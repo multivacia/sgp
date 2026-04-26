@@ -61,7 +61,7 @@ export async function serviceGetRolePermissionCodes(
 ): Promise<{ role: RoleRow; permissionCodes: string[] }> {
   const role = await findRoleById(pool, roleId)
   if (!role) {
-    throw new AppError('Papel não encontrado.', 404, ErrorCodes.OPERATIONAL_RESOURCE_NOT_FOUND)
+    throw new AppError('Papel não encontrado.', 404, ErrorCodes.NOT_FOUND)
   }
   const permissionCodes = await getPermissionCodesForRole(pool, roleId)
   return { role, permissionCodes }
@@ -79,7 +79,7 @@ function assertAdminSafeguards(
     throw new AppError(
       `O papel Administrador deve manter as permissões: ${missing.join(', ')}.`,
       400,
-      ErrorCodes.VALIDATION_INVALID_INPUT,
+      ErrorCodes.VALIDATION_ERROR,
     )
   }
 }
@@ -92,14 +92,14 @@ export async function servicePutRolePermissions(
 ): Promise<{ permissionCodes: string[] }> {
   const role = await findRoleById(pool, roleId)
   if (!role) {
-    throw new AppError('Papel não encontrado.', 404, ErrorCodes.OPERATIONAL_RESOURCE_NOT_FOUND)
+    throw new AppError('Papel não encontrado.', 404, ErrorCodes.NOT_FOUND)
   }
 
   if (role.code === COLABORADOR_ROLE_CODE) {
     throw new AppError(
       'O papel Colaborador não pode ser editado nesta versão (sem permissões RBAC explícitas).',
       403,
-      ErrorCodes.RBAC_DENIED,
+      ErrorCodes.FORBIDDEN,
     )
   }
 
@@ -113,7 +113,7 @@ export async function servicePutRolePermissions(
     throw new AppError(
       `Código(s) de permissão desconhecido(s): ${missing.join(', ')}`,
       400,
-      ErrorCodes.VALIDATION_INVALID_INPUT,
+      ErrorCodes.VALIDATION_ERROR,
     )
   }
 

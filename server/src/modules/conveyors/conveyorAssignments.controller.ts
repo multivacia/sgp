@@ -4,7 +4,6 @@ import { ok } from '../../shared/http/ok.js'
 import {
   assigneeScopedParamsSchema,
   conveyorStepParamsSchema,
-  deleteTimeEntryBodySchema,
   postAssigneeBodySchema,
   postTimeEntryBodySchema,
   postTimeEntryOnBehalfBodySchema,
@@ -140,15 +139,11 @@ export async function deleteConveyorStepTimeEntry(
 ): Promise<void> {
   const params = timeEntryScopedParamsSchema.parse(req.params)
   const pool = req.app.locals.pool as pg.Pool
-  const body = deleteTimeEntryBodySchema.parse(
-    req.body && typeof req.body === 'object' ? req.body : {},
-  )
   const result = await serviceDeleteConveyorTimeEntryAsAppUser(pool, {
     appUserId: req.authUser!.id,
     conveyorId: params.conveyorId,
     conveyorNodeId: params.stepNodeId,
     timeEntryId: params.timeEntryId,
-    reason: body.reason,
   })
   res.json(ok(result))
 }
