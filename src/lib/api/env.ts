@@ -5,7 +5,7 @@ const VALID: DataMode[] = ['mock', 'real', 'auto']
 export function getDataMode(): DataMode {
   const raw = import.meta.env.VITE_DATA_MODE?.trim().toLowerCase()
   if (raw && VALID.includes(raw as DataMode)) return raw as DataMode
-  return 'mock'
+  return 'real'
 }
 
 /** Base URL sem barra final, ex.: http://localhost:4000 */
