@@ -1,0 +1,3 @@
+-- OBSOLETO — a lógica segura de backfill está em migrations/0011_collaborators_integrity_backfill.sql
+-- (correspondência única por e-mail, colaborador ativo, sem sobrescrever vínculos).
+-- Não execute este ficheiro sobre bases já migradas com 0011.

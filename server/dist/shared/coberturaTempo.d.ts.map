@@ -1,0 +1,1 @@
+{"version":3,"file":"coberturaTempo.d.ts","sourceRoot":"","sources":["../../src/shared/coberturaTempo.ts"],"names":[],"mappings":"AAAA;;;;;GAKG;AACH,MAAM,MAAM,oBAAoB,GAAG;IACjC,uEAAuE;IACvE,KAAK,EAAE,MAAM,GAAG,IAAI,CAAA;IACpB,eAAe,EAAE,MAAM,CAAA;IACvB,gBAAgB,EAAE,MAAM,CAAA;CACzB,CAAA;AAED,wBAAgB,qBAAqB,CACnC,gBAAgB,EAAE,MAAM,EACxB,eAAe,EAAE,MAAM,GACtB,oBAAoB,CAWtB"}

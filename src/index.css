@@ -1,0 +1,398 @@
+@import "tailwindcss";
+@import "./styles/semantic-tokens.css";
+@import "./styles/theme.css";
+
+:root {
+  --sgp-ease-surface: cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+
+@layer utilities {
+  .bg-sgp-gradient-cta {
+    background-image: var(--sgp-gradient-cta);
+  }
+
+  /* CTA primário — assinatura ouro ARGOS / Multivacia (texto escuro) */
+  .sgp-cta-primary {
+    @apply inline-flex items-center justify-center rounded-xl px-5 py-2.5 text-center text-sm font-bold tracking-tight text-sgp-void transition;
+    background-image: var(--sgp-gradient-cta);
+    box-shadow: var(--sgp-shadow-gold-glow), inset 0 1px 0 0 rgba(255, 255, 255, 0.22);
+  }
+  .sgp-cta-primary:hover {
+    background-image: var(--sgp-gradient-cta-hover);
+    filter: brightness(1.05);
+    box-shadow:
+      0 8px 28px -6px rgba(201, 162, 39, 0.45),
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.28);
+  }
+
+  html[data-theme="light-executive"] .sgp-cta-primary:hover {
+    box-shadow:
+      0 8px 28px -6px rgba(200, 138, 26, 0.32),
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.45);
+  }
+
+  /* Secundário — dark premium (Multivacia: botão outline) */
+  .sgp-cta-secondary {
+    @apply inline-flex items-center justify-center rounded-xl px-5 py-2.5 text-center text-sm font-bold tracking-tight transition;
+    border-width: 1px;
+    border-color: var(--semantic-border-glass-strong);
+    background-color: var(--semantic-white-overlay-04);
+    color: rgb(226 232 240);
+    box-shadow: 0 2px 12px -4px rgba(0, 0, 0, 0.35);
+  }
+  .sgp-cta-secondary:hover {
+    border-color: rgb(201 162 39 / 0.4);
+    background-color: var(--semantic-white-overlay-08);
+    color: rgb(255 255 255);
+  }
+
+  html[data-theme="light-executive"] .sgp-cta-secondary {
+    color: rgb(51 65 85);
+    box-shadow: 0 2px 12px -4px rgba(15, 23, 42, 0.08);
+  }
+  html[data-theme="light-executive"] .sgp-cta-secondary:hover {
+    color: #0f172a;
+    border-color: #cbd5e1;
+    background-color: #f1f5f9;
+  }
+
+  .sgp-kpi-card {
+    @apply relative overflow-hidden rounded-2xl border p-5;
+    border-color: var(--semantic-border-glass);
+    background: linear-gradient(
+      165deg,
+      var(--semantic-kpi-card-start) 0%,
+      var(--semantic-kpi-card-end) 100%
+    );
+    box-shadow: var(--sgp-shadow-card-dark);
+    transition-property: box-shadow, border-color, transform, background;
+    transition-duration: 280ms;
+    transition-timing-function: var(--sgp-ease-surface);
+  }
+  .sgp-kpi-card:hover {
+    transform: translateY(-1px);
+    border-color: var(--semantic-border-glass-strong);
+    background: linear-gradient(
+      165deg,
+      var(--semantic-kpi-card-hover-start) 0%,
+      var(--semantic-kpi-card-hover-end) 100%
+    );
+    box-shadow: var(--sgp-shadow-card-hover);
+  }
+
+  /** KPI em destaque (dashboard executivo) */
+  .sgp-kpi-card--featured {
+    @apply min-h-[168px] p-6 md:min-h-[180px] md:p-7;
+  }
+  .sgp-kpi-card--featured .sgp-kpi-value {
+    @apply text-5xl md:text-6xl;
+  }
+
+  /** KPI secundário — peso visual menor */
+  .sgp-kpi-card--compact {
+    @apply p-4;
+  }
+  .sgp-kpi-card--compact .sgp-kpi-value {
+    @apply mt-2 text-3xl;
+  }
+  .sgp-kpi-card--compact .sgp-kpi-label {
+    @apply text-[9px] tracking-[0.12em];
+  }
+
+  /** Painéis de formulário / blocos — hover mais leve que cards clicáveis */
+  .sgp-panel-hover {
+    transition-property: box-shadow, border-color, transform;
+    transition-duration: 260ms;
+    transition-timing-function: var(--sgp-ease-surface);
+  }
+  .sgp-panel-hover:hover {
+    transform: translateY(-1px);
+    border-color: var(--semantic-border-glass-strong);
+    box-shadow: var(--sgp-shadow-panel-hover);
+  }
+
+  /** Base para badges / chips de status (contraste + acabamento) */
+  .sgp-chip {
+    @apply inline-flex max-w-full items-center rounded-md border px-2 py-0.5 text-[11px] font-bold leading-tight tracking-tight;
+    box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.05);
+  }
+
+  html[data-theme="light-executive"] .sgp-chip {
+    box-shadow: inset 0 1px 0 0 rgba(15, 23, 42, 0.04);
+  }
+
+  /**
+   * Superfícies clicáveis / listas — mesmo vocabulário de hover dos cards Multivacia.
+   * Sem scale; lift 1px; borda e sombra levemente reforçadas.
+   */
+  .sgp-surface-hover {
+    transition-property: box-shadow, border-color, transform, background-color;
+    transition-duration: 280ms;
+    transition-timing-function: var(--sgp-ease-surface);
+  }
+  .sgp-surface-hover:hover {
+    transform: translateY(-1px);
+    border-color: var(--semantic-border-glass-strong);
+    box-shadow: var(--sgp-shadow-card-hover);
+  }
+
+  /** Linhas de tabela — sem translate; realce por camada e borda interna */
+  .sgp-table-row-hover {
+    transition:
+      background-color 260ms var(--sgp-ease-surface),
+      box-shadow 260ms var(--sgp-ease-surface);
+  }
+  .sgp-table-row-hover:hover {
+    background-color: var(--semantic-table-row-hover-bg) !important;
+    box-shadow: inset 0 0 0 1px var(--semantic-table-row-hover-inset);
+  }
+
+  /** Zona de drop (documento) — hover em repouso; drag continua com estado próprio */
+  .sgp-dropzone-hover {
+    transition-property: border-color, background-color, box-shadow;
+    transition-duration: 280ms;
+    transition-timing-function: var(--sgp-ease-surface);
+  }
+  .sgp-dropzone-hover:hover {
+    border-color: var(--semantic-border-glass-strong);
+    background-color: var(--semantic-dropzone-hover-bg);
+    box-shadow:
+      inset 0 0 0 1px var(--semantic-border-glass),
+      0 10px 36px -14px rgba(0, 0, 0, 0.45);
+  }
+
+  html[data-theme="light-executive"] .sgp-dropzone-hover:hover {
+    box-shadow:
+      inset 0 0 0 1px var(--semantic-border-glass),
+      0 10px 36px -14px rgba(15, 23, 42, 0.08);
+  }
+
+  .sgp-panel {
+    @apply rounded-2xl border bg-sgp-app-panel/95 p-6 backdrop-blur-sm;
+    border-color: var(--semantic-border-glass);
+    box-shadow: var(--sgp-shadow-card-dark);
+  }
+
+  .sgp-header-card {
+    @apply rounded-2xl border px-4 py-4 sm:px-5;
+    border-color: var(--semantic-border-glass);
+    background: linear-gradient(
+      90deg,
+      var(--semantic-sgp-void) 0%,
+      color-mix(in srgb, var(--semantic-sgp-navy-deep) 80%, transparent) 50%,
+      var(--semantic-sgp-void) 100%
+    );
+    box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.04);
+  }
+
+  /** Card com função de link / ação — cursor + foco acessível */
+  .sgp-kpi-card--clickable {
+    @apply cursor-pointer;
+  }
+
+  .sgp-table-shell {
+    @apply overflow-hidden rounded-2xl border bg-sgp-app-panel/90 backdrop-blur-sm;
+    border-color: var(--semantic-border-glass);
+    box-shadow: var(--sgp-shadow-card-dark);
+  }
+
+  /* Campos em painéis escuros */
+  .sgp-input-app {
+    @apply rounded-xl border text-slate-100 shadow-inner outline-none placeholder:text-slate-500 focus:border-sgp-blue-bright/45 focus:ring-2 focus:ring-sgp-blue-bright/25;
+    border-color: var(--semantic-border-glass-strong);
+    background-color: var(--semantic-sgp-app-panel-deep);
+  }
+
+  html[data-theme="light-executive"] .sgp-input-app {
+    color: #0f172a;
+    border-color: #cbd5e1;
+    background-color: #ffffff;
+    box-shadow: inset 0 1px 2px rgba(30, 58, 95, 0.04);
+  }
+  html[data-theme="light-executive"] .sgp-input-app::placeholder {
+    color: #94a3b8;
+  }
+  html[data-theme="light-executive"] .sgp-input-app:focus {
+    border-color: #2f6d9b;
+    outline: none;
+    --tw-ring-offset-shadow: 0 0 #0000;
+    --tw-ring-shadow: 0 0 #0000;
+    box-shadow:
+      inset 0 1px 2px rgba(30, 58, 95, 0.05),
+      0 0 0 3px var(--semantic-focus-ring);
+  }
+
+  /* Títulos de página — presença tipo hero Multivacia */
+  .sgp-page-title {
+    @apply font-heading text-2xl font-bold tracking-tight text-slate-50 md:text-3xl;
+  }
+
+  .sgp-page-lead {
+    @apply mt-2 max-w-2xl text-sm leading-relaxed text-slate-400;
+  }
+
+  html[data-theme="light-executive"] .sgp-page-title {
+    color: #0f172a;
+  }
+  html[data-theme="light-executive"] .sgp-page-lead {
+    color: #334155;
+  }
+
+  /** Tooltip interno (Recharts / barras) — alinhado ao tema */
+  .sgp-chart-tooltip-inner {
+    @apply rounded-lg px-3 py-2 text-sm shadow-lg backdrop-blur-sm;
+    border-width: 1px;
+    border-color: var(--semantic-chart-tooltip-border);
+    background-color: var(--semantic-chart-tooltip-bg);
+  }
+  .sgp-chart-tooltip-inner .sgp-chart-tooltip-label {
+    @apply text-[11px] font-medium uppercase tracking-wide;
+    color: var(--semantic-chart-tick-fill);
+  }
+  .sgp-chart-tooltip-inner .sgp-chart-tooltip-value {
+    @apply mt-1 font-mono tabular-nums;
+    color: var(--semantic-base-fg);
+  }
+  html[data-theme="light-executive"] .sgp-chart-tooltip-inner .sgp-chart-tooltip-value {
+    color: #0f172a;
+  }
+
+  html[data-theme="light-executive"] #sgp-color-theme {
+    border-color: #cbd5e1;
+    background-color: #ffffff;
+    color: #0f172a;
+  }
+  html[data-theme="light-executive"] #sgp-color-theme:focus {
+    --tw-ring-color: var(--semantic-focus-ring);
+  }
+
+  /* Shell: tipografia base e área principal */
+  html[data-theme="light-executive"] .relative.flex.h-dvh.max-h-dvh.text-slate-200 {
+    color: #334155;
+  }
+  html[data-theme="light-executive"] main {
+    color: #334155;
+  }
+
+  /* Topbar */
+  html[data-theme="light-executive"] header.sticky {
+    border-bottom-color: var(--semantic-shell-border) !important;
+    background-color: rgba(255, 255, 255, 0.88) !important;
+    backdrop-filter: blur(12px);
+  }
+
+  /* Sidebar: substitui gradiente dark (incl. via hardcoded) e borda do shell */
+  html[data-theme="light-executive"] aside.left-0.z-50.border-r {
+    border-color: var(--semantic-shell-border) !important;
+    background: var(--semantic-sidebar-gradient) !important;
+    background-image: var(--semantic-sidebar-gradient) !important;
+    box-shadow: 4px 0 24px -12px rgba(15, 23, 42, 0.06);
+  }
+
+  /* Scrim mobile do menu */
+  html[data-theme="light-executive"] div.fixed.inset-0.z-40[class*="backdrop-blur"] {
+    background-color: rgba(30, 58, 95, 0.38) !important;
+  }
+
+  /* Navegação lateral — contraste em modo claro */
+  html[data-theme="light-executive"] #app-sidebar-nav a.border-transparent {
+    color: #64748b;
+  }
+  html[data-theme="light-executive"] #app-sidebar-nav a.border-transparent:hover {
+    color: #334155;
+    background-color: #f1f5f9;
+    border-color: #dce5ee;
+  }
+  html[data-theme="light-executive"] #app-sidebar-nav a.text-slate-50 {
+    color: #0f172a !important;
+    background-color: #eaf2fb !important;
+    border-color: #cbd5e1 !important;
+    --tw-ring-color: rgba(200, 138, 26, 0.28);
+  }
+
+  /* Select nativo e campos do header no light */
+  html[data-theme="light-executive"] select:focus-visible,
+  html[data-theme="light-executive"] input:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--semantic-focus-ring);
+  }
+
+  /* ——— Light: hierarquia tipográfica obrigatória (contraste de leitura) ———
+     primary #0F172A · secondary #334155 · muted #64748B · soft #94A3B8 */
+  html[data-theme="light-executive"] .text-slate-50,
+  html[data-theme="light-executive"] .text-slate-100 {
+    color: #0f172a !important;
+  }
+  html[data-theme="light-executive"] .text-slate-200,
+  html[data-theme="light-executive"] .text-slate-300 {
+    color: #334155 !important;
+  }
+  html[data-theme="light-executive"] .text-slate-400,
+  html[data-theme="light-executive"] .text-slate-500 {
+    color: #64748b !important;
+  }
+  html[data-theme="light-executive"] .text-slate-600 {
+    color: #475569 !important;
+  }
+  html[data-theme="light-executive"] .text-slate-700 {
+    color: #334155 !important;
+  }
+  html[data-theme="light-executive"] .text-slate-800 {
+    color: #1e293b !important;
+  }
+  html[data-theme="light-executive"] .text-slate-900,
+  html[data-theme="light-executive"] .text-slate-950 {
+    color: #0f172a !important;
+  }
+
+  html[data-theme="light-executive"] aside .text-white,
+  html[data-theme="light-executive"] aside [class*="text-white/"] {
+    color: #0f172a !important;
+  }
+
+  html[data-theme="light-executive"] header .text-white,
+  html[data-theme="light-executive"] header [class*="text-white/"] {
+    color: #0f172a !important;
+  }
+
+  html[data-theme="light-executive"] header .hover\:text-white:hover,
+  html[data-theme="light-executive"] header .hover\:text-slate-100:hover {
+    color: #0f172a !important;
+  }
+
+  html[data-theme="light-executive"] ::placeholder {
+    color: #94a3b8;
+    opacity: 1;
+  }
+
+  html[data-theme="light-executive"] select {
+    color: #0f172a;
+  }
+  html[data-theme="light-executive"] select option {
+    color: #0f172a;
+    background-color: #ffffff;
+  }
+}
+
+@layer base {
+  html {
+    @apply antialiased;
+    font-family: var(--font-sans);
+    color: var(--semantic-base-fg);
+  }
+
+  body {
+    @apply m-0 min-h-dvh bg-sgp-void;
+  }
+
+  #root {
+    @apply min-h-dvh;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-heading);
+  }
+}

@@ -10,11 +10,15 @@ type Props = {
   tree: MatrixNodeTreeApi
   parentMap: ReadonlyMap<string, string | null>
   selectedId: string | null
-  onSelect: (id: string) => void
+  onSelectComposition: (id: string) => void
+  onSelectEditMeta: (id: string) => void
   aggregateMaps: MatrixTreeAggregateMaps
   searchQuery: string
   matchIds: ReadonlySet<string>
   taskAggregates: Map<string, ReturnType<typeof getTaskAggregate>>
+  busy: boolean
+  onRemoveTaskFromCatalog: (taskId: string) => void | Promise<void>
+  onDuplicateTask: (taskId: string) => void | Promise<void>
 }
 
 function subtreeTouchesIds(
@@ -30,11 +34,15 @@ export function OperationMatrixTaskGrid({
   tree,
   parentMap,
   selectedId,
-  onSelect,
+  onSelectComposition,
+  onSelectEditMeta,
   aggregateMaps,
   searchQuery,
   matchIds,
   taskAggregates,
+  busy,
+  onRemoveTaskFromCatalog,
+  onDuplicateTask,
 }: Props) {
   const nodeTypeMap = useMemo(() => buildNodeTypeMap(tree), [tree])
 
@@ -50,16 +58,20 @@ export function OperationMatrixTaskGrid({
           !!searchQuery.trim() && subtreeTouchesIds(task, matchIds)
 
         return (
-          <div key={task.id} className="min-w-0">
+          <div key={task.id} className="min-w-0 max-w-lg">
             <TaskCard
               task={task}
               aggregate={agg}
               aggregateMaps={aggregateMaps}
               selectedId={selectedId}
-              onSelect={onSelect}
+              onSelectComposition={onSelectComposition}
+              onSelectEditMeta={onSelectEditMeta}
               searchQuery={searchQuery}
               isActiveTask={isActiveTask}
               isSearchMatch={isSearchMatch}
+              busy={busy}
+              onRemoveTask={() => void onRemoveTaskFromCatalog(task.id)}
+              onDuplicateTask={() => void onDuplicateTask(task.id)}
             />
           </div>
         )

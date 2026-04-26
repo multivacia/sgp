@@ -1,0 +1,358 @@
+/*
+  Tokens semânticos globais (SGP+). O tema default replica a identidade ARGOS atual.
+  Sobrescritos por html[data-theme="…"] — sem lógica por ecrã.
+*/
+
+:root {
+  /* ——— Paleta mapeada para @theme (--color-sgp-*) ——— */
+  --semantic-sgp-navy: #101824;
+  --semantic-sgp-navy-deep: #0a1018;
+  --semantic-sgp-navy-mid: #152a3d;
+  --semantic-sgp-void: #050a12;
+  --semantic-sgp-night: #070d14;
+  --semantic-sgp-blue: #1c4e7e;
+  --semantic-sgp-blue-bright: #3e7baa;
+  --semantic-sgp-gold: #c9a227;
+  --semantic-sgp-gold-muted: #a88620;
+  --semantic-sgp-gold-warm: #c99c5c;
+  --semantic-sgp-amber: #d4a84b;
+
+  --semantic-sgp-canvas: #dce4ef;
+  --semantic-sgp-surface: #e8edf5;
+  --semantic-sgp-surface-elevated: #f6f8fc;
+  --semantic-sgp-surface-muted: #e2e8f0;
+  --semantic-sgp-border: #b8c5d8;
+  --semantic-sgp-border-subtle: #cdd8e8;
+  --semantic-sgp-muted: #5c6b80;
+  --semantic-sgp-text: #152032;
+
+  --semantic-sgp-app-panel: #121a26;
+  --semantic-sgp-app-panel-deep: #0c1018;
+  --semantic-sgp-ink: #151d2a;
+  --semantic-sgp-ink-elevated: #1a2433;
+
+  /* ——— Texto base (html) ——— */
+  --semantic-base-fg: rgb(226 232 240);
+
+  /* ——— Superfície / bordas “glass” (header, cartões escuros) ——— */
+  --semantic-border-glass: rgba(255, 255, 255, 0.08);
+  --semantic-border-glass-strong: rgba(255, 255, 255, 0.12);
+  --semantic-white-overlay-04: rgba(255, 255, 255, 0.04);
+  --semantic-white-overlay-06: rgba(255, 255, 255, 0.06);
+  --semantic-white-overlay-08: rgba(255, 255, 255, 0.08);
+  --semantic-white-overlay-10: rgba(255, 255, 255, 0.1);
+
+  /* ——— App shell (gradiente em camadas) ——— */
+  --semantic-shell-bg-layers:
+    radial-gradient(ellipse 85% 55% at 50% -8%, rgba(62, 123, 170, 0.12), transparent 52%),
+    radial-gradient(ellipse 55% 45% at 100% 0%, rgba(201, 162, 39, 0.06), transparent 48%),
+    radial-gradient(ellipse 50% 40% at 0% 100%, rgba(28, 78, 126, 0.1), transparent 50%),
+    linear-gradient(180deg, #050a12 0%, #070d14 38%, #050a12 100%);
+
+  /* ——— Gradientes e sombras (aliases consumidos em index.css) ——— */
+  --semantic-gradient-cta: linear-gradient(
+    118deg,
+    #d4b44a 0%,
+    #c9a227 45%,
+    #a88620 100%
+  );
+  --semantic-gradient-cta-hover: linear-gradient(
+    118deg,
+    #e0c463 0%,
+    #c9a227 50%,
+    #9a7a18 100%
+  );
+  --semantic-gradient-header: linear-gradient(
+    92deg,
+    #050a12 0%,
+    #101824 40%,
+    #1c4e7e 100%
+  );
+
+  --semantic-shadow-card-dark:
+    0 1px 0 0 rgba(255, 255, 255, 0.06) inset,
+    0 8px 32px -8px rgba(0, 0, 0, 0.45),
+    0 0 0 1px rgba(255, 255, 255, 0.06);
+  --semantic-shadow-card-hover:
+    0 1px 0 0 rgba(255, 255, 255, 0.09) inset,
+    0 14px 40px -12px rgba(0, 0, 0, 0.52),
+    0 0 0 1px rgba(255, 255, 255, 0.1),
+    0 0 28px -10px rgba(62, 123, 170, 0.12);
+  --semantic-shadow-panel-hover:
+    0 1px 0 0 rgba(255, 255, 255, 0.07) inset,
+    0 10px 28px -14px rgba(0, 0, 0, 0.42),
+    0 0 0 1px rgba(255, 255, 255, 0.09);
+  --semantic-shadow-gold-glow: 0 4px 24px -4px rgba(201, 162, 39, 0.35);
+
+  /* ——— KPI / painéis (gradientes em rgba) ——— */
+  --semantic-kpi-card-start: rgba(22, 32, 46, 0.95);
+  --semantic-kpi-card-end: rgba(12, 16, 24, 0.98);
+  --semantic-kpi-card-hover-start: rgba(26, 36, 52, 0.98);
+  --semantic-kpi-card-hover-end: rgba(14, 18, 28, 0.99);
+
+  --semantic-dropzone-hover-bg: rgba(18, 26, 38, 0.88);
+
+  --semantic-table-row-hover-bg: rgba(255, 255, 255, 0.055);
+  --semantic-table-row-hover-inset: rgba(255, 255, 255, 0.07);
+
+  /* ——— Login (hero + formulário) ——— */
+  --semantic-login-brand-fg: #ffffff;
+  --semantic-login-brand-muted: rgba(255, 255, 255, 0.58);
+  --semantic-login-form-bg: rgba(21, 29, 42, 0.96);
+  --semantic-login-form-border: rgba(255, 255, 255, 0.12);
+  --semantic-login-field-fg: #ffffff;
+  --semantic-login-field-placeholder: rgba(255, 255, 255, 0.28);
+  --semantic-login-section-fade: var(--semantic-sgp-void);
+
+  /* ——— Gráficos (dashboard Recharts) ——— */
+  --semantic-chart-tooltip-bg: rgba(11, 18, 32, 0.96);
+  --semantic-chart-tooltip-border: rgba(255, 255, 255, 0.1);
+  --semantic-chart-axis-stroke: #64748b;
+  --semantic-chart-tick-fill: #94a3b8;
+  --semantic-chart-axis-line: rgba(255, 255, 255, 0.08);
+  --semantic-chart-bucket-no-backlog: #64748b;
+  --semantic-chart-bucket-em-revisao: #8b5cf6;
+  --semantic-chart-bucket-em-andamento: #38bdf8;
+  --semantic-chart-bucket-em-atraso: #fb7185;
+  --semantic-chart-bucket-concluidas: #34d399;
+  --semantic-chart-exec-ativa: #38bdf8;
+  --semantic-chart-exec-concl: #34d399;
+  --semantic-chart-exec-atraso: #fb7185;
+  --semantic-chart-bar-period: #7dd3fc;
+
+  /* ——— Grid técnico (overlay) ——— */
+  --semantic-grid-opacity: 0.38;
+  --semantic-grid-stroke: %23ffffff;
+  --semantic-grid-stroke-opacity: 0.045;
+
+  /* Aliases legados (consumo em TSX / utilities) */
+  --sgp-gradient-cta: var(--semantic-gradient-cta);
+  --sgp-gradient-cta-hover: var(--semantic-gradient-cta-hover);
+  --sgp-gradient-header: var(--semantic-gradient-header);
+  --sgp-shadow-card-dark: var(--semantic-shadow-card-dark);
+  --sgp-shadow-card-hover: var(--semantic-shadow-card-hover);
+  --sgp-shadow-panel-hover: var(--semantic-shadow-panel-hover);
+  --sgp-shadow-gold-glow: var(--semantic-shadow-gold-glow);
+}
+
+/* Slate Dark — corporativo neutro, continua escuro */
+html[data-theme="slate-dark"] {
+  --semantic-sgp-navy: #0f172a;
+  --semantic-sgp-navy-deep: #0b1220;
+  --semantic-sgp-navy-mid: #1e293b;
+  --semantic-sgp-void: #0b1120;
+  --semantic-sgp-night: #0d1524;
+  --semantic-sgp-blue: #1a4f7c;
+  --semantic-sgp-blue-bright: #3d7aad;
+  --semantic-sgp-gold: #c9a227;
+  --semantic-sgp-gold-muted: #a88620;
+  --semantic-sgp-gold-warm: #c99c5c;
+  --semantic-sgp-amber: #d4a84b;
+
+  --semantic-sgp-canvas: #dce4ef;
+  --semantic-sgp-surface: #e8edf5;
+  --semantic-sgp-surface-elevated: #f6f8fc;
+  --semantic-sgp-surface-muted: #e2e8f0;
+  --semantic-sgp-border: #b8c5d8;
+  --semantic-sgp-border-subtle: #cdd8e8;
+  --semantic-sgp-muted: #5c6b80;
+  --semantic-sgp-text: #152032;
+
+  --semantic-sgp-app-panel: #111a28;
+  --semantic-sgp-app-panel-deep: #0c121c;
+  --semantic-sgp-ink: #131c2a;
+  --semantic-sgp-ink-elevated: #182132;
+
+  --semantic-base-fg: rgb(226 232 240);
+
+  --semantic-border-glass: rgba(255, 255, 255, 0.08);
+  --semantic-border-glass-strong: rgba(255, 255, 255, 0.12);
+  --semantic-white-overlay-04: rgba(255, 255, 255, 0.04);
+  --semantic-white-overlay-06: rgba(255, 255, 255, 0.06);
+  --semantic-white-overlay-08: rgba(255, 255, 255, 0.08);
+  --semantic-white-overlay-10: rgba(255, 255, 255, 0.1);
+
+  --semantic-shell-bg-layers:
+    radial-gradient(ellipse 85% 55% at 50% -8%, rgba(56, 120, 170, 0.11), transparent 52%),
+    radial-gradient(ellipse 55% 45% at 100% 0%, rgba(180, 170, 200, 0.05), transparent 48%),
+    radial-gradient(ellipse 50% 40% at 0% 100%, rgba(40, 90, 140, 0.09), transparent 50%),
+    linear-gradient(180deg, #0b1120 0%, #0d1524 38%, #0b1120 100%);
+
+  --semantic-gradient-header: linear-gradient(
+    92deg,
+    #0b1120 0%,
+    #0f172a 40%,
+    #1a4f7c 100%
+  );
+
+  --semantic-kpi-card-start: rgba(20, 30, 44, 0.95);
+  --semantic-kpi-card-end: rgba(12, 17, 26, 0.98);
+  --semantic-kpi-card-hover-start: rgba(24, 34, 50, 0.98);
+  --semantic-kpi-card-hover-end: rgba(14, 19, 28, 0.99);
+
+  --semantic-dropzone-hover-bg: rgba(16, 24, 36, 0.88);
+
+  --semantic-table-row-hover-bg: rgba(255, 255, 255, 0.05);
+  --semantic-table-row-hover-inset: rgba(255, 255, 255, 0.065);
+
+  --semantic-chart-tooltip-bg: rgba(12, 18, 30, 0.96);
+  --semantic-chart-axis-stroke: #64748b;
+  --semantic-chart-tick-fill: #94a3b8;
+  --semantic-chart-axis-line: rgba(255, 255, 255, 0.08);
+
+  --semantic-grid-opacity: 0.36;
+}
+
+/* Light Executive — paleta executiva premium (apenas este bloco no tema light) */
+html[data-theme="light-executive"] {
+  /* Referência explícita da paleta aprovada (mapeamento interno) */
+  --color-bg-app: #f4f7fb;
+  --color-bg-app-secondary: #edf2f8;
+  --color-surface: #ffffff;
+  --color-surface-secondary: #f8fafd;
+  --color-surface-elevated: #eef3f8;
+  --color-sidebar-bg: #e9eff6;
+  --color-sidebar-panel: #f7fafd;
+  --color-topbar-bg: rgba(255, 255, 255, 0.88);
+  --color-shell-border: #d6e0ea;
+  --color-text-primary: #0f172a;
+  --color-text-secondary: #334155;
+  --color-text-muted: #64748b;
+  --color-text-soft: #94a3b8;
+  --color-border-subtle: #dce5ee;
+  --color-border-default: #cbd5e1;
+  --color-border-strong: #b8c6d8;
+  --color-accent-gold: #c88a1a;
+  --color-accent-gold-hover: #a86f12;
+  --color-accent-soft: #f5e7bf;
+  --color-accent-navy: #1e3a5f;
+  --color-accent-blue: #2f6d9b;
+  --color-accent-blue-soft: #dceaf6;
+  --color-hover-surface: #f1f5f9;
+  --color-active-surface: #e7eef7;
+  --color-selected-surface: #eaf2fb;
+  --color-focus-ring: rgba(47, 109, 155, 0.22);
+  --shadow-card-approved: 0 10px 30px rgba(15, 23, 42, 0.06);
+
+  /* ——— @theme / superfícies ——— */
+  --semantic-sgp-void: var(--color-bg-app);
+  --semantic-sgp-navy: var(--color-sidebar-bg);
+  --semantic-sgp-navy-deep: var(--color-bg-app-secondary);
+  --semantic-sgp-navy-mid: #dbe4ee;
+  --semantic-sgp-night: #ffffff;
+  --semantic-sgp-blue: var(--color-accent-navy);
+  --semantic-sgp-blue-bright: var(--color-accent-blue);
+  --semantic-sgp-gold: var(--color-accent-gold);
+  --semantic-sgp-gold-muted: var(--color-accent-gold-hover);
+  --semantic-sgp-gold-warm: #c99c5c;
+  --semantic-sgp-amber: #d4a84b;
+
+  --semantic-sgp-canvas: var(--color-accent-blue-soft);
+  --semantic-sgp-surface: var(--color-surface);
+  --semantic-sgp-surface-elevated: var(--color-surface-elevated);
+  --semantic-sgp-surface-muted: var(--color-bg-app-secondary);
+  --semantic-sgp-border: var(--color-border-default);
+  --semantic-sgp-border-subtle: var(--color-border-subtle);
+  --semantic-sgp-muted: var(--color-text-muted);
+  --semantic-sgp-text: var(--color-text-primary);
+
+  --semantic-sgp-app-panel: var(--color-surface);
+  --semantic-sgp-app-panel-deep: var(--color-sidebar-panel);
+  --semantic-sgp-ink: var(--color-surface);
+  --semantic-sgp-ink-elevated: var(--color-surface-secondary);
+
+  --semantic-base-fg: var(--color-text-primary);
+
+  --semantic-border-glass: var(--color-border-subtle);
+  --semantic-border-glass-strong: var(--color-border-default);
+  --semantic-white-overlay-04: rgba(30, 58, 95, 0.04);
+  --semantic-white-overlay-06: rgba(30, 58, 95, 0.06);
+  --semantic-white-overlay-08: rgba(30, 58, 95, 0.08);
+  --semantic-white-overlay-10: rgba(30, 58, 95, 0.1);
+
+  --semantic-shell-border: var(--color-shell-border);
+  --semantic-sidebar-gradient: linear-gradient(
+    180deg,
+    var(--color-sidebar-bg) 0%,
+    #edf2f8 46%,
+    var(--color-active-surface) 100%
+  );
+  --semantic-focus-ring: var(--color-focus-ring);
+
+  --semantic-shell-bg-layers:
+    radial-gradient(ellipse 85% 55% at 50% -8%, rgba(47, 109, 155, 0.07), transparent 52%),
+    radial-gradient(ellipse 55% 45% at 100% 0%, rgba(200, 138, 26, 0.035), transparent 48%),
+    radial-gradient(ellipse 50% 40% at 0% 100%, rgba(30, 58, 95, 0.05), transparent 50%),
+    linear-gradient(
+      180deg,
+      var(--color-bg-app) 0%,
+      var(--color-bg-app-secondary) 40%,
+      var(--color-bg-app) 100%
+    );
+
+  --semantic-gradient-cta: linear-gradient(
+    118deg,
+    var(--color-accent-soft) 0%,
+    var(--color-accent-gold) 42%,
+    var(--color-accent-gold-hover) 100%
+  );
+  --semantic-gradient-cta-hover: linear-gradient(
+    118deg,
+    #faf3dd 0%,
+    #d4a84b 45%,
+    var(--color-accent-gold-hover) 100%
+  );
+  --semantic-gradient-header: linear-gradient(
+    92deg,
+    rgba(255, 255, 255, 0.98) 0%,
+    var(--color-bg-app) 38%,
+    var(--color-accent-blue-soft) 100%
+  );
+
+  --semantic-shadow-card-dark: var(--shadow-card-approved);
+  --semantic-shadow-card-hover:
+    0 12px 32px -10px rgba(15, 23, 42, 0.1),
+    0 0 0 1px var(--color-border-subtle);
+  --semantic-shadow-panel-hover:
+    0 10px 28px -12px rgba(15, 23, 42, 0.08),
+    0 0 0 1px var(--color-border-subtle);
+  --semantic-shadow-gold-glow: 0 4px 22px -4px rgba(200, 138, 26, 0.28);
+
+  --semantic-kpi-card-start: #ffffff;
+  --semantic-kpi-card-end: var(--color-surface-secondary);
+  --semantic-kpi-card-hover-start: #ffffff;
+  --semantic-kpi-card-hover-end: var(--color-hover-surface);
+
+  --semantic-dropzone-hover-bg: var(--color-accent-blue-soft);
+
+  --semantic-table-row-hover-bg: var(--color-hover-surface);
+  --semantic-table-row-hover-inset: var(--color-border-subtle);
+
+  --semantic-login-brand-fg: var(--color-text-primary);
+  --semantic-login-brand-muted: rgba(15, 23, 42, 0.52);
+  --semantic-login-form-bg: rgba(255, 255, 255, 0.98);
+  --semantic-login-form-border: var(--color-border-subtle);
+  --semantic-login-field-fg: var(--color-text-primary);
+  --semantic-login-field-placeholder: #94a3b8;
+  --semantic-login-section-fade: var(--color-bg-app);
+
+  --semantic-chart-tooltip-bg: rgba(255, 255, 255, 0.98);
+  --semantic-chart-tooltip-border: var(--color-border-subtle);
+  --semantic-chart-axis-stroke: var(--color-text-soft);
+  --semantic-chart-tick-fill: var(--color-text-muted);
+  --semantic-chart-axis-line: rgba(47, 109, 155, 0.12);
+
+  --semantic-chart-bucket-no-backlog: #64748b;
+  --semantic-chart-bucket-em-revisao: #6d28d9;
+  --semantic-chart-bucket-em-andamento: var(--color-accent-blue);
+  --semantic-chart-bucket-em-atraso: #e11d48;
+  --semantic-chart-bucket-concluidas: #059669;
+  --semantic-chart-exec-ativa: var(--color-accent-blue);
+  --semantic-chart-exec-concl: #059669;
+  --semantic-chart-exec-atraso: #e11d48;
+  --semantic-chart-bar-period: #5b9bd5;
+
+  --semantic-grid-opacity: 0.14;
+  --semantic-grid-stroke: %2394a3b8;
+  --semantic-grid-stroke-opacity: 0.09;
+}

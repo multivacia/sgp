@@ -1,0 +1,33 @@
+/*
+  SGP — ARGOS: cores Tailwind mapeadas para tokens semânticos (semantic-tokens.css).
+*/
+@theme {
+  --font-sans: "Open Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-heading: "Montserrat", ui-sans-serif, system-ui, sans-serif;
+
+  --color-sgp-navy: var(--semantic-sgp-navy);
+  --color-sgp-navy-deep: var(--semantic-sgp-navy-deep);
+  --color-sgp-navy-mid: var(--semantic-sgp-navy-mid);
+  --color-sgp-void: var(--semantic-sgp-void);
+  --color-sgp-night: var(--semantic-sgp-night);
+  --color-sgp-blue: var(--semantic-sgp-blue);
+  --color-sgp-blue-bright: var(--semantic-sgp-blue-bright);
+  --color-sgp-gold: var(--semantic-sgp-gold);
+  --color-sgp-gold-muted: var(--semantic-sgp-gold-muted);
+  --color-sgp-gold-warm: var(--semantic-sgp-gold-warm);
+  --color-sgp-amber: var(--semantic-sgp-amber);
+
+  --color-sgp-canvas: var(--semantic-sgp-canvas);
+  --color-sgp-surface: var(--semantic-sgp-surface);
+  --color-sgp-surface-elevated: var(--semantic-sgp-surface-elevated);
+  --color-sgp-surface-muted: var(--semantic-sgp-surface-muted);
+  --color-sgp-border: var(--semantic-sgp-border);
+  --color-sgp-border-subtle: var(--semantic-sgp-border-subtle);
+  --color-sgp-muted: var(--semantic-sgp-muted);
+  --color-sgp-text: var(--semantic-sgp-text);
+
+  --color-sgp-app-panel: var(--semantic-sgp-app-panel);
+  --color-sgp-app-panel-deep: var(--semantic-sgp-app-panel-deep);
+  --color-sgp-ink: var(--semantic-sgp-ink);
+  --color-sgp-ink-elevated: var(--semantic-sgp-ink-elevated);
+}
