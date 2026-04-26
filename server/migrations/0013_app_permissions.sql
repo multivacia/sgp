@@ -1,5 +1,11 @@
 -- RBAC fino V1: permissões explícitas por papel (ADMIN / GESTOR / COLABORADOR).
 
+INSERT INTO app_roles (id, code, name) VALUES
+  ('11111111-1111-1111-1111-111111111111'::uuid, 'ADMIN', 'Administrador'),
+  ('22222222-2222-2222-2222-222222222222'::uuid, 'COLABORADOR', 'Colaborador'),
+  ('33333333-3333-3333-3333-333333333333'::uuid, 'GESTOR', 'Gestor operacional')
+ON CONFLICT (code) DO NOTHING;
+
 CREATE TABLE IF NOT EXISTS app_permissions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   code VARCHAR(128) NOT NULL UNIQUE,
@@ -45,14 +51,16 @@ ON CONFLICT (code) DO UPDATE SET name = EXCLUDED.name;
 
 -- ADMIN: todas as permissões V1
 INSERT INTO app_role_permissions (role_id, permission_id)
-SELECT '11111111-1111-1111-1111-111111111111'::uuid, p.id
+SELECT r.id, p.id
 FROM app_permissions p
+JOIN app_roles r ON r.code = 'ADMIN'
 ON CONFLICT DO NOTHING;
 
 -- GESTOR: operacional + health (sem permissões só ADMIN)
 INSERT INTO app_role_permissions (role_id, permission_id)
-SELECT '33333333-3333-3333-3333-333333333333'::uuid, p.id
+SELECT r.id, p.id
 FROM app_permissions p
+JOIN app_roles r ON r.code = 'GESTOR'
 WHERE p.code IN (
   'collaborators_admin.view',
   'collaborators_admin.create',

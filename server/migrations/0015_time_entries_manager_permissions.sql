@@ -6,13 +6,15 @@ INSERT INTO app_permissions (code, name) VALUES
 ON CONFLICT (code) DO UPDATE SET name = EXCLUDED.name;
 
 INSERT INTO app_role_permissions (role_id, permission_id)
-SELECT '11111111-1111-1111-1111-111111111111'::uuid, p.id
+SELECT r.id, p.id
 FROM app_permissions p
+JOIN app_roles r ON r.code = 'ADMIN'
 WHERE p.code IN ('time_entries.create_on_behalf', 'time_entries.delete_any')
 ON CONFLICT DO NOTHING;
 
 INSERT INTO app_role_permissions (role_id, permission_id)
-SELECT '33333333-3333-3333-3333-333333333333'::uuid, p.id
+SELECT r.id, p.id
 FROM app_permissions p
+JOIN app_roles r ON r.code = 'GESTOR'
 WHERE p.code IN ('time_entries.create_on_behalf', 'time_entries.delete_any')
 ON CONFLICT DO NOTHING;
