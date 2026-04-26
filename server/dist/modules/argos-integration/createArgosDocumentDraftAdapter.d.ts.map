@@ -1,1 +1,0 @@
-{"version":3,"file":"createArgosDocumentDraftAdapter.d.ts","sourceRoot":"","sources":["../../../src/modules/argos-integration/createArgosDocumentDraftAdapter.ts"],"names":[],"mappings":"AAAA,OAAO,KAAK,EAAE,GAAG,EAAE,MAAM,qBAAqB,CAAA;AAC9C,OAAO,KAAK,EAAE,sBAAsB,EAAE,MAAM,6BAA6B,CAAA;AAKzE,wBAAgB,+BAA+B,CAAC,GAAG,EAAE,GAAG,GAAG,sBAAsB,CAQhF"}

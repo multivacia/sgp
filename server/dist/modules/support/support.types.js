@@ -1,5 +1,0 @@
-export const SUPPORT_TICKET_STATUS = ['OPEN', 'IN_PROGRESS', 'RESOLVED', 'CLOSED'];
-export const SUPPORT_TICKET_SEVERITY = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'];
-export const SUPPORT_NOTIFICATION_CHANNEL = ['EMAIL', 'WHATSAPP'];
-export const SUPPORT_NOTIFICATION_STATUS = ['PENDING', 'SENT', 'FAILED', 'SKIPPED'];
-//# sourceMappingURL=support.types.js.map

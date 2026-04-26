@@ -1,1 +1,0 @@
-{"version":3,"file":"health.middleware.d.ts","sourceRoot":"","sources":["../../../src/modules/health/health.middleware.ts"],"names":[],"mappings":"AAAA,OAAO,KAAK,EAAE,YAAY,EAAE,OAAO,EAAE,QAAQ,EAAE,MAAM,SAAS,CAAA;AAM9D,+FAA+F;AAC/F,eAAO,MAAM,yBAAyB,sBAAsB,CAAA;AAE5D;;;;;GAKG;AACH,wBAAgB,wBAAwB,KAC9B,KAAK,OAAO,EAAE,KAAK,QAAQ,EAAE,MAAM,YAAY,KAAG,IAAI,CAwB/D"}

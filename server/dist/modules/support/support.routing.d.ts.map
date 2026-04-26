@@ -1,1 +1,0 @@
-{"version":3,"file":"support.routing.d.ts","sourceRoot":"","sources":["../../../src/modules/support/support.routing.ts"],"names":[],"mappings":"AAAA,OAAO,KAAK,EAAE,GAAG,EAAE,MAAM,qBAAqB,CAAA;AAC9C,OAAO,KAAK,EAAE,WAAW,EAAE,qBAAqB,EAAE,MAAM,oBAAoB,CAAA;AAiC5E,wBAAgB,kBAAkB,CAChC,GAAG,EAAE,GAAG,EACR,KAAK,EAAE;IAAE,QAAQ,EAAE,qBAAqB,CAAC;IAAC,QAAQ,EAAE,MAAM,CAAA;CAAE,GAC3D,WAAW,CAQb"}

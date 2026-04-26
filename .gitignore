@@ -1,3 +1,4 @@
+# Env
 .env
 .env.*
 !.env.example
@@ -7,7 +8,23 @@ server/.env
 server/.env.*
 !server/.env.example
 
+# Local editor
 .vscode
 
+# Dependencies
+node_modules
+server/node_modules
+
+# Builds
+dist
+server/dist
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Packages
 *.zip
-.zip
+*.tar.gz
