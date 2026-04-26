@@ -32,44 +32,63 @@ async function main() {
     }
 
     const adminHash = await hashPassword('12345678')
-    await client.query(
+    const adminEmail = 'admin@multivacia.com'
+    const existingAdmin = await client.query<{ id: string }>(
       `
-      INSERT INTO app_users (
-        id,
-        email,
-        password_hash,
-        is_active,
-        role_id,
-        collaborator_id,
-        avatar_url,
-        password_changed_at,
-        must_change_password,
-        deleted_at
-      )
-      VALUES (
-        '11111111-aaaa-4444-bbbb-999999999999'::uuid,
-        $1,
-        $2,
-        true,
-        $3::uuid,
-        NULL,
-        NULL,
-        now(),
-        true,
-        NULL
-      )
-      ON CONFLICT (email) DO UPDATE SET
-        password_hash = EXCLUDED.password_hash,
-        is_active = EXCLUDED.is_active,
-        role_id = EXCLUDED.role_id,
-        collaborator_id = EXCLUDED.collaborator_id,
-        avatar_url = EXCLUDED.avatar_url,
-        password_changed_at = COALESCE(app_users.password_changed_at, EXCLUDED.password_changed_at),
-        must_change_password = EXCLUDED.must_change_password,
-        deleted_at = EXCLUDED.deleted_at
+      SELECT id
+      FROM app_users
+      WHERE lower(btrim(email::text)) = lower(btrim($1::text))
+      LIMIT 1
       `,
-      ['admin@multivacia.com', adminHash, adminRole.rows[0].id],
+      [adminEmail],
     )
+    if (existingAdmin.rows[0]) {
+      await client.query(
+        `
+        UPDATE app_users
+        SET
+          password_hash = $2,
+          role_id = $3::uuid,
+          is_active = true,
+          collaborator_id = NULL,
+          must_change_password = true,
+          deleted_at = NULL,
+          updated_at = now()
+        WHERE id = $1::uuid
+        `,
+        [existingAdmin.rows[0].id, adminHash, adminRole.rows[0].id],
+      )
+    } else {
+      await client.query(
+        `
+        INSERT INTO app_users (
+          id,
+          email,
+          password_hash,
+          is_active,
+          role_id,
+          collaborator_id,
+          avatar_url,
+          password_changed_at,
+          must_change_password,
+          deleted_at
+        )
+        VALUES (
+          '11111111-aaaa-4444-bbbb-999999999999'::uuid,
+          $1,
+          $2,
+          true,
+          $3::uuid,
+          NULL,
+          NULL,
+          now(),
+          true,
+          NULL
+        )
+        `,
+        [adminEmail, adminHash, adminRole.rows[0].id],
+      )
+    }
 
     const demoPassword = process.env.SEED_DEMO_PASSWORD ?? 'SenhaSegura123'
     const hash = await hashPassword(demoPassword)
