@@ -8,6 +8,7 @@ import {
 } from 'react'
 import { SgpInlineBanner, SgpToast, type SgpToastVariant } from '../../components/ui/SgpToast'
 import type { SgpNormalizedError } from './sgpErrorContract'
+import { formatUserError } from './formatUserError'
 import { presentationPlan } from './sgpErrorContract'
 import { logSgpClientError, type SgpClientLogContext } from './sgpClientLog'
 
@@ -125,7 +126,7 @@ export function SgpErrorPresentationProvider({ children }: { children: ReactNode
     const tone = plan.modalTone ?? 'impeditivo'
     setBlockingModal({
       title: n.modalTitle,
-      message: n.userMessage,
+      message: formatUserError(n),
       tone,
     })
   }, [])
@@ -138,16 +139,16 @@ export function SgpErrorPresentationProvider({ children }: { children: ReactNode
         const tone = plan.modalTone ?? 'impeditivo'
         setBlockingModal({
           title: n.modalTitle,
-          message: n.userMessage,
+          message: formatUserError(n),
           tone,
         })
         return
       }
       if (plan.surface === 'banner') {
-        setGlobalBanner({ message: n.userMessage, variant: 'error' })
+        setGlobalBanner({ message: formatUserError(n), variant: 'error' })
         return
       }
-      setToast({ message: n.userMessage, variant: 'error' })
+      setToast({ message: formatUserError(n), variant: 'error' })
     },
     [],
   )

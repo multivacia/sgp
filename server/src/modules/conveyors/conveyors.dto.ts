@@ -37,11 +37,22 @@ export type ConveyorListItemApi = {
   totalSteps: number
 }
 
+export type ConveyorStructureStepAssigneeApi = {
+  type: 'COLLABORATOR' | 'TEAM'
+  collaboratorId: string | null
+  collaboratorName: string | null
+  teamId: string | null
+  teamName: string | null
+  isPrimary: boolean
+  orderIndex: number | null
+}
+
 export type ConveyorStructureStepApi = {
   id: string
   name: string
   orderIndex: number
   plannedMinutes: number | null
+  assignees: ConveyorStructureStepAssigneeApi[]
 }
 
 export type ConveyorStructureAreaApi = {

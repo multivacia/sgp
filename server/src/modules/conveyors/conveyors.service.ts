@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto'
 import type pg from 'pg'
 import { AppError } from '../../shared/errors/AppError.js'
 import { ErrorCodes } from '../../shared/errors/errorCodes.js'
+import { ErrorRefs } from '../../shared/errors/errorRefs.js'
 import { collaboratorExists } from '../operation-matrix/operation-matrix.repository.js'
 import { findTeamById } from '../teams/teams.repository.js'
 import type {
@@ -9,6 +10,7 @@ import type {
   ConveyorDetailApi,
   ConveyorListItemApi,
   ConveyorStructureApi,
+  ConveyorStructureStepAssigneeApi,
 } from './conveyors.dto.js'
 import {
   countActiveTimeEntriesByConveyor,
@@ -37,7 +39,9 @@ import type {
 } from './conveyors.schemas.js'
 import {
   insertConveyorNodeAssignee,
+  listConveyorNodeAssigneesForConveyorDetail,
   newAssignmentId,
+  type ConveyorNodeAssigneeDetailRow,
 } from './conveyorAssignments.repository.js'
 import { collaboratorActiveForOperations } from './conveyorAssignments.service.js'
 
@@ -231,8 +235,52 @@ export function buildConveyorStructureFromNodes(
               name: st.name,
               orderIndex: st.order_index,
               plannedMinutes: st.planned_minutes,
+              assignees: [],
             })),
         })),
+    })),
+  }
+}
+
+function mapAssigneeDetailRowToApi(
+  row: ConveyorNodeAssigneeDetailRow,
+): ConveyorStructureStepAssigneeApi {
+  return {
+    type: row.assignment_type,
+    collaboratorId: row.collaborator_id,
+    collaboratorName: row.collaborator_name,
+    teamId: row.team_id,
+    teamName: row.team_name,
+    isPrimary: row.is_primary,
+    orderIndex: row.order_index,
+  }
+}
+
+/** Estrutura de nós + alocações por etapa (uma leitura de assignees). */
+async function loadConveyorStructureWithAssignees(
+  pool: pg.Pool,
+  conveyorId: string,
+  nodes: ConveyorNodeFlatRow[],
+): Promise<ConveyorStructureApi> {
+  const structure = buildConveyorStructureFromNodes(nodes)
+  const rows = await listConveyorNodeAssigneesForConveyorDetail(pool, conveyorId)
+  const byNode = new Map<string, ConveyorStructureStepAssigneeApi[]>()
+  for (const row of rows) {
+    const api = mapAssigneeDetailRowToApi(row)
+    const list = byNode.get(row.conveyor_node_id) ?? []
+    list.push(api)
+    byNode.set(row.conveyor_node_id, list)
+  }
+  return {
+    options: structure.options.map((opt) => ({
+      ...opt,
+      areas: opt.areas.map((ar) => ({
+        ...ar,
+        steps: ar.steps.map((st) => ({
+          ...st,
+          assignees: byNode.get(st.id) ?? [],
+        })),
+      })),
     })),
   }
 }
@@ -244,7 +292,7 @@ export async function serviceGetConveyorById(
   const row = await findConveyorById(pool, id)
   if (!row) return null
   const nodes = await listConveyorNodesByConveyorId(pool, id)
-  const structure = buildConveyorStructureFromNodes(nodes)
+  const structure = await loadConveyorStructureWithAssignees(pool, id, nodes)
   return mapDetailRowToApi(row, structure)
 }
 
@@ -282,7 +330,7 @@ export async function servicePatchConveyorStatus(
   if (!updated) return null
 
   const nodes = await listConveyorNodesByConveyorId(pool, conveyorId)
-  const structure = buildConveyorStructureFromNodes(nodes)
+  const structure = await loadConveyorStructureWithAssignees(pool, conveyorId, nodes)
   return mapDetailRowToApi(updated, structure)
 }
 
@@ -456,6 +504,12 @@ export async function serviceCreateConveyor(
         'Colaborador (responsável) não encontrado.',
         422,
         ErrorCodes.VALIDATION_ERROR,
+        undefined,
+        {
+          errorRef: ErrorRefs.CONVEYOR_CREATE_FAILED,
+          category: 'BUSINESS',
+          severity: 'warning',
+        },
       )
     }
   }
@@ -468,6 +522,12 @@ export async function serviceCreateConveyor(
         'Colaborador de alocação inexistente, inativo ou indisponível.',
         422,
         ErrorCodes.VALIDATION_ERROR,
+        undefined,
+        {
+          errorRef: ErrorRefs.CONVEYOR_CREATE_FAILED,
+          category: 'BUSINESS',
+          severity: 'warning',
+        },
       )
     }
   }
@@ -478,6 +538,12 @@ export async function serviceCreateConveyor(
         'Time de alocação inexistente ou inativo.',
         422,
         ErrorCodes.VALIDATION_ERROR,
+        undefined,
+        {
+          errorRef: ErrorRefs.CONVEYOR_CREATE_FAILED,
+          category: 'BUSINESS',
+          severity: 'warning',
+        },
       )
     }
   }
@@ -625,7 +691,7 @@ export async function servicePatchConveyorDados(
   if (!updated) return null
 
   const nodes = await listConveyorNodesByConveyorId(pool, conveyorId)
-  const structure = buildConveyorStructureFromNodes(nodes)
+  const structure = await loadConveyorStructureWithAssignees(pool, conveyorId, nodes)
   return mapDetailRowToApi(updated, structure)
 }
 
@@ -722,6 +788,6 @@ export async function serviceReplaceConveyorStructure(
   const row = await findConveyorById(pool, conveyorId)
   if (!row) return null
   const nodes = await listConveyorNodesByConveyorId(pool, conveyorId)
-  const structure = buildConveyorStructureFromNodes(nodes)
+  const structure = await loadConveyorStructureWithAssignees(pool, conveyorId, nodes)
   return mapDetailRowToApi(row, structure)
 }

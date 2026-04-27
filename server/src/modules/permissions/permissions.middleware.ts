@@ -2,6 +2,7 @@ import type { NextFunction, Request, Response } from 'express'
 import type pg from 'pg'
 import { AppError } from '../../shared/errors/AppError.js'
 import { ErrorCodes } from '../../shared/errors/errorCodes.js'
+import { ErrorRefs } from '../../shared/errors/errorRefs.js'
 import { asyncRoute } from '../../shared/asyncRoute.js'
 import { findPermissionCodesForAppUser } from './permissions.repository.js'
 
@@ -33,6 +34,12 @@ export function requirePermission(permissionCode: string) {
           'Sessão não autenticada. Faça login.',
           401,
           ErrorCodes.UNAUTHORIZED,
+          undefined,
+          {
+            errorRef: ErrorRefs.RBAC_UNAUTHENTICATED,
+            category: 'AUTH',
+            severity: 'warning',
+          },
         ),
       )
       return
@@ -44,6 +51,12 @@ export function requirePermission(permissionCode: string) {
           'Sem permissão para esta operação.',
           403,
           ErrorCodes.FORBIDDEN,
+          undefined,
+          {
+            errorRef: ErrorRefs.RBAC_PERMISSION_DENIED,
+            category: 'RBAC',
+            severity: 'warning',
+          },
         ),
       )
       return
@@ -66,6 +79,12 @@ export function requireAnyPermission(...permissionCodes: string[]) {
           'Sessão não autenticada. Faça login.',
           401,
           ErrorCodes.UNAUTHORIZED,
+          undefined,
+          {
+            errorRef: ErrorRefs.RBAC_UNAUTHENTICATED,
+            category: 'AUTH',
+            severity: 'warning',
+          },
         ),
       )
       return
@@ -77,6 +96,12 @@ export function requireAnyPermission(...permissionCodes: string[]) {
           'Sem permissão para esta operação.',
           403,
           ErrorCodes.FORBIDDEN,
+          undefined,
+          {
+            errorRef: ErrorRefs.RBAC_PERMISSION_DENIED,
+            category: 'RBAC',
+            severity: 'warning',
+          },
         ),
       )
       return

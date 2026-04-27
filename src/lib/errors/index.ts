@@ -3,6 +3,8 @@ export {
   logSgpClientError,
 } from './sgpClientLog'
 export { reportClientError } from './reportClientError'
+export { ErrorRefs, type ErrorRef } from './errorCatalog'
+export { formatUserError } from './formatUserError'
 export {
   type SgpErrorCause,
   type SgpErrorSeverity,

@@ -1,0 +1,8 @@
+export const ErrorRefs = {
+  API_CLIENT_REQUEST_FAILED: 'SGP-API-CLIENT-001',
+  RBAC_PERMISSION_DENIED: 'SGP-RBAC-CHECK-001',
+  CONVEYOR_CREATE_FAILED: 'SGP-CONVEYOR-CREATE-001',
+  CONVEYOR_DETAIL_NOT_FOUND: 'SGP-CONVEYOR-DETAIL-001',
+} as const
+
+export type ErrorRef = (typeof ErrorRefs)[keyof typeof ErrorRefs]

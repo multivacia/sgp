@@ -13,7 +13,7 @@ import type {
 import type { Collaborator } from '../../domain/collaborators/collaborator.types'
 import type { Team } from '../../domain/teams/team.types'
 import type { MatrixNodeApi, MatrixNodeTreeApi } from '../../domain/operation-matrix/operation-matrix.types'
-import { isBlockingSeverity, reportClientError } from '../../lib/errors'
+import { formatUserError, isBlockingSeverity, reportClientError } from '../../lib/errors'
 import { useSgpErrorSurface } from '../../lib/errors/SgpErrorPresentation'
 import { useRegisterTransientContext } from '../../lib/shell/transient-context'
 import {
@@ -105,21 +105,25 @@ function detailToDados(d: ConveyorDetail): CreateConveyorDados {
   }
 }
 
-function structureToManualRoots(structure: ConveyorStructure): ManualOptionDraft[] {
+/**
+ * Detalhe da API: ids de opção/área/etapa vêm do servidor e alinham com `conveyor_node_assignees`.
+ * Chaves de etapa = id do nó STEP — obrigatório para hidratar `manualAloc`.
+ */
+function structureToManualRootsFromApiDetail(structure: ConveyorStructure): ManualOptionDraft[] {
   return [...structure.options]
     .sort((a, b) => a.orderIndex - b.orderIndex)
     .map((op) => ({
-      key: crypto.randomUUID(),
+      key: op.id,
       titulo: op.name,
       areas: [...op.areas]
         .sort((a, b) => a.orderIndex - b.orderIndex)
         .map((ar) => ({
-          key: crypto.randomUUID(),
+          key: ar.id,
           titulo: ar.name,
           steps: [...ar.steps]
             .sort((a, b) => a.orderIndex - b.orderIndex)
             .map((st) => ({
-              key: crypto.randomUUID(),
+              key: st.id,
               titulo: st.name,
               plannedMinutes: Math.max(0, Math.floor(Number(st.plannedMinutes ?? 0))),
             })),
@@ -127,7 +131,77 @@ function structureToManualRoots(structure: ConveyorStructure): ManualOptionDraft
     }))
 }
 
-function serializeRoots(roots: ManualOptionDraft[]): string {
+function detailStructureToManualAloc(
+  structure: ConveyorStructure,
+): Record<string, NovaEsteiraAlocacaoLinha[]> {
+  const out: Record<string, NovaEsteiraAlocacaoLinha[]> = {}
+  for (const op of structure.options) {
+    for (const ar of op.areas) {
+      for (const st of ar.steps) {
+        const assignees = st.assignees ?? []
+        if (assignees.length === 0) continue
+        out[st.id] = assignees.map((a) => {
+          if (a.type === 'TEAM') {
+            return {
+              type: 'TEAM' as const,
+              teamId: a.teamId ?? undefined,
+              isPrimary: false,
+            }
+          }
+          return {
+            type: 'COLLABORATOR' as const,
+            collaboratorId: a.collaboratorId ?? undefined,
+            isPrimary: a.isPrimary,
+          }
+        })
+      }
+    }
+  }
+  return out
+}
+
+/** Linha de alocação normalizada para comparação estável (modo edit). */
+type NormalizedAllocSnapshotRow = {
+  type: 'COLLABORATOR' | 'TEAM'
+  collaboratorId: string | null
+  teamId: string | null
+  isPrimary: boolean
+}
+
+function normalizeAllocRowsForSnapshot(
+  rows: NovaEsteiraAlocacaoLinha[],
+): NormalizedAllocSnapshotRow[] {
+  const out: NormalizedAllocSnapshotRow[] = rows.map((r) => {
+    const type = r.type === 'TEAM' ? 'TEAM' : 'COLLABORATOR'
+    return {
+      type,
+      collaboratorId:
+        type === 'COLLABORATOR' ? (r.collaboratorId?.trim() || null) : null,
+      teamId: type === 'TEAM' ? (r.teamId?.trim() || null) : null,
+      isPrimary: Boolean(r.isPrimary),
+    }
+  })
+  out.sort((a, b) => {
+    if (a.type !== b.type) return a.type.localeCompare(b.type)
+    const ac = a.collaboratorId ?? ''
+    const bc = b.collaboratorId ?? ''
+    if (ac !== bc) return ac.localeCompare(bc)
+    const at = a.teamId ?? ''
+    const bt = b.teamId ?? ''
+    if (at !== bt) return at.localeCompare(bt)
+    return Number(a.isPrimary) - Number(b.isPrimary)
+  })
+  return out
+}
+
+/**
+ * Snapshot persistível no modo edit: estrutura (títulos/minutos) + alocações por etapa,
+ * com ordem de linhas de alocação normalizada (evita falso negativo só por permuta no array).
+ */
+function buildPersistableStructureSnapshot(
+  roots: ManualOptionDraft[],
+  manualAloc: Record<string, NovaEsteiraAlocacaoLinha[]>,
+): string {
   return JSON.stringify(
     roots.map((o) => ({
       t: o.titulo.trim(),
@@ -136,6 +210,7 @@ function serializeRoots(roots: ManualOptionDraft[]): string {
         s: ar.steps.map((st) => ({
           t: st.titulo.trim(),
           m: Math.max(0, Math.floor(st.plannedMinutes)),
+          alloc: normalizeAllocRowsForSnapshot(manualAloc[st.key] ?? []),
         })),
       })),
     })),
@@ -286,9 +361,11 @@ export function ConveyorCreateEditPage({ mode }: { mode: Mode }) {
         setExtras(ex0)
         setBaselineExtras(ex0)
         setDetailId(detail.id)
-        const roots = structureToManualRoots(detail.structure)
+        const roots = structureToManualRootsFromApiDetail(detail.structure)
+        const initialAloc = detailStructureToManualAloc(detail.structure)
         setManualRoots(roots)
-        setBaselineStructureSig(serializeRoots(roots))
+        setManualAloc(initialAloc)
+        setBaselineStructureSig(buildPersistableStructureSnapshot(roots, initialAloc))
       } catch (e) {
         const n = reportClientError(e, {
           module: 'esteiras',
@@ -297,7 +374,7 @@ export function ConveyorCreateEditPage({ mode }: { mode: Mode }) {
           entityId: id,
         })
         if (isBlockingSeverity(n.severity)) presentBlocking(n)
-        else setLoadError(n.userMessage)
+        else setLoadError(formatUserError(n))
       } finally {
         if (!cancelled) setLoadingEdit(false)
       }
@@ -333,7 +410,7 @@ export function ConveyorCreateEditPage({ mode }: { mode: Mode }) {
         if (!cancelled) {
           const n = reportClientError(e, { module: 'esteiras', action: 'nova_esteira_load_matrizes', route: pathname })
           if (isBlockingSeverity(n.severity)) presentBlocking(n)
-          else setMatrizesError(n.userMessage)
+          else setMatrizesError(formatUserError(n))
         }
       } finally {
         if (!cancelled) setMatrizesLoading(false)
@@ -356,7 +433,7 @@ export function ConveyorCreateEditPage({ mode }: { mode: Mode }) {
         if (!cancelled) {
           const n = reportClientError(e, { module: 'esteiras', action: 'nova_esteira_load_times', route: pathname })
           if (isBlockingSeverity(n.severity)) presentBlocking(n)
-          else setTeamError(n.userMessage)
+          else setTeamError(formatUserError(n))
         }
       } finally {
         if (!cancelled) setTeamLoading(false)
@@ -379,7 +456,7 @@ export function ConveyorCreateEditPage({ mode }: { mode: Mode }) {
         if (!cancelled) {
           const n = reportClientError(e, { module: 'esteiras', action: 'nova_esteira_load_colaboradores', route: pathname })
           if (isBlockingSeverity(n.severity)) presentBlocking(n)
-          else setColabError(n.userMessage)
+          else setColabError(formatUserError(n))
         }
       } finally {
         if (!cancelled) setColabLoading(false)
@@ -404,7 +481,7 @@ export function ConveyorCreateEditPage({ mode }: { mode: Mode }) {
         if (!cancelled) {
           const n = reportClientError(e, { module: 'esteiras', action: 'nova_esteira_prefetch_matrix_trees', route: pathname })
           if (isBlockingSeverity(n.severity)) presentBlocking(n)
-          else setTreesError(n.userMessage)
+          else setTreesError(formatUserError(n))
         }
       } finally {
         if (!cancelled) setTreesLoading(false)
@@ -535,7 +612,11 @@ export function ConveyorCreateEditPage({ mode }: { mode: Mode }) {
     )
   }, [baselineDados, baselineExtras, dados, extras])
   const hasDadosChanges = Object.keys(dirtyDadosPatch).length > 0
-  const hasStructureChanges = mode === 'edit' ? serializeRoots(manualRoots) !== baselineStructureSig : true
+  const hasStructureChanges =
+    mode === 'edit'
+      ? buildPersistableStructureSnapshot(manualRoots, manualAloc) !==
+        baselineStructureSig
+      : true
   const pendenciasRevisao = useMemo(() => {
     const basePendencias = pendenciasParaResumo(dados.nome, manualRoots, manualAloc)
     if (!hasDadosChanges && !hasStructureChanges) {
@@ -594,7 +675,7 @@ export function ConveyorCreateEditPage({ mode }: { mode: Mode }) {
         entityId: detailId ?? undefined,
       })
       if (isBlockingSeverity(n.severity)) presentBlocking(n)
-      else setSubmitError(n.userMessage)
+      else setSubmitError(formatUserError(n))
     } finally {
       setSubmitting(false)
     }

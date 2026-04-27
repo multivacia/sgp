@@ -30,6 +30,9 @@ export function logSgpClientError(
     severity: err.severity,
     cause: err.cause,
     code: err.code,
+    errorRef: err.errorRef,
+    correlationId: err.correlationId,
+    category: err.category,
     status: err.status,
     ...ctx.extra,
   }

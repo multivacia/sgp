@@ -33,6 +33,10 @@ export type SgpNormalizedError = {
   /** HTTP quando aplicável */
   status?: number
   code?: string
+  errorRef?: string
+  correlationId?: string
+  category?: string
+  backendSeverity?: string
   /** Detalhe técnico bruto (não mostrar ao utilizador; útil em logs) */
   details?: unknown
   /** Erro original quando existir */
@@ -168,6 +172,10 @@ export function normalizeClientError(err: unknown): SgpNormalizedError {
       modalTitle: modalTitleFor(severity, cause),
       status: err.status,
       code: err.code,
+      errorRef: err.errorRef,
+      correlationId: err.correlationId,
+      category: err.category,
+      backendSeverity: err.severity,
       details: err.details,
       original: err,
     }

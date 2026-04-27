@@ -9,17 +9,33 @@ export const SESSION_REVOKED_USER_MESSAGE =
 export class ApiError extends Error {
   readonly status: number
   readonly code?: string
+  readonly errorRef?: string
+  readonly correlationId?: string
+  readonly category?: string
+  readonly severity?: string
   readonly details?: unknown
 
   constructor(
     message: string,
     status: number,
-    options?: { code?: string; details?: unknown; cause?: unknown },
+    options?: {
+      code?: string
+      errorRef?: string
+      correlationId?: string
+      category?: string
+      severity?: string
+      details?: unknown
+      cause?: unknown
+    },
   ) {
     super(message, options?.cause ? { cause: options.cause } : undefined)
     this.name = 'ApiError'
     this.status = status
     this.code = options?.code
+    this.errorRef = options?.errorRef
+    this.correlationId = options?.correlationId
+    this.category = options?.category
+    this.severity = options?.severity
     this.details = options?.details
   }
 }
@@ -49,6 +65,10 @@ type ErrorEnvelope = {
   error?: {
     code?: string
     message?: string
+    errorRef?: string
+    correlationId?: string
+    category?: string
+    severity?: string
     details?: unknown
   }
 }
@@ -75,7 +95,15 @@ function messageFromValidationDetails(details: unknown): string | undefined {
 export function parseErrorEnvelope(
   json: unknown,
   status: number,
-): { message: string; code?: string; details?: unknown } {
+): {
+  message: string
+  code?: string
+  errorRef?: string
+  correlationId?: string
+  category?: string
+  severity?: string
+  details?: unknown
+} {
   if (!json || typeof json !== 'object') {
     return { message: friendlyMessageForHttpStatus(status) }
   }
@@ -92,6 +120,11 @@ export function parseErrorEnvelope(
   return {
     message: msg,
     code: typeof e.error?.code === 'string' ? e.error.code : undefined,
+    errorRef: typeof e.error?.errorRef === 'string' ? e.error.errorRef : undefined,
+    correlationId:
+      typeof e.error?.correlationId === 'string' ? e.error.correlationId : undefined,
+    category: typeof e.error?.category === 'string' ? e.error.category : undefined,
+    severity: typeof e.error?.severity === 'string' ? e.error.severity : undefined,
     details: e.error?.details,
   }
 }

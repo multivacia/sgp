@@ -93,11 +93,23 @@ export type ConveyorCreatedSummary = {
   createdAt: string
 }
 
+export type ConveyorStructureStepAssignee = {
+  type: 'COLLABORATOR' | 'TEAM'
+  collaboratorId: string | null
+  collaboratorName: string | null
+  teamId: string | null
+  teamName: string | null
+  isPrimary: boolean
+  orderIndex: number | null
+}
+
 export type ConveyorStructureStep = {
   id: string
   name: string
   orderIndex: number
   plannedMinutes: number | null
+  /** Presente no GET detalhe — alocações por etapa. */
+  assignees?: ConveyorStructureStepAssignee[]
 }
 
 export type ConveyorStructureArea = {

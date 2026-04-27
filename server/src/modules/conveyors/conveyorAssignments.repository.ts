@@ -183,6 +183,55 @@ export async function findAssigneeIdForStepAndCollaborator(
   return r.rows[0]?.id ?? null
 }
 
+/** Uma linha por alocação — para enriquecer GET detalhe (agrupar por `conveyor_node_id`). */
+export type ConveyorNodeAssigneeDetailRow = {
+  conveyor_node_id: string
+  assignment_type: 'COLLABORATOR' | 'TEAM'
+  collaborator_id: string | null
+  collaborator_name: string | null
+  team_id: string | null
+  team_name: string | null
+  is_primary: boolean
+  order_index: number
+  created_at: Date
+}
+
+/**
+ * Todas as alocações ativas dos STEP desta esteira — uma query (join colaboradores/times).
+ * Ordem: nó, order_index, created_at.
+ */
+export async function listConveyorNodeAssigneesForConveyorDetail(
+  pool: pg.Pool,
+  conveyorId: string,
+): Promise<ConveyorNodeAssigneeDetailRow[]> {
+  const r = await pool.query<ConveyorNodeAssigneeDetailRow>(
+    `SELECT
+       cna.conveyor_node_id::text AS conveyor_node_id,
+       cna.assignment_type,
+       cna.collaborator_id::text,
+       c.full_name AS collaborator_name,
+       cna.team_id::text,
+       t.name AS team_name,
+       cna.is_primary,
+       cna.order_index,
+       cna.created_at
+     FROM conveyor_node_assignees cna
+     INNER JOIN conveyor_nodes cn
+       ON cn.id = cna.conveyor_node_id
+      AND cn.deleted_at IS NULL
+      AND cn.node_type = 'STEP'
+     LEFT JOIN collaborators c
+       ON c.id = cna.collaborator_id AND c.deleted_at IS NULL
+     LEFT JOIN teams t
+       ON t.id = cna.team_id AND t.deleted_at IS NULL
+     WHERE cna.conveyor_id = $1::uuid
+       AND cna.deleted_at IS NULL
+     ORDER BY cna.conveyor_node_id, cna.order_index ASC, cna.created_at ASC`,
+    [conveyorId],
+  )
+  return r.rows
+}
+
 export async function listConveyorNodeAssigneesByStep(
   pool: pg.Pool,
   conveyorId: string,

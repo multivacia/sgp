@@ -4,6 +4,7 @@ import {
   parseErrorEnvelope,
   SESSION_REVOKED_CREDENTIALS_CHANGED_CODE,
 } from './apiErrors'
+import { ErrorRefs } from '../errors/errorCatalog'
 import { SGP_NETWORK_ERROR_API_DIAGNOSTIC_MESSAGE } from '../errors/sgpErrorContract'
 import { getApiBaseUrl } from './env'
 
@@ -42,7 +43,13 @@ export async function requestJson<T>(
     const msg = isNetwork
       ? SGP_NETWORK_ERROR_API_DIAGNOSTIC_MESSAGE
       : 'Falha de ligação inesperada. Tente novamente ou recarregue a página.'
-    throw new ApiError(msg, 503, { code: 'NETWORK_ERROR', cause: e })
+    throw new ApiError(msg, 503, {
+      code: 'NETWORK_ERROR',
+      errorRef: ErrorRefs.API_CLIENT_REQUEST_FAILED,
+      category: 'API',
+      severity: 'critical',
+      cause: e,
+    })
   }
 
   if (res.ok && res.status === 204) {
@@ -64,7 +71,8 @@ export async function requestJson<T>(
   }
 
   if (!res.ok) {
-    const { message, code, details } = parseErrorEnvelope(parsed, res.status)
+    const { message, code, errorRef, correlationId, category, severity, details } =
+      parseErrorEnvelope(parsed, res.status)
     if (
       res.status === 401 &&
       code === SESSION_REVOKED_CREDENTIALS_CHANGED_CODE
@@ -73,7 +81,14 @@ export async function requestJson<T>(
         new CustomEvent('sgp:session-revoked', { detail: { message } }),
       )
     }
-    throw new ApiError(message, res.status, { code, details })
+    throw new ApiError(message, res.status, {
+      code,
+      errorRef,
+      correlationId,
+      category,
+      severity,
+      details,
+    })
   }
 
   if (parsed && typeof parsed === 'object' && 'data' in parsed) {
@@ -111,7 +126,13 @@ export async function requestMultipartJson<T>(
     const msg = isNetwork
       ? SGP_NETWORK_ERROR_API_DIAGNOSTIC_MESSAGE
       : 'Falha de ligação inesperada. Tente novamente ou recarregue a página.'
-    throw new ApiError(msg, 503, { code: 'NETWORK_ERROR', cause: e })
+    throw new ApiError(msg, 503, {
+      code: 'NETWORK_ERROR',
+      errorRef: ErrorRefs.API_CLIENT_REQUEST_FAILED,
+      category: 'API',
+      severity: 'critical',
+      cause: e,
+    })
   }
 
   const text = await res.text()
@@ -129,7 +150,8 @@ export async function requestMultipartJson<T>(
   }
 
   if (!res.ok) {
-    const { message, code, details } = parseErrorEnvelope(parsed, res.status)
+    const { message, code, errorRef, correlationId, category, severity, details } =
+      parseErrorEnvelope(parsed, res.status)
     if (
       res.status === 401 &&
       code === SESSION_REVOKED_CREDENTIALS_CHANGED_CODE
@@ -138,7 +160,14 @@ export async function requestMultipartJson<T>(
         new CustomEvent('sgp:session-revoked', { detail: { message } }),
       )
     }
-    throw new ApiError(message, res.status, { code, details })
+    throw new ApiError(message, res.status, {
+      code,
+      errorRef,
+      correlationId,
+      category,
+      severity,
+      details,
+    })
   }
 
   if (parsed && typeof parsed === 'object' && 'data' in parsed) {
