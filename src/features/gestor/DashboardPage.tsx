@@ -31,6 +31,9 @@ import {
   fetchExecutiveDashboard,
   fetchOperationalDashboard,
 } from '../../services/dashboard/dashboardApiService'
+import { getConveyorHealthSummary } from '../../services/conveyors/conveyorsApiService'
+import { buildArgosDashboardSummary } from '../../domain/conveyors/conveyorHealthDashboard'
+import type { ConveyorHealthSummaryItem } from '../../domain/conveyors/conveyorHealth.types'
 import {
   dashboardHints,
   executiveDashboardCopy,
@@ -182,6 +185,9 @@ export function DashboardPage() {
     '' | '7d' | '15d' | '30d' | 'month'
   >(() => readStoredOperationalRealizedPreset())
   const operationalLoadedRef = useRef(false)
+  const [argosSummaryLoading, setArgosSummaryLoading] = useState(true)
+  const [argosSummaryError, setArgosSummaryError] = useState<string | null>(null)
+  const [argosSummaryItems, setArgosSummaryItems] = useState<ConveyorHealthSummaryItem[]>([])
 
   const load = useCallback(async () => {
     const isInitialLoad = !operationalLoadedRef.current
@@ -236,6 +242,28 @@ export function DashboardPage() {
     void load()
   }, [load])
 
+  useEffect(() => {
+    let cancelled = false
+    setArgosSummaryLoading(true)
+    setArgosSummaryError(null)
+    ;(async () => {
+      try {
+        const res = await getConveyorHealthSummary({ limit: 500 })
+        if (cancelled) return
+        setArgosSummaryItems(res.data)
+      } catch {
+        if (cancelled) return
+        setArgosSummaryItems([])
+        setArgosSummaryError('Não foi possível carregar o resumo ARGOS agora.')
+      } finally {
+        if (!cancelled) setArgosSummaryLoading(false)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
   const persistViewMode = useCallback((mode: DashboardViewMode) => {
     setViewMode(mode)
     try {
@@ -286,6 +314,11 @@ export function DashboardPage() {
         value: c.realizedMinutes,
       }))
   }, [operational])
+
+  const argosDashboardSummary = useMemo(
+    () => buildArgosDashboardSummary(argosSummaryItems),
+    [argosSummaryItems],
+  )
 
   return (
     <PageCanvas>
@@ -461,6 +494,87 @@ export function DashboardPage() {
                   />
                 </div>
               )}
+          </section>
+
+          <section className="sgp-panel sgp-panel-hover">
+            <h2 className="font-heading text-sm font-bold uppercase tracking-[0.12em] text-slate-200">
+              ARGOS — Saúde das Esteiras
+            </h2>
+            {argosSummaryLoading ? (
+              <p className="mt-3 text-sm text-slate-500">Carregando resumo ARGOS…</p>
+            ) : argosSummaryError ? (
+              <p className="mt-3 text-sm text-slate-500">{argosSummaryError}</p>
+            ) : argosDashboardSummary.withAnalysis === 0 ? (
+              <p className="mt-3 text-sm text-slate-500">
+                Ainda não há análises ARGOS salvas.
+              </p>
+            ) : (
+              <>
+                <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+                  <KpiCard
+                    label="Esteiras analisadas"
+                    value={argosDashboardSummary.withAnalysis}
+                  />
+                  <KpiCard
+                    label="Alto/crítico risco"
+                    value={argosDashboardSummary.riskHighOrCritical}
+                  />
+                  <KpiCard
+                    label="Em atenção"
+                    value={argosDashboardSummary.healthAttention}
+                  />
+                  <KpiCard
+                    label="Score médio"
+                    value={
+                      argosDashboardSummary.averageScore == null
+                        ? '—'
+                        : argosDashboardSummary.averageScore
+                    }
+                  />
+                  <KpiCard
+                    label="Última análise"
+                    value={
+                      argosDashboardSummary.latestAnalysisAt
+                        ? new Date(argosDashboardSummary.latestAnalysisAt).toLocaleString('pt-BR')
+                        : '—'
+                    }
+                  />
+                </div>
+
+                <div className="mt-5">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">
+                    Esteiras que pedem atenção
+                  </p>
+                  <ul className="mt-2 space-y-2 text-sm">
+                    {argosDashboardSummary.topRiskItems.length === 0 ? (
+                      <li className="text-slate-500">Sem itens de atenção no momento.</li>
+                    ) : (
+                      argosDashboardSummary.topRiskItems.map((item) => (
+                        <li
+                          key={item.analysisId}
+                          className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-white/[0.06] bg-sgp-app-panel-deep/80 px-3 py-2"
+                        >
+                          <div className="text-xs text-slate-300">
+                            <span className="font-semibold text-slate-200">
+                              {item.conveyorId}
+                            </span>{' '}
+                            · saúde {item.healthStatus ?? '—'} · risco {item.riskLevel ?? '—'} ·
+                            score {item.score ?? '—'} ·{' '}
+                            {new Date(item.createdAt).toLocaleString('pt-BR')}
+                          </div>
+                          <a
+                            href={`/app/esteiras/${encodeURIComponent(item.conveyorId)}`}
+                            className="text-xs font-medium text-sgp-blue-bright hover:underline"
+                          >
+                            Consultar
+                          </a>
+                        </li>
+                      ))
+                    )}
+                  </ul>
+                </div>
+              </>
+            )}
           </section>
 
           <section className="sgp-panel sgp-panel-hover">

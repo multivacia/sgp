@@ -52,6 +52,11 @@ import {
   type OperationalBucket,
 } from '../lib/backlog/operationalBuckets'
 import { mapConveyorListItemToBacklogRow } from '../lib/backlog/mapConveyorListToBacklog'
+import type { ArgosHealthBacklogFilter } from '../domain/conveyors/conveyorHealth.types'
+import {
+  buildArgosHealthSummaryOverview,
+  filterRowsByArgosHealth,
+} from '../domain/conveyors/conveyorHealthBacklog'
 import {
   BACKLOG_MOCK_ROWS,
   computeBacklogKpis,
@@ -61,7 +66,10 @@ import {
   getEsteirasExtraSnapshot,
   subscribeEsteiras,
 } from '../mocks/runtime-esteiras'
-import { listConveyors } from '../services/conveyors/conveyorsApiService'
+import {
+  getConveyorHealthSummary,
+  listConveyors,
+} from '../services/conveyors/conveyorsApiService'
 
 function matchesSearch(row: BacklogRow, q: string) {
   if (!q.trim()) return true
@@ -227,6 +235,7 @@ export function BacklogPage() {
   const [apiRows, setApiRows] = useState<BacklogRow[]>([])
   const [apiLoading, setApiLoading] = useState(false)
   const [apiError, setApiError] = useState<string | null>(null)
+  const [argosFilter, setArgosFilter] = useState<ArgosHealthBacklogFilter>('all')
 
   const loadConveyors = useCallback(async () => {
     if (!useLiveApi) return
@@ -235,7 +244,35 @@ export function BacklogPage() {
     try {
       // Fonte global do painel: sem recortes de filtros de tabela.
       const items = await listConveyors()
-      setApiRows(items.map(mapConveyorListItemToBacklogRow))
+      const summaryByConveyorId = new Map<
+        string,
+        Awaited<ReturnType<typeof getConveyorHealthSummary>>['data'][number]
+      >()
+      try {
+        const summaryResp = await getConveyorHealthSummary()
+        for (const s of summaryResp.data) summaryByConveyorId.set(s.conveyorId, s)
+      } catch {
+        // Falha do resumo ARGOS não bloqueia a listagem do backlog.
+      }
+      setApiRows(
+        items.map((item) => {
+          const row = mapConveyorListItemToBacklogRow(item)
+          const s = summaryByConveyorId.get(item.id)
+          if (!s) return row
+          return {
+            ...row,
+            argosSummary: {
+              analysisId: s.analysisId,
+              createdAt: s.createdAt,
+              healthStatus: s.healthStatus,
+              score: s.score,
+              riskLevel: s.riskLevel,
+              routeUsed: s.routeUsed,
+              llmUsed: s.llmUsed,
+            },
+          }
+        }),
+      )
     } catch (e) {
       setApiRows([])
       const n = reportClientError(e, {
@@ -319,7 +356,7 @@ export function BacklogPage() {
     [searchParams, setSearchParams],
   )
 
-  const filtered = useMemo(() => {
+  const baseFiltered = useMemo(() => {
     return allRows.filter((row) => {
       if (!matchesSearch(row, qDraft)) return false
       if (priorityFilter && row.priority !== priorityFilter) return false
@@ -337,6 +374,16 @@ export function BacklogPage() {
     statusFilter,
     daysWindow,
   ])
+
+  const argosOverview = useMemo(
+    () => buildArgosHealthSummaryOverview(baseFiltered),
+    [baseFiltered],
+  )
+
+  const filtered = useMemo(
+    () => filterRowsByArgosHealth(baseFiltered, argosFilter),
+    [argosFilter, baseFiltered],
+  )
 
   const kpis = useMemo(() => computeBacklogKpis(allRows), [allRows])
 
@@ -493,6 +540,115 @@ export function BacklogPage() {
       ) : null}
 
       <section ref={listSectionRef} className="space-y-4">
+        <div className="flex flex-wrap items-center gap-2 text-xs">
+          <button
+            type="button"
+            onClick={() => setArgosFilter('all')}
+            className={`rounded-full border px-3 py-1.5 ${
+              argosFilter === 'all'
+                ? 'border-sgp-blue-bright/45 bg-sgp-blue-bright/15 text-slate-100'
+                : 'border-white/12 bg-white/[0.03] text-slate-300'
+            }`}
+          >
+            ARGOS: Todas
+          </button>
+          <button
+            type="button"
+            onClick={() => setArgosFilter('with_analysis')}
+            className={`rounded-full border px-3 py-1.5 ${
+              argosFilter === 'with_analysis'
+                ? 'border-sgp-blue-bright/45 bg-sgp-blue-bright/15 text-slate-100'
+                : 'border-white/12 bg-white/[0.03] text-slate-300'
+            }`}
+          >
+            ARGOS: Com análise
+          </button>
+          <button
+            type="button"
+            onClick={() => setArgosFilter('without_analysis')}
+            className={`rounded-full border px-3 py-1.5 ${
+              argosFilter === 'without_analysis'
+                ? 'border-sgp-blue-bright/45 bg-sgp-blue-bright/15 text-slate-100'
+                : 'border-white/12 bg-white/[0.03] text-slate-300'
+            }`}
+          >
+            ARGOS: Sem análise
+          </button>
+          <button
+            type="button"
+            onClick={() => setArgosFilter('risk_low')}
+            className={`rounded-full border px-3 py-1.5 ${
+              argosFilter === 'risk_low'
+                ? 'border-sgp-blue-bright/45 bg-sgp-blue-bright/15 text-slate-100'
+                : 'border-white/12 bg-white/[0.03] text-slate-300'
+            }`}
+          >
+            ARGOS: Risco baixo
+          </button>
+          <button
+            type="button"
+            onClick={() => setArgosFilter('risk_medium')}
+            className={`rounded-full border px-3 py-1.5 ${
+              argosFilter === 'risk_medium'
+                ? 'border-sgp-blue-bright/45 bg-sgp-blue-bright/15 text-slate-100'
+                : 'border-white/12 bg-white/[0.03] text-slate-300'
+            }`}
+          >
+            ARGOS: Risco médio
+          </button>
+          <button
+            type="button"
+            onClick={() => setArgosFilter('risk_high_or_critical')}
+            className={`rounded-full border px-3 py-1.5 ${
+              argosFilter === 'risk_high_or_critical'
+                ? 'border-sgp-blue-bright/45 bg-sgp-blue-bright/15 text-slate-100'
+                : 'border-white/12 bg-white/[0.03] text-slate-300'
+            }`}
+          >
+            ARGOS: Alto/crítico
+          </button>
+          <button
+            type="button"
+            onClick={() => setArgosFilter('health_attention')}
+            className={`rounded-full border px-3 py-1.5 ${
+              argosFilter === 'health_attention'
+                ? 'border-sgp-blue-bright/45 bg-sgp-blue-bright/15 text-slate-100'
+                : 'border-white/12 bg-white/[0.03] text-slate-300'
+            }`}
+          >
+            ARGOS: Saúde atenção
+          </button>
+          <button
+            type="button"
+            onClick={() => setArgosFilter('health_critical')}
+            className={`rounded-full border px-3 py-1.5 ${
+              argosFilter === 'health_critical'
+                ? 'border-sgp-blue-bright/45 bg-sgp-blue-bright/15 text-slate-100'
+                : 'border-white/12 bg-white/[0.03] text-slate-300'
+            }`}
+          >
+            ARGOS: Saúde crítica
+          </button>
+        </div>
+
+        <div className="flex flex-wrap gap-2 text-xs text-slate-300">
+          <span className="rounded-lg border border-white/12 bg-white/[0.03] px-3 py-1.5">
+            Com análise ARGOS: {argosOverview.withAnalysis}
+          </span>
+          <span className="rounded-lg border border-white/12 bg-white/[0.03] px-3 py-1.5">
+            Sem análise ARGOS: {argosOverview.withoutAnalysis}
+          </span>
+          <span className="rounded-lg border border-amber-400/20 bg-amber-500/10 px-3 py-1.5">
+            Em atenção: {argosOverview.healthAttention}
+          </span>
+          <span className="rounded-lg border border-rose-400/20 bg-rose-500/10 px-3 py-1.5">
+            Alto/crítico risco: {argosOverview.riskHighOrCritical}
+          </span>
+          <span className="rounded-lg border border-emerald-400/20 bg-emerald-500/10 px-3 py-1.5">
+            Saudáveis/baixo risco: {argosOverview.riskLow}
+          </span>
+        </div>
+
         <BacklogFilters
           search={qDraft}
           onSearchChange={setQDraft}

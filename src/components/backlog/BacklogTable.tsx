@@ -54,6 +54,29 @@ function formatWhen(iso: string) {
   })
 }
 
+function ArgosCell({ row }: { row: BacklogRow }) {
+  const s = row.argosSummary
+  if (!s) return <span className="text-xs text-slate-500">Sem análise ARGOS</span>
+  return (
+    <div className="space-y-1">
+      <div className="flex flex-wrap gap-1.5">
+        <span className="sgp-chip border-sky-400/25 bg-sky-500/10 text-[10px] font-semibold text-sky-100">
+          {s.healthStatus ?? '—'}
+        </span>
+        <span className="sgp-chip border-white/12 bg-white/[0.04] text-[10px] text-slate-300">
+          score {s.score ?? '—'}
+        </span>
+        <span className="sgp-chip border-white/12 bg-white/[0.04] text-[10px] text-slate-300">
+          risco {s.riskLevel ?? '—'}
+        </span>
+      </div>
+      <p className="text-[10px] text-slate-500">
+        {new Date(s.createdAt).toLocaleString('pt-BR')}
+      </p>
+    </div>
+  )
+}
+
 type Props = {
   rows: BacklogRow[]
 }
@@ -66,7 +89,7 @@ export function BacklogTable({ rows }: Props) {
   return (
     <div className="sgp-table-shell">
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[880px] border-collapse text-left text-sm">
+        <table className="w-full min-w-[980px] border-collapse text-left text-sm">
           <thead>
             <tr
               className="border-b border-white/[0.08] text-white shadow-inner"
@@ -91,6 +114,9 @@ export function BacklogTable({ rows }: Props) {
               </th>
               <th className="whitespace-nowrap px-4 py-4 font-heading text-[11px] font-bold uppercase tracking-[0.12em]">
                 Situação
+              </th>
+              <th className="whitespace-nowrap px-4 py-4 font-heading text-[11px] font-bold uppercase tracking-[0.12em]">
+                ARGOS
               </th>
               <th className="whitespace-nowrap px-4 py-4 font-heading text-[11px] font-bold uppercase tracking-[0.12em]">
                 Entrada
@@ -149,6 +175,9 @@ export function BacklogTable({ rows }: Props) {
                   </td>
                   <td className="px-4 py-3.5 align-middle">
                     <OperationalBucketBadge bucket={getOperationalBucket(row)} />
+                  </td>
+                  <td className="px-4 py-3.5 align-middle">
+                    <ArgosCell row={row} />
                   </td>
                   <td className="whitespace-nowrap px-4 py-3.5 align-middle text-xs font-medium text-slate-500">
                     {formatWhen(row.enteredAt)}

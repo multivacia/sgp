@@ -8,8 +8,13 @@ import type {
   PatchConveyorStatusBody,
   PatchConveyorStructureBody,
 } from '../../domain/conveyors/conveyor.types'
+import type {
+  ConveyorHealthAnalysisHistoryItem,
+  ConveyorHealthSummaryItem,
+  ConveyorHealthAnalysisV1,
+} from '../../domain/conveyors/conveyorHealth.types'
 import type { ConveyorNodeWorkload } from '../../domain/conveyors/conveyorNodeWorkload.types'
-import { requestJson } from '../../lib/api/client'
+import { requestJson, requestJsonEnvelope } from '../../lib/api/client'
 
 const BASE = '/api/v1'
 
@@ -60,6 +65,63 @@ export async function getConveyorNodeWorkload(
   return requestJson<ConveyorNodeWorkload>(
     'GET',
     `${BASE}/conveyors/${encodeURIComponent(id)}/node-workload`,
+  )
+}
+
+/**
+ * Análise de saúde operacional (ARGOS via SGP) — POST /api/v1/conveyors/:id/health-analysis
+ */
+export async function postConveyorHealthAnalysis(id: string): Promise<{
+  data: ConveyorHealthAnalysisV1
+  meta: Record<string, unknown>
+}> {
+  return requestJsonEnvelope<ConveyorHealthAnalysisV1>(
+    'POST',
+    `${BASE}/conveyors/${encodeURIComponent(id)}/health-analysis`,
+    { body: { policy: 'balanced' } },
+  )
+}
+
+/**
+ * Última análise persistida (se existir) — GET /api/v1/conveyors/:id/health-analysis/latest
+ */
+export async function getLatestConveyorHealthAnalysis(id: string): Promise<{
+  data: ConveyorHealthAnalysisV1 | null
+  meta: Record<string, unknown>
+}> {
+  return requestJsonEnvelope<ConveyorHealthAnalysisV1 | null>(
+    'GET',
+    `${BASE}/conveyors/${encodeURIComponent(id)}/health-analysis/latest`,
+  )
+}
+
+/**
+ * Histórico de análises persistidas — GET /api/v1/conveyors/:id/health-analysis/history
+ */
+export async function getConveyorHealthAnalysisHistory(
+  id: string,
+  options?: { limit?: number },
+): Promise<{
+  data: ConveyorHealthAnalysisHistoryItem[]
+  meta: Record<string, unknown>
+}> {
+  const limit = Math.min(Math.max(1, Math.floor(options?.limit ?? 10)), 50)
+  return requestJsonEnvelope<ConveyorHealthAnalysisHistoryItem[]>(
+    'GET',
+    `${BASE}/conveyors/${encodeURIComponent(id)}/health-analysis/history?limit=${limit}`,
+  )
+}
+
+/**
+ * Resumo executivo ARGOS (última análise por esteira) — GET /api/v1/conveyors/health-analysis/summary
+ */
+export async function getConveyorHealthSummary(
+  options?: { limit?: number },
+): Promise<{ data: ConveyorHealthSummaryItem[]; meta: Record<string, unknown> }> {
+  const limit = Math.min(Math.max(1, Math.floor(options?.limit ?? 100)), 500)
+  return requestJsonEnvelope<ConveyorHealthSummaryItem[]>(
+    'GET',
+    `${BASE}/conveyors/health-analysis/summary?limit=${limit}`,
   )
 }
 

@@ -77,6 +77,27 @@ export type Env = {
   /** Tamanho máximo do ficheiro em `POST .../conveyors/document-draft`. */
   documentDraftMaxFileBytes: number
   /**
+   * Base URL do serviço ARGOS (ex.: `https://argos.example.com`) — usada com
+   * `argosConveyorHealthAnalyzePath` para análise de saúde de esteira.
+   * Diferente de `argosIngestUrl` (URL completa do multipart de documentos).
+   */
+  argosBaseUrl?: string
+  /**
+   * Path do `POST` de análise de saúde, relativo a `argosBaseUrl`.
+   * Padrão: `/api/v1/specialists/conveyor-health/analyze`
+   */
+  argosConveyorHealthAnalyzePath: string
+  /**
+   * Timeout dedicado para análise de saúde. Se ausente, reutiliza o parsing de
+   * `ARGOS_HEALTH_TIMEOUT_MS` ou, em último caso, `argosIngestTimeoutMs`.
+   */
+  argosHealthTimeoutMs: number
+  /**
+   * Quando `false` (ex. `ARGOS_HEALTH_ENABLED=0`), o cliente de health recusa chamadas.
+   * `undefined` = não definido no ambiente — comportamento ligado por defeito.
+   */
+  argosHealthEnabled?: boolean
+  /**
    * Quando true, exige `ARGOS_INGEST_URL` — falha no arranque se o endpoint remoto
    * não estiver configurado (evita usar pipeline local ou stub sem decisão explícita).
    */
@@ -371,6 +392,38 @@ export function loadEnv(): Env {
     argosIngestTimeoutMs = n
   }
 
+  const argosBaseUrl = process.env.ARGOS_BASE_URL?.trim() || undefined
+
+  const DEFAULT_ARGOS_HEALTH_PATH = '/api/v1/specialists/conveyor-health/analyze'
+  const rawHealthPath = process.env.ARGOS_CONVEYOR_HEALTH_ANALYZE_PATH?.trim()
+  const argosConveyorHealthAnalyzePath =
+    rawHealthPath && rawHealthPath !== '' ? rawHealthPath : DEFAULT_ARGOS_HEALTH_PATH
+
+  let argosHealthTimeoutMs = argosIngestTimeoutMs
+  const rawHealthTimeout = process.env.ARGOS_HEALTH_TIMEOUT_MS?.trim()
+  if (rawHealthTimeout !== undefined && rawHealthTimeout !== '') {
+    const n = Number.parseInt(rawHealthTimeout, 10)
+    if (Number.isNaN(n) || n < 1000 || n > 3_600_000) {
+      throw new Error(
+        'ARGOS_HEALTH_TIMEOUT_MS deve ser um inteiro entre 1000 e 3600000 (ms).',
+      )
+    }
+    argosHealthTimeoutMs = n
+  }
+
+  let argosHealthEnabled: boolean | undefined
+  const rawHealthEn = process.env.ARGOS_HEALTH_ENABLED?.trim()
+  if (rawHealthEn !== undefined && rawHealthEn !== '') {
+    const l = rawHealthEn.toLowerCase()
+    if (['1', 'true', 'yes', 'on'].includes(l)) argosHealthEnabled = true
+    else if (['0', 'false', 'no', 'off'].includes(l)) argosHealthEnabled = false
+    else {
+      throw new Error(
+        'ARGOS_HEALTH_ENABLED deve ser um de: 1, 0, true, false, yes, no, on, off.',
+      )
+    }
+  }
+
   let documentDraftMaxFileBytes = 15 * 1024 * 1024
   const rawMax = process.env.DOCUMENT_DRAFT_MAX_FILE_BYTES?.trim()
   if (rawMax !== undefined && rawMax !== '') {
@@ -433,6 +486,10 @@ export function loadEnv(): Env {
     argosCallerEnvironment,
     argosPolicyMode,
     argosIngestTimeoutMs,
+    argosBaseUrl,
+    argosConveyorHealthAnalyzePath,
+    argosHealthTimeoutMs,
+    argosHealthEnabled,
     documentDraftMaxFileBytes,
     argosRemoteRequired,
     argosUseMinimalStub,

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { requestJson } from './client'
+import { requestJson, requestJsonEnvelope } from './client'
 
 describe('requestJson', () => {
   const originalFetch = globalThis.fetch
@@ -51,5 +51,36 @@ describe('requestJson', () => {
         ? raw.get('Content-Type')
         : (raw as Record<string, string>)['Content-Type']
     expect(ct).toBe('application/json')
+  })
+
+  it('requestJsonEnvelope devolve data e meta do envelope', async () => {
+    vi.stubEnv('VITE_API_BASE_URL', '')
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      text: async () =>
+        JSON.stringify({
+          data: { ok: true },
+          meta: {
+            requestId: 'req-1',
+            correlationId: 'corr-1',
+            routeUsed: 'deterministic',
+            llmUsed: false,
+          },
+        }),
+    })
+    globalThis.fetch = fetchMock as unknown as typeof fetch
+
+    const r = await requestJsonEnvelope<{ ok: boolean }>(
+      'POST',
+      '/api/v1/conveyors/x/health-analysis',
+      { body: { policy: 'balanced' } },
+    )
+
+    expect(r.data.ok).toBe(true)
+    expect(r.meta.requestId).toBe('req-1')
+    expect(r.meta.correlationId).toBe('corr-1')
+    expect(r.meta.routeUsed).toBe('deterministic')
+    expect(r.meta.llmUsed).toBe(false)
   })
 })

@@ -60,6 +60,7 @@ import {
 } from './ActivityHistoricoDrawer'
 import { GestorAtividadeMenu } from './GestorAtividadeMenu'
 import { ConveyorNodeWorkloadPanel } from './ConveyorNodeWorkloadPanel'
+import { ConveyorHealthAnalysisCard } from './ConveyorHealthAnalysisCard'
 
 function statusEsteiraLabel(s: EsteiraStatusGeral) {
   const map: Record<EsteiraStatusGeral, string> = {
@@ -766,6 +767,8 @@ function EsteiraDetalheBasicoReal({ id }: { id: string | undefined }) {
         loading={nodeWorkloadLoading}
         error={nodeWorkloadError}
       />
+
+      <ConveyorHealthAnalysisCard conveyorId={detail.id} />
 
       <section className="mt-8 rounded-2xl border border-white/[0.08] bg-white/[0.02] p-6">
         <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">

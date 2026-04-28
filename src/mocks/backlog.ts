@@ -56,6 +56,16 @@ export type BacklogRow = {
   estimatedDeadline?: string | null
   /** Texto auxiliar para busca (ex.: cliente da API). */
   clientName?: string
+  /** Última leitura executiva ARGOS (opcional; não bloqueia listagem). */
+  argosSummary?: {
+    analysisId: string
+    createdAt: string
+    healthStatus?: string
+    score?: number
+    riskLevel?: string
+    routeUsed?: string
+    llmUsed?: boolean
+  }
 }
 
 function countActivities(esteiraId: string): number {
