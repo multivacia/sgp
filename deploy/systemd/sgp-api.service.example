@@ -1,0 +1,15 @@
+[Unit]
+Description=SGP API service
+After=network.target
+
+[Service]
+Type=simple
+User=ec2-user
+WorkingDirectory=/opt/sgp/current/server
+EnvironmentFile=/opt/sgp/shared/server.env
+ExecStart=/usr/bin/node /opt/sgp/current/server/dist/server.js
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,107 @@
+name: Deploy SGP to EC2
+
+on:
+  workflow_dispatch:
+    inputs:
+      migrate_on_deploy:
+        description: "Run DB migrations on deploy (1=yes, 0=no)"
+        required: false
+        default: "0"
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      EC2_HOST: ${{ secrets.EC2_HOST }}
+      EC2_USER: ${{ secrets.EC2_USER }}
+      EC2_APP_DIR: ${{ secrets.EC2_APP_DIR }}
+      DEPLOY_ENV: ${{ secrets.DEPLOY_ENV }}
+      MIGRATE_ON_DEPLOY: ${{ github.event.inputs.migrate_on_deploy || '0' }}
+      RELEASE_ID: ${{ github.run_id }}-${{ github.sha }}
+    steps:
+      - name: Validate required secrets
+        run: |
+          set -euo pipefail
+          for key in EC2_HOST EC2_USER EC2_APP_DIR; do
+            if [ -z "${!key:-}" ]; then
+              echo "Missing required secret: ${key}"
+              exit 1
+            fi
+          done
+          if [ -z "${{ secrets.EC2_SSH_KEY }}" ]; then
+            echo "Missing required secret: EC2_SSH_KEY"
+            exit 1
+          fi
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            server/package-lock.json
+
+      - name: Install frontend deps
+        run: npm ci
+
+      - name: Install backend deps
+        run: npm ci --prefix server
+
+      - name: Build backend
+        run: npm run server:build
+
+      - name: Build frontend
+        run: npm run build
+
+      - name: Create release package
+        run: |
+          set -euo pipefail
+          rm -rf release
+          mkdir -p release/server
+          cp -R dist release/frontend-dist
+          cp -R server/dist release/server/dist
+          cp -R server/migrations release/server/migrations
+          cp server/package.json release/server/package.json
+          cp server/package-lock.json release/server/package-lock.json
+          cp scripts/deploy/ec2-remote-deploy.sh release/ec2-remote-deploy.sh
+          tar -czf sgp-release.tgz -C release .
+
+      - name: Setup SSH key
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H "$EC2_HOST" >> ~/.ssh/known_hosts
+
+      - name: Upload release to EC2
+        run: |
+          set -euo pipefail
+          scp sgp-release.tgz "${EC2_USER}@${EC2_HOST}:/tmp/sgp-release-${RELEASE_ID}.tgz"
+
+      - name: Deploy release on EC2
+        run: |
+          set -euo pipefail
+          ssh "${EC2_USER}@${EC2_HOST}" \
+            "export EC2_APP_DIR='${EC2_APP_DIR}' RELEASE_ID='${RELEASE_ID}' MIGRATE_ON_DEPLOY='${MIGRATE_ON_DEPLOY}' DEPLOY_ENV='${DEPLOY_ENV}'; bash -s" <<'EOF'
+          set -euo pipefail
+          RELEASES_DIR="${EC2_APP_DIR}/releases"
+          RELEASE_DIR="${RELEASES_DIR}/${RELEASE_ID}"
+          TARBALL="/tmp/sgp-release-${RELEASE_ID}.tgz"
+          mkdir -p "${RELEASES_DIR}" "${EC2_APP_DIR}/shared"
+          rm -rf "${RELEASE_DIR}"
+          mkdir -p "${RELEASE_DIR}"
+          tar -xzf "${TARBALL}" -C "${RELEASE_DIR}"
+          chmod +x "${RELEASE_DIR}/ec2-remote-deploy.sh"
+          "${RELEASE_DIR}/ec2-remote-deploy.sh" "${EC2_APP_DIR}" "${RELEASE_DIR}"
+          rm -f "${TARBALL}"
+          EOF
