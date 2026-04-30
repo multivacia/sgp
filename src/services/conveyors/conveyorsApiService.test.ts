@@ -3,6 +3,7 @@ import { ApiError } from '../../lib/api/apiErrors'
 import type { CreateConveyorInput } from '../../domain/conveyors/conveyor.types'
 import {
   createConveyor,
+  getConveyorOperationalEvents,
   getConveyorHealthAnalysisHistory,
   getConveyorHealthSummary,
   getLatestConveyorHealthAnalysis,
@@ -335,5 +336,37 @@ describe('getConveyorHealthSummary', () => {
     const r = await getConveyorHealthSummary()
     expect(r.data[0]?.conveyorId).toBe('cv-1')
     expect(r.meta.count).toBe(1)
+  })
+})
+
+describe('getConveyorOperationalEvents', () => {
+  const originalFetch = globalThis.fetch
+
+  afterEach(() => {
+    globalThis.fetch = originalFetch
+    vi.unstubAllEnvs()
+  })
+
+  it('monta URL correta com limit', async () => {
+    vi.stubEnv('VITE_API_BASE_URL', '')
+    const id = 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11'
+    globalThis.fetch = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const u = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url
+      expect(u).toContain(`/api/v1/conveyors/${id}/operational-events?limit=20`)
+      expect(init?.method).toBe('GET')
+      return {
+        ok: true,
+        status: 200,
+        text: async () =>
+          JSON.stringify({
+            data: [],
+            meta: { total: 0, limit: 20 },
+          }),
+      } as Response
+    }) as unknown as typeof fetch
+
+    const out = await getConveyorOperationalEvents(id, { limit: 20 })
+    expect(Array.isArray(out.data)).toBe(true)
+    expect(out.meta.limit).toBe(20)
   })
 })

@@ -14,6 +14,7 @@ import type {
   ConveyorHealthAnalysisV1,
 } from '../../domain/conveyors/conveyorHealth.types'
 import type { ConveyorNodeWorkload } from '../../domain/conveyors/conveyorNodeWorkload.types'
+import type { ConveyorOperationalEvent } from '../../domain/conveyors/conveyorOperationalEvents.types'
 import { requestJson, requestJsonEnvelope } from '../../lib/api/client'
 
 const BASE = '/api/v1'
@@ -65,6 +66,20 @@ export async function getConveyorNodeWorkload(
   return requestJson<ConveyorNodeWorkload>(
     'GET',
     `${BASE}/conveyors/${encodeURIComponent(id)}/node-workload`,
+  )
+}
+
+/**
+ * Eventos operacionais do detalhe — GET /api/v1/conveyors/:id/operational-events
+ */
+export async function getConveyorOperationalEvents(
+  id: string,
+  options?: { limit?: number },
+): Promise<{ data: ConveyorOperationalEvent[]; meta: Record<string, unknown> }> {
+  const limit = Math.min(Math.max(1, Math.floor(options?.limit ?? 20)), 200)
+  return requestJsonEnvelope<ConveyorOperationalEvent[]>(
+    'GET',
+    `${BASE}/conveyors/${encodeURIComponent(id)}/operational-events?limit=${limit}`,
   )
 }
 

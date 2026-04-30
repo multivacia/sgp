@@ -16,6 +16,28 @@ export type CollaboratorFunctionRow = {
   created_at: Date
 }
 
+export type OperationalCapacitySettingsRow = {
+  id: number
+  default_daily_minutes: number
+  created_at: Date
+  updated_at: Date
+  updated_by: string | null
+}
+
+export type CollaboratorCapacityOverrideRow = {
+  id: string
+  collaborator_id: string
+  daily_minutes: number
+  effective_from: string | null
+  effective_to: string | null
+  is_active: boolean
+  created_at: Date
+  updated_at: Date
+  created_by: string | null
+  updated_by: string | null
+  deleted_at: Date | null
+}
+
 export async function listSectorsAdmin(pool: pg.Pool): Promise<SectorAdminRow[]> {
   const r = await pool.query<SectorAdminRow>(
     `SELECT id, name, is_active, created_at
@@ -211,4 +233,184 @@ export async function countCollaboratorsWithRole(
     [roleId],
   )
   return Number(r.rows[0]?.c ?? 0)
+}
+
+export async function getOperationalCapacitySettings(
+  pool: pg.Pool,
+): Promise<OperationalCapacitySettingsRow | null> {
+  const r = await pool.query<OperationalCapacitySettingsRow>(
+    `SELECT id, default_daily_minutes, created_at, updated_at, updated_by
+     FROM operational_capacity_settings
+     WHERE id = 1`,
+  )
+  return r.rows[0] ?? null
+}
+
+export async function upsertOperationalCapacitySettings(
+  pool: pg.Pool,
+  input: { defaultDailyMinutes: number; updatedBy?: string | null },
+): Promise<OperationalCapacitySettingsRow> {
+  const r = await pool.query<OperationalCapacitySettingsRow>(
+    `INSERT INTO operational_capacity_settings (
+       id, default_daily_minutes, updated_by
+     ) VALUES (
+       1, $1::int, $2::uuid
+     )
+     ON CONFLICT (id) DO UPDATE
+     SET default_daily_minutes = EXCLUDED.default_daily_minutes,
+         updated_by = EXCLUDED.updated_by,
+         updated_at = now()
+     RETURNING id, default_daily_minutes, created_at, updated_at, updated_by`,
+    [input.defaultDailyMinutes, input.updatedBy ?? null],
+  )
+  const row = r.rows[0]
+  if (!row) throw new Error('upsert operational_capacity_settings failed')
+  return row
+}
+
+export async function getActiveCollaboratorCapacityOverride(
+  pool: pg.Pool,
+  collaboratorId: string,
+  date?: string,
+): Promise<CollaboratorCapacityOverrideRow | null> {
+  const refDate = date ?? new Date().toISOString().slice(0, 10)
+  const r = await pool.query<CollaboratorCapacityOverrideRow>(
+    `SELECT id, collaborator_id, daily_minutes, effective_from, effective_to, is_active,
+            created_at, updated_at, created_by, updated_by, deleted_at
+     FROM collaborator_capacity_overrides
+     WHERE collaborator_id = $1::uuid
+       AND deleted_at IS NULL
+       AND is_active = true
+       AND (effective_from IS NULL OR effective_from <= $2::date)
+       AND (effective_to IS NULL OR effective_to >= $2::date)
+     ORDER BY
+       CASE WHEN effective_from IS NULL THEN 1 ELSE 0 END ASC,
+       effective_from DESC NULLS LAST,
+       updated_at DESC
+     LIMIT 1`,
+    [collaboratorId, refDate],
+  )
+  return r.rows[0] ?? null
+}
+
+export const getCollaboratorCapacityOverride = getActiveCollaboratorCapacityOverride
+
+export async function listCollaboratorCapacityOverrides(
+  pool: pg.Pool,
+  filters: { collaboratorId?: string; includeDeleted?: boolean } = {},
+): Promise<CollaboratorCapacityOverrideRow[]> {
+  const where: string[] = []
+  const vals: unknown[] = []
+  let n = 1
+  if (filters.collaboratorId) {
+    where.push(`collaborator_id = $${n}::uuid`)
+    vals.push(filters.collaboratorId)
+    n += 1
+  }
+  if (!filters.includeDeleted) {
+    where.push('deleted_at IS NULL')
+  }
+  const sql = `
+    SELECT id, collaborator_id, daily_minutes, effective_from, effective_to, is_active,
+           created_at, updated_at, created_by, updated_by, deleted_at
+    FROM collaborator_capacity_overrides
+    ${where.length ? `WHERE ${where.join(' AND ')}` : ''}
+    ORDER BY updated_at DESC
+  `
+  const r = await pool.query<CollaboratorCapacityOverrideRow>(sql, vals)
+  return r.rows
+}
+
+export async function upsertCollaboratorCapacityOverride(
+  pool: pg.Pool,
+  input: {
+    collaboratorId: string
+    dailyMinutes: number
+    effectiveFrom?: string | null
+    effectiveTo?: string | null
+    isActive?: boolean
+    actorUserId?: string | null
+  },
+): Promise<CollaboratorCapacityOverrideRow> {
+  const r = await pool.query<CollaboratorCapacityOverrideRow>(
+    `WITH current AS (
+       SELECT id
+       FROM collaborator_capacity_overrides
+       WHERE collaborator_id = $1::uuid
+         AND deleted_at IS NULL
+       ORDER BY updated_at DESC
+       LIMIT 1
+     ),
+     upserted AS (
+       INSERT INTO collaborator_capacity_overrides (
+         id, collaborator_id, daily_minutes, effective_from, effective_to,
+         is_active, created_by, updated_by
+       )
+       SELECT gen_random_uuid(), $1::uuid, $2::int, $3::date, $4::date, $5::boolean, $6::uuid, $6::uuid
+       WHERE NOT EXISTS (SELECT 1 FROM current)
+       RETURNING *
+     )
+     UPDATE collaborator_capacity_overrides cco
+     SET daily_minutes = $2::int,
+         effective_from = $3::date,
+         effective_to = $4::date,
+         is_active = $5::boolean,
+         updated_by = $6::uuid,
+         updated_at = now()
+     WHERE cco.id = COALESCE((SELECT id FROM current), (SELECT id FROM upserted))
+     RETURNING cco.id, cco.collaborator_id, cco.daily_minutes, cco.effective_from, cco.effective_to,
+               cco.is_active, cco.created_at, cco.updated_at, cco.created_by, cco.updated_by, cco.deleted_at`,
+    [
+      input.collaboratorId,
+      input.dailyMinutes,
+      input.effectiveFrom ?? null,
+      input.effectiveTo ?? null,
+      input.isActive ?? true,
+      input.actorUserId ?? null,
+    ],
+  )
+  const row = r.rows[0]
+  if (!row) throw new Error('upsert collaborator_capacity_overrides failed')
+  return row
+}
+
+export async function softDeleteCollaboratorCapacityOverride(
+  pool: pg.Pool,
+  id: string,
+  actorUserId?: string | null,
+): Promise<boolean> {
+  const r = await pool.query(
+    `UPDATE collaborator_capacity_overrides
+     SET deleted_at = now(),
+         updated_by = $2::uuid,
+         updated_at = now()
+     WHERE id = $1::uuid
+       AND deleted_at IS NULL`,
+    [id, actorUserId ?? null],
+  )
+  return (r.rowCount ?? 0) > 0
+}
+
+export async function resolveCollaboratorDailyCapacityMinutes(
+  pool: pg.Pool,
+  collaboratorId: string,
+  date?: string,
+): Promise<{
+  defaultDailyMinutes: number | null
+  overrideDailyMinutes: number | null
+  source: 'override' | 'default' | 'fallback'
+}> {
+  const [settings, override] = await Promise.all([
+    getOperationalCapacitySettings(pool),
+    getActiveCollaboratorCapacityOverride(pool, collaboratorId, date),
+  ])
+  const defaultDailyMinutes = settings?.default_daily_minutes ?? null
+  const overrideDailyMinutes = override?.daily_minutes ?? null
+  if (overrideDailyMinutes != null) {
+    return { defaultDailyMinutes, overrideDailyMinutes, source: 'override' }
+  }
+  if (defaultDailyMinutes != null) {
+    return { defaultDailyMinutes, overrideDailyMinutes, source: 'default' }
+  }
+  return { defaultDailyMinutes: null, overrideDailyMinutes: null, source: 'fallback' }
 }

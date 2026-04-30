@@ -44,6 +44,8 @@ import {
   type ConveyorNodeAssigneeDetailRow,
 } from './conveyorAssignments.repository.js'
 import { collaboratorActiveForOperations } from './conveyorAssignments.service.js'
+import { serviceGetConveyorPendingMinutes } from './conveyorNodeWorkload.service.js'
+import { detectAndRecordConveyorDelayTransition } from './operational-events/conveyor-delay-events.service.js'
 
 function emptyToNull(s: string | undefined): string | null {
   const t = (s ?? '').trim()
@@ -303,6 +305,7 @@ export async function servicePatchConveyorStatus(
 ): Promise<ConveyorDetailApi | null> {
   const row = await findConveyorById(pool, conveyorId)
   if (!row) return null
+  const beforePendingMinutes = (await serviceGetConveyorPendingMinutes(pool, conveyorId)) ?? 0
 
   if (row.operational_status === nextStatus) {
     throw new AppError(
@@ -328,6 +331,24 @@ export async function servicePatchConveyorStatus(
     mode,
   )
   if (!updated) return null
+  const afterPendingMinutes = (await serviceGetConveyorPendingMinutes(pool, conveyorId)) ?? 0
+  await detectAndRecordConveyorDelayTransition(pool, {
+    conveyorId,
+    before: {
+      operationalStatus: row.operational_status,
+      estimatedDeadline: row.estimated_deadline,
+      pendingMinutes: beforePendingMinutes,
+      now: new Date(),
+    },
+    after: {
+      operationalStatus: updated.operational_status,
+      estimatedDeadline: updated.estimated_deadline,
+      pendingMinutes: afterPendingMinutes,
+      now: new Date(),
+    },
+    source: 'USER_ACTION',
+    occurredAt: new Date(),
+  })
 
   const nodes = await listConveyorNodesByConveyorId(pool, conveyorId)
   const structure = await loadConveyorStructureWithAssignees(pool, conveyorId, nodes)
@@ -640,6 +661,7 @@ export async function servicePatchConveyorDados(
 ): Promise<ConveyorDetailApi | null> {
   const existing = await findConveyorById(pool, conveyorId)
   if (!existing) return null
+  const beforePendingMinutes = (await serviceGetConveyorPendingMinutes(pool, conveyorId)) ?? 0
 
   const patch: PatchConveyorDadosFields = {}
 
@@ -689,6 +711,24 @@ export async function servicePatchConveyorDados(
 
   const updated = await updateConveyorDados(pool, conveyorId, patch)
   if (!updated) return null
+  const afterPendingMinutes = (await serviceGetConveyorPendingMinutes(pool, conveyorId)) ?? 0
+  await detectAndRecordConveyorDelayTransition(pool, {
+    conveyorId,
+    before: {
+      operationalStatus: existing.operational_status,
+      estimatedDeadline: existing.estimated_deadline,
+      pendingMinutes: beforePendingMinutes,
+      now: new Date(),
+    },
+    after: {
+      operationalStatus: updated.operational_status,
+      estimatedDeadline: updated.estimated_deadline,
+      pendingMinutes: afterPendingMinutes,
+      now: new Date(),
+    },
+    source: 'USER_ACTION',
+    occurredAt: new Date(),
+  })
 
   const nodes = await listConveyorNodesByConveyorId(pool, conveyorId)
   const structure = await loadConveyorStructureWithAssignees(pool, conveyorId, nodes)

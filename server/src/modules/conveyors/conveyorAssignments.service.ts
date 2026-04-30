@@ -33,6 +33,7 @@ import {
   type InsertConveyorTimeEntryRow,
 } from './conveyorAssignments.repository.js'
 import { findTeamById } from '../teams/teams.repository.js'
+import { detectAndRecordConveyorStepCompleted } from './operational-events/conveyor-step-completion-events.service.js'
 
 function isPgUniqueViolation(err: unknown): boolean {
   return err instanceof DatabaseError && err.code === '23505'
@@ -361,6 +362,13 @@ export async function serviceCreateConveyorTimeEntry(
   if (!created) {
     throw new AppError('Apontamento não encontrado após criação.', 500, ErrorCodes.INTERNAL)
   }
+  await detectAndRecordConveyorStepCompleted(pool, {
+    // TODO: quando existir conclusão explícita de STEP, esta chamada passará a materializar o evento.
+    conveyorId: input.conveyorId,
+    stepNodeId: input.conveyorNodeId,
+    source: 'USER_ACTION',
+    occurredAt: created.entry_at,
+  })
   return timeEntryRowToCreated(created, null)
 }
 
@@ -490,6 +498,14 @@ export async function serviceCreateConveyorTimeEntryOnBehalf(
       ErrorCodes.INTERNAL,
     )
   }
+  await detectAndRecordConveyorStepCompleted(pool, {
+    // TODO: quando existir conclusão explícita de STEP, esta chamada passará a materializar o evento.
+    conveyorId: input.conveyorId,
+    stepNodeId: input.conveyorNodeId,
+    source: 'USER_ACTION',
+    occurredAt: created.entry_at,
+    createdBy: input.actorAppUserId,
+  })
   const actorEmail = await findAppUserEmailById(pool, input.actorAppUserId)
   return timeEntryRowToCreated(created, actorEmail)
 }

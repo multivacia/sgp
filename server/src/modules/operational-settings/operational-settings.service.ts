@@ -17,17 +17,43 @@ import {
   insertCollaboratorFunction,
   insertSector,
   listCollaboratorFunctions,
+  listCollaboratorCapacityOverrides,
   listSectorsAdmin,
+  resolveCollaboratorDailyCapacityMinutes,
   roleCodeExists,
   sectorNameExists,
+  softDeleteCollaboratorCapacityOverride,
+  upsertCollaboratorCapacityOverride,
+  upsertOperationalCapacitySettings,
+  getOperationalCapacitySettings,
   updateCollaboratorFunction,
   updateSector,
+  type CollaboratorCapacityOverrideRow,
   type CollaboratorFunctionRow,
+  type OperationalCapacitySettingsRow,
   type SectorAdminRow,
 } from './operational-settings.repository.js'
 
 function genOperationalRoleCode(): string {
   return `OPF_${randomBytes(4).toString('hex').toUpperCase()}`
+}
+
+const SAFE_CAPACITY_FALLBACK_MINUTES = 480
+const MIN_DAILY_CAPACITY_MINUTES = 1
+const MAX_DAILY_CAPACITY_MINUTES = 1440
+
+function assertExplicitCapacityValue(
+  value: number | null | undefined,
+  field: 'defaultDailyMinutes' | 'overrideDailyMinutes',
+): void {
+  if (value == null) return
+  if (!Number.isInteger(value) || value < MIN_DAILY_CAPACITY_MINUTES || value > MAX_DAILY_CAPACITY_MINUTES) {
+    throw new AppError(
+      `${field} deve ser um inteiro entre ${MIN_DAILY_CAPACITY_MINUTES} e ${MAX_DAILY_CAPACITY_MINUTES}.`,
+      422,
+      ErrorCodes.VALIDATION_ERROR,
+    )
+  }
 }
 
 export async function serviceListSectorsAdmin(pool: pg.Pool): Promise<SectorAdminRow[]> {
@@ -187,5 +213,105 @@ export async function serviceDeleteCollaboratorFunction(
       404,
       ErrorCodes.NOT_FOUND,
     )
+  }
+}
+
+export function resolveDailyCapacityMinutes(input: {
+  defaultDailyMinutes: number | null | undefined
+  overrideDailyMinutes: number | null | undefined
+}): number {
+  assertExplicitCapacityValue(input.defaultDailyMinutes, 'defaultDailyMinutes')
+  assertExplicitCapacityValue(input.overrideDailyMinutes, 'overrideDailyMinutes')
+
+  const resolved = input.overrideDailyMinutes ?? input.defaultDailyMinutes ?? SAFE_CAPACITY_FALLBACK_MINUTES
+  return Math.min(MAX_DAILY_CAPACITY_MINUTES, Math.max(MIN_DAILY_CAPACITY_MINUTES, resolved))
+}
+
+export async function serviceGetOperationalCapacitySettings(
+  pool: pg.Pool,
+): Promise<OperationalCapacitySettingsRow | null> {
+  return getOperationalCapacitySettings(pool)
+}
+
+export async function serviceUpsertOperationalCapacitySettings(
+  pool: pg.Pool,
+  defaultDailyMinutes: number,
+  actorUserId?: string | null,
+): Promise<OperationalCapacitySettingsRow> {
+  return upsertOperationalCapacitySettings(pool, {
+    defaultDailyMinutes,
+    updatedBy: actorUserId ?? null,
+  })
+}
+
+export async function serviceGetCollaboratorCapacityOverrides(
+  pool: pg.Pool,
+  collaboratorId: string,
+): Promise<CollaboratorCapacityOverrideRow[]> {
+  return listCollaboratorCapacityOverrides(pool, { collaboratorId })
+}
+
+export async function serviceUpsertCollaboratorCapacityOverride(
+  pool: pg.Pool,
+  input: {
+    collaboratorId: string
+    dailyMinutes: number
+    effectiveFrom?: string | null
+    effectiveTo?: string | null
+    isActive?: boolean
+    actorUserId?: string | null
+  },
+): Promise<CollaboratorCapacityOverrideRow> {
+  return upsertCollaboratorCapacityOverride(pool, input)
+}
+
+export async function serviceSoftDeleteCollaboratorCapacityOverride(
+  pool: pg.Pool,
+  collaboratorId: string,
+  actorUserId?: string | null,
+): Promise<void> {
+  const [latest] = await listCollaboratorCapacityOverrides(pool, { collaboratorId })
+  if (!latest) {
+    throw new AppError(
+      'Override de capacidade não encontrado para o colaborador.',
+      404,
+      ErrorCodes.NOT_FOUND,
+    )
+  }
+  const ok = await softDeleteCollaboratorCapacityOverride(pool, latest.id, actorUserId ?? null)
+  if (!ok) {
+    throw new AppError(
+      'Override de capacidade não encontrado para o colaborador.',
+      404,
+      ErrorCodes.NOT_FOUND,
+    )
+  }
+}
+
+export async function serviceResolveCollaboratorDailyCapacity(
+  pool: pg.Pool,
+  collaboratorId: string,
+  date?: string,
+): Promise<{
+  collaboratorId: string
+  date: string
+  defaultDailyMinutes: number | null
+  overrideDailyMinutes: number | null
+  resolvedDailyMinutes: number
+  source: 'override' | 'default' | 'fallback'
+}> {
+  const refDate = date ?? new Date().toISOString().slice(0, 10)
+  const resolved = await resolveCollaboratorDailyCapacityMinutes(
+    pool,
+    collaboratorId,
+    refDate,
+  )
+  return {
+    collaboratorId,
+    date: refDate,
+    defaultDailyMinutes: resolved.defaultDailyMinutes,
+    overrideDailyMinutes: resolved.overrideDailyMinutes,
+    resolvedDailyMinutes: resolveDailyCapacityMinutes(resolved),
+    source: resolved.source,
   }
 }

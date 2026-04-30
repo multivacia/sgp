@@ -15,6 +15,7 @@ import type {
   ConveyorStructureStep,
 } from '../../domain/conveyors/conveyor.types'
 import type { ConveyorNodeWorkload } from '../../domain/conveyors/conveyorNodeWorkload.types'
+import type { ConveyorOperationalEvent } from '../../domain/conveyors/conveyorOperationalEvents.types'
 import type { StepAnaliticoDetalhe } from '../../domain/esteiras/step-analitico.types'
 import { useAuth } from '../../lib/use-auth'
 import { getDataMode } from '../../lib/api/env'
@@ -25,8 +26,10 @@ import {
 } from '../../lib/errors'
 import { useSgpErrorSurface } from '../../lib/errors/SgpErrorPresentation'
 import { mapOperationalStatusToUi } from '../../lib/backlog/mapConveyorListToBacklog'
+import { formatConveyorOperationalEvent } from '../../domain/conveyors/formatConveyorOperationalEvent'
 import {
   getConveyorById,
+  getConveyorOperationalEvents,
   getConveyorNodeWorkload,
   patchConveyorStatus,
 } from '../../services/conveyors/conveyorsApiService'
@@ -242,6 +245,13 @@ function EsteiraDetalheBasicoReal({ id }: { id: string | undefined }) {
   )
   const [routeToast, setRouteToast] = useState<string | null>(null)
   const [showCreatedBanner, setShowCreatedBanner] = useState(false)
+  const [operationalEvents, setOperationalEvents] = useState<ConveyorOperationalEvent[]>(
+    [],
+  )
+  const [operationalEventsLoading, setOperationalEventsLoading] = useState(false)
+  const [operationalEventsError, setOperationalEventsError] = useState<string | null>(
+    null,
+  )
 
   useEffect(() => {
     const st = location.state as
@@ -381,6 +391,44 @@ function EsteiraDetalheBasicoReal({ id }: { id: string | undefined }) {
       cancelled = true
     }
   }, [detail])
+
+  useEffect(() => {
+    if (!detail?.id) {
+      setOperationalEvents([])
+      setOperationalEventsError(null)
+      setOperationalEventsLoading(false)
+      return
+    }
+    let cancelled = false
+    setOperationalEventsLoading(true)
+    setOperationalEventsError(null)
+    void getConveyorOperationalEvents(detail.id, { limit: 20 })
+      .then((r) => {
+        if (!cancelled) setOperationalEvents(r.data)
+      })
+      .catch((e) => {
+        if (!cancelled) {
+          setOperationalEvents([])
+          const n = reportClientError(e, {
+            module: 'esteiras',
+            action: 'detalhe_operational_events',
+            route: location.pathname,
+            entityId: detail.id,
+          })
+          if (isBlockingSeverity(n.severity)) {
+            presentBlocking(n)
+          } else {
+            setOperationalEventsError(n.userMessage)
+          }
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setOperationalEventsLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [detail?.id])
 
   useEffect(() => {
     if (!detail || stepAnaliticoLoading) return
@@ -769,6 +817,54 @@ function EsteiraDetalheBasicoReal({ id }: { id: string | undefined }) {
       />
 
       <ConveyorHealthAnalysisCard conveyorId={detail.id} />
+
+      <section className="mt-8 rounded-2xl border border-white/[0.08] bg-white/[0.02] p-6">
+        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">
+          Eventos operacionais
+        </p>
+        {operationalEventsLoading ? (
+          <p className="mt-4 text-sm text-slate-500">Carregando eventos…</p>
+        ) : null}
+        {operationalEventsError ? (
+          <p className="mt-4 text-sm text-rose-300/95" role="alert">
+            {operationalEventsError}
+          </p>
+        ) : null}
+        {!operationalEventsLoading && !operationalEventsError && operationalEvents.length === 0 ? (
+          <p className="mt-4 text-sm text-slate-500">
+            Nenhum evento operacional registrado ainda.
+          </p>
+        ) : null}
+        {!operationalEventsLoading && !operationalEventsError && operationalEvents.length > 0 ? (
+          <ul className="mt-4 space-y-2">
+            {operationalEvents.map((ev) => {
+              const display = formatConveyorOperationalEvent(ev)
+              const toneClass =
+                display.tone === 'warning'
+                  ? 'border-amber-400/30 bg-amber-500/[0.08]'
+                  : display.tone === 'success'
+                    ? 'border-emerald-400/30 bg-emerald-500/[0.08]'
+                    : 'border-white/[0.08] bg-white/[0.03]'
+              const stepHint = ev.nodeId ? `STEP ${ev.nodeId.slice(0, 8)}` : null
+              return (
+                <li key={ev.eventId} className={`rounded-lg border px-3 py-2 ${toneClass}`}>
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-sm font-semibold text-slate-100">{display.label}</p>
+                    <p className="text-xs text-slate-400">
+                      {new Date(ev.occurredAt).toLocaleString('pt-BR')}
+                    </p>
+                  </div>
+                  <p className="mt-1 text-xs text-slate-400">{display.description}</p>
+                  <p className="mt-1 text-[11px] text-slate-500">
+                    Fonte: {ev.source}
+                    {stepHint ? ` · ${stepHint}` : ''}
+                  </p>
+                </li>
+              )
+            })}
+          </ul>
+        ) : null}
+      </section>
 
       <section className="mt-8 rounded-2xl border border-white/[0.08] bg-white/[0.02] p-6">
         <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">

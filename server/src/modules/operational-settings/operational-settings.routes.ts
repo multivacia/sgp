@@ -3,10 +3,15 @@ import { asyncRoute } from '../../shared/asyncRoute.js'
 import { requireAuth } from '../auth/auth.middleware.js'
 import { requirePermission } from '../permissions/permissions.middleware.js'
 import {
+  deleteCollaboratorCapacity,
   deleteOperationalCollaboratorRole,
   deleteOperationalSector,
+  getCollaboratorCapacity,
+  getOperationalCapacitySettings,
   getOperationalCollaboratorRoles,
   getOperationalSectors,
+  putCollaboratorCapacity,
+  putOperationalCapacitySettings,
   patchOperationalCollaboratorRole,
   patchOperationalSector,
   postOperationalCollaboratorRole,
@@ -45,6 +50,23 @@ export function operationalSettingsRouter(): Router {
     '/admin/operational-settings/collaborator-roles/:id',
     ...ap(m),
     asyncRoute(deleteOperationalCollaboratorRole),
+  )
+  r.get('/admin/operational-settings/capacity', ...ap(m), asyncRoute(getOperationalCapacitySettings))
+  r.put('/admin/operational-settings/capacity', ...ap(m), asyncRoute(putOperationalCapacitySettings))
+  r.get(
+    '/admin/operational-settings/collaborators/:collaboratorId/capacity',
+    ...ap(m),
+    asyncRoute(getCollaboratorCapacity),
+  )
+  r.put(
+    '/admin/operational-settings/collaborators/:collaboratorId/capacity',
+    ...ap(m),
+    asyncRoute(putCollaboratorCapacity),
+  )
+  r.delete(
+    '/admin/operational-settings/collaborators/:collaboratorId/capacity',
+    ...ap(m),
+    asyncRoute(deleteCollaboratorCapacity),
   )
 
   return r

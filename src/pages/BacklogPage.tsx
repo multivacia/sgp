@@ -235,6 +235,9 @@ export function BacklogPage() {
   const [apiRows, setApiRows] = useState<BacklogRow[]>([])
   const [apiLoading, setApiLoading] = useState(false)
   const [apiError, setApiError] = useState<string | null>(null)
+  const [argosSummaryByConveyorId, setArgosSummaryByConveyorId] = useState<
+    Map<string, Awaited<ReturnType<typeof getConveyorHealthSummary>>['data'][number]>
+  >(new Map())
   const [argosFilter, setArgosFilter] = useState<ArgosHealthBacklogFilter>('all')
 
   const loadConveyors = useCallback(async () => {
@@ -244,34 +247,8 @@ export function BacklogPage() {
     try {
       // Fonte global do painel: sem recortes de filtros de tabela.
       const items = await listConveyors()
-      const summaryByConveyorId = new Map<
-        string,
-        Awaited<ReturnType<typeof getConveyorHealthSummary>>['data'][number]
-      >()
-      try {
-        const summaryResp = await getConveyorHealthSummary()
-        for (const s of summaryResp.data) summaryByConveyorId.set(s.conveyorId, s)
-      } catch {
-        // Falha do resumo ARGOS não bloqueia a listagem do backlog.
-      }
       setApiRows(
-        items.map((item) => {
-          const row = mapConveyorListItemToBacklogRow(item)
-          const s = summaryByConveyorId.get(item.id)
-          if (!s) return row
-          return {
-            ...row,
-            argosSummary: {
-              analysisId: s.analysisId,
-              createdAt: s.createdAt,
-              healthStatus: s.healthStatus,
-              score: s.score,
-              riskLevel: s.riskLevel,
-              routeUsed: s.routeUsed,
-              llmUsed: s.llmUsed,
-            },
-          }
-        }),
+        items.map((item) => mapConveyorListItemToBacklogRow(item)),
       )
     } catch (e) {
       setApiRows([])
@@ -290,9 +267,26 @@ export function BacklogPage() {
     }
   }, [useLiveApi])
 
+  const loadArgosSummary = useCallback(async () => {
+    if (!useLiveApi) return
+    try {
+      const summaryResp = await getConveyorHealthSummary({ limit: 500 })
+      setArgosSummaryByConveyorId(
+        new Map(summaryResp.data.map((s) => [s.conveyorId, s])),
+      )
+    } catch {
+      // Falha do resumo ARGOS não bloqueia a listagem do backlog.
+      setArgosSummaryByConveyorId(new Map())
+    }
+  }, [useLiveApi])
+
   useEffect(() => {
     void loadConveyors()
   }, [loadConveyors])
+
+  useEffect(() => {
+    void loadArgosSummary()
+  }, [loadArgosSummary])
 
   useEffect(() => {
     if (!useLiveApi) return
@@ -327,7 +321,25 @@ export function BacklogPage() {
     [extra],
   )
 
-  const allRows = useLiveApi ? apiRows : mockRows
+  const allRows = useMemo(() => {
+    if (!useLiveApi) return mockRows
+    return apiRows.map((row) => {
+      const s = argosSummaryByConveyorId.get(row.id)
+      if (!s) return row
+      return {
+        ...row,
+        argosSummary: {
+          analysisId: s.analysisId,
+          createdAt: s.createdAt,
+          healthStatus: s.healthStatus,
+          score: s.score,
+          riskLevel: s.riskLevel,
+          routeUsed: s.routeUsed,
+          llmUsed: s.llmUsed,
+        },
+      }
+    })
+  }, [useLiveApi, mockRows, apiRows, argosSummaryByConveyorId])
 
   const page = useMemo(() => parseBacklogPage(searchParams), [searchParams])
   const pageSize = useMemo(

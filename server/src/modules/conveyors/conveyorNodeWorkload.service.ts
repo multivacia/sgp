@@ -121,3 +121,12 @@ export async function serviceGetConveyorNodeWorkload(
     notes: NOTES,
   }
 }
+
+export async function serviceGetConveyorPendingMinutes(
+  pool: pg.Pool,
+  conveyorId: string,
+): Promise<number | null> {
+  const data = await serviceGetConveyorNodeWorkload(pool, conveyorId)
+  if (!data) return null
+  return data.steps.reduce((sum, step) => sum + Math.max(0, step.pendingMinutes), 0)
+}

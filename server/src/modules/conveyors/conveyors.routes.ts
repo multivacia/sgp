@@ -18,12 +18,14 @@ import {
 } from './conveyors.patch.controller.js'
 import { patchConveyorStatus } from './conveyors.status.controller.js'
 import { registerConveyorHealthRoutes } from './health/conveyor-health.routes.js'
+import { registerConveyorOperationalEventsRoutes } from './operational-events/conveyor-operational-events.routes.js'
 
 const auth = [requireAuth()]
 
 export function conveyorsRouter(env: Env): Router {
   const r = Router()
   registerConveyorHealthRoutes(r)
+  registerConveyorOperationalEventsRoutes(r)
   const uploadDraft = documentDraftMulter(env)
   r.get('/conveyors', ...auth, asyncRoute(getConveyors))
   r.patch(
