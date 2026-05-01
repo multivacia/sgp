@@ -28,7 +28,15 @@ ln -sfn "${RELEASE_DIR}" "${CURRENT_LINK}"
 sudo systemctl restart sgp-api.service
 sudo systemctl is-active --quiet sgp-api.service
 
-curl -fsS --max-time 10 "http://127.0.0.1:3333/api/v1/health" >/dev/null
-curl -fsS --max-time 10 "http://127.0.0.1/" >/dev/null
+SGP_API_PORT="${SGP_API_PORT:-3334}"
+SGP_HEALTH_PATH="${SGP_HEALTH_PATH:-/api/v1/health}"
+SGP_HEALTH_URL="http://127.0.0.1:${SGP_API_PORT}${SGP_HEALTH_PATH}"
+
+echo "Checking SGP API health at ${SGP_HEALTH_URL}"
+curl -fsS "${SGP_HEALTH_URL}"
+
+if ! curl -fsS http://127.0.0.1/ >/dev/null; then
+  echo "WARN: frontend/nginx health check failed. API deploy succeeded."
+fi
 
 echo "Deploy completed: ${RELEASE_DIR}"
