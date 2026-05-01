@@ -18,7 +18,6 @@ import type { ConveyorNodeWorkload } from '../../domain/conveyors/conveyorNodeWo
 import type { ConveyorOperationalEvent } from '../../domain/conveyors/conveyorOperationalEvents.types'
 import type { StepAnaliticoDetalhe } from '../../domain/esteiras/step-analitico.types'
 import { useAuth } from '../../lib/use-auth'
-import { getDataMode } from '../../lib/api/env'
 import { ApiError } from '../../lib/api/apiErrors'
 import {
   isBlockingSeverity,
@@ -942,7 +941,7 @@ function EsteiraDetalheBasicoReal({ id }: { id: string | undefined }) {
   )
 }
 
-function EsteiraDetalheMockPage({ id }: { id: string | undefined }) {
+export function EsteiraDetalheMockPage({ id }: { id: string | undefined }) {
   const operacaoV = useSyncExternalStore(
     subscribeOperacaoApontamentos,
     getOperacaoApontamentosVersion,
@@ -1472,9 +1471,5 @@ function EsteiraDetalheMockPage({ id }: { id: string | undefined }) {
 
 export function EsteiraDetalhePage() {
   const { id } = useParams()
-  const mode = getDataMode()
-  if (mode === 'real' || mode === 'auto') {
-    return <EsteiraDetalheBasicoReal id={id} />
-  }
-  return <EsteiraDetalheMockPage id={id} />
+  return <EsteiraDetalheBasicoReal id={id} />
 }
