@@ -1,0 +1,19 @@
+[Unit]
+Description=ARGOS Gateway
+After=network.target
+
+[Service]
+Type=simple
+User=ec2-user
+WorkingDirectory=/opt/argos/current/apps/argos-gateway
+EnvironmentFile=/opt/argos/shared/argos-gateway.env
+# Use caminho absoluto para o artefato gerado pelo build (ajuste se o entrypoint não for dist/main.js).
+ExecStart=/usr/bin/node /opt/argos/current/apps/argos-gateway/dist/main.js
+Restart=always
+RestartSec=5
+
+# Se Node não estiver em /usr/bin/node (ex.: NVM no usuário da EC2), substitua por caminho absoluto ao binário, por exemplo:
+# ExecStart=/home/ec2-user/.nvm/versions/node/v22.14.0/bin/node /opt/argos/current/apps/argos-gateway/dist/main.js
+
+[Install]
+WantedBy=multi-user.target
