@@ -2,6 +2,8 @@
 
 Este documento define o fluxo de deploy para demo/sprint sem alterar regra de negocio.
 
+Operação na instância (diretórios oficiais, portas 3333/3334/8080, Nginx, validação e troubleshooting de frontend): **[deploy-sgp-ec2.md](deploy-sgp-ec2.md)**.
+
 ## O que foi adicionado
 
 - Workflow GitHub Actions: `.github/workflows/deploy-ec2.yml`
@@ -26,7 +28,7 @@ Este documento define o fluxo de deploy para demo/sprint sem alterar regra de ne
 ## Envs obrigatorias do backend (`shared/server.env`)
 
 - `NODE_ENV=production`
-- `PORT=3333`
+- `PORT=3334` (SGP API; **3333** na mesma EC2 costuma ser **SGM API** — ver [deploy-sgp-ec2.md](deploy-sgp-ec2.md))
 - `DATABASE_URL` **ou** `PGHOST`/`PGPORT`/`PGDATABASE`/`PGUSER`/`PGPASSWORD`
 - `JWT_SECRET`
 - `AUTH_COOKIE_NAME`
@@ -71,12 +73,7 @@ Se Node vier de NVM, usar caminho absoluto do binario (ex.: `/home/ec2-user/.nvm
 
 ## Config nginx (alvo)
 
-Base em `deploy/nginx/sgp.conf.example`:
-
-- Frontend servido de `/opt/sgp/current/frontend-dist`
-- `location ^~ /api/` para proxy em `http://127.0.0.1:3333`
-- `try_files` para SPA
-- `client_max_body_size 20m` (ajuste conforme necessidade)
+Template: `deploy/nginx/sgp.conf.example`. Detalhes e troubleshooting estão em **[deploy-sgp-ec2.md](deploy-sgp-ec2.md)** (proxy `/api/` → `http://127.0.0.1:3334/api/`, `try_files` SPA, `root` em `/opt/sgp/current/frontend-dist`).
 
 ## ARGOS gateway na mesma EC2
 
@@ -89,9 +86,11 @@ Recomendado:
 
 ## Validacao rapida pos-deploy
 
-- Backend SGP: `curl -fsS http://127.0.0.1:3333/api/v1/health`
+- Backend SGP: `curl -fsS http://127.0.0.1:3334/api/v1/health`
 - Frontend via nginx: `curl -fsS http://127.0.0.1/`
 - Service SGP: `sudo systemctl status sgp-api.service --no-pager`
+
+Lista mais completa (incluindo HTTPS público): [deploy-sgp-ec2.md](deploy-sgp-ec2.md).
 
 ## Observacoes de seguranca
 
