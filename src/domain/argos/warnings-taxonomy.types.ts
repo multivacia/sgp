@@ -24,6 +24,11 @@ export type ArgosIssueCode =
   | 'ambiguous_segment'
   | 'conflicting_facts'
   | 'review_recommended'
+  | 'redaction.personal_data_removed'
+  | 'redaction.financial_data_removed'
+  | 'matching.review_similar_required'
+  | 'matching.create_new_requires_human_review'
+  | 'matching.ignored_non_operational_item'
   /* Campo ausente */
   | 'missing_license_plate'
   | 'missing_client'

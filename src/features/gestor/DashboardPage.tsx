@@ -18,6 +18,13 @@ import { ExecutiveWindowSelector } from '../../components/dashboard/ExecutiveWin
 import { PageCanvas } from '../../components/ui/PageCanvas'
 import type { DashboardOperacionalSerieItem } from '../../lib/dashboard-operacional-series'
 import { OPERATIONAL_BUCKET_LABELS } from '../../lib/backlog/operationalBuckets'
+import {
+  buildCapacityStatus,
+  capacityLoadStatusLabel,
+  formatCapacityLabel,
+  formatPercent,
+} from '../../features/admin/operational-capacity/operationalCapacity.helpers'
+import { PERMISSION_OPERATIONAL_SETTINGS_MANAGE } from '../../lib/permissions/permissionCodes'
 import { formatHumanMinutes } from '../../lib/formatters'
 import { isBlockingSeverity, reportClientError } from '../../lib/errors'
 import { useSgpErrorSurface } from '../../lib/errors/SgpErrorPresentation'
@@ -31,6 +38,7 @@ import {
   fetchExecutiveDashboard,
   fetchOperationalDashboard,
 } from '../../services/dashboard/dashboardApiService'
+import { getCollaboratorCapacityResolved } from '../../services/operationalCapacity.service'
 import { getConveyorHealthSummary } from '../../services/conveyors/conveyorsApiService'
 import { buildArgosDashboardSummary } from '../../domain/conveyors/conveyorHealthDashboard'
 import type { ConveyorHealthSummaryItem } from '../../domain/conveyors/conveyorHealth.types'
@@ -164,6 +172,7 @@ export function DashboardPage() {
   const { presentBlocking } = useSgpErrorSurface()
   const { can } = useAuth()
   const showOpTab = can('dashboard.view_operational')
+  const canManageOperationalCapacity = can(PERMISSION_OPERATIONAL_SETTINGS_MANAGE)
   const showExecTab = can('dashboard.view_executive')
   const [tab, setTab] = useState<TabKey>(() =>
     !showOpTab && showExecTab ? 'executive' : 'operational',
@@ -188,6 +197,9 @@ export function DashboardPage() {
   const [argosSummaryLoading, setArgosSummaryLoading] = useState(true)
   const [argosSummaryError, setArgosSummaryError] = useState<string | null>(null)
   const [argosSummaryItems, setArgosSummaryItems] = useState<ConveyorHealthSummaryItem[]>([])
+  const [collabCapacityMinutes, setCollabCapacityMinutes] = useState<
+    Record<string, number | undefined>
+  >({})
 
   const load = useCallback(async () => {
     const isInitialLoad = !operationalLoadedRef.current
@@ -241,6 +253,33 @@ export function DashboardPage() {
   useEffect(() => {
     void load()
   }, [load])
+
+  useEffect(() => {
+    if (!operational || !canManageOperationalCapacity) {
+      setCollabCapacityMinutes({})
+      return
+    }
+    let cancelled = false
+    const ids = operational.collaboratorLoad.map((c) => c.collaboratorId)
+    if (ids.length === 0) {
+      setCollabCapacityMinutes({})
+      return
+    }
+    void Promise.allSettled(ids.map((id) => getCollaboratorCapacityResolved(id))).then(
+      (results) => {
+        if (cancelled) return
+        const next: Record<string, number | undefined> = {}
+        results.forEach((r, i) => {
+          const id = ids[i]!
+          if (r.status === 'fulfilled') next[id] = r.value.resolvedDailyMinutes
+        })
+        setCollabCapacityMinutes(next)
+      },
+    )
+    return () => {
+      cancelled = true
+    }
+  }, [operational, canManageOperationalCapacity])
 
   useEffect(() => {
     let cancelled = false
@@ -730,39 +769,87 @@ export function DashboardPage() {
               </div>
             </div>
             <div className="mt-6 overflow-x-auto">
-              <table className="w-full min-w-[640px] text-left text-sm">
+              <table className="w-full min-w-[880px] text-left text-sm">
                 <thead>
                   <tr className="border-b border-white/10 text-[10px] uppercase tracking-wider text-slate-500">
                     <th className="py-2 pr-3">Colaborador</th>
                     <th className="py-2 pr-3">Alocações</th>
                     <th className="py-2 pr-3">Principal / apoio</th>
                     <th className="py-2 pr-3">{operationalLabels.previstoEstrutural} (STEPS)</th>
+                    {canManageOperationalCapacity ? (
+                      <th className="py-2 pr-3">Previsto vs capacidade diária</th>
+                    ) : null}
                     <th className="py-2">{operationalLabels.minutosApontadosAcumulado}</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {operational.collaboratorLoad.map((r) => (
-                    <tr
-                      key={r.collaboratorId}
-                      className="border-b border-white/[0.04] text-slate-300"
-                    >
-                      <td className="py-2 pr-3 font-medium text-slate-200">
-                        {r.fullName ?? r.collaboratorId.slice(0, 8)}
-                      </td>
-                      <td className="py-2 pr-3 tabular-nums">{r.assignmentCount}</td>
-                      <td className="py-2 pr-3 tabular-nums">
-                        {r.primaryCount} / {r.supportCount}
-                      </td>
-                      <td className="py-2 pr-3 tabular-nums">
-                        {formatHumanMinutes(r.plannedMinutesOnSteps)}
-                      </td>
-                      <td className="py-2 tabular-nums text-emerald-200/90">
-                        {formatHumanMinutes(r.realizedMinutes)}
-                      </td>
-                    </tr>
-                  ))}
+                  {operational.collaboratorLoad.map((r) => {
+                    const capM = collabCapacityMinutes[r.collaboratorId]
+                    const st =
+                      capM != null
+                        ? buildCapacityStatus({
+                            allocatedMinutes: r.plannedMinutesOnSteps,
+                            capacityMinutes: capM,
+                          })
+                        : null
+                    const pctLabel =
+                      capM != null && r.plannedMinutesOnSteps > 0
+                        ? formatPercent(r.plannedMinutesOnSteps / capM)
+                        : null
+                    return (
+                      <tr
+                        key={r.collaboratorId}
+                        className="border-b border-white/[0.04] text-slate-300"
+                      >
+                        <td className="py-2 pr-3 font-medium text-slate-200">
+                          {r.fullName ?? r.collaboratorId.slice(0, 8)}
+                        </td>
+                        <td className="py-2 pr-3 tabular-nums">{r.assignmentCount}</td>
+                        <td className="py-2 pr-3 tabular-nums">
+                          {r.primaryCount} / {r.supportCount}
+                        </td>
+                        <td className="py-2 pr-3 tabular-nums">
+                          {formatHumanMinutes(r.plannedMinutesOnSteps)}
+                        </td>
+                        {canManageOperationalCapacity ? (
+                          <td className="py-2 pr-3 text-xs">
+                            {capM != null ? (
+                              <span
+                                className={
+                                  st?.kind === 'over'
+                                    ? 'text-rose-200/95'
+                                    : st?.kind === 'attention'
+                                      ? 'text-amber-200/95'
+                                      : 'text-slate-300'
+                                }
+                              >
+                                {formatHumanMinutes(r.plannedMinutesOnSteps)} /{' '}
+                                {formatCapacityLabel(capM)} · {pctLabel ?? '—'}
+                                {st && st.kind !== 'no_data' ? (
+                                  <span className="ml-1 text-[10px] text-slate-500">
+                                    ({capacityLoadStatusLabel(st.kind)})
+                                  </span>
+                                ) : null}
+                              </span>
+                            ) : (
+                              <span className="text-slate-600">…</span>
+                            )}
+                          </td>
+                        ) : null}
+                        <td className="py-2 tabular-nums text-emerald-200/90">
+                          {formatHumanMinutes(r.realizedMinutes)}
+                        </td>
+                      </tr>
+                    )
+                  })}
                 </tbody>
               </table>
+              {canManageOperationalCapacity ? (
+                <p className="mt-3 max-w-3xl text-[11px] leading-relaxed text-slate-600">
+                  O previsto em STEPs é a soma estrutural das atribuições; a capacidade diária é o
+                  limite de jornada. A comparação é indicativa quando o previsto total excede um dia.
+                </p>
+              ) : null}
               {operational.collaboratorLoad.length === 0 && (
                 <p className="mt-4 text-sm text-slate-500">Sem dados de colaboradores.</p>
               )}

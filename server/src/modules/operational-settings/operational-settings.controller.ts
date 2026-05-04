@@ -1,5 +1,8 @@
 import type { Request, Response } from 'express'
 import type pg from 'pg'
+import { findCollaboratorById } from '../collaborators/collaborators.repository.js'
+import { AppError } from '../../shared/errors/AppError.js'
+import { ErrorCodes } from '../../shared/errors/errorCodes.js'
 import { ok } from '../../shared/http/ok.js'
 import {
   collaboratorCapacityQuerySchema,
@@ -27,6 +30,34 @@ import {
   serviceUpsertCollaboratorCapacityOverride,
   serviceUpsertOperationalCapacitySettings,
 } from './operational-settings.service.js'
+
+function toIsoDateTime(value: unknown): string {
+  if (value instanceof Date && !Number.isNaN(value.getTime())) return value.toISOString()
+  if (typeof value === 'string' || typeof value === 'number') {
+    const d = new Date(value)
+    if (!Number.isNaN(d.getTime())) return d.toISOString()
+  }
+  return new Date().toISOString()
+}
+
+function toIsoDateOnlyOrNull(value: unknown): string | null {
+  if (value == null) return null
+  if (typeof value === 'string') {
+    const s = value.trim()
+    return s.length >= 10 ? s.slice(0, 10) : s || null
+  }
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    return value.toISOString().slice(0, 10)
+  }
+  return null
+}
+
+async function assertCollaboratorExistsOr404(pool: pg.Pool, collaboratorId: string): Promise<void> {
+  const row = await findCollaboratorById(pool, collaboratorId)
+  if (!row) {
+    throw new AppError('Colaborador não encontrado.', 404, ErrorCodes.NOT_FOUND)
+  }
+}
 
 function sectorToJson(row: {
   id: string
@@ -67,7 +98,7 @@ function capacitySettingsToJson(row: {
 }) {
   return {
     defaultDailyMinutes: row.default_daily_minutes,
-    updatedAt: row.updated_at.toISOString(),
+    updatedAt: toIsoDateTime(row.updated_at),
     updatedBy: row.updated_by,
   }
 }
@@ -89,14 +120,14 @@ function capacityOverrideToJson(row: {
     id: row.id,
     collaboratorId: row.collaborator_id,
     dailyMinutes: row.daily_minutes,
-    effectiveFrom: row.effective_from,
-    effectiveTo: row.effective_to,
+    effectiveFrom: toIsoDateOnlyOrNull(row.effective_from),
+    effectiveTo: toIsoDateOnlyOrNull(row.effective_to),
     isActive: row.is_active,
-    createdAt: row.created_at.toISOString(),
-    updatedAt: row.updated_at.toISOString(),
+    createdAt: toIsoDateTime(row.created_at),
+    updatedAt: toIsoDateTime(row.updated_at),
     createdBy: row.created_by,
     updatedBy: row.updated_by,
-    deletedAt: row.deleted_at?.toISOString() ?? null,
+    deletedAt: row.deleted_at == null ? null : toIsoDateTime(row.deleted_at),
   }
 }
 
@@ -207,6 +238,7 @@ export async function getCollaboratorCapacity(
   const collaboratorId = uuidParamSchema.parse(req.params.collaboratorId)
   const query = collaboratorCapacityQuerySchema.parse(req.query)
   const pool = req.app.locals.pool as pg.Pool
+  await assertCollaboratorExistsOr404(pool, collaboratorId)
   const [resolved, overrides] = await Promise.all([
     serviceResolveCollaboratorDailyCapacity(pool, collaboratorId, query.date),
     serviceGetCollaboratorCapacityOverrides(pool, collaboratorId),
@@ -226,6 +258,7 @@ export async function putCollaboratorCapacity(
   const collaboratorId = uuidParamSchema.parse(req.params.collaboratorId)
   const body = upsertCollaboratorCapacityOverrideBodySchema.parse(req.body)
   const pool = req.app.locals.pool as pg.Pool
+  await assertCollaboratorExistsOr404(pool, collaboratorId)
   const row = await serviceUpsertCollaboratorCapacityOverride(pool, {
     collaboratorId,
     dailyMinutes: body.dailyMinutes,
@@ -243,6 +276,7 @@ export async function deleteCollaboratorCapacity(
 ): Promise<void> {
   const collaboratorId = uuidParamSchema.parse(req.params.collaboratorId)
   const pool = req.app.locals.pool as pg.Pool
+  await assertCollaboratorExistsOr404(pool, collaboratorId)
   await serviceSoftDeleteCollaboratorCapacityOverride(
     pool,
     collaboratorId,

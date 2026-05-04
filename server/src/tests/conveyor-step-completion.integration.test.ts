@@ -7,6 +7,8 @@ import {
 } from '../config/env.js'
 import { closePool, getPool } from '../plugins/db.js'
 import { serviceCreateConveyorTimeEntry } from '../modules/conveyors/conveyorAssignments.service.js'
+import { servicePatchConveyorStepCompletion } from '../modules/conveyors/conveyor-step-operational.service.js'
+import { serviceGetConveyorNodeWorkload } from '../modules/conveyors/conveyorNodeWorkload.service.js'
 import { listConveyorOperationalEvents } from '../modules/conveyors/operational-events/conveyor-operational-events.repository.js'
 
 loadDotenvFiles()
@@ -62,11 +64,12 @@ describe.skipIf(!hasDb)('conveyor step completed (integração leve)', () => {
     )
     await pool.query(
       `INSERT INTO conveyor_nodes (
-         id, conveyor_id, parent_id, root_id, node_type, source_origin, name, order_index, level_depth, planned_minutes
+         id, conveyor_id, parent_id, root_id, node_type, source_origin, name, order_index, level_depth, planned_minutes,
+         operational_status, operational_completed_at, operational_completed_by
        ) VALUES
-         ($1::uuid, $4::uuid, NULL, $1::uuid, 'OPTION', 'manual', 'OP', 1, 0, NULL),
-         ($2::uuid, $4::uuid, $1::uuid, $1::uuid, 'AREA', 'manual', 'AR', 1, 1, NULL),
-         ($3::uuid, $4::uuid, $2::uuid, $1::uuid, 'STEP', 'manual', 'ST', 1, 2, $5::int)`,
+         ($1::uuid, $4::uuid, NULL, $1::uuid, 'OPTION', 'manual', 'OP', 1, 0, NULL, NULL, NULL, NULL),
+         ($2::uuid, $4::uuid, $1::uuid, $1::uuid, 'AREA', 'manual', 'AR', 1, 1, NULL, NULL, NULL, NULL),
+         ($3::uuid, $4::uuid, $2::uuid, $1::uuid, 'STEP', 'manual', 'ST', 1, 2, $5::int, 'PENDING', NULL, NULL)`,
       [optionId, areaId, stepId, conveyorId, plannedMinutes],
     )
     return { conveyorId, stepId, collaboratorId }
@@ -115,5 +118,148 @@ describe.skipIf(!hasDb)('conveyor step completed (integração leve)', () => {
       expect(events).toHaveLength(0)
     },
   )
+
+  it.skipIf(!tablesAvailable)(
+    'conclusão explícita persiste COMPLETED e cria CONVEYOR_STEP_COMPLETED',
+    async () => {
+      const seed = await seedConveyorWithStep(15)
+      const u = await pool.query<{ id: string }>(`SELECT id::text AS id FROM app_users LIMIT 1`)
+      const actorId = u.rows[0]?.id
+      if (!actorId) throw new Error('Esperado ≥1 app_users para actor.')
+      const first = await servicePatchConveyorStepCompletion(pool, {
+        conveyorId: seed.conveyorId,
+        stepNodeId: seed.stepId,
+        actorAppUserId: actorId,
+        action: 'COMPLETE',
+        note: 'teste',
+      })
+      expect(first.idempotent).toBe(false)
+      const st = await pool.query<{ operational_status: string }>(
+        `SELECT operational_status FROM conveyor_nodes WHERE id = $1::uuid`,
+        [seed.stepId],
+      )
+      expect(st.rows[0]?.operational_status).toBe('COMPLETED')
+      const events = await listConveyorOperationalEvents(pool, {
+        conveyorId: seed.conveyorId,
+        eventType: 'CONVEYOR_STEP_COMPLETED',
+        limit: 10,
+      })
+      expect(events).toHaveLength(1)
+
+      const second = await servicePatchConveyorStepCompletion(pool, {
+        conveyorId: seed.conveyorId,
+        stepNodeId: seed.stepId,
+        actorAppUserId: actorId,
+        action: 'COMPLETE',
+      })
+      expect(second.idempotent).toBe(true)
+      const eventsAfter = await listConveyorOperationalEvents(pool, {
+        conveyorId: seed.conveyorId,
+        eventType: 'CONVEYOR_STEP_COMPLETED',
+        limit: 10,
+      })
+      expect(eventsAfter).toHaveLength(1)
+    },
+  )
+
+  it.skipIf(!tablesAvailable)(
+    'reabertura explícita: REOPENED, evento CONVEYOR_STEP_REOPENED e ciclo concluir → reabrir → concluir',
+    async () => {
+      const seed = await seedConveyorWithStep(100)
+      const u = await pool.query<{ id: string }>(`SELECT id::text AS id FROM app_users LIMIT 1`)
+      const actorId = u.rows[0]?.id
+      if (!actorId) throw new Error('Esperado ≥1 app_users para actor.')
+
+      await serviceCreateConveyorTimeEntry(pool, {
+        conveyorId: seed.conveyorId,
+        conveyorNodeId: seed.stepId,
+        collaboratorId: seed.collaboratorId,
+        minutes: 30,
+      })
+
+      const w0 = await serviceGetConveyorNodeWorkload(pool, seed.conveyorId)
+      const step0 = w0?.steps.find((s) => s.stepId === seed.stepId)
+      expect(step0?.operationalStatus).toBe('PENDING')
+      expect(step0?.pendingMinutes).toBe(70)
+
+      await servicePatchConveyorStepCompletion(pool, {
+        conveyorId: seed.conveyorId,
+        stepNodeId: seed.stepId,
+        actorAppUserId: actorId,
+        action: 'COMPLETE',
+      })
+
+      const w1 = await serviceGetConveyorNodeWorkload(pool, seed.conveyorId)
+      const step1 = w1?.steps.find((s) => s.stepId === seed.stepId)
+      expect(step1?.operationalStatus).toBe('COMPLETED')
+      expect(step1?.pendingMinutes).toBe(0)
+
+      const reopen = await servicePatchConveyorStepCompletion(pool, {
+        conveyorId: seed.conveyorId,
+        stepNodeId: seed.stepId,
+        actorAppUserId: actorId,
+        action: 'REOPEN',
+        note: 'volta',
+      })
+      expect(reopen.idempotent).toBe(false)
+
+      const stRe = await pool.query<{
+        operational_status: string
+        operational_completed_at: string | null
+        operational_completed_by: string | null
+      }>(
+        `SELECT operational_status, operational_completed_at::text, operational_completed_by::text
+         FROM conveyor_nodes WHERE id = $1::uuid`,
+        [seed.stepId],
+      )
+      expect(stRe.rows[0]?.operational_status).toBe('REOPENED')
+      expect(stRe.rows[0]?.operational_completed_at).toBeNull()
+      expect(stRe.rows[0]?.operational_completed_by).toBeNull()
+
+      const reopenEvents = await listConveyorOperationalEvents(pool, {
+        conveyorId: seed.conveyorId,
+        eventType: 'CONVEYOR_STEP_REOPENED',
+        limit: 10,
+      })
+      expect(reopenEvents).toHaveLength(1)
+      expect(reopenEvents[0]?.reason).toBe('EXPLICITLY_REOPENED')
+      expect(reopenEvents[0]?.new_value).toBe('REOPENED')
+
+      const w2 = await serviceGetConveyorNodeWorkload(pool, seed.conveyorId)
+      const step2 = w2?.steps.find((s) => s.stepId === seed.stepId)
+      expect(step2?.operationalStatus).toBe('REOPENED')
+      expect(step2?.pendingMinutes).toBe(70)
+
+      const thirdComplete = await servicePatchConveyorStepCompletion(pool, {
+        conveyorId: seed.conveyorId,
+        stepNodeId: seed.stepId,
+        actorAppUserId: actorId,
+        action: 'COMPLETE',
+      })
+      expect(thirdComplete.idempotent).toBe(false)
+
+      const completedTwice = await listConveyorOperationalEvents(pool, {
+        conveyorId: seed.conveyorId,
+        eventType: 'CONVEYOR_STEP_COMPLETED',
+        limit: 10,
+      })
+      expect(completedTwice.length).toBeGreaterThanOrEqual(2)
+    },
+  )
+
+  it.skipIf(!tablesAvailable)('REOPEN com etapa não concluída falha', async () => {
+    const seed = await seedConveyorWithStep(20)
+    const u = await pool.query<{ id: string }>(`SELECT id::text AS id FROM app_users LIMIT 1`)
+    const actorId = u.rows[0]?.id
+    if (!actorId) throw new Error('Esperado ≥1 app_users para actor.')
+    await expect(
+      servicePatchConveyorStepCompletion(pool, {
+        conveyorId: seed.conveyorId,
+        stepNodeId: seed.stepId,
+        actorAppUserId: actorId,
+        action: 'REOPEN',
+      }),
+    ).rejects.toMatchObject({ statusCode: 422 })
+  })
 })
 

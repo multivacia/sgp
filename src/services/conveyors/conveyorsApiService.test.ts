@@ -7,6 +7,8 @@ import {
   getConveyorHealthAnalysisHistory,
   getConveyorHealthSummary,
   getLatestConveyorHealthAnalysis,
+  patchConveyorStepCompletion,
+  reopenConveyorStep,
   postConveyorHealthAnalysis,
 } from './conveyorsApiService'
 
@@ -368,5 +370,64 @@ describe('getConveyorOperationalEvents', () => {
     const out = await getConveyorOperationalEvents(id, { limit: 20 })
     expect(Array.isArray(out.data)).toBe(true)
     expect(out.meta.limit).toBe(20)
+  })
+})
+
+describe('patchConveyorStepCompletion', () => {
+  const originalFetch = globalThis.fetch
+
+  afterEach(() => {
+    globalThis.fetch = originalFetch
+    vi.unstubAllEnvs()
+  })
+
+  it('PATCH …/completion com action COMPLETE', async () => {
+    vi.stubEnv('VITE_API_BASE_URL', '')
+    const cid = 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11'
+    const sid = 'b0eebc99-9c0b-4ef8-bb6d-6bb9bd380a22'
+    globalThis.fetch = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const u = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url
+      expect(u).toContain(`/api/v1/conveyors/${cid}/steps/${sid}/completion`)
+      expect(init?.method).toBe('PATCH')
+      const b = JSON.parse(String(init?.body)) as { action: string }
+      expect(b.action).toBe('COMPLETE')
+      return {
+        ok: true,
+        status: 200,
+        text: async () =>
+          JSON.stringify({
+            data: { id: cid, structure: { options: [] } },
+            meta: { stepCompletionIdempotent: false },
+          }),
+      } as Response
+    }) as unknown as typeof fetch
+
+    const r = await patchConveyorStepCompletion(cid, sid, { action: 'COMPLETE' })
+    expect(r.meta.stepCompletionIdempotent).toBe(false)
+  })
+
+  it('PATCH …/completion com action REOPEN via reopenConveyorStep', async () => {
+    vi.stubEnv('VITE_API_BASE_URL', '')
+    const cid = 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11'
+    const sid = 'b0eebc99-9c0b-4ef8-bb6d-6bb9bd380a22'
+    globalThis.fetch = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const u = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url
+      expect(u).toContain(`/api/v1/conveyors/${cid}/steps/${sid}/completion`)
+      expect(init?.method).toBe('PATCH')
+      const b = JSON.parse(String(init?.body)) as { action: string; note?: string }
+      expect(b.action).toBe('REOPEN')
+      expect(b.note).toBe('nota')
+      return {
+        ok: true,
+        status: 200,
+        text: async () =>
+          JSON.stringify({
+            data: { id: cid, structure: { options: [] } },
+            meta: { stepCompletionIdempotent: false },
+          }),
+      } as Response
+    }) as unknown as typeof fetch
+
+    await reopenConveyorStep(cid, sid, { note: 'nota' })
   })
 })

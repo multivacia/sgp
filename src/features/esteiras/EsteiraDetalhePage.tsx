@@ -14,8 +14,14 @@ import type {
   ConveyorOperationalStatus,
   ConveyorStructureStep,
 } from '../../domain/conveyors/conveyor.types'
+import {
+  canCompleteStep,
+  canReopenStep,
+  isStepOperationallyCompleted,
+} from '../../domain/conveyors/stepOperationalStatus'
 import type { ConveyorNodeWorkload } from '../../domain/conveyors/conveyorNodeWorkload.types'
 import type { ConveyorOperationalEvent } from '../../domain/conveyors/conveyorOperationalEvents.types'
+import { ConveyorOperationalEventsTimeline } from './ConveyorOperationalEventsTimeline'
 import type { StepAnaliticoDetalhe } from '../../domain/esteiras/step-analitico.types'
 import { useAuth } from '../../lib/use-auth'
 import { ApiError } from '../../lib/api/apiErrors'
@@ -25,12 +31,13 @@ import {
 } from '../../lib/errors'
 import { useSgpErrorSurface } from '../../lib/errors/SgpErrorPresentation'
 import { mapOperationalStatusToUi } from '../../lib/backlog/mapConveyorListToBacklog'
-import { formatConveyorOperationalEvent } from '../../domain/conveyors/formatConveyorOperationalEvent'
 import {
   getConveyorById,
   getConveyorOperationalEvents,
   getConveyorNodeWorkload,
   patchConveyorStatus,
+  patchConveyorStepCompletion,
+  reopenConveyorStep,
 } from '../../services/conveyors/conveyorsApiService'
 import {
   getConveyorStepAssignees,
@@ -207,6 +214,8 @@ function flattenConveyorStructureSteps(
   return out
 }
 
+const OPERATIONAL_EVENTS_LOAD_ERROR = 'Não foi possível carregar os eventos operacionais.'
+
 function isUuidLike(s: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
     s.trim(),
@@ -251,6 +260,94 @@ function EsteiraDetalheBasicoReal({ id }: { id: string | undefined }) {
   const [operationalEventsError, setOperationalEventsError] = useState<string | null>(
     null,
   )
+  const [operationalEventsLimit, setOperationalEventsLimit] = useState(50)
+  const [stepCompletingId, setStepCompletingId] = useState<string | null>(null)
+  const [stepReopeningId, setStepReopeningId] = useState<string | null>(null)
+  const [reopenDialog, setReopenDialog] = useState<{
+    stepId: string
+    stepName: string
+  } | null>(null)
+  const [reopenNote, setReopenNote] = useState('')
+
+  const handleLoadMoreOperationalEvents = useCallback(() => {
+    setOperationalEventsLimit((n) => Math.min(200, n + 25))
+  }, [])
+
+  const handleCompleteStep = useCallback(
+    async (stepId: string) => {
+      if (!detail?.id) return
+      if (!window.confirm('Confirmar conclusão desta etapa?')) return
+      setStepCompletingId(stepId)
+      try {
+        await patchConveyorStepCompletion(detail.id, stepId, { action: 'COMPLETE' })
+        const [dNext, evNext, wNext] = await Promise.all([
+          getConveyorById(detail.id),
+          getConveyorOperationalEvents(detail.id, { limit: operationalEventsLimit }),
+          getConveyorNodeWorkload(detail.id).catch(() => null),
+        ])
+        setDetail(dNext)
+        setOperationalEvents(evNext.data)
+        if (wNext) setNodeWorkload(wNext)
+      } catch (e) {
+        const n = reportClientError(e, {
+          module: 'esteiras',
+          action: 'step_complete',
+          route: location.pathname,
+          entityId: detail.id,
+        })
+        if (isBlockingSeverity(n.severity)) {
+          presentBlocking(n)
+        } else {
+          setLoadError(n.userMessage)
+        }
+      } finally {
+        setStepCompletingId(null)
+      }
+    },
+    [detail, location.pathname, presentBlocking, operationalEventsLimit],
+  )
+
+  const handleConfirmReopenStep = useCallback(async () => {
+    if (!detail?.id || !reopenDialog) return
+    const stepId = reopenDialog.stepId
+    const note = reopenNote.trim() ? reopenNote.trim().slice(0, 2000) : undefined
+    setStepReopeningId(stepId)
+    try {
+      await reopenConveyorStep(detail.id, stepId, { note })
+      const [dNext, evNext, wNext] = await Promise.all([
+        getConveyorById(detail.id),
+        getConveyorOperationalEvents(detail.id, { limit: operationalEventsLimit }),
+        getConveyorNodeWorkload(detail.id).catch(() => null),
+      ])
+      setDetail(dNext)
+      setOperationalEvents(evNext.data)
+      if (wNext) setNodeWorkload(wNext)
+      setReopenDialog(null)
+      setReopenNote('')
+      setRouteToast('Etapa reaberta.')
+    } catch (e) {
+      const n = reportClientError(e, {
+        module: 'esteiras',
+        action: 'step_reopen',
+        route: location.pathname,
+        entityId: detail.id,
+      })
+      if (isBlockingSeverity(n.severity)) {
+        presentBlocking(n)
+      } else {
+        setLoadError(n.userMessage || 'Não foi possível reabrir a etapa.')
+      }
+    } finally {
+      setStepReopeningId(null)
+    }
+  }, [
+    detail,
+    location.pathname,
+    presentBlocking,
+    operationalEventsLimit,
+    reopenDialog,
+    reopenNote,
+  ])
 
   useEffect(() => {
     const st = location.state as
@@ -401,7 +498,7 @@ function EsteiraDetalheBasicoReal({ id }: { id: string | undefined }) {
     let cancelled = false
     setOperationalEventsLoading(true)
     setOperationalEventsError(null)
-    void getConveyorOperationalEvents(detail.id, { limit: 20 })
+    void getConveyorOperationalEvents(detail.id, { limit: operationalEventsLimit })
       .then((r) => {
         if (!cancelled) setOperationalEvents(r.data)
       })
@@ -417,7 +514,7 @@ function EsteiraDetalheBasicoReal({ id }: { id: string | undefined }) {
           if (isBlockingSeverity(n.severity)) {
             presentBlocking(n)
           } else {
-            setOperationalEventsError(n.userMessage)
+            setOperationalEventsError(OPERATIONAL_EVENTS_LOAD_ERROR)
           }
         }
       })
@@ -427,7 +524,7 @@ function EsteiraDetalheBasicoReal({ id }: { id: string | undefined }) {
     return () => {
       cancelled = true
     }
-  }, [detail?.id])
+  }, [detail?.id, operationalEventsLimit, location.pathname, presentBlocking])
 
   useEffect(() => {
     if (!detail || stepAnaliticoLoading) return
@@ -472,6 +569,29 @@ function EsteiraDetalheBasicoReal({ id }: { id: string | undefined }) {
         operationalStatus: target,
       })
       setDetail(d)
+      setOperationalEventsLoading(true)
+      setOperationalEventsError(null)
+      try {
+        const ev = await getConveyorOperationalEvents(id.trim(), {
+          limit: operationalEventsLimit,
+        })
+        setOperationalEvents(ev.data)
+      } catch (evErr) {
+        setOperationalEvents([])
+        const n = reportClientError(evErr, {
+          module: 'esteiras',
+          action: 'detalhe_operational_events_after_status',
+          route: location.pathname,
+          entityId: id.trim(),
+        })
+        if (isBlockingSeverity(n.severity)) {
+          presentBlocking(n)
+        } else {
+          setOperationalEventsError(OPERATIONAL_EVENTS_LOAD_ERROR)
+        }
+      } finally {
+        setOperationalEventsLoading(false)
+      }
     } catch (e) {
       const n = reportClientError(e, {
         module: 'esteiras',
@@ -559,6 +679,69 @@ function EsteiraDetalheBasicoReal({ id }: { id: string | undefined }) {
           onDismiss={() => setRouteToast(null)}
           className="!bottom-auto top-6 max-w-md"
         />
+      ) : null}
+      {reopenDialog ? (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/55 p-4 backdrop-blur-[2px]"
+          role="dialog"
+          aria-modal
+          aria-labelledby="reopen-step-title"
+          onClick={() => {
+            if (stepReopeningId) return
+            setReopenDialog(null)
+            setReopenNote('')
+          }}
+        >
+          <div
+            className="w-full max-w-md rounded-2xl border border-white/[0.1] bg-gradient-to-b from-sgp-app-panel/95 to-sgp-app-panel-deep/98 p-6 shadow-[0_24px_80px_-24px_rgba(0,0,0,0.85)] ring-1 ring-white/[0.05]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2
+              id="reopen-step-title"
+              className="font-heading text-lg font-bold tracking-tight text-slate-50"
+            >
+              Reabrir etapa?
+            </h2>
+            <p className="mt-3 text-sm leading-relaxed text-slate-400">
+              A etapa voltará a ter pendência calculada normalmente. Os apontamentos e o histórico de
+              conclusão serão mantidos.
+            </p>
+            <label className="mt-4 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+              Observação da reabertura{' '}
+              <span className="font-normal normal-case text-slate-600">(opcional)</span>
+              <textarea
+                value={reopenNote}
+                onChange={(e) => setReopenNote(e.target.value)}
+                maxLength={2000}
+                rows={3}
+                disabled={Boolean(stepReopeningId)}
+                className="mt-2 w-full resize-y rounded-xl border border-white/12 bg-white/[0.04] px-3 py-2 text-sm text-slate-100 placeholder:text-slate-600 focus:border-sgp-gold/35 focus:outline-none focus:ring-1 focus:ring-sgp-gold/25 disabled:opacity-50"
+                placeholder="Contexto para a equipa…"
+              />
+            </label>
+            <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end sm:gap-3">
+              <button
+                type="button"
+                disabled={Boolean(stepReopeningId)}
+                onClick={() => {
+                  setReopenDialog(null)
+                  setReopenNote('')
+                }}
+                className="rounded-xl border border-white/12 bg-white/[0.04] px-4 py-2.5 text-sm font-semibold text-slate-200 transition hover:border-sgp-gold/30 hover:bg-white/[0.07] disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                disabled={Boolean(stepReopeningId)}
+                onClick={() => void handleConfirmReopenStep()}
+                className="rounded-xl border border-sgp-gold/35 bg-sgp-gold/10 px-4 py-2.5 text-sm font-bold text-sgp-gold-warm shadow-inner transition hover:border-sgp-gold/50 hover:bg-sgp-gold/[0.14] disabled:opacity-50"
+              >
+                {stepReopeningId ? 'Reabrindo etapa…' : 'Reabrir etapa'}
+              </button>
+            </div>
+          </div>
+        </div>
       ) : null}
       {stepNotice ? (
         <SgpToast
@@ -817,53 +1000,14 @@ function EsteiraDetalheBasicoReal({ id }: { id: string | undefined }) {
 
       <ConveyorHealthAnalysisCard conveyorId={detail.id} />
 
-      <section className="mt-8 rounded-2xl border border-white/[0.08] bg-white/[0.02] p-6">
-        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">
-          Eventos operacionais
-        </p>
-        {operationalEventsLoading ? (
-          <p className="mt-4 text-sm text-slate-500">Carregando eventos…</p>
-        ) : null}
-        {operationalEventsError ? (
-          <p className="mt-4 text-sm text-rose-300/95" role="alert">
-            {operationalEventsError}
-          </p>
-        ) : null}
-        {!operationalEventsLoading && !operationalEventsError && operationalEvents.length === 0 ? (
-          <p className="mt-4 text-sm text-slate-500">
-            Nenhum evento operacional registrado ainda.
-          </p>
-        ) : null}
-        {!operationalEventsLoading && !operationalEventsError && operationalEvents.length > 0 ? (
-          <ul className="mt-4 space-y-2">
-            {operationalEvents.map((ev) => {
-              const display = formatConveyorOperationalEvent(ev)
-              const toneClass =
-                display.tone === 'warning'
-                  ? 'border-amber-400/30 bg-amber-500/[0.08]'
-                  : display.tone === 'success'
-                    ? 'border-emerald-400/30 bg-emerald-500/[0.08]'
-                    : 'border-white/[0.08] bg-white/[0.03]'
-              const stepHint = ev.nodeId ? `STEP ${ev.nodeId.slice(0, 8)}` : null
-              return (
-                <li key={ev.eventId} className={`rounded-lg border px-3 py-2 ${toneClass}`}>
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <p className="text-sm font-semibold text-slate-100">{display.label}</p>
-                    <p className="text-xs text-slate-400">
-                      {new Date(ev.occurredAt).toLocaleString('pt-BR')}
-                    </p>
-                  </div>
-                  <p className="mt-1 text-xs text-slate-400">{display.description}</p>
-                  <p className="mt-1 text-[11px] text-slate-500">
-                    Fonte: {ev.source}
-                    {stepHint ? ` · ${stepHint}` : ''}
-                  </p>
-                </li>
-              )
-            })}
-          </ul>
-        ) : null}
-      </section>
+      <ConveyorOperationalEventsTimeline
+        events={operationalEvents}
+        loading={operationalEventsLoading}
+        error={operationalEventsError}
+        structure={detail.structure}
+        fetchLimit={operationalEventsLimit}
+        onLoadMore={handleLoadMoreOperationalEvents}
+      />
 
       <section className="mt-8 rounded-2xl border border-white/[0.08] bg-white/[0.02] p-6">
         <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">
@@ -915,12 +1059,50 @@ function EsteiraDetalheBasicoReal({ id }: { id: string | undefined }) {
                                 </span>{' '}
                                 {st.name}
                               </span>
-                              <span className="text-xs tabular-nums text-slate-400">
-                                {st.plannedMinutes != null
-                                  ? formatMinutosHumanos(st.plannedMinutes)
-                                  : '—'}
+                              <span className="flex flex-wrap items-center gap-2">
+                                {isStepOperationallyCompleted(st) ? (
+                                  <span className="rounded-md border border-emerald-400/35 bg-emerald-500/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-100">
+                                    Concluída
+                                  </span>
+                                ) : null}
+                                <span className="text-xs tabular-nums text-slate-400">
+                                  {st.plannedMinutes != null
+                                    ? formatMinutosHumanos(st.plannedMinutes)
+                                    : '—'}
+                                </span>
                               </span>
                             </div>
+                            {canReopenStep(st, canAlterConveyor) || canCompleteStep(st, canAlterConveyor) ? (
+                              <div className="flex flex-wrap justify-end gap-2">
+                                {canReopenStep(st, canAlterConveyor) ? (
+                                  <button
+                                    type="button"
+                                    disabled={
+                                      stepReopeningId === st.id || stepCompletingId === st.id
+                                    }
+                                    className="rounded-lg border border-amber-400/30 bg-amber-500/10 px-3 py-1.5 text-xs font-semibold text-amber-100 hover:bg-amber-500/15 disabled:opacity-50"
+                                    onClick={() => {
+                                      setReopenNote('')
+                                      setReopenDialog({ stepId: st.id, stepName: st.name })
+                                    }}
+                                  >
+                                    Reabrir etapa
+                                  </button>
+                                ) : null}
+                                {canCompleteStep(st, canAlterConveyor) ? (
+                                  <button
+                                    type="button"
+                                    disabled={
+                                      stepCompletingId === st.id || stepReopeningId === st.id
+                                    }
+                                    className="rounded-lg border border-white/15 bg-white/[0.06] px-3 py-1.5 text-xs font-semibold text-slate-100 hover:bg-white/[0.09] disabled:opacity-50"
+                                    onClick={() => void handleCompleteStep(st.id)}
+                                  >
+                                    {stepCompletingId === st.id ? 'A concluir…' : 'Concluir etapa'}
+                                  </button>
+                                ) : null}
+                              </div>
+                            ) : null}
                             <StepAnaliticoPanel
                               loading={stepAnaliticoLoading}
                               stepAnalitico={stepAnaliticoByStepId[st.id]}

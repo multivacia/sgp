@@ -4,6 +4,7 @@ import { ok } from '../../shared/http/ok.js'
 import {
   assigneeScopedParamsSchema,
   conveyorStepParamsSchema,
+  patchConveyorStepCompletionBodySchema,
   postAssigneeBodySchema,
   postTimeEntryBodySchema,
   postTimeEntryOnBehalfBodySchema,
@@ -18,6 +19,7 @@ import {
   serviceListConveyorNodeAssignees,
   serviceListConveyorTimeEntries,
 } from './conveyorAssignments.service.js'
+import { servicePatchConveyorStepCompletion } from './conveyor-step-operational.service.js'
 
 export async function postConveyorStepAssignee(
   req: Request,
@@ -131,6 +133,24 @@ export async function getConveyorStepTimeEntries(
     params.stepNodeId,
   )
   res.json(ok(data))
+}
+
+export async function patchConveyorStepCompletion(
+  req: Request,
+  res: Response,
+): Promise<void> {
+  const params = conveyorStepParamsSchema.parse(req.params)
+  const body = patchConveyorStepCompletionBodySchema.parse(req.body)
+  const pool = req.app.locals.pool as pg.Pool
+  // TODO: permissões finas `conveyor_steps.complete` / `conveyor_steps.reopen` (hoje: mesmo gate que demais mutações da esteira).
+  const out = await servicePatchConveyorStepCompletion(pool, {
+    conveyorId: params.conveyorId,
+    stepNodeId: params.stepNodeId,
+    actorAppUserId: req.authUser!.id,
+    action: body.action,
+    note: body.note,
+  })
+  res.status(200).json(ok(out.detail, { stepCompletionIdempotent: out.idempotent }))
 }
 
 export async function deleteConveyorStepTimeEntry(

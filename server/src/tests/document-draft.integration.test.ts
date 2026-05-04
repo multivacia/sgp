@@ -40,32 +40,38 @@ describe.skipIf(!hasDb)('POST /api/v1/conveyors/document-draft (integração)', 
     process.env.SGP_TEST_LOCAL_DOCUMENT_ADAPTER = '1'
     resetEnvCacheForTests()
     const env = loadEnv()
-    expect(env.argosIngestUrl).toBeUndefined()
+    expect(env.documentDraftAdapter).toBe('local')
     pool = getPool(env)
     app = createApp(pool, createLogger('silent'), env)
     const hash = await hashPassword('CollabGovTest1!')
     await pool.query(
       `INSERT INTO app_users (
-          id, email, password_hash, is_active, role_id, must_change_password, password_changed_at
+          id, email, password_hash, is_active, role_id, must_change_password, password_changed_at, deleted_at
         ) VALUES (
-          $1::uuid, $2, $3, true, $4::uuid, false, now()
+          $1::uuid, $2, $3, true, $4::uuid, false, now(), NULL
         )
         ON CONFLICT (id) DO UPDATE SET
           role_id = EXCLUDED.role_id,
           is_active = true,
-          email = EXCLUDED.email`,
+          email = EXCLUDED.email,
+          password_hash = EXCLUDED.password_hash,
+          password_changed_at = now(),
+          deleted_at = NULL`,
       [GOV_ADMIN_USER_ID, GOV_ADMIN_EMAIL, hash, ADMIN_ROLE_ID],
     )
     await pool.query(
       `INSERT INTO app_users (
-          id, email, password_hash, is_active, role_id, must_change_password, password_changed_at
+          id, email, password_hash, is_active, role_id, must_change_password, password_changed_at, deleted_at
         ) VALUES (
-          $1::uuid, $2, $3, true, $4::uuid, false, now()
+          $1::uuid, $2, $3, true, $4::uuid, false, now(), NULL
         )
         ON CONFLICT (id) DO UPDATE SET
           role_id = EXCLUDED.role_id,
           is_active = true,
-          email = EXCLUDED.email`,
+          email = EXCLUDED.email,
+          password_hash = EXCLUDED.password_hash,
+          password_changed_at = now(),
+          deleted_at = NULL`,
       [COLAB_ONLY_USER_ID, COLAB_ONLY_EMAIL, hash, SEED_ROLE_ID],
     )
   })
@@ -97,7 +103,7 @@ describe.skipIf(!hasDb)('POST /api/v1/conveyors/document-draft (integração)', 
     expect(res.body.error?.code).toBe('FORBIDDEN')
   })
 
-  it('GOV/ADMIN com permissão → 200 e pipeline local (draft 1.0.0)', async () => {
+  it('GOV/ADMIN com permissão → 200 e pipeline local (draft 1.0.0/1.1.0)', async () => {
     const res = await request(app)
       .post('/api/v1/conveyors/document-draft')
       .set(
@@ -113,7 +119,24 @@ describe.skipIf(!hasDb)('POST /api/v1/conveyors/document-draft (integração)', 
     expect(['completed', 'partial']).toContain(d.status)
     expect(d.strategy).toBe('local_heuristic_pipeline_v1')
     expect(d.specialist).toBe('sgp_argos_local_heuristic_v1')
-    expect(d.draft?.schemaVersion).toBe('1.0.0')
+    expect(['1.0.0', '1.1.0']).toContain(d.draft?.schemaVersion)
+    if (d.draft?.schemaVersion === '1.1.0') {
+      expect(d.draft.humanReviewRequired).toBe(true)
+      expect(d.sourceDocument?.provider).toBe('BRAVO')
+      expect(d.sourceDocument?.documentType).toBe('OS_OR_BUDGET')
+      expect(d.extractedItems).toBeTruthy()
+      expect(Array.isArray(d.extractedItems?.serviceItems)).toBe(true)
+      expect(Array.isArray(d.extractedItems?.partItems)).toBe(true)
+      expect(Array.isArray(d.extractedItems?.operationalNotes)).toBe(true)
+      expect(typeof d.redaction?.financialDataRemoved).toBe('boolean')
+      expect(typeof d.redaction?.personalDataRemoved).toBe('boolean')
+      expect(Array.isArray(d.redaction?.removedCategories)).toBe(true)
+      expect(Array.isArray(d.matchingPlan)).toBe(true)
+      expect(JSON.stringify(d.extractedItems)).not.toMatch(/R\$/i)
+      expect(JSON.stringify(d.extractedItems)).not.toMatch(
+        /\b(CPF|CNPJ|RG|I\.E\.|telefone|e-mail|endere[cç]o)\b/i,
+      )
+    }
     expect(d.document?.contentSha256).toMatch(/^[a-f0-9]{64}$/)
     expect(Array.isArray(d.extractedFacts)).toBe(true)
     expect(Array.isArray(d.warnings)).toBe(true)

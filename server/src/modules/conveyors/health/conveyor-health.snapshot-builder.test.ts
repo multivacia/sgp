@@ -20,6 +20,14 @@ const AREA_A = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'
 const OPT_A = 'cccccccc-cccc-cccc-cccc-cccccccccccc'
 const CONV_ID = 'dddddddd-dddd-dddd-dddd-dddddddddddd'
 
+const stepOperationalDefaults = {
+  operationalStatus: 'PENDING' as const,
+  isCompleted: false,
+  completedAt: null,
+  completedByName: null,
+  completionEventId: null,
+}
+
 function baseDetail(overrides: Partial<ConveyorDetailApi> = {}): ConveyorDetailApi {
   return {
     id: CONV_ID,
@@ -63,6 +71,7 @@ function baseDetail(overrides: Partial<ConveyorDetailApi> = {}): ConveyorDetailA
                   name: 'Etapa 1',
                   orderIndex: 1,
                   plannedMinutes: 30,
+                  ...stepOperationalDefaults,
                   assignees: [
                     {
                       type: 'COLLABORATOR',
@@ -102,6 +111,8 @@ function baseWorkload(overrides: Partial<ConveyorNodeWorkloadApi> = {}): Conveyo
         areaName: 'Área 1',
         stepId: STEP_A,
         stepName: 'Etapa 1',
+        operationalStatus: 'PENDING',
+        isOperationallyCompleted: false,
         plannedMinutes: 30,
         realizedMinutes: 10,
         pendingMinutes: 20,
@@ -192,6 +203,8 @@ describe('buildConveyorOperationalSnapshotV1', () => {
           areaName: 'Área 1',
           stepId: STEP_A,
           stepName: 'Etapa 1',
+          operationalStatus: 'PENDING',
+          isOperationallyCompleted: false,
           plannedMinutes: 30,
           realizedMinutes: 5,
           pendingMinutes: 25,
@@ -239,6 +252,7 @@ describe('buildConveyorOperationalSnapshotV1', () => {
                     name: 'Etapa 1',
                     orderIndex: 1,
                     plannedMinutes: 30,
+                    ...stepOperationalDefaults,
                     assignees: [],
                   },
                 ],
@@ -268,6 +282,8 @@ describe('buildConveyorOperationalSnapshotV1', () => {
           areaName: 'Área 1',
           stepId: STEP_A,
           stepName: 'Etapa 1',
+          operationalStatus: 'PENDING',
+          isOperationallyCompleted: false,
           plannedMinutes: 30,
           realizedMinutes: 50,
           pendingMinutes: 0,
@@ -316,6 +332,7 @@ describe('buildConveyorOperationalSnapshotV1', () => {
                     name: 'Etapa 1',
                     orderIndex: 1,
                     plannedMinutes: null,
+                    ...stepOperationalDefaults,
                     assignees: [
                       {
                         type: 'COLLABORATOR',
@@ -344,6 +361,8 @@ describe('buildConveyorOperationalSnapshotV1', () => {
           areaName: 'Área 1',
           stepId: STEP_A,
           stepName: 'Etapa 1',
+          operationalStatus: 'PENDING',
+          isOperationallyCompleted: false,
           plannedMinutes: null,
           realizedMinutes: 0,
           pendingMinutes: 0,
@@ -425,6 +444,79 @@ describe('buildConveyorOperationalSnapshotV1', () => {
     expect(snap.teamExecutionSummary[0]!.completionRatio).toBe(0.5)
     expect(snap.recentActivity.timeEntries).toHaveLength(1)
     expect(snap.dataQuality.missingAssigneeSteps).toBe(0)
+  })
+
+  it('STEP concluída operacionalmente aparece como completed no snapshot', () => {
+    const detail = baseDetail({
+      structure: {
+        options: [
+          {
+            id: OPT_A,
+            name: 'Opção 1',
+            orderIndex: 1,
+            areas: [
+              {
+                id: AREA_A,
+                name: 'Área 1',
+                orderIndex: 1,
+                steps: [
+                  {
+                    id: STEP_A,
+                    name: 'Etapa 1',
+                    orderIndex: 1,
+                    plannedMinutes: 30,
+                    operationalStatus: 'COMPLETED',
+                    isCompleted: true,
+                    completedAt: '2026-04-01T10:00:00.000Z',
+                    completedByName: 'gestor@exemplo.com',
+                    completionEventId: null,
+                    assignees: [],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    })
+    const workload = baseWorkload({
+      steps: [
+        {
+          optionId: OPT_A,
+          optionName: 'Opção 1',
+          areaId: AREA_A,
+          areaName: 'Área 1',
+          stepId: STEP_A,
+          stepName: 'Etapa 1',
+          operationalStatus: 'COMPLETED',
+          isOperationallyCompleted: true,
+          plannedMinutes: 30,
+          realizedMinutes: 5,
+          pendingMinutes: 0,
+        },
+      ],
+      areas: [
+        {
+          optionId: OPT_A,
+          optionName: 'Opção 1',
+          areaId: AREA_A,
+          areaName: 'Área 1',
+          plannedMinutesSum: 30,
+          realizedMinutesSum: 5,
+          pendingMinutesSum: 0,
+        },
+      ],
+    })
+    const snap = buildConveyorOperationalSnapshotV1({
+      conveyorDetail: detail,
+      nodeWorkload: workload,
+      requestId: 'r',
+      correlationId: 'c',
+      now: FIXED_NOW,
+    })
+    expect(snap.structure.options[0]!.areas[0]!.steps[0]!.status).toBe('completed')
+    expect(snap.totals.completedSteps).toBe(1)
+    expect(snap.totals.pendingSteps).toBe(0)
   })
 
   it('quando operationalStatus é desconhecido aplica fallback e warning', () => {

@@ -45,6 +45,16 @@ import {
 } from './conveyorAssignments.repository.js'
 import { collaboratorActiveForOperations } from './conveyorAssignments.service.js'
 import { serviceGetConveyorPendingMinutes } from './conveyorNodeWorkload.service.js'
+import {
+  detectSyntheticSubtreeRollupInCreatePayload,
+  detectSyntheticSubtreeRollupNodesFromDetailStructure,
+  detectSyntheticSubtreeRollupNodesFromFlatRows,
+  detectSyntheticSubtreeRollupNodesFromPostBody,
+  isConveyorCreateDiagnosticsEnabled,
+  logConveyorCreateDiagnostics,
+  summarizePersistedConveyorNodes,
+  summarizePostConveyorBodyForDiagnostics,
+} from './conveyorCreateDiagnostics.js'
 import { detectAndRecordConveyorDelayTransition } from './operational-events/conveyor-delay-events.service.js'
 
 function emptyToNull(s: string | undefined): string | null {
@@ -136,20 +146,26 @@ function mapListRowToApi(row: ConveyorListRow): ConveyorListItemApi {
 function parseConveyorMetadataJson(m: unknown): {
   colaboradorId: string | null
   matrixRootItemId: string | null
+  documentReviewAudit: Record<string, unknown> | null
 } {
   if (!m || typeof m !== 'object') {
-    return { colaboradorId: null, matrixRootItemId: null }
+    return { colaboradorId: null, matrixRootItemId: null, documentReviewAudit: null }
   }
   const o = m as Record<string, unknown>
   const cid = o.colaboradorId
   const mid = o.matrixRootItemId
+  const dra = o.documentReviewAudit
   return {
     colaboradorId: typeof cid === 'string' ? cid : null,
     matrixRootItemId: typeof mid === 'string' ? mid : null,
+    documentReviewAudit:
+      dra && typeof dra === 'object' && !Array.isArray(dra)
+        ? (dra as Record<string, unknown>)
+        : null,
   }
 }
 
-function mapDetailRowToApi(
+export function mapDetailRowToApi(
   row: ConveyorDetailRow,
   structure: ConveyorStructureApi,
 ): ConveyorDetailApi {
@@ -232,13 +248,22 @@ export function buildConveyorStructureFromNodes(
           steps: rows
             .filter((r) => r.parent_id === area.id && r.node_type === 'STEP')
             .sort((a, b) => a.order_index - b.order_index)
-            .map((st) => ({
-              id: st.id,
-              name: st.name,
-              orderIndex: st.order_index,
-              plannedMinutes: st.planned_minutes,
-              assignees: [],
-            })),
+            .map((st) => {
+              const op = st.operational_status ?? 'PENDING'
+              const completed = op === 'COMPLETED'
+              return {
+                id: st.id,
+                name: st.name,
+                orderIndex: st.order_index,
+                plannedMinutes: st.planned_minutes,
+                assignees: [],
+                operationalStatus: op,
+                isCompleted: completed,
+                completedAt: st.operational_completed_at,
+                completedByName: st.operational_completed_by_email?.trim() || null,
+                completionEventId: null,
+              }
+            }),
         })),
     })),
   }
@@ -259,7 +284,7 @@ function mapAssigneeDetailRowToApi(
 }
 
 /** Estrutura de nós + alocações por etapa (uma leitura de assignees). */
-async function loadConveyorStructureWithAssignees(
+export async function loadConveyorStructureWithAssignees(
   pool: pg.Pool,
   conveyorId: string,
   nodes: ConveyorNodeFlatRow[],
@@ -295,6 +320,17 @@ export async function serviceGetConveyorById(
   if (!row) return null
   const nodes = await listConveyorNodesByConveyorId(pool, id)
   const structure = await loadConveyorStructureWithAssignees(pool, id, nodes)
+  if (isConveyorCreateDiagnosticsEnabled()) {
+    const synth = detectSyntheticSubtreeRollupNodesFromDetailStructure(structure)
+    if (synth.length > 0) {
+      console.info({
+        stage: 'conveyor.detail.structure_synthetic_check',
+        conveyorId: id,
+        syntheticRollupDetected: true,
+        syntheticFindings: synth,
+      })
+    }
+  }
   return mapDetailRowToApi(row, structure)
 }
 
@@ -440,6 +476,9 @@ async function materializeConveyorOptions(
       required: true,
       source_key: null,
       metadata_json: null,
+      operational_status: null,
+      operational_completed_at: null,
+      operational_completed_by: null,
     })
 
     const areas = [...op.areas].sort((a, b) => a.orderIndex - b.orderIndex)
@@ -463,6 +502,9 @@ async function materializeConveyorOptions(
         required: true,
         source_key: null,
         metadata_json: null,
+        operational_status: null,
+        operational_completed_at: null,
+        operational_completed_by: null,
       })
 
       const steps = [...ar.steps].sort((a, b) => a.orderIndex - b.orderIndex)
@@ -486,6 +528,9 @@ async function materializeConveyorOptions(
           required: st.required ?? true,
           source_key: null,
           metadata_json: null,
+          operational_status: 'PENDING',
+          operational_completed_at: null,
+          operational_completed_by: null,
         })
 
         const assignees = st.assignees ?? []
@@ -569,13 +614,38 @@ export async function serviceCreateConveyor(
     }
   }
 
+  const officialRollup = detectSyntheticSubtreeRollupInCreatePayload(body)
+  if (officialRollup.length > 0) {
+    throw new AppError(
+      'A estrutura contém uma etapa sintética de Matriz. Remova o item agregado e mantenha apenas as atividades reais.',
+      422,
+      ErrorCodes.CONVEYOR_SYNTHETIC_ROLLUP_STEP,
+      { findings: officialRollup },
+      {
+        errorRef: ErrorRefs.CONVEYOR_CREATE_FAILED,
+        category: 'BUSINESS',
+        severity: 'warning',
+      },
+    )
+  }
+
   const priority = normalizePriority(dados.prioridade)
   const conveyorId = randomUUID()
   const code: string | null = null
 
+  if (isConveyorCreateDiagnosticsEnabled()) {
+    logConveyorCreateDiagnostics({
+      stage: 'conveyor.create.incoming_payload',
+      conveyorId,
+      summary: summarizePostConveyorBodyForDiagnostics(body),
+      syntheticFindings: detectSyntheticSubtreeRollupNodesFromPostBody(body),
+    })
+  }
+
   const metadata_json = {
     colaboradorId: dados.colaboradorId ?? null,
     matrixRootItemId: body.matrixRootItemId ?? null,
+    documentReviewAudit: body.metadata?.documentReviewAudit ?? null,
   }
 
   const client = await pool.connect()
@@ -610,6 +680,17 @@ export async function serviceCreateConveyor(
 
     await materializeConveyorOptions(client, conveyorId, body.options)
 
+    if (isConveyorCreateDiagnosticsEnabled()) {
+      const persisted = await listConveyorNodesByConveyorId(client, conveyorId)
+      const synthFlat = detectSyntheticSubtreeRollupNodesFromFlatRows(persisted)
+      logConveyorCreateDiagnostics({
+        stage: 'conveyor.create.persisted_nodes',
+        conveyorId,
+        summary: summarizePersistedConveyorNodes(persisted),
+        syntheticFindings: synthFlat,
+      })
+    }
+
     await client.query('COMMIT')
 
     return {
@@ -641,8 +722,16 @@ export async function serviceCreateConveyor(
 
 function mergeConveyorMetadata(
   current: unknown,
-  patch: { colaboradorId?: string | null; matrixRootItemId?: string | null },
-): { colaboradorId: string | null; matrixRootItemId: string | null } {
+  patch: {
+    colaboradorId?: string | null
+    matrixRootItemId?: string | null
+    documentReviewAudit?: Record<string, unknown> | null
+  },
+): {
+  colaboradorId: string | null
+  matrixRootItemId: string | null
+  documentReviewAudit: Record<string, unknown> | null
+} {
   const cur = parseConveyorMetadataJson(current)
   return {
     colaboradorId:
@@ -651,6 +740,10 @@ function mergeConveyorMetadata(
       patch.matrixRootItemId !== undefined
         ? patch.matrixRootItemId
         : cur.matrixRootItemId,
+    documentReviewAudit:
+      patch.documentReviewAudit !== undefined
+        ? patch.documentReviewAudit
+        : cur.documentReviewAudit,
   }
 }
 
@@ -784,6 +877,21 @@ export async function serviceReplaceConveyorStructure(
         ErrorCodes.VALIDATION_ERROR,
       )
     }
+  }
+
+  const officialRollupPatch = detectSyntheticSubtreeRollupInCreatePayload(body)
+  if (officialRollupPatch.length > 0) {
+    throw new AppError(
+      'A estrutura contém uma etapa sintética de Matriz. Remova o item agregado e mantenha apenas as atividades reais.',
+      422,
+      ErrorCodes.CONVEYOR_SYNTHETIC_ROLLUP_STEP,
+      { findings: officialRollupPatch },
+      {
+        errorRef: ErrorRefs.CONVEYOR_CREATE_FAILED,
+        category: 'BUSINESS',
+        severity: 'warning',
+      },
+    )
   }
 
   const totals = computeTotalsForOptions(body.options)

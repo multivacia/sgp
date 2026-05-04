@@ -6,6 +6,7 @@ import type {
   ListConveyorsQuery,
   PatchConveyorDadosBody,
   PatchConveyorStatusBody,
+  PatchConveyorStepCompletionBody,
   PatchConveyorStructureBody,
 } from '../../domain/conveyors/conveyor.types'
 import type {
@@ -181,4 +182,35 @@ export async function patchConveyorStructure(
     `${BASE}/conveyors/${encodeURIComponent(id)}/structure`,
     { body },
   )
+}
+
+/**
+ * Conclusão explícita de etapa (STEP) — PATCH …/steps/:stepNodeId/completion
+ */
+export async function patchConveyorStepCompletion(
+  conveyorId: string,
+  stepNodeId: string,
+  body: PatchConveyorStepCompletionBody,
+): Promise<{ data: ConveyorDetail; meta: Record<string, unknown> }> {
+  return requestJsonEnvelope<ConveyorDetail>(
+    'PATCH',
+    `${BASE}/conveyors/${encodeURIComponent(conveyorId)}/steps/${encodeURIComponent(stepNodeId)}/completion`,
+    { body },
+  )
+}
+
+export type { ConveyorStepCompletionAction } from '../../domain/conveyors/conveyor.types'
+
+/**
+ * Reabertura explícita de etapa (STEP) — mesmo endpoint que `patchConveyorStepCompletion` com `action: 'REOPEN'`.
+ */
+export async function reopenConveyorStep(
+  conveyorId: string,
+  stepNodeId: string,
+  body: { note?: string } = {},
+): Promise<{ data: ConveyorDetail; meta: Record<string, unknown> }> {
+  return patchConveyorStepCompletion(conveyorId, stepNodeId, {
+    action: 'REOPEN',
+    note: body.note,
+  })
 }

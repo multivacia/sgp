@@ -73,13 +73,16 @@ export async function ensureMariaCollaboratorSeedForIntegration(
     `,
   )
 
+  /**
+   * Índice único parcial `idx_app_users_collaborator_id_unique`: só pode haver um `app_users`
+   * com cada `collaborator_id` não nulo — inclui linhas arquivadas (`deleted_at`), que continuam
+   * a contar para o índice. Liberta o vínculo em todas as linhas antes de atribuir à Maria.
+   */
   await pool.query(
     `
     UPDATE app_users
     SET collaborator_id = NULL
     WHERE collaborator_id = '3a5f3c72-2e75-4e0a-8f6e-6d4d086e5f1c'::uuid
-      AND id <> '44444444-4444-4444-4444-444444444444'::uuid
-      AND deleted_at IS NULL
     `,
   )
 
@@ -122,14 +125,5 @@ export async function ensureMariaCollaboratorSeedForIntegration(
       deleted_at = EXCLUDED.deleted_at
     `,
     ['maria@exemplo.com', hash],
-  )
-
-  await pool.query(
-    `
-    UPDATE app_users
-    SET collaborator_id = '3a5f3c72-2e75-4e0a-8f6e-6d4d086e5f1c'::uuid
-    WHERE id = '44444444-4444-4444-4444-444444444444'::uuid
-      AND deleted_at IS NULL
-    `,
   )
 }

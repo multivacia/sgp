@@ -23,17 +23,39 @@ export type ServiceLineGuess = {
   confidence: number
 }
 
+export type PartLineGuess = {
+  orderIndex: number
+  description: string
+  quantity?: number
+  confidence: number
+}
+
 export type HeuristicInterpretation = {
   osNumber?: string
+  documentNumber?: string
   licensePlate?: string
   clientName?: string
   vehicleDescription?: string
   modelVersion?: string
+  vehicleYear?: number
+  vehicleColor?: string
+  /** `Data:` / emissão — no Bravo costuma vir como ISO yyyy-mm-dd. */
+  issuedAt?: string
+  /** Entrada oficina — no Bravo costuma vir como ISO yyyy-mm-dd. */
+  entryAt?: string
+  receivedAt?: string
   notes?: string
+  operationalNotes?: string[]
   serviceLines: ServiceLineGuess[]
+  partLines?: PartLineGuess[]
   suggestedEsteiraTitle?: string
   suggestedEsteiraDescription?: string
   priorityHint?: 'alta' | 'media' | 'baixa'
+  personalDataDetected?: boolean
+  financialDataDetected?: boolean
+  removedCategories?: string[]
+  /** Interpretação determinística Bravo (PDF tabular) — regras TD9 para draft da esteira. */
+  heuristicSource?: 'bravo_deterministic'
   /** Confiança por campo lógico (chaves alinhadas a suggestedDados do draft). */
   fieldConfidence: Record<string, number>
 }

@@ -17,7 +17,7 @@ function isUniqueViolation(error: unknown): boolean {
 }
 
 export async function serviceCreateConveyorOperationalEvent(
-  pool: pg.Pool,
+  pool: pg.Pool | pg.PoolClient,
   input: InsertConveyorOperationalEventInput,
 ): Promise<{ created: boolean; event: ConveyorOperationalEventRow }> {
   if (input.idempotencyKey) {

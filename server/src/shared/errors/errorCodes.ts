@@ -12,4 +12,8 @@ export const ErrorCodes = {
   /** Bloqueio temporário por tentativas falhadas de login (locked_until). */
   ACCOUNT_TEMPORARILY_LOCKED: 'ACCOUNT_TEMPORARILY_LOCKED',
   FORBIDDEN: 'FORBIDDEN',
+  /** Dependência de armazenamento indisponível (ex.: migration não aplicada). */
+  SERVICE_UNAVAILABLE: 'SERVICE_UNAVAILABLE',
+  /** Etapa STEP espúria (rollup de TASK) em área placeholder quando já há setores reais. */
+  CONVEYOR_SYNTHETIC_ROLLUP_STEP: 'CONVEYOR_SYNTHETIC_ROLLUP_STEP',
 } as const

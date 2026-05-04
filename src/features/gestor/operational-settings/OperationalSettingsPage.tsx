@@ -29,8 +29,9 @@ import {
   patchOperationalCollaboratorRole,
   patchOperationalSector,
 } from '../../../services/admin/operationalSettingsApiService'
+import { OperationalCapacityTab } from './capacity/OperationalCapacityTab'
 
-type TabId = 'sectors' | 'roles'
+type TabId = 'sectors' | 'roles' | 'capacity'
 
 type ToastState = { message: string; variant: SgpToastVariant } | null
 
@@ -117,8 +118,8 @@ export function OperationalSettingsPage() {
         <div className="mt-3">
           <h1 className="sgp-page-title">Configurações operacionais</h1>
           <p className="sgp-page-lead mt-2 max-w-2xl">
-            Parametrização isolada de setores e de funções/papéis usados no cadastro de colaboradores.
-            Papéis de segurança (RBAC) não são geridos aqui.
+            Parametrização isolada de setores, funções/papéis no cadastro de colaboradores e capacidade
+            operacional diária. Papéis de segurança (RBAC) não são geridos aqui.
           </p>
         </div>
       </header>
@@ -155,9 +156,22 @@ export function OperationalSettingsPage() {
         >
           Funções operacionais
         </button>
+        <button
+          type="button"
+          onClick={() => setTab('capacity')}
+          className={`rounded-lg px-4 py-2 text-sm font-bold transition ${
+            tab === 'capacity'
+              ? 'bg-sgp-gold/15 text-sgp-gold ring-1 ring-sgp-gold/35'
+              : 'text-slate-400 hover:bg-white/[0.04]'
+          }`}
+        >
+          Capacidade operacional
+        </button>
       </div>
 
-      {tab === 'sectors' ? (
+      {tab === 'capacity' ? (
+        <OperationalCapacityTab />
+      ) : tab === 'sectors' ? (
         <section className="mt-6">
           <div className="sgp-panel sgp-panel-hover">
             <div className="flex flex-col gap-3 md:flex-row md:flex-wrap md:items-end md:justify-between">
@@ -276,7 +290,7 @@ export function OperationalSettingsPage() {
             </div>
           </div>
         </section>
-      ) : (
+      ) : tab === 'roles' ? (
         <section className="mt-6">
           <div className="sgp-panel sgp-panel-hover">
             <div className="flex flex-col gap-3 md:flex-row md:flex-wrap md:items-end md:justify-between">
@@ -399,7 +413,7 @@ export function OperationalSettingsPage() {
             </div>
           </div>
         </section>
-      )}
+      ) : null}
 
       {sectorModal ? (
         <SectorNameModal

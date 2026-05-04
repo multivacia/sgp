@@ -99,8 +99,11 @@ function mapAssignees(step: ConveyorStructureStepApi): ConveyorOperationalSnapsh
     .filter((entry): entry is ConveyorOperationalSnapshotAssigneeV1 => entry !== null)
 }
 
-function mapStepStatus(step: { realizedMinutes: number; pendingMinutes: number }, isOverdueContext: boolean): ConveyorStepStatusV1 {
-  if (step.pendingMinutes <= 0 && step.realizedMinutes > 0) return 'completed'
+function mapStepStatus(
+  step: ConveyorStructureStepApi & { realizedMinutes: number; pendingMinutes: number },
+  isOverdueContext: boolean,
+): ConveyorStepStatusV1 {
+  if (step.operationalStatus === 'COMPLETED') return 'completed'
   if (isOverdueContext && step.pendingMinutes > 0) return 'overdue'
   if (step.realizedMinutes > 0) return 'in_progress'
   return 'not_started'
@@ -146,7 +149,11 @@ function buildComputed(
         const assignees = mapAssignees(step)
         const hasPrimaryResponsible = assignees.some((assignee) => assignee.isPrimary)
         const status = mapStepStatus(
-          { realizedMinutes: stepRealizedMinutes, pendingMinutes: stepPendingMinutes },
+          {
+            ...step,
+            realizedMinutes: stepRealizedMinutes,
+            pendingMinutes: stepPendingMinutes,
+          },
           isOverdueContext,
         )
         if (step.plannedMinutes == null) missingPlannedMinutesSteps++

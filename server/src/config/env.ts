@@ -58,8 +58,14 @@ export type Env = {
    * o header `X-SGP-Infra-Token` com este valor (comparação segura no servidor).
    */
   healthInfraToken?: string
-  /** URL completa do endpoint ARGOS de ingestão (opcional; sem isto usa adapter stub). */
+  /** URL completa do endpoint ARGOS de ingestão (obrigatória só para `documentDraftAdapter === 'remote'`). */
   argosIngestUrl?: string
+  /**
+   * Adapter do `POST .../conveyors/document-draft`: **local** (pipeline R6 Bravo por defeito),
+   * **remote** (gateway HTTP, só com configuração explícita) ou **stub** (mínimo).
+   * `ARGOS_INGEST_URL` já não escolhe remoto automaticamente.
+   */
+  documentDraftAdapter: 'local' | 'remote' | 'stub'
   /** Bearer opcional para `Authorization` no cliente HTTP ARGOS. */
   argosIngestToken?: string
   /**
@@ -103,8 +109,8 @@ export type Env = {
    */
   argosRemoteRequired: boolean
   /**
-   * Quando true, sem URL remoto usa apenas o stub mínimo (testes); caso contrário
-   * usa o pipeline heurístico local (`LocalPipelineArgosDocumentDraftAdapter`).
+   * Valor cru de `ARGOS_USE_MINIMAL_STUB` (legacy); a escolha efetiva do adapter de
+   * document-draft está em {@link documentDraftAdapter}.
    */
   argosUseMinimalStub: boolean
   supportTicketsEnabled?: boolean
@@ -133,6 +139,41 @@ let cached: Env | undefined
 /** Para testes de integração que precisam alterar `process.env` antes de `loadEnv()`. */
 export function resetEnvCacheForTests(): void {
   cached = undefined
+}
+
+/**
+ * Escolha explícita do adapter de document-draft (não inferir a partir de ARGOS_INGEST_URL).
+ * Precedência: `DOCUMENT_DRAFT_ADAPTER` → alias legacy de local → `ARGOS_USE_MINIMAL_STUB` (stub) → local.
+ */
+/** Exportado para testes unitários da precedência sem carregar todo o `loadEnv`. */
+export function resolveDocumentDraftAdapter(
+  processEnv: NodeJS.ProcessEnv,
+): 'local' | 'remote' | 'stub' {
+  const raw = processEnv.DOCUMENT_DRAFT_ADAPTER?.trim().toLowerCase()
+  if (raw === 'local' || raw === 'remote' || raw === 'stub') {
+    return raw
+  }
+  if (raw !== undefined && raw !== '') {
+    throw new Error(
+      'DOCUMENT_DRAFT_ADAPTER deve ser um de: local, remote, stub (ou omitir para local).',
+    )
+  }
+  if (
+    processEnv.SGP_TEST_LOCAL_DOCUMENT_ADAPTER === '1' ||
+    processEnv.SGP_LOCAL_DOCUMENT_PIPELINE === '1' ||
+    processEnv.DOCUMENT_DRAFT_USE_LOCAL_PIPELINE === '1'
+  ) {
+    return 'local'
+  }
+  const stubLegacy = processEnv.ARGOS_USE_MINIMAL_STUB?.trim().toLowerCase()
+  if (
+    stubLegacy !== undefined &&
+    stubLegacy !== '' &&
+    ['1', 'true', 'yes', 'on'].includes(stubLegacy)
+  ) {
+    return 'stub'
+  }
+  return 'local'
 }
 
 function formatZodEnvError(err: z.ZodError): string {
@@ -319,15 +360,16 @@ export function loadEnv(): Env {
     )
   }
 
-  /**
-   * Apenas para testes de integração (`SGP_TEST_LOCAL_DOCUMENT_ADAPTER=1`):
-   * força adapter documental local mesmo com `ARGOS_INGEST_URL` no `.env`.
-   */
-  const forceLocalDocumentAdapter =
-    process.env.SGP_TEST_LOCAL_DOCUMENT_ADAPTER === '1'
-  const argosIngestUrl = forceLocalDocumentAdapter
-    ? undefined
-    : (process.env.ARGOS_INGEST_URL?.trim() || undefined)
+  const argosIngestUrl = process.env.ARGOS_INGEST_URL?.trim() || undefined
+  const documentDraftAdapter = resolveDocumentDraftAdapter(process.env)
+  if (documentDraftAdapter === 'remote' && !argosIngestUrl) {
+    throw new Error(
+      [
+        'DOCUMENT_DRAFT_ADAPTER=remote exige ARGOS_INGEST_URL com a URL completa do gateway de ingestão.',
+        'Para o pipeline local R6 (padrão seguro), use DOCUMENT_DRAFT_ADAPTER=local ou omita a variável.',
+      ].join(' '),
+    )
+  }
   const argosIngestToken = process.env.ARGOS_INGEST_TOKEN?.trim() || undefined
 
   let argosRemoteRequired = false
@@ -482,6 +524,7 @@ export function loadEnv(): Env {
     loginLockoutMinutes: v.LOGIN_LOCKOUT_MINUTES,
     healthInfraToken,
     argosIngestUrl,
+    documentDraftAdapter,
     argosIngestToken,
     argosCallerEnvironment,
     argosPolicyMode,

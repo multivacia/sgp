@@ -98,3 +98,12 @@ export const deleteTimeEntryBodySchema = z.object({
 })
 
 export type DeleteTimeEntryBody = z.infer<typeof deleteTimeEntryBodySchema>
+
+export const patchConveyorStepCompletionBodySchema = z.object({
+  action: z.enum(['COMPLETE', 'REOPEN']),
+  note: z.string().max(2000).optional(),
+})
+
+export type PatchConveyorStepCompletionBody = z.infer<
+  typeof patchConveyorStepCompletionBodySchema
+>

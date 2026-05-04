@@ -11,6 +11,7 @@ import {
 } from '../config/env.js'
 import { hashPassword } from '../shared/password/password.js'
 import { sessionCookieForUser } from './sessionTestCookie.js'
+import { detectSyntheticSubtreeRollupNodesFromDetailStructure } from '../modules/conveyors/conveyorCreateDiagnostics.js'
 
 loadDotenvFiles()
 
@@ -156,6 +157,9 @@ describe.skipIf(!hasDb)('conveyors POST (integração)', () => {
     expect(d.totalPlannedMinutes).toBe(30)
     expect(Array.isArray(d.structure?.options)).toBe(true)
     expect(d.structure.options[0]?.areas?.[0]?.steps?.[0]?.name).toBe('Etapa 1')
+    expect(d.structure.options[0]?.areas?.[0]?.steps?.[0]?.operationalStatus).toBe('PENDING')
+    expect(d.structure.options[0]?.areas?.[0]?.steps?.[0]?.isCompleted).toBe(false)
+    expect(detectSyntheticSubtreeRollupNodesFromDetailStructure(d.structure)).toEqual([])
   })
 
   it('GET /api/v1/conveyors/:id/node-workload 200 — pendência e áreas', async () => {
@@ -186,10 +190,223 @@ describe.skipIf(!hasDb)('conveyors POST (integração)', () => {
     expect(w.steps[0].plannedMinutes).toBe(30)
     expect(w.steps[0].realizedMinutes).toBe(0)
     expect(w.steps[0].pendingMinutes).toBe(30)
+    expect(w.steps[0].operationalStatus).toBe('PENDING')
+    expect(w.steps[0].isOperationallyCompleted).toBe(false)
     expect(w.areas.length).toBe(1)
     expect(w.areas[0].plannedMinutesSum).toBe(30)
     expect(w.areas[0].pendingMinutesSum).toBe(30)
     expect(typeof w.notes).toBe('string')
+  })
+
+  it('PATCH /api/v1/conveyors/:id/steps/:stepId/completion conclui etapa explicitamente', async () => {
+    const body = minimalValidBody()
+    const post = await request(app)
+      .post('/api/v1/conveyors')
+      .set(
+        'Cookie',
+        await sessionCookieForUser(pool, GOV_ADMIN_USER_ID, GOV_ADMIN_EMAIL),
+      )
+      .send(body)
+    expect(post.status).toBe(201)
+    const cid = post.body.data.id as string
+    const det = await request(app)
+      .get(`/api/v1/conveyors/${cid}`)
+      .set(
+        'Cookie',
+        await sessionCookieForUser(pool, MARIA_APP_USER_ID, MARIA_EMAIL),
+      )
+    expect(det.status).toBe(200)
+    const stepId = det.body.data.structure.options[0].areas[0].steps[0].id as string
+
+    const patch = await request(app)
+      .patch(`/api/v1/conveyors/${cid}/steps/${stepId}/completion`)
+      .set(
+        'Cookie',
+        await sessionCookieForUser(pool, GOV_ADMIN_USER_ID, GOV_ADMIN_EMAIL),
+      )
+      .send({ action: 'COMPLETE', note: 'e2e' })
+    expect(patch.status).toBe(200)
+    expect(patch.body.meta.stepCompletionIdempotent).toBe(false)
+    const st = patch.body.data.structure.options[0].areas[0].steps[0]
+    expect(st.operationalStatus).toBe('COMPLETED')
+    expect(st.isCompleted).toBe(true)
+
+    const patch2 = await request(app)
+      .patch(`/api/v1/conveyors/${cid}/steps/${stepId}/completion`)
+      .set(
+        'Cookie',
+        await sessionCookieForUser(pool, GOV_ADMIN_USER_ID, GOV_ADMIN_EMAIL),
+      )
+      .send({ action: 'COMPLETE' })
+    expect(patch2.status).toBe(200)
+    expect(patch2.body.meta.stepCompletionIdempotent).toBe(true)
+  })
+
+  it('PATCH completion action inválida responde 400/422 (Zod)', async () => {
+    const body = minimalValidBody()
+    const post = await request(app)
+      .post('/api/v1/conveyors')
+      .set(
+        'Cookie',
+        await sessionCookieForUser(pool, GOV_ADMIN_USER_ID, GOV_ADMIN_EMAIL),
+      )
+      .send(body)
+    expect(post.status).toBe(201)
+    const cid = post.body.data.id as string
+    const det = await request(app)
+      .get(`/api/v1/conveyors/${cid}`)
+      .set(
+        'Cookie',
+        await sessionCookieForUser(pool, MARIA_APP_USER_ID, MARIA_EMAIL),
+      )
+    expect(det.status).toBe(200)
+    const stepId = det.body.data.structure.options[0].areas[0].steps[0].id as string
+
+    const bad = await request(app)
+      .patch(`/api/v1/conveyors/${cid}/steps/${stepId}/completion`)
+      .set(
+        'Cookie',
+        await sessionCookieForUser(pool, GOV_ADMIN_USER_ID, GOV_ADMIN_EMAIL),
+      )
+      .send({ action: 'INVALID' })
+    expect(bad.status).toBeGreaterThanOrEqual(400)
+    expect(bad.status).toBeLessThan(500)
+  })
+
+  it('PATCH completion REOPEN: volta a pendência e permite nova conclusão', async () => {
+    const body = minimalValidBody()
+    const post = await request(app)
+      .post('/api/v1/conveyors')
+      .set(
+        'Cookie',
+        await sessionCookieForUser(pool, GOV_ADMIN_USER_ID, GOV_ADMIN_EMAIL),
+      )
+      .send(body)
+    expect(post.status).toBe(201)
+    const cid = post.body.data.id as string
+    const det = await request(app)
+      .get(`/api/v1/conveyors/${cid}`)
+      .set(
+        'Cookie',
+        await sessionCookieForUser(pool, MARIA_APP_USER_ID, MARIA_EMAIL),
+      )
+    expect(det.status).toBe(200)
+    const stepId = det.body.data.structure.options[0].areas[0].steps[0].id as string
+
+    const complete1 = await request(app)
+      .patch(`/api/v1/conveyors/${cid}/steps/${stepId}/completion`)
+      .set(
+        'Cookie',
+        await sessionCookieForUser(pool, GOV_ADMIN_USER_ID, GOV_ADMIN_EMAIL),
+      )
+      .send({ action: 'COMPLETE' })
+    expect(complete1.status).toBe(200)
+
+    const wDone = await request(app)
+      .get(`/api/v1/conveyors/${cid}/node-workload`)
+      .set(
+        'Cookie',
+        await sessionCookieForUser(pool, MARIA_APP_USER_ID, MARIA_EMAIL),
+      )
+    expect(wDone.status).toBe(200)
+    const stepDone = wDone.body.data.steps.find((s: { stepId: string }) => s.stepId === stepId)
+    expect(stepDone.pendingMinutes).toBe(0)
+    expect(stepDone.isOperationallyCompleted).toBe(true)
+
+    const reopen = await request(app)
+      .patch(`/api/v1/conveyors/${cid}/steps/${stepId}/completion`)
+      .set(
+        'Cookie',
+        await sessionCookieForUser(pool, GOV_ADMIN_USER_ID, GOV_ADMIN_EMAIL),
+      )
+      .send({ action: 'REOPEN', note: 'rever escopo' })
+    expect(reopen.status).toBe(200)
+    expect(reopen.body.data.structure.options[0].areas[0].steps[0].operationalStatus).toBe(
+      'REOPENED',
+    )
+
+    const wOpen = await request(app)
+      .get(`/api/v1/conveyors/${cid}/node-workload`)
+      .set(
+        'Cookie',
+        await sessionCookieForUser(pool, MARIA_APP_USER_ID, MARIA_EMAIL),
+      )
+    expect(wOpen.status).toBe(200)
+    const stepOpen = wOpen.body.data.steps.find((s: { stepId: string }) => s.stepId === stepId)
+    expect(stepOpen.pendingMinutes).toBe(30)
+    expect(stepOpen.isOperationallyCompleted).toBe(false)
+
+    const complete2 = await request(app)
+      .patch(`/api/v1/conveyors/${cid}/steps/${stepId}/completion`)
+      .set(
+        'Cookie',
+        await sessionCookieForUser(pool, GOV_ADMIN_USER_ID, GOV_ADMIN_EMAIL),
+      )
+      .send({ action: 'COMPLETE' })
+    expect(complete2.status).toBe(200)
+    expect(complete2.body.meta.stepCompletionIdempotent).toBe(false)
+    expect(complete2.body.data.structure.options[0].areas[0].steps[0].operationalStatus).toBe(
+      'COMPLETED',
+    )
+  })
+
+  it('PATCH completion REOPEN com etapa não concluída responde 422', async () => {
+    const body = minimalValidBody()
+    const post = await request(app)
+      .post('/api/v1/conveyors')
+      .set(
+        'Cookie',
+        await sessionCookieForUser(pool, GOV_ADMIN_USER_ID, GOV_ADMIN_EMAIL),
+      )
+      .send(body)
+    expect(post.status).toBe(201)
+    const cid = post.body.data.id as string
+    const det = await request(app)
+      .get(`/api/v1/conveyors/${cid}`)
+      .set(
+        'Cookie',
+        await sessionCookieForUser(pool, MARIA_APP_USER_ID, MARIA_EMAIL),
+      )
+    expect(det.status).toBe(200)
+    const stepId = det.body.data.structure.options[0].areas[0].steps[0].id as string
+
+    const reopen = await request(app)
+      .patch(`/api/v1/conveyors/${cid}/steps/${stepId}/completion`)
+      .set(
+        'Cookie',
+        await sessionCookieForUser(pool, GOV_ADMIN_USER_ID, GOV_ADMIN_EMAIL),
+      )
+      .send({ action: 'REOPEN' })
+    expect(reopen.status).toBe(422)
+  })
+
+  it('PATCH completion em nó OPTION responde 422', async () => {
+    const body = minimalValidBody()
+    const post = await request(app)
+      .post('/api/v1/conveyors')
+      .set(
+        'Cookie',
+        await sessionCookieForUser(pool, GOV_ADMIN_USER_ID, GOV_ADMIN_EMAIL),
+      )
+      .send(body)
+    expect(post.status).toBe(201)
+    const cid = post.body.data.id as string
+    const det = await request(app)
+      .get(`/api/v1/conveyors/${cid}`)
+      .set(
+        'Cookie',
+        await sessionCookieForUser(pool, MARIA_APP_USER_ID, MARIA_EMAIL),
+      )
+    expect(det.status).toBe(200)
+    const optionId = det.body.data.structure.options[0].id as string
+    const res = await request(app)
+      .patch(`/api/v1/conveyors/${cid}/steps/${optionId}/completion`)
+      .set(
+        'Cookie',
+        await sessionCookieForUser(pool, GOV_ADMIN_USER_ID, GOV_ADMIN_EMAIL),
+      )
+      .send({ action: 'COMPLETE' })
+    expect(res.status).toBe(422)
   })
 
   it('GET /api/v1/conveyors/:id/node-workload 404 UUID inexistente', async () => {
@@ -416,5 +633,138 @@ describe.skipIf(!hasDb)('conveyors POST (integração)', () => {
       .send(body)
     expect(res.status).toBe(422)
     expect(res.body.error?.message).toContain('Colaborador')
+  })
+
+  it('POST 422 — S9.4.5 pseudo-rollup oficial (Área + step = opção com setores reais)', async () => {
+    const t = '16 - VOLANTE'
+    const body = minimalValidBody()
+    body.options = [
+      {
+        titulo: t,
+        orderIndex: 1,
+        sourceOrigin: 'manual' as const,
+        areas: [
+          {
+            titulo: 'Área',
+            orderIndex: 1,
+            sourceOrigin: 'manual' as const,
+            steps: [
+              {
+                titulo: t,
+                orderIndex: 1,
+                plannedMinutes: 250,
+                sourceOrigin: 'manual' as const,
+                required: true,
+                assignees: [],
+              },
+            ],
+          },
+          {
+            titulo: 'PREPARAÇÃO',
+            orderIndex: 2,
+            sourceOrigin: 'manual' as const,
+            steps: [
+              {
+                titulo: 'Remover revestimento',
+                orderIndex: 1,
+                plannedMinutes: 10,
+                sourceOrigin: 'manual' as const,
+                required: true,
+                assignees: [],
+              },
+              {
+                titulo: 'Limpar',
+                orderIndex: 2,
+                plannedMinutes: 10,
+                sourceOrigin: 'manual' as const,
+                required: true,
+                assignees: [],
+              },
+            ],
+          },
+        ],
+      },
+    ]
+    const res = await request(app)
+      .post('/api/v1/conveyors')
+      .set(
+        'Cookie',
+        await sessionCookieForUser(pool, GOV_ADMIN_USER_ID, GOV_ADMIN_EMAIL),
+      )
+      .send(body)
+    expect(res.status).toBe(422)
+    expect(res.body.error?.code).toBe('CONVEYOR_SYNTHETIC_ROLLUP_STEP')
+  })
+
+  it('POST 201 — S9.4.5 payload sem pseudo-rollup (só setores nomeados)', async () => {
+    const body = minimalValidBody()
+    body.options = [
+      {
+        titulo: '16 - VOLANTE',
+        orderIndex: 1,
+        sourceOrigin: 'manual' as const,
+        areas: [
+          {
+            titulo: 'PREPARAÇÃO',
+            orderIndex: 1,
+            sourceOrigin: 'manual' as const,
+            steps: [
+              {
+                titulo: 'Remover revestimento',
+                orderIndex: 1,
+                plannedMinutes: 10,
+                sourceOrigin: 'manual' as const,
+                required: true,
+                assignees: [],
+              },
+              {
+                titulo: 'Limpar',
+                orderIndex: 2,
+                plannedMinutes: 10,
+                sourceOrigin: 'manual' as const,
+                required: true,
+                assignees: [],
+              },
+            ],
+          },
+          {
+            titulo: 'CORTE',
+            orderIndex: 2,
+            sourceOrigin: 'manual' as const,
+            steps: [
+              {
+                titulo: 'Corte couro',
+                orderIndex: 1,
+                plannedMinutes: 40,
+                sourceOrigin: 'manual' as const,
+                required: true,
+                assignees: [],
+              },
+            ],
+          },
+        ],
+      },
+    ]
+    const post = await request(app)
+      .post('/api/v1/conveyors')
+      .set(
+        'Cookie',
+        await sessionCookieForUser(pool, GOV_ADMIN_USER_ID, GOV_ADMIN_EMAIL),
+      )
+      .send(body)
+    expect(post.status).toBe(201)
+    const cid = post.body.data.id as string
+    const res = await request(app)
+      .get(`/api/v1/conveyors/${cid}`)
+      .set(
+        'Cookie',
+        await sessionCookieForUser(pool, MARIA_APP_USER_ID, MARIA_EMAIL),
+      )
+    expect(res.status).toBe(200)
+    const d = res.body.data
+    const areaNames = d.structure.options[0]?.areas?.map((a: { name: string }) => a.name) ?? []
+    expect(areaNames).not.toContain('Área')
+    expect(detectSyntheticSubtreeRollupNodesFromDetailStructure(d.structure)).toEqual([])
+    expect(d.totalPlannedMinutes).toBe(60)
   })
 })

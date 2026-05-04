@@ -1,6 +1,6 @@
 import { useCallback, useState, type DragEvent } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import type { ConveyorDraftV1 } from '../../../domain/argos/draft-v1.types'
+import type { ConveyorDraft } from '../../../domain/argos/draft-v1.types'
 import type { ArgosDocumentIngestResult } from '../../../domain/argos/ingest-response.types'
 import { PageCanvas } from '../../../components/ui/PageCanvas'
 import { SgpInlineBanner } from '../../../components/ui/SgpToast'
@@ -17,14 +17,40 @@ import {
 } from '../../../services/conveyors/documentDraftApiService'
 import { partitionArgosIssues, isArgosResultOperationallyFailed } from './argosIssues'
 import {
-  draftV1ToCreateConveyorInput,
+  applyReviewDecisionsToDraftV11,
+  buildCreateConveyorInputForDocumentImport,
+  buildDocumentReviewAuditPayload,
+  validateDocumentReviewAuditIsSafe,
   validateDraftForCreate,
 } from './draftToCreateConveyorInput'
+import { DocumentDraftReviewPanel } from './DocumentDraftReviewPanel'
+import { buildDocumentDraftReviewModel, isDraftV11Result } from './documentDraftReview'
+import {
+  buildFinalDecisionCounts,
+  canCreateOfficialConveyor,
+  type ReviewAcceptanceState,
+  type ReviewItemCurrentDecision,
+} from './documentReviewAcceptance'
+import {
+  editableDraftContainsForbiddenOperationalContent,
+  normalizeV11DraftForEditing,
+} from './draftV11EditorNormalize'
+import {
+  detectSyntheticSubtreeRollupInEditableDraft,
+  detectSyntheticSubtreeRollupSteps,
+  summarizeConveyorDraftForImportDebug,
+  summarizeCreateConveyorInput,
+  SYNTHETIC_SUBTREE_STEP_USER_MESSAGE,
+  toSyntheticFindingDevLog,
+} from './documentImportCreatePayloadDiagnostics'
 
-type SuggestedForm = ConveyorDraftV1['suggestedDados'] & { osNumber?: string }
+const DOCUMENT_IMPORT_PAYLOAD_DIAGNOSTICS =
+  import.meta.env.DEV || import.meta.env.MODE !== 'production'
 
-function cloneDraft(d: ConveyorDraftV1): ConveyorDraftV1 {
-  return JSON.parse(JSON.stringify(d)) as ConveyorDraftV1
+type SuggestedForm = ConveyorDraft['suggestedDados'] & { osNumber?: string }
+
+function cloneDraft(d: ConveyorDraft): ConveyorDraft {
+  return JSON.parse(JSON.stringify(d)) as ConveyorDraft
 }
 
 function ingestAllowsHumanReview(r: ArgosDocumentIngestResult): boolean {
@@ -43,9 +69,10 @@ export function NovaEsteiraPorDocumentoPage() {
   const [dragOver, setDragOver] = useState(false)
   const [processing, setProcessing] = useState(false)
   const [ingest, setIngest] = useState<ArgosDocumentIngestResult | null>(null)
-  const [editedDraft, setEditedDraft] = useState<ConveyorDraftV1 | null>(null)
+  const [editedDraft, setEditedDraft] = useState<ConveyorDraft | null>(null)
   const [localError, setLocalError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
+  const [reviewAcceptance, setReviewAcceptance] = useState<ReviewAcceptanceState>({})
   /** Modo de execução documental no servidor (vindo de `meta` — sem inferência no cliente). */
   const [documentExecutionMode, setDocumentExecutionMode] = useState<
     DocumentDraftExecutionMode | null
@@ -58,6 +85,7 @@ export function NovaEsteiraPorDocumentoPage() {
     setEditedDraft(null)
     setLocalError(null)
     setDocumentExecutionMode(null)
+    setReviewAcceptance({})
   }, [])
 
   /** Troca de função no shell: há interpretação ARGOS ou processamento em curso. */
@@ -75,13 +103,18 @@ export function NovaEsteiraPorDocumentoPage() {
       setIngest(null)
       setEditedDraft(null)
       setDocumentExecutionMode(null)
+      setReviewAcceptance({})
       try {
         const { result, documentDraftExecutionMode } =
           await postConveyorDocumentDraft(file)
         setIngest(result)
         setDocumentExecutionMode(documentDraftExecutionMode ?? null)
         if (ingestAllowsHumanReview(result) && result.draft) {
-          setEditedDraft(cloneDraft(result.draft))
+          let nextDraft = cloneDraft(result.draft)
+          if (isDraftV11Result(result)) {
+            nextDraft = normalizeV11DraftForEditing(result, nextDraft)
+          }
+          setEditedDraft(nextDraft)
         }
       } catch (e) {
         const n = reportClientError(e, {
@@ -132,19 +165,169 @@ export function NovaEsteiraPorDocumentoPage() {
       fatalIssues: fatalList,
     })
 
-  const canSubmit = Boolean(editedDraft) && !blockedOperationally && !submitting
+  const reviewModel = ingest && isDraftV11Result(ingest) ? buildDocumentDraftReviewModel(ingest) : null
+  const draftBlockedByForbiddenOperationalContent =
+    editedDraft !== null &&
+    editableDraftContainsForbiddenOperationalContent(editedDraft)
+
+  const isBravoV11Import =
+    Boolean(ingest && isDraftV11Result(ingest) && ingest.sourceDocument?.provider === 'BRAVO')
+
+  const canSubmit =
+    Boolean(editedDraft) &&
+    !blockedOperationally &&
+    !draftBlockedByForbiddenOperationalContent &&
+    !submitting &&
+    canCreateOfficialConveyor(ingest, reviewModel, reviewAcceptance)
 
   async function handleCriarEsteira() {
     if (!editedDraft) return
-    const v = validateDraftForCreate(editedDraft)
+    const hasPendingRequiredReviewDecisions = !canCreateOfficialConveyor(
+      ingest,
+      reviewModel,
+      reviewAcceptance,
+    )
+    const draftForCreate =
+      ingest && isDraftV11Result(ingest)
+        ? applyReviewDecisionsToDraftV11(editedDraft, ingest.matchingPlan, reviewAcceptance)
+        : editedDraft
+    const auditPayload =
+      ingest && isDraftV11Result(ingest)
+        ? buildDocumentReviewAuditPayload({
+            ingest,
+            acceptance: reviewAcceptance,
+            finalDraft: draftForCreate,
+          })
+        : null
+    const v = validateDraftForCreate(
+      draftForCreate,
+      ingest?.extractedItems?.operationalNotes,
+      {
+        hasPendingRequiredReviewDecisions,
+        documentReviewAudit: auditPayload,
+      },
+    )
     if (v) {
       setLocalError(v)
       return
     }
+    if (auditPayload) {
+      const auditError = validateDocumentReviewAuditIsSafe(auditPayload)
+      if (auditError) {
+        setLocalError(auditError)
+        return
+      }
+    }
+
+    const needsReinforcedReview = reviewModel?.counters.hasReviewRequiredItems ?? false
+    const finalCounts =
+      reviewModel && ingest && isDraftV11Result(ingest)
+        ? buildFinalDecisionCounts(reviewModel, reviewAcceptance)
+        : null
+    const summaryLines = finalCounts
+      ? `\n\nResumo das decisões:\n· Alinhados à matriz: ${finalCounts.reuseOrMatrix}\n· Novos confirmados: ${finalCounts.confirmedNew}\n· Ignorados pelo revisor: ${finalCounts.userIgnored}\n· Alternativas selecionadas: ${finalCounts.alternativePicked}`
+      : ''
+    const confirmed = window.confirm(
+      needsReinforcedReview
+        ? `Confirmar criação da esteira oficial.\n\nVocê confirmou os itens que exigiam revisão. A esteira oficial será criada a partir deste draft revisado.${summaryLines}`
+        : `Confirmar criação da esteira oficial a partir do draft revisado?${summaryLines}`,
+    )
+    if (!confirmed) return
+
     setLocalError(null)
     setSubmitting(true)
     try {
-      const body = draftV1ToCreateConveyorInput(editedDraft)
+      if (ingest && isDraftV11Result(ingest) && DOCUMENT_IMPORT_PAYLOAD_DIAGNOSTICS) {
+        console.info({
+          stage: 'document_import.draft.before_review_decisions',
+          summary: summarizeConveyorDraftForImportDebug(editedDraft),
+        })
+        console.info({
+          stage: 'document_import.draft.after_review_decisions',
+          summary: summarizeConveyorDraftForImportDebug(draftForCreate),
+        })
+      }
+      const built = buildCreateConveyorInputForDocumentImport(draftForCreate, {
+        bravoOsDocumentImport: isBravoV11Import,
+        documentReviewAudit: auditPayload ?? undefined,
+      })
+      const body = built.inputAfterStrip
+      if (DOCUMENT_IMPORT_PAYLOAD_DIAGNOSTICS) {
+        console.info({
+          stage: 'document_import.create_payload.summary',
+          summary: summarizeCreateConveyorInput(body),
+        })
+      }
+
+      const draftFindings = detectSyntheticSubtreeRollupInEditableDraft(editedDraft)
+      const reviewedDraftFindings = detectSyntheticSubtreeRollupInEditableDraft(draftForCreate)
+      const legacyPayloadBeforeStrip = detectSyntheticSubtreeRollupSteps(built.inputBeforeStrip)
+      const legacyPayloadAfterStrip = detectSyntheticSubtreeRollupSteps(built.inputAfterStrip)
+
+      if (import.meta.env.DEV) {
+        console.info({
+          stage: 'document_import.synthetic_blocker.source',
+          officialPayloadFindingsBeforeStrip: toSyntheticFindingDevLog(
+            built.officialFindingsBeforeStrip,
+            'official_create_payload',
+          ),
+          officialPayloadFindingsAfterStrip: toSyntheticFindingDevLog(
+            built.officialFindingsAfterStrip,
+            'official_create_payload_final',
+          ),
+          legacyPayloadFindingsBeforeStrip: toSyntheticFindingDevLog(
+            legacyPayloadBeforeStrip,
+            'legacy_payload_heuristic',
+          ),
+          legacyPayloadFindingsAfterStrip: toSyntheticFindingDevLog(
+            legacyPayloadAfterStrip,
+            'legacy_payload_heuristic_final',
+          ),
+          draftFindings: toSyntheticFindingDevLog(draftFindings, 'legacy_editable_draft'),
+          reviewedDraftFindings: toSyntheticFindingDevLog(
+            reviewedDraftFindings,
+            'legacy_reviewed_draft',
+          ),
+          createInputBeforeStripFindings: toSyntheticFindingDevLog(
+            built.officialFindingsBeforeStrip,
+            'official_create_payload_unstripped',
+          ),
+          createInputAfterStripFindings: toSyntheticFindingDevLog(
+            built.officialFindingsAfterStrip,
+            'official_create_payload_stripped',
+          ),
+        })
+      }
+
+      const officialRollupBlocksPost = built.officialFindingsAfterStrip.length > 0
+
+      if (
+        import.meta.env.DEV &&
+        !officialRollupBlocksPost &&
+        (draftFindings.length > 0 ||
+          reviewedDraftFindings.length > 0 ||
+          legacyPayloadAfterStrip.length > 0)
+      ) {
+        console.warn({
+          stage: 'document_import.synthetic_legacy_heuristic_only',
+          message:
+            'Heurísticas legadas acusaram rollup no draft ou no payload, mas o detector oficial no POST final está limpo — não bloqueando.',
+          draftFindings,
+          reviewedDraftFindings,
+          legacyPayloadAfterStrip,
+        })
+      }
+
+      if (officialRollupBlocksPost) {
+        console.error({
+          stage: 'document_import.synthetic_official_blocks_post',
+          officialFindingsAfterStrip: built.officialFindingsAfterStrip,
+        })
+        setLocalError(SYNTHETIC_SUBTREE_STEP_USER_MESSAGE)
+        setSubmitting(false)
+        return
+      }
+
       const created = await createConveyor(body)
       navigate(`/app/esteiras/${encodeURIComponent(created.id)}`, {
         replace: true,
@@ -167,6 +350,25 @@ export function NovaEsteiraPorDocumentoPage() {
     } finally {
       setSubmitting(false)
     }
+  }
+
+  function applyReviewDecision(payload: {
+    itemKey: string
+    currentDecision: ReviewItemCurrentDecision
+    selectedAlternativeMatrixNodeId?: string
+  }) {
+    setReviewAcceptance((prev) => ({
+      ...prev,
+      [payload.itemKey]: {
+        itemKey: payload.itemKey,
+        currentDecision: payload.currentDecision,
+        selectedAlternativeMatrixNodeId:
+          payload.currentDecision === 'SELECT_ALTERNATIVE'
+            ? payload.selectedAlternativeMatrixNodeId
+            : undefined,
+        updatedAt: new Date().toISOString(),
+      },
+    }))
   }
 
   function patchSuggested(patch: Partial<SuggestedForm>) {
@@ -205,6 +407,13 @@ export function NovaEsteiraPorDocumentoPage() {
           variant="neutral"
           message="Modo demonstração (stub): rascunho mínimo para testes rápidos — não usa o ARGOS remoto nem o pipeline local completo."
           className="mt-6 max-w-4xl border-amber-500/30 bg-amber-500/[0.09] text-amber-50/95"
+        />
+      ) : null}
+      {documentExecutionMode === 'remote' ? (
+        <SgpInlineBanner
+          variant="neutral"
+          message="Modo remoto ARGOS: o rascunho veio do gateway (DOCUMENT_DRAFT_ADAPTER=remote). O padrão seguro em dev/HML é DOCUMENT_DRAFT_ADAPTER=local (pipeline R6 OS Bravo 1.1.0). ARGOS_INGEST_URL sozinho já não ativa remoto."
+          className="mt-6 max-w-4xl border-violet-500/25 bg-violet-500/[0.08] text-violet-50/95"
         />
       ) : null}
 
@@ -354,6 +563,14 @@ export function NovaEsteiraPorDocumentoPage() {
 
       {editedDraft ? (
         <div className="mt-10 max-w-4xl space-y-8">
+          {ingest && isDraftV11Result(ingest) ? (
+            <DocumentDraftReviewPanel
+              ingest={ingest}
+              acceptanceState={reviewAcceptance}
+              onReviewDecision={applyReviewDecision}
+            />
+          ) : null}
+
           <section className="rounded-2xl border border-white/[0.08] bg-white/[0.03] p-6 ring-1 ring-white/[0.05]">
             <h2 className="font-heading text-lg text-slate-100">Dados sugeridos (editáveis)</h2>
             <p className="mt-1 text-sm text-slate-500">
@@ -378,16 +595,23 @@ export function NovaEsteiraPorDocumentoPage() {
               />
               <Field
                 label="Modelo / versão"
-                value={(editedDraft.suggestedDados as SuggestedForm).modelVersion ?? ''}
+                readOnly={isBravoV11Import}
+                value={
+                  isBravoV11Import
+                    ? ''
+                    : ((editedDraft.suggestedDados as SuggestedForm).modelVersion ?? '')
+                }
                 onChange={(v) => patchSuggested({ modelVersion: v })}
               />
               <Field
                 label="Placa"
+                readOnly={isBravoV11Import}
                 value={(editedDraft.suggestedDados as SuggestedForm).licensePlate ?? ''}
                 onChange={(v) => patchSuggested({ licensePlate: v })}
               />
               <Field
                 label="Prazo estimado"
+                readOnly={isBravoV11Import}
                 value={(editedDraft.suggestedDados as SuggestedForm).estimatedDeadline ?? ''}
                 onChange={(v) => patchSuggested({ estimatedDeadline: v })}
               />
@@ -396,6 +620,7 @@ export function NovaEsteiraPorDocumentoPage() {
                   Observações
                 </label>
                 <textarea
+                  readOnly={isBravoV11Import}
                   value={(editedDraft.suggestedDados as SuggestedForm).notes ?? ''}
                   onChange={(e) => patchSuggested({ notes: e.target.value })}
                   rows={3}
@@ -440,7 +665,7 @@ export function NovaEsteiraPorDocumentoPage() {
             <DraftStructureEditor draft={editedDraft} onChange={setEditedDraft} />
           </section>
 
-          {ingest && ingest.extractedFacts.length > 0 ? (
+          {ingest && !isDraftV11Result(ingest) && ingest.extractedFacts.length > 0 ? (
             <section className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-6">
               <h3 className="text-sm font-semibold text-slate-300">Factos extraídos</h3>
               <ul className="mt-3 space-y-2 text-xs text-slate-400">
@@ -454,6 +679,14 @@ export function NovaEsteiraPorDocumentoPage() {
                 ))}
               </ul>
             </section>
+          ) : null}
+
+          {draftBlockedByForbiddenOperationalContent ? (
+            <SgpInlineBanner
+              variant="error"
+              message="O draft contém conteúdo financeiro ou sensível removido por segurança. Reimporte ou revise o documento antes de criar a esteira."
+              className="border-rose-500/25 bg-rose-500/[0.08] text-rose-50/95"
+            />
           ) : null}
 
           <div className="flex flex-wrap gap-3 border-t border-white/10 pt-6">
@@ -549,26 +782,33 @@ function Field(props: {
   label: string
   value: string
   onChange: (v: string) => void
+  readOnly?: boolean
 }) {
   return (
     <div>
       <label className="mb-1 block text-xs font-semibold text-slate-400">{props.label}</label>
       <input
         value={props.value}
-        onChange={(e) => props.onChange(e.target.value)}
-        className="sgp-input-app w-full rounded-lg px-3 py-2 text-sm"
+        readOnly={props.readOnly}
+        onChange={(e) => {
+          if (props.readOnly) return
+          props.onChange(e.target.value)
+        }}
+        className={`sgp-input-app w-full rounded-lg px-3 py-2 text-sm${
+          props.readOnly ? ' cursor-not-allowed opacity-[0.85]' : ''
+        }`}
       />
     </div>
   )
 }
 
 function DraftStructureEditor(props: {
-  draft: ConveyorDraftV1
-  onChange: (d: ConveyorDraftV1) => void
+  draft: ConveyorDraft
+  onChange: (d: ConveyorDraft) => void
 }) {
   const { draft, onChange } = props
 
-  function update(mut: (d: ConveyorDraftV1) => void) {
+  function update(mut: (d: ConveyorDraft) => void) {
     const n = cloneDraft(draft)
     mut(n)
     onChange(n)

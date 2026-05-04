@@ -46,7 +46,7 @@ export function createApp(pool: pg.Pool, logger: Logger, env: Env): Express {
   app.use('/api/v1', teamsRouter())
   app.use('/api/v1', collaboratorsRouter())
   app.use('/api/v1', operationMatrixRouter())
-  app.locals.argosDocumentDraftAdapter = createArgosDocumentDraftAdapter(env)
+  app.locals.argosDocumentDraftAdapter = createArgosDocumentDraftAdapter(env, pool)
   app.use('/api/v1', conveyorsRouter(env))
   app.use('/api/v1', conveyorAssignmentsRouter())
   app.use('/api/v1', myActivitiesRouter())

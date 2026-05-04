@@ -48,6 +48,8 @@ export async function serviceGetConveyorNodeWorkload(
   const stepRowsRaw = hierarchy.map((h) => {
     const realized = realizedByStep.get(h.step_id) ?? 0
     const planned = h.planned_minutes
+    const op = (h.operational_status ?? 'PENDING').trim() || 'PENDING'
+    const isDone = op === 'COMPLETED'
     return {
       optionId: h.option_id,
       optionName: h.option_name,
@@ -55,9 +57,11 @@ export async function serviceGetConveyorNodeWorkload(
       areaName: h.area_name,
       stepId: h.step_id,
       stepName: h.step_name,
+      operationalStatus: op,
+      isOperationallyCompleted: isDone,
       plannedMinutes: planned,
       realizedMinutes: realized,
-      pendingMinutes: pendingMinutes(planned, realized),
+      pendingMinutes: isDone ? 0 : pendingMinutes(planned, realized),
     }
   })
 

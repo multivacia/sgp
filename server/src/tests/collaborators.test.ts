@@ -198,6 +198,167 @@ describe.skipIf(!hasDb)('collaborators (integração)', () => {
     expect(res.body.error?.code).toBe('NOT_FOUND')
   })
 
+  it('GET /api/v1/collaborators/:collaboratorId/operational-health-snapshot sem sessão → 401', async () => {
+    const res = await request(app).get(
+      `/api/v1/collaborators/${SEED_COLLAB_ID}/operational-health-snapshot`,
+    )
+    expect(res.status).toBe(401)
+  })
+
+  it('GET operational-health-snapshot colaborador inexistente → 404', async () => {
+    const res = await request(app)
+      .get(
+        '/api/v1/collaborators/00000000-0000-0000-0000-000000000099/operational-health-snapshot',
+      )
+      .set(
+        'Cookie',
+        await sessionCookieForUser(pool, MARIA_APP_USER_ID, MARIA_EMAIL),
+      )
+    expect(res.status).toBe(404)
+    expect(res.body.error?.code).toBe('NOT_FOUND')
+  })
+
+  it('GET operational-health-snapshot sucesso (envelope + capacity.source em maiúsculas)', async () => {
+    const res = await request(app)
+      .get(
+        `/api/v1/collaborators/${SEED_COLLAB_ID}/operational-health-snapshot?referenceDate=2026-04-28&recentDays=3`,
+      )
+      .set(
+        'Cookie',
+        await sessionCookieForUser(pool, MARIA_APP_USER_ID, MARIA_EMAIL),
+      )
+    expect(res.status).toBe(200)
+    const d = res.body.data
+    expect(d?.snapshotVersion).toBe('collaborator_operational_health_snapshot_v1')
+    expect(d?.schemaVersion).toBe('1.0.1')
+    expect(d?.referenceDate).toBe('2026-04-28')
+    expect(d?.recentDays).toBe(3)
+    expect(d?.collaborator?.id).toBe(SEED_COLLAB_ID)
+    expect(typeof d?.collaborator?.isActive).toBe('boolean')
+    expect(['OVERRIDE', 'DEFAULT', 'FALLBACK', 'MISSING']).toContain(d?.capacity?.source)
+    expect(typeof d?.capacity?.resolvedDailyMinutes).toBe('number')
+    expect(d?.capacity?.windowCapacityMinutes).toBe(
+      d.capacity.resolvedDailyMinutes * 3,
+    )
+    expect(d?.recentTimeEntries?.windowFrom).toBe('2026-04-26T00:00:00.000Z')
+    expect(d?.recentTimeEntries?.windowToExclusive).toBe('2026-04-29T00:00:00.000Z')
+    expect(d?.workload?.openDistinctSteps).toBeTypeOf('number')
+    expect(Array.isArray(d?.dataQuality?.warnings)).toBe(true)
+    for (const w of d.dataQuality.warnings as { code: string; message: string }[]) {
+      expect(w).toEqual({ code: w.code, message: w.message })
+    }
+  })
+
+  it('GET operational-health-snapshot colaborador novo sem esteiras → NO_OPEN_ASSIGNMENTS', async () => {
+    const code = `COL-OH-${randomUUID().slice(0, 8)}`
+    const post = await request(app)
+      .post('/api/v1/collaborators')
+      .set(
+        'Cookie',
+        await sessionCookieForUser(pool, GOV_ADMIN_USER_ID, GOV_ADMIN_EMAIL),
+      )
+      .send({
+        fullName: 'Snapshot OH vazio',
+        code,
+        sectorId: SEED_SECTOR_ID,
+        roleId: SEED_ROLE_ID,
+      })
+    expect(post.status).toBe(201)
+    const id = post.body.data?.id as string
+    const snap = await request(app)
+      .get(`/api/v1/collaborators/${id}/operational-health-snapshot?referenceDate=2026-04-28`)
+      .set(
+        'Cookie',
+        await sessionCookieForUser(pool, GOV_ADMIN_USER_ID, GOV_ADMIN_EMAIL),
+      )
+    expect(snap.status).toBe(200)
+    const codes = (snap.body.data?.dataQuality?.warnings ?? []).map(
+      (w: { code: string }) => w.code,
+    )
+    expect(codes).toContain('NO_OPEN_ASSIGNMENTS')
+  })
+
+  it('GET operational-health-snapshot colaborador inativo → COLLABORATOR_INACTIVE', async () => {
+    const code = `COL-OH-IN-${randomUUID().slice(0, 8)}`
+    const post = await request(app)
+      .post('/api/v1/collaborators')
+      .set(
+        'Cookie',
+        await sessionCookieForUser(pool, GOV_ADMIN_USER_ID, GOV_ADMIN_EMAIL),
+      )
+      .send({
+        fullName: 'Snapshot OH inativo',
+        code,
+        sectorId: SEED_SECTOR_ID,
+        roleId: SEED_ROLE_ID,
+      })
+    expect(post.status).toBe(201)
+    const id = post.body.data?.id as string
+    const inact = await request(app)
+      .post(`/api/v1/collaborators/${id}/inactivate`)
+      .set(
+        'Cookie',
+        await sessionCookieForUser(pool, GOV_ADMIN_USER_ID, GOV_ADMIN_EMAIL),
+      )
+    expect(inact.status).toBe(200)
+    const snap = await request(app)
+      .get(`/api/v1/collaborators/${id}/operational-health-snapshot`)
+      .set(
+        'Cookie',
+        await sessionCookieForUser(pool, GOV_ADMIN_USER_ID, GOV_ADMIN_EMAIL),
+      )
+    expect(snap.status).toBe(200)
+    expect(snap.body.data?.collaborator?.isActive).toBe(false)
+    const codes = (snap.body.data?.dataQuality?.warnings ?? []).map(
+      (w: { code: string }) => w.code,
+    )
+    expect(codes).toContain('COLLABORATOR_INACTIVE')
+    expect(codes).toContain('NO_OPEN_ASSIGNMENTS')
+  })
+
+  it('GET /api/v1/collaborators/operational-health-summary sem sessão → 401', async () => {
+    const res = await request(app).get('/api/v1/collaborators/operational-health-summary')
+    expect(res.status).toBe(401)
+  })
+
+  it('GET operational-health-summary sucesso (contrato compacto + meta)', async () => {
+    const res = await request(app)
+      .get(
+        '/api/v1/collaborators/operational-health-summary?limit=2&referenceDate=2026-04-28&recentDays=3',
+      )
+      .set(
+        'Cookie',
+        await sessionCookieForUser(pool, MARIA_APP_USER_ID, MARIA_EMAIL),
+      )
+    expect(res.status).toBe(200)
+    const d = res.body.data
+    expect(d?.summaryVersion).toBe('collaborator_operational_health_summary_v1')
+    expect(d?.schemaVersion).toBe('1.0.0')
+    expect(d?.referenceDate).toBe('2026-04-28')
+    expect(d?.recentDays).toBe(3)
+    expect(d?.totals?.collaboratorsAnalyzed).toBe(d?.rows?.length ?? 0)
+    expect(res.body.meta?.limit).toBe(2)
+    expect(res.body.meta?.returned).toBeLessThanOrEqual(2)
+    expect(typeof res.body.meta?.hasMore).toBe('boolean')
+    const row0 = d?.rows?.[0] as
+      | {
+          collaborator: { fullName: string }
+          deterministicStatus: { status: string; score: number }
+          signals: unknown[]
+          dataQuality: { warnings: unknown[] }
+        }
+      | undefined
+    if (row0) {
+      expect(row0.collaborator.fullName.length).toBeGreaterThan(0)
+      expect(['healthy', 'attention', 'critical', 'unknown']).toContain(
+        row0.deterministicStatus.status,
+      )
+      expect(typeof row0.deterministicStatus.score).toBe('number')
+      expect(Array.isArray(row0.signals)).toBe(true)
+      expect(Array.isArray(row0.dataQuality.warnings)).toBe(true)
+    }
+  })
+
   it('POST /api/v1/collaborators com sessão COLABORADOR → 403', async () => {
     const res = await request(app)
       .post('/api/v1/collaborators')

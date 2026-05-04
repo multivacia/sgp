@@ -18,6 +18,7 @@ const baseEnv: Env = {
   loginLockoutMinutes: 15,
   argosPolicyMode: 'balanced',
   argosIngestTimeoutMs: 120_000,
+  documentDraftAdapter: 'local',
   documentDraftMaxFileBytes: 15 * 1024 * 1024,
   argosRemoteRequired: false,
   argosUseMinimalStub: false,

@@ -233,15 +233,39 @@ export async function serviceGetOperationalCapacitySettings(
   return getOperationalCapacitySettings(pool)
 }
 
+function throwIfOperationalCapacityStorageUnavailable(e: unknown): void {
+  if (e instanceof Error && e.message === 'OPERATIONAL_CAPACITY_STORAGE_UNAVAILABLE') {
+    throw new AppError(
+      'Capacidade operacional indisponível nesta instância. Confirme se a migration 0025_operational_capacity_base.sql foi aplicada à base.',
+      503,
+      ErrorCodes.SERVICE_UNAVAILABLE,
+    )
+  }
+}
+
+function mapCollaboratorOverrideWriteFailure(e: unknown): never {
+  throwIfOperationalCapacityStorageUnavailable(e)
+  const code = (e as { code?: string })?.code
+  if (code === '23503') {
+    throw new AppError('Colaborador não encontrado.', 404, ErrorCodes.NOT_FOUND)
+  }
+  throw e
+}
+
 export async function serviceUpsertOperationalCapacitySettings(
   pool: pg.Pool,
   defaultDailyMinutes: number,
   actorUserId?: string | null,
 ): Promise<OperationalCapacitySettingsRow> {
-  return upsertOperationalCapacitySettings(pool, {
-    defaultDailyMinutes,
-    updatedBy: actorUserId ?? null,
-  })
+  try {
+    return await upsertOperationalCapacitySettings(pool, {
+      defaultDailyMinutes,
+      updatedBy: actorUserId ?? null,
+    })
+  } catch (e) {
+    throwIfOperationalCapacityStorageUnavailable(e)
+    throw e
+  }
 }
 
 export async function serviceGetCollaboratorCapacityOverrides(
@@ -262,7 +286,11 @@ export async function serviceUpsertCollaboratorCapacityOverride(
     actorUserId?: string | null
   },
 ): Promise<CollaboratorCapacityOverrideRow> {
-  return upsertCollaboratorCapacityOverride(pool, input)
+  try {
+    return await upsertCollaboratorCapacityOverride(pool, input)
+  } catch (e) {
+    mapCollaboratorOverrideWriteFailure(e)
+  }
 }
 
 export async function serviceSoftDeleteCollaboratorCapacityOverride(
@@ -278,13 +306,19 @@ export async function serviceSoftDeleteCollaboratorCapacityOverride(
       ErrorCodes.NOT_FOUND,
     )
   }
-  const ok = await softDeleteCollaboratorCapacityOverride(pool, latest.id, actorUserId ?? null)
-  if (!ok) {
-    throw new AppError(
-      'Override de capacidade não encontrado para o colaborador.',
-      404,
-      ErrorCodes.NOT_FOUND,
-    )
+  try {
+    const ok = await softDeleteCollaboratorCapacityOverride(pool, latest.id, actorUserId ?? null)
+    if (!ok) {
+      throw new AppError(
+        'Override de capacidade não encontrado para o colaborador.',
+        404,
+        ErrorCodes.NOT_FOUND,
+      )
+    }
+  } catch (e) {
+    if (e instanceof AppError) throw e
+    throwIfOperationalCapacityStorageUnavailable(e)
+    throw e
   }
 }
 

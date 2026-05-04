@@ -2,6 +2,7 @@ export const conveyorOperationalEventTypeValues = [
   'CONVEYOR_ENTERED_DELAY',
   'CONVEYOR_LEFT_DELAY',
   'CONVEYOR_STEP_COMPLETED',
+  'CONVEYOR_STEP_REOPENED',
   'MANUAL_NOTE',
 ] as const
 

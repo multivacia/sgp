@@ -36,12 +36,42 @@ export class StubArgosDocumentDraftAdapter implements ArgosDocumentDraftPort {
           confidence: 1,
         },
       ],
+      sourceDocument: {
+        provider: 'BRAVO',
+        documentType: 'OS_OR_BUDGET',
+        documentNumber: input.fileName.replace(/\.[^.]+$/, ''),
+      },
+      operationalContext: {},
+      extractedItems: {
+        serviceItems: [],
+        partItems: [],
+        operationalNotes: [],
+      },
+      redaction: {
+        personalDataRemoved: true,
+        financialDataRemoved: true,
+        removedCategories: [
+          'cpf_cnpj',
+          'rg_ie',
+          'address',
+          'phone',
+          'email',
+          'customer_name',
+          'pricing',
+          'payment_terms',
+          'discount',
+          'totals',
+        ],
+      },
+      matchingPlan: [],
       draft: {
-        schemaVersion: '1.0.0',
+        schemaVersion: '1.1.0',
         suggestedDados: {
           title: input.fileName.replace(/\.[^.]+$/, '') || undefined,
         },
         options: [],
+        warnings: [],
+        humanReviewRequired: true,
       },
       warnings: [],
       confidence: {

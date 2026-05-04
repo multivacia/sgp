@@ -8,11 +8,15 @@ export type ConveyorNodeWorkloadStepApi = {
   areaName: string
   stepId: string
   stepName: string
+  /** Estado operacional persistido no STEP (`conveyor_nodes.operational_status`). */
+  operationalStatus: string
+  /** `operationalStatus === 'COMPLETED'` — não deriva de tempo realizado. */
+  isOperationallyCompleted: boolean
   /** Previsto estrutural no STEP (`conveyor_nodes.planned_minutes`). */
   plannedMinutes: number | null
   /** Soma de `conveyor_time_entries.minutes` para este STEP (não apagados). */
   realizedMinutes: number
-  /** max(0, planned − realized) com planned nulo tratado como 0. */
+  /** max(0, planned − realized) com planned nulo tratado como 0; zero quando STEP concluído operacionalmente. */
   pendingMinutes: number
 }
 

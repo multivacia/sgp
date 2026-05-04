@@ -2,41 +2,105 @@ import type {
   ConveyorOperationalEvent,
   ConveyorOperationalEventDisplay,
 } from './conveyorOperationalEvents.types'
+import {
+  formatOperationalEventReasonLine,
+  getOperationalEventCategory,
+  getOperationalEventCategoryChip,
+  getOperationalEventDisplayLabel,
+  getOperationalEventSeverity,
+} from './operationalEventTaxonomy'
+
+function mapSeverityToTone(
+  severity: ReturnType<typeof getOperationalEventSeverity>,
+): ConveyorOperationalEventDisplay['tone'] {
+  if (severity === 'success') return 'success'
+  if (severity === 'warning' || severity === 'critical') return 'warning'
+  return 'neutral'
+}
+
+function stepCompletedDescription(event: ConveyorOperationalEvent): string {
+  const r = (event.reason ?? '').trim().toUpperCase()
+  const base =
+    'A atividade foi concluída por ação explícita. O tempo apontado não conclui a etapa; o registro representa uma ação operacional explícita.'
+  if (r === 'EXPLICITLY_COMPLETED') {
+    return `${base} Conclusão registrada manualmente.`
+  }
+  if (event.reason?.trim()) return `${base} (${event.reason.trim()})`
+  return base
+}
+
+function stepReopenedDescription(event: ConveyorOperationalEvent): string {
+  const base = 'A atividade foi reaberta por ação explícita.'
+  const r = (event.reason ?? '').trim().toUpperCase()
+  if (r === 'EXPLICITLY_REOPENED') {
+    return `${base} Reabertura registrada manualmente.`
+  }
+  const line = formatOperationalEventReasonLine(event)
+  if (line) return `${base} ${line}`
+  return base
+}
+
+function delayDescription(event: ConveyorOperationalEvent, entered: boolean): string {
+  const friendly = formatOperationalEventReasonLine(event)
+  if (friendly) return friendly
+  return entered
+    ? 'A esteira passou a ser considerada em atraso face ao prazo e à pendência registada.'
+    : 'A esteira deixou de ser considerada em atraso face ao prazo e à pendência registada.'
+}
+
+function baseDisplay(
+  event: ConveyorOperationalEvent,
+  description: string,
+): ConveyorOperationalEventDisplay {
+  const category = getOperationalEventCategory(event.eventType)
+  const label = getOperationalEventDisplayLabel(event.eventType)
+  const chipLabel = getOperationalEventCategoryChip(category)
+  const severity = getOperationalEventSeverity(event.eventType)
+  return {
+    label,
+    description,
+    tone: mapSeverityToTone(severity),
+    chipLabel,
+    category,
+    severity,
+  }
+}
 
 export function formatConveyorOperationalEvent(
   event: ConveyorOperationalEvent,
 ): ConveyorOperationalEventDisplay {
   switch (event.eventType) {
     case 'CONVEYOR_ENTERED_DELAY':
-      return {
-        label: 'Esteira entrou em atraso',
-        description: event.reason ?? 'A esteira passou para estado de atraso.',
-        tone: 'warning',
-      }
+      return baseDisplay(event, delayDescription(event, true))
     case 'CONVEYOR_LEFT_DELAY':
-      return {
-        label: 'Esteira saiu de atraso',
-        description: event.reason ?? 'A esteira deixou o estado de atraso.',
-        tone: 'success',
-      }
+      return baseDisplay(event, delayDescription(event, false))
     case 'CONVEYOR_STEP_COMPLETED':
-      return {
-        label: 'Atividade concluída',
-        description: event.reason ?? 'Uma atividade atingiu o planejado.',
-        tone: 'success',
-      }
+      return baseDisplay(event, stepCompletedDescription(event))
+    case 'CONVEYOR_STEP_REOPENED':
+      return baseDisplay(event, stepReopenedDescription(event))
+    case 'CONVEYOR_STEP_BLOCKED':
+      return baseDisplay(
+        event,
+        formatOperationalEventReasonLine(event) ?? 'A atividade foi marcada como bloqueada.',
+      )
+    case 'CONVEYOR_STEP_UNBLOCKED':
+      return baseDisplay(
+        event,
+        formatOperationalEventReasonLine(event) ?? 'O bloqueio da atividade foi levantado.',
+      )
+    case 'CONVEYOR_STEP_PAUSED':
+      return baseDisplay(
+        event,
+        formatOperationalEventReasonLine(event) ?? 'A atividade foi pausada.',
+      )
+    case 'CONVEYOR_STEP_RESUMED':
+      return baseDisplay(
+        event,
+        formatOperationalEventReasonLine(event) ?? 'A atividade foi retomada.',
+      )
     case 'MANUAL_NOTE':
-      return {
-        label: 'Nota operacional',
-        description: event.reason ?? 'Nota operacional registrada.',
-        tone: 'neutral',
-      }
+      return baseDisplay(event, event.reason?.trim() || 'Observação operacional registrada.')
     default:
-      return {
-        label: event.eventType,
-        description: event.reason ?? 'Evento operacional registrado.',
-        tone: 'neutral',
-      }
+      return baseDisplay(event, event.reason?.trim() || 'Evento operacional registrado.')
   }
 }
-

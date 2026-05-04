@@ -216,4 +216,65 @@ describe('argosGatewayResponseMapper', () => {
     expect(out.status).toBe('partial')
     expect(out.warnings.some((w) => w.code === 'W1')).toBe(true)
   })
+
+  it('aceita contrato lógico v1.1.0 sem descartar blocos novos', () => {
+    const v11 = {
+      requestId: '11111111-1111-1111-1111-111111111111',
+      correlationId: '22222222-2222-2222-2222-222222222222',
+      status: 'completed',
+      specialist: 'argos_document_bravo_v1',
+      strategy: 'deterministic_rules_first',
+      document: { fileName: 'os.pdf', mimeType: 'application/pdf' },
+      sourceDocument: {
+        provider: 'BRAVO',
+        documentType: 'OS_OR_BUDGET',
+      },
+      operationalContext: { vehicle: { model: 'Onix', year: 2020 } },
+      extractedFacts: [],
+      extractedItems: {
+        serviceItems: [
+          { description: 'Reforma de bancos', confidence: 0.9 },
+        ],
+        partItems: [{ description: 'Courvin', confidence: 0.6 }],
+        operationalNotes: ['Priorizar entrega'],
+      },
+      redaction: {
+        personalDataRemoved: true,
+        financialDataRemoved: true,
+        removedCategories: [
+          'cpf_cnpj',
+          'rg_ie',
+          'address',
+          'phone',
+          'email',
+          'customer_name',
+          'pricing',
+          'payment_terms',
+          'discount',
+          'totals',
+        ],
+      },
+      matchingPlan: [
+        {
+          extractedServiceDescription: 'Reforma de bancos',
+          suggestedAction: 'REUSE_EXISTING',
+          confidence: 0.9,
+        },
+      ],
+      draft: {
+        schemaVersion: '1.1.0',
+        suggestedDados: { title: 'OS 100' },
+        options: [],
+        warnings: [],
+        humanReviewRequired: true,
+      },
+      warnings: [],
+      confidence: { overall: 0.8 },
+    }
+
+    const out = parseArgosRemoteDocumentIngestPayload(v11)
+    expect(out.draft?.schemaVersion).toBe('1.1.0')
+    expect(out.redaction?.financialDataRemoved).toBe(true)
+    expect(out.matchingPlan?.[0]?.suggestedAction).toBe('REUSE_EXISTING')
+  })
 })

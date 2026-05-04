@@ -115,6 +115,28 @@ export async function findCollaboratorById(
   return row ? rowToCollaboratorApi(row) : null
 }
 
+/**
+ * Listagem determinística para resumo de saúde operacional (nome, id).
+ * `includeInactive=false`: apenas colaboradores ativos (`is_active` e `status`).
+ */
+export async function listCollaboratorsForOperationalHealthSummary(
+  pool: pg.Pool,
+  input: { includeInactive: boolean; limit: number; offset: number },
+): Promise<CollaboratorApi[]> {
+  const activeOnly = !input.includeInactive
+  const extra = activeOnly
+    ? ` AND c.is_active = TRUE AND c.status = 'ACTIVE'`
+    : ''
+  const r = await pool.query<CollaboratorRow>(
+    `${baseSelect}
+     WHERE c.deleted_at IS NULL${extra}
+     ORDER BY c.full_name ASC NULLS LAST, c.id ASC
+     LIMIT $1::int OFFSET $2::int`,
+    [input.limit, input.offset],
+  )
+  return r.rows.map(rowToCollaboratorApi)
+}
+
 export type InsertInput = {
   full_name: string
   code?: string | null

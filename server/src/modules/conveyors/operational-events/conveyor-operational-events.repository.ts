@@ -25,7 +25,7 @@ function baseSelectSql(): string {
 }
 
 export async function insertConveyorOperationalEvent(
-  pool: pg.Pool,
+  pool: pg.Pool | pg.PoolClient,
   input: InsertConveyorOperationalEventInput,
 ): Promise<ConveyorOperationalEventRow> {
   const r = await pool.query<ConveyorOperationalEventRow>(
@@ -115,7 +115,7 @@ export async function existsConveyorOperationalEventByIdempotencyKey(
 }
 
 export async function getConveyorOperationalEventByIdempotencyKey(
-  pool: pg.Pool,
+  pool: pg.Pool | pg.PoolClient,
   key: string,
 ): Promise<ConveyorOperationalEventRow | null> {
   const r = await pool.query<ConveyorOperationalEventRow>(
@@ -129,7 +129,7 @@ export async function getConveyorOperationalEventByIdempotencyKey(
 }
 
 export async function getStepCompletionFacts(
-  pool: pg.Pool,
+  pool: pg.Pool | pg.PoolClient,
   conveyorId: string,
   stepNodeId: string,
 ): Promise<(ConveyorStepCompletionStateInput & { conveyorId: string; stepNodeId: string }) | null> {
@@ -137,10 +137,12 @@ export async function getStepCompletionFacts(
     node_type: string | null
     planned_minutes: number | null
     realized_minutes: string | null
+    operational_status: string | null
   }>(
     `SELECT
        n.node_type,
        n.planned_minutes,
+       n.operational_status,
        COALESCE(SUM(cte.minutes), 0)::text AS realized_minutes
      FROM conveyor_nodes n
      LEFT JOIN conveyor_time_entries cte
@@ -150,7 +152,7 @@ export async function getStepCompletionFacts(
      WHERE n.id = $1::uuid
        AND n.conveyor_id = $2::uuid
        AND n.deleted_at IS NULL
-     GROUP BY n.id, n.node_type, n.planned_minutes`,
+     GROUP BY n.id, n.node_type, n.planned_minutes, n.operational_status`,
     [stepNodeId, conveyorId],
   )
   const row = r.rows[0]
@@ -161,6 +163,7 @@ export async function getStepCompletionFacts(
     nodeType: row.node_type,
     plannedMinutes: row.planned_minutes,
     realizedMinutes: Number(row.realized_minutes ?? '0') || 0,
+    operationalStatus: row.operational_status,
   }
 }
 

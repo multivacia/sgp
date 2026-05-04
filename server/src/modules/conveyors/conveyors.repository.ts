@@ -1,5 +1,6 @@
 import type pg from 'pg'
 import { randomUUID } from 'node:crypto'
+import type { ConveyorNodeStepOperationalStatusDb } from './stepOperationalStatus.js'
 
 export type InsertConveyorRow = {
   id: string
@@ -84,6 +85,12 @@ export type ConveyorNodeFlatRow = {
   order_index: number
   name: string
   planned_minutes: number | null
+  source_origin: 'manual' | 'reaproveitada' | 'base'
+  /** Apenas STEPs; OPTION/AREA = null. */
+  operational_status: ConveyorNodeStepOperationalStatusDb | null
+  operational_completed_at: string | null
+  operational_completed_by: string | null
+  operational_completed_by_email: string | null
 }
 
 /** Atualização atómica de status + completed_at (modo calculado no serviço). */
@@ -181,7 +188,7 @@ export async function findConveyorById(
 }
 
 export async function listConveyorNodesByConveyorId(
-  pool: pg.Pool,
+  pool: pg.Pool | pg.PoolClient,
   conveyorId: string,
 ): Promise<ConveyorNodeFlatRow[]> {
   const r = await pool.query<{
@@ -191,11 +198,28 @@ export async function listConveyorNodesByConveyorId(
     order_index: number
     name: string
     planned_minutes: number | null
+    source_origin: 'manual' | 'reaproveitada' | 'base'
+    operational_status: ConveyorNodeStepOperationalStatusDb | null
+    operational_completed_at: Date | null
+    operational_completed_by: string | null
+    operational_completed_by_email: string | null
   }>(
     `
-    SELECT id::text, parent_id::text, node_type, order_index, name, planned_minutes
-    FROM conveyor_nodes
-    WHERE conveyor_id = $1::uuid AND deleted_at IS NULL
+    SELECT
+      cn.id::text,
+      cn.parent_id::text,
+      cn.node_type,
+      cn.order_index,
+      cn.name,
+      cn.planned_minutes,
+      cn.source_origin,
+      cn.operational_status,
+      cn.operational_completed_at,
+      cn.operational_completed_by::text,
+      au.email AS operational_completed_by_email
+    FROM conveyor_nodes cn
+    LEFT JOIN app_users au ON au.id = cn.operational_completed_by
+    WHERE cn.conveyor_id = $1::uuid AND cn.deleted_at IS NULL
     `,
     [conveyorId],
   )
@@ -206,7 +230,46 @@ export async function listConveyorNodesByConveyorId(
     order_index: row.order_index,
     name: row.name,
     planned_minutes: row.planned_minutes,
+    source_origin: row.source_origin,
+    operational_status: row.operational_status,
+    operational_completed_at: row.operational_completed_at
+      ? row.operational_completed_at.toISOString()
+      : null,
+    operational_completed_by: row.operational_completed_by,
+    operational_completed_by_email: row.operational_completed_by_email,
   }))
+}
+
+export async function updateConveyorNodeStepOperationalFields(
+  pool: pg.Pool | pg.PoolClient,
+  conveyorId: string,
+  nodeId: string,
+  fields: {
+    operational_status: ConveyorNodeStepOperationalStatusDb
+    operational_completed_at: string | null
+    operational_completed_by: string | null
+  },
+): Promise<boolean> {
+  const r = await pool.query<{ id: string }>(
+    `UPDATE conveyor_nodes SET
+       operational_status = $3::varchar,
+       operational_completed_at = $4::timestamptz,
+       operational_completed_by = $5::uuid,
+       updated_at = now()
+     WHERE id = $2::uuid
+       AND conveyor_id = $1::uuid
+       AND deleted_at IS NULL
+       AND node_type = 'STEP'
+     RETURNING id::text`,
+    [
+      conveyorId,
+      nodeId,
+      fields.operational_status,
+      fields.operational_completed_at,
+      fields.operational_completed_by,
+    ],
+  )
+  return Boolean(r.rows[0])
 }
 
 export async function updateConveyorOperationalStatus(
@@ -327,6 +390,9 @@ export type InsertConveyorNodeRow = {
   required: boolean
   source_key: string | null
   metadata_json: unknown | null
+  operational_status: ConveyorNodeStepOperationalStatusDb | null
+  operational_completed_at: string | null
+  operational_completed_by: string | null
 }
 
 export async function insertConveyor(
@@ -389,11 +455,13 @@ export async function insertConveyorNode(
     `INSERT INTO conveyor_nodes (
       id, conveyor_id, parent_id, root_id, node_type, source_origin,
       code, name, description, order_index, level_depth, is_active,
-      planned_minutes, default_responsible_id, required, source_key, metadata_json
+      planned_minutes, default_responsible_id, required, source_key, metadata_json,
+      operational_status, operational_completed_at, operational_completed_by
     ) VALUES (
       $1, $2, $3, $4, $5, $6,
       $7, $8, $9, $10, $11, $12,
-      $13, $14, $15, $16, $17::jsonb
+      $13, $14, $15, $16, $17::jsonb,
+      $18::varchar, $19::timestamptz, $20::uuid
     )`,
     [
       row.id,
@@ -415,6 +483,9 @@ export async function insertConveyorNode(
       row.metadata_json === null || row.metadata_json === undefined
         ? null
         : JSON.stringify(row.metadata_json),
+      row.operational_status,
+      row.operational_completed_at,
+      row.operational_completed_by,
     ],
   )
 }

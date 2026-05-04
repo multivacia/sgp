@@ -1,4 +1,11 @@
-import type { ConveyorDraftV1 } from './draft-v1.types'
+import type {
+  ArgosExtractedItemsV11,
+  ArgosMatchingPlanItemV11,
+  ArgosOperationalContextV11,
+  ArgosRedactionV11,
+  ArgosSourceDocumentV11,
+  ConveyorDraft,
+} from './draft-v1.types'
 import type { ArgosIssue } from './warnings-taxonomy.types'
 
 /**
@@ -65,7 +72,12 @@ export type ArgosDocumentIngestResult = {
   strategy: ArgosStrategyRef
   document: ArgosDocumentDescriptor
   extractedFacts: ArgosExtractedFact[]
-  draft: ConveyorDraftV1 | null
+  sourceDocument?: ArgosSourceDocumentV11
+  operationalContext?: ArgosOperationalContextV11
+  extractedItems?: ArgosExtractedItemsV11
+  redaction?: ArgosRedactionV11
+  matchingPlan?: ArgosMatchingPlanItemV11[]
+  draft: ConveyorDraft | null
   warnings: ArgosIssue[]
   confidence: ArgosConfidenceSummary | null
 }

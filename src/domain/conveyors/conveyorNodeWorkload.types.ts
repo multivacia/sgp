@@ -7,6 +7,8 @@ export type ConveyorNodeWorkloadStep = {
   areaName: string
   stepId: string
   stepName: string
+  operationalStatus: string
+  isOperationallyCompleted: boolean
   plannedMinutes: number | null
   realizedMinutes: number
   pendingMinutes: number

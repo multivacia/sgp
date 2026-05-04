@@ -10,6 +10,7 @@ import { RbacRolePermissionsPage } from '../features/admin/rbac/RbacRolePermissi
 import { AdminAuditTrailPage } from '../features/admin/users/AdminAuditTrailPage'
 import { UsersPage } from '../features/admin/users/UsersPage'
 import { ColaboradoresPage } from '../features/gestor/ColaboradoresPage'
+import { CollaboratorOperationalHealthPage } from '../features/collaborators/health/CollaboratorOperationalHealthPage'
 import { OperationalSettingsPage } from '../features/gestor/operational-settings/OperationalSettingsPage'
 import { EquipeDetalhePage } from '../features/gestor/equipes/EquipeDetalhePage'
 import { EquipeNovaPage } from '../features/gestor/equipes/EquipeNovaPage'
@@ -81,6 +82,14 @@ export function AppRoutes() {
                 >
                   <DashboardPage />
                 </RequireAnyPermission>
+              }
+            />
+            <Route
+              path="colaboradores/saude-operacional"
+              element={
+                <RequirePermission permission="collaborators_admin.view">
+                  <CollaboratorOperationalHealthPage />
+                </RequirePermission>
               }
             />
             <Route

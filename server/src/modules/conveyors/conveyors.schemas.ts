@@ -124,6 +124,127 @@ export const postConveyorDadosSchema = z.object({
   colaboradorId: z.string().uuid().nullable().optional(),
 })
 
+const auditSafeStringSchema = z
+  .string()
+  .min(1)
+  .max(500)
+  .superRefine((value, ctx) => {
+    const lowered = value.toLowerCase()
+    const forbidden = [
+      'cpf',
+      'cnpj',
+      'telefone',
+      'email',
+      'endereco',
+      'cep',
+      'chassi',
+      'partitems',
+      'candidatelines',
+      'debug',
+      'rawtext',
+      'pagamento',
+      'desconto',
+      'troco',
+      'recebido',
+      'r$',
+    ]
+    if (forbidden.some((t) => lowered.includes(t))) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'documentReviewAudit contém conteúdo proibido.',
+      })
+    }
+  })
+
+const documentReviewAuditDecisionSchema = z
+  .object({
+    index: z.number().int().min(0),
+    extractedServiceDescription: auditSafeStringSchema,
+    finalDecision: z.enum([
+      'ACCEPT_SUGGESTED',
+      'SELECT_ALTERNATIVE',
+      'CONFIRM_CREATE_NEW',
+      'IGNORE_ITEM',
+    ]),
+    finalSourceOrigin: z.enum(['manual', 'reaproveitada', 'base']),
+    matchedMatrixNodeId: z.string().nullable().optional(),
+    selectedAlternativeMatrixNodeId: z.string().nullable().optional(),
+    plannedMinutes: z.number().int().min(0).nullable().optional(),
+    confidence: z.number().min(0).max(1).nullable().optional(),
+    matchedMatrixNodeType: z.enum(['TASK', 'SECTOR', 'ACTIVITY']).nullable().optional(),
+    reusedStructureKind: z.enum(['MATRIX_SUBTREE', 'MATRIX_ACTIVITY']).nullable().optional(),
+    expandedSubtree: z.boolean().optional(),
+    expandedAreasCount: z.number().int().min(0).nullable().optional(),
+    expandedActivitiesCount: z.number().int().min(0).nullable().optional(),
+    expandedPlannedMinutesTotal: z.number().int().min(0).nullable().optional(),
+    subtreeMaterializationSkippedDuplicate: z.boolean().optional(),
+  })
+  .strict()
+
+const documentReviewAuditSchema = z
+  .object({
+    schemaVersion: z.literal('r6_document_review_audit_v1'),
+    source: z
+      .object({
+        provider: z.string().min(1),
+        documentType: z.string().min(1),
+        documentNumber: z
+          .string()
+          .max(500)
+          .superRefine((value, ctx) => {
+            const lowered = value.toLowerCase()
+            const forbidden = [
+              'cpf',
+              'cnpj',
+              'telefone',
+              'email',
+              'endereco',
+              'cep',
+              'chassi',
+              'partitems',
+              'candidatelines',
+              'debug',
+              'rawtext',
+              'pagamento',
+              'desconto',
+              'troco',
+              'recebido',
+              'r$',
+            ]
+            if (forbidden.some((t) => lowered.includes(t))) {
+              ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: 'documentReviewAudit contém conteúdo proibido.',
+              })
+            }
+          })
+          .optional(),
+        requestId: z.string().min(1),
+        correlationId: z.string().min(1),
+      })
+      .strict(),
+    summary: z
+      .object({
+        totalServiceItems: z.number().int().min(0),
+        reusedCount: z.number().int().min(0),
+        acceptedSimilarCount: z.number().int().min(0),
+        selectedAlternativeCount: z.number().int().min(0),
+        createNewConfirmedCount: z.number().int().min(0),
+        ignoredCount: z.number().int().min(0),
+        expandedSubtreeDecisionsCount: z.number().int().min(0).optional(),
+        uniqueSubtreeRootsMaterialized: z.number().int().min(0).optional(),
+      })
+      .strict(),
+    decisions: z.array(documentReviewAuditDecisionSchema).max(500),
+  })
+  .strict()
+
+const postConveyorMetadataSchema = z
+  .object({
+    documentReviewAudit: documentReviewAuditSchema.optional(),
+  })
+  .strict()
+
 export const postConveyorBodySchema = z.object({
   dados: postConveyorDadosSchema,
   originType: z.enum(['MANUAL', 'BASE', 'HYBRID']),
@@ -133,6 +254,7 @@ export const postConveyorBodySchema = z.object({
   baseVersion: z.number().int().positive().nullable().optional(),
   /** Item raiz da matriz operacional (auditoria / rastreio). */
   matrixRootItemId: z.string().uuid().nullable().optional(),
+  metadata: postConveyorMetadataSchema.optional(),
   options: z.array(postConveyorOptionSchema).min(1),
 })
 

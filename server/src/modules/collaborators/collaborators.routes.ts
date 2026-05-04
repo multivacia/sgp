@@ -10,6 +10,8 @@ import {
   postCollaborator,
   postInactivate,
 } from './collaborators.controller.js'
+import { getCollaboratorOperationalHealthSnapshot } from './collaborator-operational-health.controller.js'
+import { getCollaboratorsOperationalHealthSummary } from './collaborator-operational-health-summary.controller.js'
 import { getOperationalJourney } from '../operational-journey/operational-journey.controller.js'
 
 /** Leitura para fluxos operacionais autenticados (esteiras, matrizes). */
@@ -32,9 +34,19 @@ export function collaboratorsRouter(): Router {
   const r = Router()
   r.get('/collaborators', ...auth, asyncRoute(getCollaborators))
   r.get(
+    '/collaborators/operational-health-summary',
+    ...auth,
+    asyncRoute(getCollaboratorsOperationalHealthSummary),
+  )
+  r.get(
     '/collaborators/:collaboratorId/operational-journey',
     ...authJourney,
     asyncRoute(getOperationalJourney),
+  )
+  r.get(
+    '/collaborators/:collaboratorId/operational-health-snapshot',
+    ...auth,
+    asyncRoute(getCollaboratorOperationalHealthSnapshot),
   )
   r.get('/collaborators/:id', ...auth, asyncRoute(getCollaboratorById))
   r.post('/collaborators', ...authCreate, asyncRoute(postCollaborator))

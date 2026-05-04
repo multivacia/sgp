@@ -1,5 +1,46 @@
 import type pg from 'pg'
 
+function pgErrorCode(e: unknown): string | undefined {
+  if (!e || typeof e !== 'object') return undefined
+  return (e as { code?: string }).code
+}
+
+/** Tabela/coluna de capacidade operacional ausente ou schema incompleto (PostgreSQL). */
+function isOperationalCapacityInfraReadError(e: unknown): boolean {
+  const c = pgErrorCode(e)
+  return c === '42P01' || c === '42703'
+}
+
+/** Log técnico (stdout) — diagnóstico de falhas PostgreSQL em capacidade por colaborador. */
+function logCollaboratorCapacityPg(context: string, e: unknown): void {
+  if (!e || typeof e !== 'object') {
+    console.error(`[operational-capacity:${context}]`, e)
+    return
+  }
+  const err = e as {
+    code?: string
+    message?: string
+    detail?: string
+    hint?: string
+    schema?: string
+    table?: string
+    constraint?: string
+    position?: string
+    routine?: string
+  }
+  console.error(`[operational-capacity:${context}]`, {
+    code: err.code,
+    message: err.message,
+    detail: err.detail,
+    hint: err.hint,
+    schema: err.schema,
+    table: err.table,
+    constraint: err.constraint,
+    position: err.position,
+    routine: err.routine,
+  })
+}
+
 export type SectorAdminRow = {
   id: string
   name: string
@@ -238,34 +279,46 @@ export async function countCollaboratorsWithRole(
 export async function getOperationalCapacitySettings(
   pool: pg.Pool,
 ): Promise<OperationalCapacitySettingsRow | null> {
-  const r = await pool.query<OperationalCapacitySettingsRow>(
-    `SELECT id, default_daily_minutes, created_at, updated_at, updated_by
-     FROM operational_capacity_settings
-     WHERE id = 1`,
-  )
-  return r.rows[0] ?? null
+  try {
+    const r = await pool.query<OperationalCapacitySettingsRow>(
+      `SELECT id, default_daily_minutes, created_at, updated_at, updated_by
+       FROM operational_capacity_settings
+       WHERE id = 1`,
+    )
+    return r.rows[0] ?? null
+  } catch (e) {
+    if (isOperationalCapacityInfraReadError(e)) return null
+    throw e
+  }
 }
 
 export async function upsertOperationalCapacitySettings(
   pool: pg.Pool,
   input: { defaultDailyMinutes: number; updatedBy?: string | null },
 ): Promise<OperationalCapacitySettingsRow> {
-  const r = await pool.query<OperationalCapacitySettingsRow>(
-    `INSERT INTO operational_capacity_settings (
-       id, default_daily_minutes, updated_by
-     ) VALUES (
-       1, $1::int, $2::uuid
-     )
-     ON CONFLICT (id) DO UPDATE
-     SET default_daily_minutes = EXCLUDED.default_daily_minutes,
-         updated_by = EXCLUDED.updated_by,
-         updated_at = now()
-     RETURNING id, default_daily_minutes, created_at, updated_at, updated_by`,
-    [input.defaultDailyMinutes, input.updatedBy ?? null],
-  )
-  const row = r.rows[0]
-  if (!row) throw new Error('upsert operational_capacity_settings failed')
-  return row
+  try {
+    const r = await pool.query<OperationalCapacitySettingsRow>(
+      `INSERT INTO operational_capacity_settings (
+         id, default_daily_minutes, updated_by
+       ) VALUES (
+         1, $1::int, $2::uuid
+       )
+       ON CONFLICT (id) DO UPDATE
+       SET default_daily_minutes = EXCLUDED.default_daily_minutes,
+           updated_by = EXCLUDED.updated_by,
+           updated_at = now()
+       RETURNING id, default_daily_minutes, created_at, updated_at, updated_by`,
+      [input.defaultDailyMinutes, input.updatedBy ?? null],
+    )
+    const row = r.rows[0]
+    if (!row) throw new Error('upsert operational_capacity_settings failed')
+    return row
+  } catch (e) {
+    if (isOperationalCapacityInfraReadError(e)) {
+      throw new Error('OPERATIONAL_CAPACITY_STORAGE_UNAVAILABLE')
+    }
+    throw e
+  }
 }
 
 export async function getActiveCollaboratorCapacityOverride(
@@ -274,23 +327,28 @@ export async function getActiveCollaboratorCapacityOverride(
   date?: string,
 ): Promise<CollaboratorCapacityOverrideRow | null> {
   const refDate = date ?? new Date().toISOString().slice(0, 10)
-  const r = await pool.query<CollaboratorCapacityOverrideRow>(
-    `SELECT id, collaborator_id, daily_minutes, effective_from, effective_to, is_active,
-            created_at, updated_at, created_by, updated_by, deleted_at
-     FROM collaborator_capacity_overrides
-     WHERE collaborator_id = $1::uuid
-       AND deleted_at IS NULL
-       AND is_active = true
-       AND (effective_from IS NULL OR effective_from <= $2::date)
-       AND (effective_to IS NULL OR effective_to >= $2::date)
-     ORDER BY
-       CASE WHEN effective_from IS NULL THEN 1 ELSE 0 END ASC,
-       effective_from DESC NULLS LAST,
-       updated_at DESC
-     LIMIT 1`,
-    [collaboratorId, refDate],
-  )
-  return r.rows[0] ?? null
+  try {
+    const r = await pool.query<CollaboratorCapacityOverrideRow>(
+      `SELECT id, collaborator_id, daily_minutes, effective_from, effective_to, is_active,
+              created_at, updated_at, created_by, updated_by, deleted_at
+       FROM collaborator_capacity_overrides
+       WHERE collaborator_id = $1::uuid
+         AND deleted_at IS NULL
+         AND is_active = true
+         AND (effective_from IS NULL OR effective_from <= $2::date)
+         AND (effective_to IS NULL OR effective_to >= $2::date)
+       ORDER BY
+         CASE WHEN effective_from IS NULL THEN 1 ELSE 0 END ASC,
+         effective_from DESC NULLS LAST,
+         updated_at DESC
+       LIMIT 1`,
+      [collaboratorId, refDate],
+    )
+    return r.rows[0] ?? null
+  } catch (e) {
+    if (isOperationalCapacityInfraReadError(e)) return null
+    throw e
+  }
 }
 
 export const getCollaboratorCapacityOverride = getActiveCollaboratorCapacityOverride
@@ -317,8 +375,13 @@ export async function listCollaboratorCapacityOverrides(
     ${where.length ? `WHERE ${where.join(' AND ')}` : ''}
     ORDER BY updated_at DESC
   `
-  const r = await pool.query<CollaboratorCapacityOverrideRow>(sql, vals)
-  return r.rows
+  try {
+    const r = await pool.query<CollaboratorCapacityOverrideRow>(sql, vals)
+    return r.rows
+  } catch (e) {
+    if (isOperationalCapacityInfraReadError(e)) return []
+    throw e
+  }
 }
 
 export async function upsertCollaboratorCapacityOverride(
@@ -332,46 +395,43 @@ export async function upsertCollaboratorCapacityOverride(
     actorUserId?: string | null
   },
 ): Promise<CollaboratorCapacityOverrideRow> {
-  const r = await pool.query<CollaboratorCapacityOverrideRow>(
-    `WITH current AS (
-       SELECT id
-       FROM collaborator_capacity_overrides
-       WHERE collaborator_id = $1::uuid
-         AND deleted_at IS NULL
-       ORDER BY updated_at DESC
-       LIMIT 1
-     ),
-     upserted AS (
-       INSERT INTO collaborator_capacity_overrides (
-         id, collaborator_id, daily_minutes, effective_from, effective_to,
+  try {
+    const r = await pool.query<CollaboratorCapacityOverrideRow>(
+      `INSERT INTO collaborator_capacity_overrides (
+         collaborator_id, daily_minutes, effective_from, effective_to,
          is_active, created_by, updated_by
+       ) VALUES (
+         $1::uuid, $2::int, $3::date, $4::date, $5::boolean, $6::uuid, $6::uuid
        )
-       SELECT gen_random_uuid(), $1::uuid, $2::int, $3::date, $4::date, $5::boolean, $6::uuid, $6::uuid
-       WHERE NOT EXISTS (SELECT 1 FROM current)
-       RETURNING *
-     )
-     UPDATE collaborator_capacity_overrides cco
-     SET daily_minutes = $2::int,
-         effective_from = $3::date,
-         effective_to = $4::date,
-         is_active = $5::boolean,
-         updated_by = $6::uuid,
+       ON CONFLICT (collaborator_id) WHERE deleted_at IS NULL AND is_active = true
+       DO UPDATE SET
+         daily_minutes = EXCLUDED.daily_minutes,
+         effective_from = EXCLUDED.effective_from,
+         effective_to = EXCLUDED.effective_to,
+         is_active = EXCLUDED.is_active,
+         updated_by = EXCLUDED.updated_by,
          updated_at = now()
-     WHERE cco.id = COALESCE((SELECT id FROM current), (SELECT id FROM upserted))
-     RETURNING cco.id, cco.collaborator_id, cco.daily_minutes, cco.effective_from, cco.effective_to,
-               cco.is_active, cco.created_at, cco.updated_at, cco.created_by, cco.updated_by, cco.deleted_at`,
-    [
-      input.collaboratorId,
-      input.dailyMinutes,
-      input.effectiveFrom ?? null,
-      input.effectiveTo ?? null,
-      input.isActive ?? true,
-      input.actorUserId ?? null,
-    ],
-  )
-  const row = r.rows[0]
-  if (!row) throw new Error('upsert collaborator_capacity_overrides failed')
-  return row
+       RETURNING id, collaborator_id, daily_minutes, effective_from, effective_to,
+                 is_active, created_at, updated_at, created_by, updated_by, deleted_at`,
+      [
+        input.collaboratorId,
+        input.dailyMinutes,
+        input.effectiveFrom ?? null,
+        input.effectiveTo ?? null,
+        input.isActive ?? true,
+        input.actorUserId ?? null,
+      ],
+    )
+    const row = r.rows[0]
+    if (!row) throw new Error('upsert collaborator_capacity_overrides failed')
+    return row
+  } catch (e) {
+    logCollaboratorCapacityPg('upsertCollaboratorCapacityOverride', e)
+    if (isOperationalCapacityInfraReadError(e)) {
+      throw new Error('OPERATIONAL_CAPACITY_STORAGE_UNAVAILABLE')
+    }
+    throw e
+  }
 }
 
 export async function softDeleteCollaboratorCapacityOverride(
@@ -379,16 +439,23 @@ export async function softDeleteCollaboratorCapacityOverride(
   id: string,
   actorUserId?: string | null,
 ): Promise<boolean> {
-  const r = await pool.query(
-    `UPDATE collaborator_capacity_overrides
-     SET deleted_at = now(),
-         updated_by = $2::uuid,
-         updated_at = now()
-     WHERE id = $1::uuid
-       AND deleted_at IS NULL`,
-    [id, actorUserId ?? null],
-  )
-  return (r.rowCount ?? 0) > 0
+  try {
+    const r = await pool.query(
+      `UPDATE collaborator_capacity_overrides
+       SET deleted_at = now(),
+           updated_by = $2::uuid,
+           updated_at = now()
+       WHERE id = $1::uuid
+         AND deleted_at IS NULL`,
+      [id, actorUserId ?? null],
+    )
+    return (r.rowCount ?? 0) > 0
+  } catch (e) {
+    if (isOperationalCapacityInfraReadError(e)) {
+      throw new Error('OPERATIONAL_CAPACITY_STORAGE_UNAVAILABLE')
+    }
+    throw e
+  }
 }
 
 export async function resolveCollaboratorDailyCapacityMinutes(

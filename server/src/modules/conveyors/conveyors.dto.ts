@@ -47,12 +47,24 @@ export type ConveyorStructureStepAssigneeApi = {
   orderIndex: number | null
 }
 
+export type ConveyorNodeStepOperationalStatusApi =
+  | 'PENDING'
+  | 'IN_PROGRESS'
+  | 'BLOCKED'
+  | 'COMPLETED'
+  | 'REOPENED'
+
 export type ConveyorStructureStepApi = {
   id: string
   name: string
   orderIndex: number
   plannedMinutes: number | null
   assignees: ConveyorStructureStepAssigneeApi[]
+  operationalStatus: ConveyorNodeStepOperationalStatusApi
+  isCompleted: boolean
+  completedAt: string | null
+  completedByName: string | null
+  completionEventId: string | null
 }
 
 export type ConveyorStructureAreaApi = {

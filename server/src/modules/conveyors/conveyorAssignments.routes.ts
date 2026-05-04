@@ -7,6 +7,7 @@ import {
   deleteConveyorStepTimeEntry,
   getConveyorStepAssignees,
   getConveyorStepTimeEntries,
+  patchConveyorStepCompletion,
   postConveyorStepAssignee,
   postConveyorStepTimeEntry,
   postConveyorStepTimeEntryOnBehalf,
@@ -16,6 +17,12 @@ const auth = [requireAuth()]
 
 export function conveyorAssignmentsRouter(): Router {
   const r = Router()
+  r.patch(
+    '/conveyors/:conveyorId/steps/:stepNodeId/completion',
+    requireAuth(),
+    requirePermission('conveyors.create'),
+    asyncRoute(patchConveyorStepCompletion),
+  )
   r.post(
     '/conveyors/:conveyorId/steps/:stepNodeId/assignees',
     requireAuth(),

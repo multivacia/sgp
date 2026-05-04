@@ -56,11 +56,12 @@ describe.skipIf(!hasDb)('conveyor delay events (integração leve)', () => {
 
     await pool.query(
       `INSERT INTO conveyor_nodes (
-         id, conveyor_id, parent_id, root_id, node_type, source_origin, name, order_index, level_depth, planned_minutes
+         id, conveyor_id, parent_id, root_id, node_type, source_origin, name, order_index, level_depth, planned_minutes,
+         operational_status, operational_completed_at, operational_completed_by
        ) VALUES
-         ($1::uuid, $4::uuid, NULL, $1::uuid, 'OPTION', 'manual', 'OP', 1, 0, NULL),
-         ($2::uuid, $4::uuid, $1::uuid, $1::uuid, 'AREA', 'manual', 'AR', 1, 1, NULL),
-         ($3::uuid, $4::uuid, $2::uuid, $1::uuid, 'STEP', 'manual', 'ST', 1, 2, 60)`,
+         ($1::uuid, $4::uuid, NULL, $1::uuid, 'OPTION', 'manual', 'OP', 1, 0, NULL, NULL, NULL, NULL),
+         ($2::uuid, $4::uuid, $1::uuid, $1::uuid, 'AREA', 'manual', 'AR', 1, 1, NULL, NULL, NULL, NULL),
+         ($3::uuid, $4::uuid, $2::uuid, $1::uuid, 'STEP', 'manual', 'ST', 1, 2, 60, 'PENDING', NULL, NULL)`,
       [optionId, areaId, stepId, conveyorId],
     )
     return conveyorId

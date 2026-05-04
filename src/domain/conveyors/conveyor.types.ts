@@ -56,6 +56,51 @@ export type CreateConveyorOptionInput = {
   areas: CreateConveyorAreaInput[]
 }
 
+export type DocumentReviewAuditDecision = {
+  index: number
+  extractedServiceDescription: string
+  finalDecision:
+    | 'ACCEPT_SUGGESTED'
+    | 'SELECT_ALTERNATIVE'
+    | 'CONFIRM_CREATE_NEW'
+    | 'IGNORE_ITEM'
+  finalSourceOrigin: ConveyorSourceOrigin
+  matchedMatrixNodeId?: string | null
+  selectedAlternativeMatrixNodeId?: string | null
+  plannedMinutes?: number | null
+  confidence?: number | null
+  /** R6 S9 — metadados seguros de expansão de subárvore (sem árvore completa). */
+  matchedMatrixNodeType?: 'TASK' | 'SECTOR' | 'ACTIVITY' | null
+  reusedStructureKind?: 'MATRIX_SUBTREE' | 'MATRIX_ACTIVITY' | null
+  expandedSubtree?: boolean
+  expandedAreasCount?: number | null
+  expandedActivitiesCount?: number | null
+  expandedPlannedMinutesTotal?: number | null
+  subtreeMaterializationSkippedDuplicate?: boolean
+}
+
+export type DocumentReviewAuditPayload = {
+  schemaVersion: 'r6_document_review_audit_v1'
+  source: {
+    provider: string
+    documentType: string
+    documentNumber?: string
+    requestId: string
+    correlationId: string
+  }
+  summary: {
+    totalServiceItems: number
+    reusedCount: number
+    acceptedSimilarCount: number
+    selectedAlternativeCount: number
+    createNewConfirmedCount: number
+    ignoredCount: number
+    expandedSubtreeDecisionsCount?: number
+    uniqueSubtreeRootsMaterialized?: number
+  }
+  decisions: DocumentReviewAuditDecision[]
+}
+
 /** Corpo JSON do POST /api/v1/conveyors */
 export type CreateConveyorInput = {
   dados: CreateConveyorDados
@@ -66,6 +111,9 @@ export type CreateConveyorInput = {
   baseVersion?: number | null
   /** Item raiz (ITEM) da matriz operacional usada na materialização. */
   matrixRootItemId?: string | null
+  metadata?: {
+    documentReviewAudit?: DocumentReviewAuditPayload
+  }
   options: CreateConveyorOptionInput[]
 }
 
@@ -103,6 +151,13 @@ export type ConveyorStructureStepAssignee = {
   orderIndex: number | null
 }
 
+export type ConveyorNodeStepOperationalStatus =
+  | 'PENDING'
+  | 'IN_PROGRESS'
+  | 'BLOCKED'
+  | 'COMPLETED'
+  | 'REOPENED'
+
 export type ConveyorStructureStep = {
   id: string
   name: string
@@ -110,6 +165,11 @@ export type ConveyorStructureStep = {
   plannedMinutes: number | null
   /** Presente no GET detalhe — alocações por etapa. */
   assignees?: ConveyorStructureStepAssignee[]
+  operationalStatus: ConveyorNodeStepOperationalStatus
+  isCompleted: boolean
+  completedAt: string | null
+  completedByName: string | null
+  completionEventId: string | null
 }
 
 export type ConveyorStructureArea = {
@@ -178,6 +238,14 @@ export type PatchConveyorStructureBody = {
 /** Corpo do PATCH /api/v1/conveyors/:id/status */
 export type PatchConveyorStatusBody = {
   operationalStatus: ConveyorOperationalStatus
+}
+
+export type ConveyorStepCompletionAction = 'COMPLETE' | 'REOPEN'
+
+/** PATCH /api/v1/conveyors/:conveyorId/steps/:stepNodeId/completion */
+export type PatchConveyorStepCompletionBody = {
+  action: ConveyorStepCompletionAction
+  note?: string
 }
 
 /** Item do GET /api/v1/conveyors */

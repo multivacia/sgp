@@ -18,6 +18,8 @@ loadDotenvFiles()
 const hasDb = hasDatabaseConnectionInEnv(process.env)
 
 let capacityTablesAvailable = false
+/** Índice parcial da migration 0027 — necessário para INSERT … ON CONFLICT no upsert. */
+let capacityActiveUniqueIndexAvailable = false
 
 describe.skipIf(!hasDb)('operational capacity repository (integração)', () => {
   let pool: ReturnType<typeof getPool>
@@ -33,6 +35,15 @@ describe.skipIf(!hasDb)('operational capacity repository (integração)', () => 
        END AS ok`,
     )
     capacityTablesAvailable = probe.rows[0]?.ok === '1'
+    if (capacityTablesAvailable) {
+      const idx = await pool.query<{ n: string }>(
+        `SELECT COUNT(*)::text AS n
+         FROM pg_indexes
+         WHERE schemaname = 'public'
+           AND indexname = 'uq_collaborator_capacity_overrides_active_collaborator'`,
+      )
+      capacityActiveUniqueIndexAvailable = Number(idx.rows[0]?.n ?? 0) > 0
+    }
   })
 
   afterAll(async () => {
@@ -63,7 +74,9 @@ describe.skipIf(!hasDb)('operational capacity repository (integração)', () => 
     },
   )
 
-  it.skipIf(!capacityTablesAvailable)('override ativo vence default', async () => {
+  it.skipIf(!capacityTablesAvailable || !capacityActiveUniqueIndexAvailable)(
+    'override ativo vence default',
+    async () => {
     const collaboratorId = randomUUID()
     await pool.query(
       `INSERT INTO collaborators (id, full_name, status, is_active)
@@ -84,9 +97,10 @@ describe.skipIf(!hasDb)('operational capacity repository (integração)', () => 
     )
     expect(out.source).toBe('override')
     expect(out.overrideDailyMinutes).toBe(360)
-  })
+    },
+  )
 
-  it.skipIf(!capacityTablesAvailable)(
+  it.skipIf(!capacityTablesAvailable || !capacityActiveUniqueIndexAvailable)(
     'override inativo ou fora da janela não vence default',
     async () => {
       const collaboratorId = randomUUID()
@@ -127,7 +141,7 @@ describe.skipIf(!hasDb)('operational capacity repository (integração)', () => 
     },
   )
 
-  it.skipIf(!capacityTablesAvailable)(
+  it.skipIf(!capacityTablesAvailable || !capacityActiveUniqueIndexAvailable)(
     'soft delete remove override da resolução',
     async () => {
       const collaboratorId = randomUUID()
@@ -159,6 +173,58 @@ describe.skipIf(!hasDb)('operational capacity repository (integração)', () => 
         '2026-04-28',
       )
       expect(afterDelete.source).toBe('default')
+    },
+  )
+
+  it.skipIf(!capacityTablesAvailable || !capacityActiveUniqueIndexAvailable)(
+    'CAP-HF1.2: upsert cria, atualiza minutos, soft delete e volta a criar',
+    async () => {
+      const collaboratorId = randomUUID()
+      await pool.query(
+        `INSERT INTO collaborators (id, full_name, status, is_active)
+         VALUES ($1::uuid, 'Cap Upsert HF12', 'ACTIVE', true)`,
+        [collaboratorId],
+      )
+      await upsertOperationalCapacitySettings(pool, { defaultDailyMinutes: 480 })
+
+      const first = await upsertCollaboratorCapacityOverride(pool, {
+        collaboratorId,
+        dailyMinutes: 400,
+        isActive: true,
+      })
+      expect(first.daily_minutes).toBe(400)
+
+      const mid = await resolveCollaboratorDailyCapacityMinutes(pool, collaboratorId, '2026-04-28')
+      expect(mid.source).toBe('override')
+      expect(mid.overrideDailyMinutes).toBe(400)
+
+      const second = await upsertCollaboratorCapacityOverride(pool, {
+        collaboratorId,
+        dailyMinutes: 380,
+        isActive: true,
+      })
+      expect(second.id).toBe(first.id)
+      expect(second.daily_minutes).toBe(380)
+
+      const afterUpdate = await resolveCollaboratorDailyCapacityMinutes(pool, collaboratorId, '2026-04-28')
+      expect(afterUpdate.overrideDailyMinutes).toBe(380)
+
+      await softDeleteCollaboratorCapacityOverride(pool, second.id)
+      const afterDel = await resolveCollaboratorDailyCapacityMinutes(pool, collaboratorId, '2026-04-28')
+      expect(afterDel.source).toBe('default')
+      expect(afterDel.overrideDailyMinutes).toBeNull()
+
+      const third = await upsertCollaboratorCapacityOverride(pool, {
+        collaboratorId,
+        dailyMinutes: 410,
+        isActive: true,
+      })
+      expect(third.daily_minutes).toBe(410)
+      expect(third.id).not.toBe(first.id)
+
+      const final = await resolveCollaboratorDailyCapacityMinutes(pool, collaboratorId, '2026-04-28')
+      expect(final.source).toBe('override')
+      expect(final.overrideDailyMinutes).toBe(410)
     },
   )
 })

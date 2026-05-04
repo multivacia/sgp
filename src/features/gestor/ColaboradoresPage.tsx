@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useLocation, useSearchParams } from 'react-router-dom'
+import { Link, useLocation, useSearchParams } from 'react-router-dom'
 import { PageCanvas } from '../../components/ui/PageCanvas'
 import {
   SgpContextActionsMenu,
@@ -43,6 +43,13 @@ import {
   postAdminCollaboratorRestore,
   postAdminCollaboratorSoftDelete,
 } from '../../services/admin/adminCollaboratorsApiService'
+import { getCollaboratorCapacityResolved } from '../../services/operationalCapacity.service'
+import type { CollaboratorCapacityResolved } from '../../domain/operational-capacity'
+import {
+  formatCapacityLabel,
+} from '../../features/admin/operational-capacity/operationalCapacity.helpers'
+import { PERMISSION_OPERATIONAL_SETTINGS_MANAGE } from '../../lib/permissions/permissionCodes'
+import { useAuth } from '../../lib/use-auth'
 
 const COLABS_FILTER_KEYS: (keyof CollaboratorsListUrlState)[] = [
   'search',
@@ -100,6 +107,8 @@ function ColaborAvatar({ row }: { row: AdminCollaborator }) {
 export function ColaboradoresPage() {
   const { pathname } = useLocation()
   const { presentBlocking } = useSgpErrorSurface()
+  const { can } = useAuth()
+  const canSeeOperationalCapacity = can(PERMISSION_OPERATIONAL_SETTINGS_MANAGE)
   const [searchParams, setSearchParams] = useSearchParams()
   const urlState = useMemo(
     () => parseCollaboratorsListUrlState(searchParams),
@@ -115,6 +124,9 @@ export function ColaboradoresPage() {
   const [total, setTotal] = useState(0)
 
   const [draftSearch, setDraftSearch] = useState(urlState.search)
+  const [capacityByCollaboratorId, setCapacityByCollaboratorId] = useState<
+    Record<string, CollaboratorCapacityResolved | undefined>
+  >({})
   const [focusFetchedCollab, setFocusFetchedCollab] =
     useState<AdminCollaborator | null>(null)
   const [showFocusOutsideBanner, setShowFocusOutsideBanner] = useState(false)
@@ -199,6 +211,29 @@ export function ColaboradoresPage() {
   useEffect(() => {
     void load()
   }, [load])
+
+  useEffect(() => {
+    if (!canSeeOperationalCapacity || rows.length === 0) {
+      setCapacityByCollaboratorId({})
+      return
+    }
+    let cancelled = false
+    void (async () => {
+      const settled = await Promise.allSettled(
+        rows.map((r) => getCollaboratorCapacityResolved(r.id)),
+      )
+      if (cancelled) return
+      const next: Record<string, CollaboratorCapacityResolved | undefined> = {}
+      settled.forEach((res, i) => {
+        const id = rows[i]!.id
+        if (res.status === 'fulfilled') next[id] = res.value
+      })
+      setCapacityByCollaboratorId(next)
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [canSeeOperationalCapacity, rows])
 
   const maxPage = Math.max(1, Math.ceil(total / urlState.pageSize) || 1)
 
@@ -299,13 +334,21 @@ export function ColaboradoresPage() {
               <span className="font-mono text-slate-400">app_users</span>. Sem dados fictícios.
             </p>
           </div>
-          <button
-            type="button"
-            className="sgp-cta-primary px-6"
-            onClick={() => setCriando(true)}
-          >
-            Novo colaborador
-          </button>
+          <div className="flex flex-wrap gap-2">
+            <Link
+              to="/app/colaboradores/saude-operacional"
+              className="rounded-lg border border-white/12 px-4 py-2 text-sm font-semibold text-slate-200 hover:bg-white/[0.05]"
+            >
+              Saúde operacional
+            </Link>
+            <button
+              type="button"
+              className="sgp-cta-primary px-6"
+              onClick={() => setCriando(true)}
+            >
+              Novo colaborador
+            </button>
+          </div>
         </div>
       </header>
 
@@ -600,6 +643,25 @@ export function ColaboradoresPage() {
                           <p className="truncate text-xs text-slate-500">
                             {c.email ?? '—'}
                           </p>
+                          {canSeeOperationalCapacity ? (
+                            <p className="mt-1 text-[11px] text-slate-500">
+                              {capacityByCollaboratorId[c.id] ? (
+                                <>
+                                  Capacidade:{' '}
+                                  <span className="font-semibold text-slate-400">
+                                    {formatCapacityLabel(
+                                      capacityByCollaboratorId[c.id]!.resolvedDailyMinutes,
+                                    )}
+                                  </span>
+                                  {capacityByCollaboratorId[c.id]!.source === 'override'
+                                    ? ' (ajuste)'
+                                    : null}
+                                </>
+                              ) : (
+                                <span className="text-slate-600">Capacidade: …</span>
+                              )}
+                            </p>
+                          ) : null}
                         </div>
                       </div>
                     </td>
@@ -713,6 +775,7 @@ export function ColaboradoresPage() {
           key="create"
           titulo="Novo colaborador"
           modo="create"
+          operationalCapacityEnabled={false}
           sectors={sectors}
           roles={roles}
           onClose={() => setCriando(false)}
@@ -735,6 +798,7 @@ export function ColaboradoresPage() {
           titulo="Editar colaborador"
           modo="edit"
           inicial={editando}
+          operationalCapacityEnabled={canSeeOperationalCapacity}
           sectors={sectors}
           roles={roles}
           onClose={() => setEditando(null)}
@@ -758,6 +822,7 @@ export function ColaboradoresPage() {
 type FormPropsCreate = {
   titulo: string
   modo: 'create'
+  operationalCapacityEnabled: boolean
   sectors: Sector[]
   roles: Role[]
   onClose: () => void
@@ -768,6 +833,7 @@ type FormPropsEdit = {
   titulo: string
   modo: 'edit'
   inicial: AdminCollaborator
+  operationalCapacityEnabled: boolean
   sectors: Sector[]
   roles: Role[]
   onClose: () => void
@@ -792,6 +858,87 @@ function isOptionalAvatarUrlOk(raw: string): boolean {
   const t = raw.trim()
   if (!t) return true
   return /^https?:\/\/.+/i.test(t)
+}
+
+function CollaboratorOperationalCapacityCard({
+  collaboratorId,
+}: {
+  collaboratorId: string
+}) {
+  const [data, setData] = useState<CollaboratorCapacityResolved | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    let cancelled = false
+    setLoading(true)
+    void getCollaboratorCapacityResolved(collaboratorId)
+      .then((r) => {
+        if (!cancelled) setData(r)
+      })
+      .catch(() => {
+        if (!cancelled) setData(null)
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [collaboratorId])
+
+  return (
+    <div className="rounded-xl border border-white/[0.08] bg-sgp-app-panel-deep/80 px-4 py-3 sm:col-span-2">
+      <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">
+        Capacidade operacional
+      </p>
+      {loading ? (
+        <p className="mt-2 text-sm text-slate-500">A carregar…</p>
+      ) : data ? (
+        <dl className="mt-2 space-y-1.5 text-sm text-slate-300">
+          <div className="flex flex-wrap justify-between gap-2">
+            <dt className="text-slate-500">Padrão global</dt>
+            <dd className="font-medium tabular-nums text-slate-200">
+              {data.defaultDailyMinutes != null
+                ? formatCapacityLabel(data.defaultDailyMinutes)
+                : '—'}
+            </dd>
+          </div>
+          <div className="flex flex-wrap justify-between gap-2">
+            <dt className="text-slate-500">Ajuste individual</dt>
+            <dd className="font-medium tabular-nums text-slate-200">
+              {data.overrideDailyMinutes != null
+                ? formatCapacityLabel(data.overrideDailyMinutes)
+                : '—'}
+            </dd>
+          </div>
+          <div className="flex flex-wrap justify-between gap-2 border-t border-white/[0.06] pt-2">
+            <dt className="text-slate-400">Efetiva (hoje)</dt>
+            <dd className="font-heading font-bold tabular-nums text-emerald-200/95">
+              {formatCapacityLabel(data.resolvedDailyMinutes)}
+            </dd>
+          </div>
+          <p className="pt-1 text-[11px] text-slate-600">
+            Origem:{' '}
+            {data.source === 'override'
+              ? 'ajuste individual'
+              : data.source === 'default'
+                ? 'padrão global'
+                : 'fallback'}
+          </p>
+        </dl>
+      ) : (
+        <p className="mt-2 text-sm text-slate-500">
+          Não foi possível carregar a capacidade operacional.
+        </p>
+      )}
+      <Link
+        to="/app/configuracoes-operacionais"
+        className="mt-3 inline-block text-[11px] font-bold text-sgp-gold/90 underline-offset-2 hover:underline"
+      >
+        Gerir em Configurações operacionais — Capacidade operacional
+      </Link>
+    </div>
+  )
 }
 
 function FormColaboradorModal(props: FormProps) {
@@ -938,6 +1085,10 @@ function FormColaboradorModal(props: FormProps) {
               className="sgp-input-app mt-1.5 w-full min-w-0 resize-none rounded-lg border border-white/10 bg-sgp-void/80 px-3 py-2.5 text-sm text-slate-200"
             />
           </label>
+
+          {props.modo === 'edit' && props.operationalCapacityEnabled ? (
+            <CollaboratorOperationalCapacityCard collaboratorId={props.inicial.id} />
+          ) : null}
         </div>
 
         <div className="mt-6 flex flex-wrap justify-end gap-2 border-t border-white/[0.06] pt-5">

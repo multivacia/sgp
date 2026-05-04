@@ -90,6 +90,13 @@ export const GESTAO_NAV_ITEMS: ShellNavItem[] = [
     permission: 'collaborators_admin.view',
   },
   {
+    to: '/app/colaboradores/saude-operacional',
+    label: 'Saúde operacional',
+    section: 'gestao',
+    navGroup: 'cadastros_operacionais',
+    permission: 'collaborators_admin.view',
+  },
+  {
     to: '/app/usuarios',
     label: 'Usuários',
     section: 'gestao',
