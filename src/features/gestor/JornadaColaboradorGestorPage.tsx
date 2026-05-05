@@ -446,6 +446,34 @@ export function JornadaColaboradorGestorPage() {
             </div>
           </section>
 
+          <section className="mt-4">
+            <div className="sgp-panel sgp-panel-hover !p-4">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                Extra esteira (período)
+              </p>
+              <p className="mt-1 font-heading text-2xl font-bold text-slate-50">
+                {formatHumanMinutes(journey.extraTimeEntriesSummary.totalMinutes)}
+              </p>
+              <p className="mt-2 text-xs text-slate-400">
+                {journey.extraTimeEntriesSummary.entriesCount > 0
+                  ? `${journey.extraTimeEntriesSummary.entriesCount} lançamento(s) fora de esteira neste período.`
+                  : 'Nenhum apontamento extra no período.'}
+              </p>
+              {journey.extraTimeEntriesSummary.topDescriptions.length > 0 ? (
+                <ul className="mt-3 space-y-1 text-xs text-slate-300">
+                  {journey.extraTimeEntriesSummary.topDescriptions.map((item) => (
+                    <li key={item.descriptionId} className="flex items-center justify-between gap-2">
+                      <span className="truncate">{item.description}</span>
+                      <span className="shrink-0 tabular-nums text-slate-400">
+                        {formatHumanMinutes(item.totalMinutes)} · {item.entriesCount}x
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+            </div>
+          </section>
+
           <section className="mt-4 rounded-xl border border-sgp-gold/25 bg-sgp-gold/[0.06] px-4 py-3">
             <p className="text-[10px] font-bold uppercase tracking-wider text-amber-200/90">
               {operationalLabels.coberturaTempo}

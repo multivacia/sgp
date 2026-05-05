@@ -94,6 +94,10 @@ describe.skipIf(!hasDb)('GET /collaborators/:id/operational-journey (integraçã
     expect(typeof res.body.data.load.assignmentCount).toBe('number')
     expect(typeof res.body.data.execution.realizedMinutesTotal).toBe('number')
     expect(typeof res.body.data.execution.realizedMinutesInPeriod).toBe('number')
+    expect(res.body.data.extraTimeEntriesSummary).toBeTruthy()
+    expect(typeof res.body.data.extraTimeEntriesSummary.totalMinutes).toBe('number')
+    expect(typeof res.body.data.extraTimeEntriesSummary.entriesCount).toBe('number')
+    expect(Array.isArray(res.body.data.extraTimeEntriesSummary.topDescriptions)).toBe(true)
     expect(res.body.data.coberturaTempo).toBeTruthy()
     expect(
       res.body.data.coberturaTempo.ratio === null ||
