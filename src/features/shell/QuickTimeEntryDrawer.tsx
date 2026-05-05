@@ -5,6 +5,10 @@ import { formatHumanMinutes } from '../../lib/formatters'
 import { postConveyorStepTimeEntry } from '../../services/conveyors/conveyorStepAssignmentsApiService'
 import { listTimeEntryCandidates } from '../../services/my-activities/myActivitiesApiService'
 import type { TimeEntryCandidateItem } from '../../domain/my-activities/my-activities.types'
+import type {
+  ExtraTimeEntryDescriptionOption,
+  ExtraTimeEntryItem,
+} from '../../domain/my-activities/extraTimeEntries.types'
 import { useAuth } from '../../lib/use-auth'
 import {
   isBlockingSeverity,
@@ -14,12 +18,18 @@ import {
 import { useSgpErrorSurface } from '../../lib/errors/SgpErrorPresentation'
 import { transversalUxCopy } from '../../lib/transversalUxCopy'
 import { labelRoleInStep } from '../colaborador/minhasAtividadesLabels'
+import {
+  createMyExtraTimeEntry,
+  listExtraTimeEntryDescriptions,
+  listMyExtraTimeEntries,
+} from '../../services/my-activities/extraTimeEntriesApiService'
 
 const SEARCH_DEBOUNCE_MS = 200
 
 type ToastState = { message: string; variant: SgpToastVariant } | null
 
 type Phase = 'list' | 'form'
+type DrawerTab = 'conveyor' | 'extra'
 
 type Props = {
   open: boolean
@@ -39,6 +49,7 @@ export function QuickTimeEntryDrawer({ open, onClose }: Props) {
   const { user, ready: authReady } = useAuth()
   const { presentBlocking } = useSgpErrorSurface()
   const [phase, setPhase] = useState<Phase>('list')
+  const [tab, setTab] = useState<DrawerTab>('conveyor')
   const [search, setSearch] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [items, setItems] = useState<TimeEntryCandidateItem[]>([])
@@ -51,6 +62,21 @@ export function QuickTimeEntryDrawer({ open, onClose }: Props) {
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [toast, setToast] = useState<ToastState>(null)
+  const [extraDescriptions, setExtraDescriptions] = useState<
+    ExtraTimeEntryDescriptionOption[]
+  >([])
+  const [extraDescriptionsLoading, setExtraDescriptionsLoading] = useState(false)
+  const [extraDescriptionsError, setExtraDescriptionsError] = useState<string | null>(null)
+  const [extraEntries, setExtraEntries] = useState<ExtraTimeEntryItem[]>([])
+  const [extraEntriesLoading, setExtraEntriesLoading] = useState(false)
+  const [extraEntriesError, setExtraEntriesError] = useState<string | null>(null)
+  const [extraUnavailableReason, setExtraUnavailableReason] = useState<string | null>(null)
+  const [extraDescriptionId, setExtraDescriptionId] = useState('')
+  const [extraEntryDate, setExtraEntryDate] = useState(new Date().toISOString().slice(0, 10))
+  const [extraMinutesStr, setExtraMinutesStr] = useState('30')
+  const [extraNotes, setExtraNotes] = useState('')
+  const [extraSubmitting, setExtraSubmitting] = useState(false)
+  const [extraSubmitError, setExtraSubmitError] = useState<string | null>(null)
 
   useEffect(() => {
     const t = window.setTimeout(
@@ -63,6 +89,7 @@ export function QuickTimeEntryDrawer({ open, onClose }: Props) {
   useEffect(() => {
     if (!open) {
       setPhase('list')
+      setTab('conveyor')
       setSelected(null)
       setSearch('')
       setDebouncedSearch('')
@@ -71,6 +98,19 @@ export function QuickTimeEntryDrawer({ open, onClose }: Props) {
       setToast(null)
       setMinutesStr('30')
       setDescription('')
+      setExtraDescriptions([])
+      setExtraDescriptionsLoading(false)
+      setExtraDescriptionsError(null)
+      setExtraEntries([])
+      setExtraEntriesLoading(false)
+      setExtraEntriesError(null)
+      setExtraUnavailableReason(null)
+      setExtraDescriptionId('')
+      setExtraEntryDate(new Date().toISOString().slice(0, 10))
+      setExtraMinutesStr('30')
+      setExtraNotes('')
+      setExtraSubmitting(false)
+      setExtraSubmitError(null)
     }
   }, [open])
 
@@ -108,6 +148,68 @@ export function QuickTimeEntryDrawer({ open, onClose }: Props) {
     void load()
   }, [open, authReady, load])
 
+  const loadExtraDescriptions = useCallback(async () => {
+    if (!open) return
+    setExtraDescriptionsLoading(true)
+    setExtraDescriptionsError(null)
+    try {
+      const rows = await listExtraTimeEntryDescriptions()
+      setExtraDescriptions(rows)
+      if (rows.length > 0) {
+        setExtraDescriptionId((prev) => prev || rows[0].id)
+      } else {
+        setExtraDescriptionId('')
+      }
+    } catch (e) {
+      const n = reportClientError(e, {
+        module: 'shell',
+        action: 'extra_time_entry_descriptions_load',
+      })
+      if (isBlockingSeverity(n.severity)) {
+        presentBlocking(n)
+        onClose()
+        return
+      }
+      setExtraDescriptionsError(n.userMessage)
+      setExtraDescriptions([])
+      setExtraDescriptionId('')
+    } finally {
+      setExtraDescriptionsLoading(false)
+    }
+  }, [open, onClose, presentBlocking])
+
+  const loadExtraEntries = useCallback(async () => {
+    if (!open) return
+    setExtraEntriesLoading(true)
+    setExtraEntriesError(null)
+    try {
+      const result = await listMyExtraTimeEntries({ limit: 10 })
+      setExtraEntries(result.items)
+      setExtraUnavailableReason(result.unavailableReason)
+    } catch (e) {
+      const n = reportClientError(e, {
+        module: 'shell',
+        action: 'extra_time_entries_list',
+      })
+      if (isBlockingSeverity(n.severity)) {
+        presentBlocking(n)
+        onClose()
+        return
+      }
+      setExtraEntriesError(n.userMessage)
+      setExtraEntries([])
+      setExtraUnavailableReason(null)
+    } finally {
+      setExtraEntriesLoading(false)
+    }
+  }, [open, onClose, presentBlocking])
+
+  useEffect(() => {
+    if (!open || !authReady) return
+    void loadExtraDescriptions()
+    void loadExtraEntries()
+  }, [open, authReady, loadExtraDescriptions, loadExtraEntries])
+
   useEffect(() => {
     if (!open) return
     const prev = document.body.style.overflow
@@ -128,6 +230,8 @@ export function QuickTimeEntryDrawer({ open, onClose }: Props) {
 
   const minutes = Number.parseInt(minutesStr, 10)
   const minutesValid = Number.isInteger(minutes) && minutes >= 1
+  const extraMinutes = Number.parseInt(extraMinutesStr, 10)
+  const extraMinutesValid = Number.isInteger(extraMinutes) && extraMinutes >= 1
 
   function startForm(c: TimeEntryCandidateItem) {
     setSelected(c)
@@ -184,6 +288,49 @@ export function QuickTimeEntryDrawer({ open, onClose }: Props) {
     }
   }
 
+  async function saveExtra() {
+    if (!user || extraSubmitting) return
+    if (!user.collaboratorId || extraUnavailableReason) {
+      pushToast(transversalUxCopy.collaboratorLinkMissingToast, 'error')
+      return
+    }
+    if (!extraDescriptionId) {
+      setExtraSubmitError('Selecione uma descrição.')
+      return
+    }
+    if (!extraMinutesValid) {
+      setExtraSubmitError('Informe minutos válidos (maior que zero).')
+      return
+    }
+    setExtraSubmitError(null)
+    setExtraSubmitting(true)
+    try {
+      await createMyExtraTimeEntry({
+        descriptionId: extraDescriptionId,
+        entryDate: extraEntryDate || undefined,
+        minutes: extraMinutes,
+        notes: extraNotes.trim() || undefined,
+      })
+      pushToast('Apontamento extra esteira registado com sucesso.', 'success')
+      setExtraMinutesStr('30')
+      setExtraNotes('')
+      await loadExtraEntries()
+    } catch (e) {
+      const n = reportClientError(e, {
+        module: 'shell',
+        action: 'extra_time_entry_save',
+      })
+      const plan = presentationPlan(n)
+      if (plan.surface === 'modal') {
+        presentBlocking(n)
+      } else {
+        setExtraSubmitError(n.userMessage)
+      }
+    } finally {
+      setExtraSubmitting(false)
+    }
+  }
+
   if (!open) return null
   if (typeof document === 'undefined') return null
 
@@ -221,7 +368,11 @@ export function QuickTimeEntryDrawer({ open, onClose }: Props) {
                 id="qte-title"
                 className="mt-1 font-heading text-lg font-bold tracking-tight text-white md:text-xl"
               >
-                {phase === 'list' ? 'Apontar horas' : 'Registrar tempo'}
+                {tab === 'conveyor'
+                  ? phase === 'list'
+                    ? 'Apontar horas'
+                    : 'Registrar tempo'
+                  : 'Apontamento extra esteira'}
               </h2>
             </div>
             <button
@@ -237,189 +388,348 @@ export function QuickTimeEntryDrawer({ open, onClose }: Props) {
         <main className="flex min-h-0 flex-1 flex-col overflow-hidden">
           {!authReady ? (
             <p className="p-5 text-sm text-slate-500">Carregando sessão…</p>
-          ) : phase === 'list' ? (
+          ) : (
             <>
-              <div className="shrink-0 space-y-3 border-b border-white/[0.06] p-4 md:p-5">
-                {unavailableReason ? (
-                  <div className="rounded-xl border border-amber-500/30 bg-amber-500/[0.07] px-3 py-2.5 text-xs leading-relaxed text-amber-100/95">
-                    <p className="font-bold text-amber-200">
-                      {transversalUxCopy.collaboratorLinkMissingTitle}
-                    </p>
-                    <p className="mt-1 text-amber-50/90">{unavailableReason}</p>
-                  </div>
-                ) : null}
-                <label className="block text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">
-                  Pesquisar
-                  <input
-                    type="search"
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    placeholder="Esteira, cliente, veículo, área, atividade…"
-                    className="mt-1.5 w-full rounded-xl border border-[color:var(--semantic-border-glass-strong)] bg-sgp-app-panel-deep/90 px-3 py-2 text-sm text-slate-200 outline-none ring-sgp-blue-bright/0 transition focus:ring-2 focus:ring-sgp-blue-bright/25"
-                  />
-                </label>
+              <div className="shrink-0 border-b border-white/[0.06] px-4 py-3 md:px-5">
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setTab('conveyor')}
+                    className={`rounded-lg px-3 py-1.5 text-xs font-bold transition ${
+                      tab === 'conveyor'
+                        ? 'bg-sgp-gold/15 text-sgp-gold ring-1 ring-sgp-gold/35'
+                        : 'text-slate-400 hover:bg-white/[0.04]'
+                    }`}
+                  >
+                    Esteira
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTab('extra')
+                      setPhase('list')
+                    }}
+                    className={`rounded-lg px-3 py-1.5 text-xs font-bold transition ${
+                      tab === 'extra'
+                        ? 'bg-sgp-gold/15 text-sgp-gold ring-1 ring-sgp-gold/35'
+                        : 'text-slate-400 hover:bg-white/[0.04]'
+                    }`}
+                  >
+                    Extra esteira
+                  </button>
+                </div>
               </div>
+              {tab === 'conveyor' ? (
+                phase === 'list' ? (
+                  <>
+                    <div className="shrink-0 space-y-3 border-b border-white/[0.06] p-4 md:p-5">
+                      {unavailableReason ? (
+                        <div className="rounded-xl border border-amber-500/30 bg-amber-500/[0.07] px-3 py-2.5 text-xs leading-relaxed text-amber-100/95">
+                          <p className="font-bold text-amber-200">
+                            {transversalUxCopy.collaboratorLinkMissingTitle}
+                          </p>
+                          <p className="mt-1 text-amber-50/90">{unavailableReason}</p>
+                        </div>
+                      ) : null}
+                      <label className="block text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">
+                        Pesquisar
+                        <input
+                          type="search"
+                          value={search}
+                          onChange={(e) => setSearch(e.target.value)}
+                          placeholder="Esteira, cliente, veículo, área, atividade…"
+                          className="mt-1.5 w-full rounded-xl border border-[color:var(--semantic-border-glass-strong)] bg-sgp-app-panel-deep/90 px-3 py-2 text-sm text-slate-200 outline-none ring-sgp-blue-bright/0 transition focus:ring-2 focus:ring-sgp-blue-bright/25"
+                        />
+                      </label>
+                    </div>
 
-              <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-6 pt-3 md:px-5">
-                {loading ? (
-                  <p className="text-sm text-slate-500">Carregando atividades…</p>
-                ) : loadError ? (
-                  <div className="rounded-xl border border-rose-500/25 bg-rose-500/[0.06] p-4 text-sm text-rose-100">
-                    <p>{loadError}</p>
+                    <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-6 pt-3 md:px-5">
+                      {loading ? (
+                        <p className="text-sm text-slate-500">Carregando atividades…</p>
+                      ) : loadError ? (
+                        <div className="rounded-xl border border-rose-500/25 bg-rose-500/[0.06] p-4 text-sm text-rose-100">
+                          <p>{loadError}</p>
+                          <button
+                            type="button"
+                            className="mt-3 text-xs font-bold text-sgp-blue-bright hover:underline"
+                            onClick={() => void load()}
+                          >
+                            Tentar novamente
+                          </button>
+                        </div>
+                      ) : unavailableReason && items.length === 0 ? (
+                        <p className="text-sm text-slate-500">
+                          Não há atividades para apontar neste contexto.
+                        </p>
+                      ) : items.length === 0 ? (
+                        <p className="text-sm text-slate-500">
+                          {debouncedSearch.trim()
+                            ? 'Nenhuma atividade corresponde à pesquisa.'
+                            : 'Sem atividades em aberto para apontamento.'}
+                        </p>
+                      ) : (
+                        <ul className="space-y-3">
+                          {items.map((c) => (
+                            <li
+                              key={`${c.conveyorId}-${c.stepNodeId}`}
+                              className="rounded-2xl border border-white/[0.07] bg-white/[0.03] p-4 shadow-inner"
+                            >
+                              <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500">
+                                Esteira
+                              </p>
+                              <p className="mt-1 font-heading text-sm font-bold text-white">
+                                {c.conveyorName}
+                              </p>
+                              <p className="mt-2 text-xs text-slate-500">{buildContextLine(c)}</p>
+                              <p className="mt-3 text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500">
+                                Atividade
+                              </p>
+                              <p className="mt-0.5 text-sm font-semibold text-slate-200">
+                                {c.stepName}
+                              </p>
+                              <p className="mt-2 text-xs text-slate-500">
+                                {c.areaName} · {labelRoleInStep(c.roleInStep)}
+                                {c.assignmentType === 'TEAM' ? ' · Time' : ''}
+                              </p>
+                              <div className="mt-3 grid grid-cols-3 gap-2 text-[11px] text-slate-400">
+                                <div>
+                                  <p className="text-[9px] uppercase tracking-wider text-slate-600">
+                                    Previsto
+                                  </p>
+                                  <p className="font-semibold text-slate-200">
+                                    {c.plannedMinutes != null
+                                      ? formatHumanMinutes(c.plannedMinutes)
+                                      : '—'}
+                                  </p>
+                                </div>
+                                <div>
+                                  <p className="text-[9px] uppercase tracking-wider text-slate-600">
+                                    Realizado
+                                  </p>
+                                  <p className="font-semibold text-slate-200">
+                                    {formatHumanMinutes(c.realizedMinutes)}
+                                  </p>
+                                </div>
+                                <div>
+                                  <p className="text-[9px] uppercase tracking-wider text-slate-600">
+                                    Pendente
+                                  </p>
+                                  <p className="font-semibold text-slate-200">
+                                    {formatHumanMinutes(c.pendingMinutes)}
+                                  </p>
+                                </div>
+                              </div>
+                              <button
+                                type="button"
+                                className="sgp-cta-primary mt-4 w-full justify-center py-2 text-center text-xs"
+                                onClick={() => startForm(c)}
+                                disabled={Boolean(unavailableReason)}
+                              >
+                                Apontar
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  </>
+                ) : selected ? (
+                  <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 pb-8 pt-4 md:px-6">
+                    <div className="rounded-2xl border border-white/[0.07] bg-white/[0.03] p-4">
+                      <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500">
+                        Esteira
+                      </p>
+                      <p className="mt-1 font-heading text-base font-bold text-white">
+                        {selected.conveyorName}
+                      </p>
+                      <p className="mt-3 text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500">
+                        Atividade
+                      </p>
+                      <p className="mt-0.5 text-sm font-semibold text-slate-100">
+                        {selected.stepName}
+                      </p>
+                      <p className="mt-2 text-xs text-slate-500">
+                        {selected.areaName} · {labelRoleInStep(selected.roleInStep)}
+                      </p>
+                    </div>
+
+                    <label className="mt-6 block text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">
+                      Tempo (minutos)
+                      <input
+                        type="number"
+                        min={1}
+                        step={1}
+                        inputMode="numeric"
+                        value={minutesStr}
+                        onChange={(e) => setMinutesStr(e.target.value)}
+                        className="mt-1.5 w-full rounded-xl border border-[color:var(--semantic-border-glass-strong)] bg-sgp-app-panel-deep/90 px-3 py-2 text-sm text-slate-200 outline-none focus:ring-2 focus:ring-sgp-blue-bright/25"
+                      />
+                    </label>
+
+                    <label className="mt-4 block text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">
+                      Descrição (opcional)
+                      <textarea
+                        value={description}
+                        onChange={(e) => setDescription(e.target.value)}
+                        rows={3}
+                        placeholder="Notas sobre o trabalho realizado…"
+                        className="mt-1.5 w-full resize-none rounded-xl border border-[color:var(--semantic-border-glass-strong)] bg-sgp-app-panel-deep/90 px-3 py-2 text-sm text-slate-200 outline-none focus:ring-2 focus:ring-sgp-blue-bright/25"
+                      />
+                    </label>
+
+                    {submitError ? (
+                      <p className="mt-3 text-sm text-rose-200">{submitError}</p>
+                    ) : null}
+
+                    <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:justify-end">
+                      <button
+                        type="button"
+                        className="rounded-xl border border-white/12 px-4 py-2.5 text-sm font-semibold text-slate-300 transition hover:bg-white/[0.05]"
+                        onClick={backToList}
+                        disabled={submitting}
+                      >
+                        Cancelar
+                      </button>
+                      <button
+                        type="button"
+                        className="sgp-cta-primary px-4 py-2.5 text-sm disabled:pointer-events-none disabled:opacity-50"
+                        onClick={() => void save()}
+                        disabled={submitting || !minutesValid}
+                      >
+                        {submitting ? 'A guardar…' : 'Salvar apontamento'}
+                      </button>
+                    </div>
+                  </div>
+                ) : null
+              ) : (
+                <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 pb-8 pt-4 md:px-6">
+                  {extraUnavailableReason ? (
+                    <div className="rounded-xl border border-amber-500/30 bg-amber-500/[0.07] px-3 py-2.5 text-xs leading-relaxed text-amber-100/95">
+                      <p className="font-bold text-amber-200">
+                        {transversalUxCopy.collaboratorLinkMissingTitle}
+                      </p>
+                      <p className="mt-1 text-amber-50/90">{extraUnavailableReason}</p>
+                    </div>
+                  ) : null}
+
+                  <label className="mt-2 block text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">
+                    Descrição do apontamento
+                    <select
+                      value={extraDescriptionId}
+                      onChange={(e) => setExtraDescriptionId(e.target.value)}
+                      className="mt-1.5 w-full rounded-xl border border-[color:var(--semantic-border-glass-strong)] bg-sgp-app-panel-deep/90 px-3 py-2 text-sm text-slate-200 outline-none focus:ring-2 focus:ring-sgp-blue-bright/25"
+                      disabled={extraDescriptionsLoading || extraDescriptions.length === 0}
+                    >
+                      {extraDescriptions.map((d) => (
+                        <option key={d.id} value={d.id}>
+                          {d.description}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  {extraDescriptionsLoading ? (
+                    <p className="mt-2 text-xs text-slate-500">Carregando descrições...</p>
+                  ) : null}
+                  {extraDescriptionsError ? (
+                    <p className="mt-2 text-xs text-rose-200">{extraDescriptionsError}</p>
+                  ) : null}
+                  {!extraDescriptionsLoading &&
+                  !extraDescriptionsError &&
+                  extraDescriptions.length === 0 ? (
+                    <p className="mt-2 text-xs text-slate-500">
+                      Não há descrições ativas configuradas.
+                    </p>
+                  ) : null}
+
+                  <label className="mt-4 block text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">
+                    Data
+                    <input
+                      type="date"
+                      value={extraEntryDate}
+                      onChange={(e) => setExtraEntryDate(e.target.value)}
+                      className="mt-1.5 w-full rounded-xl border border-[color:var(--semantic-border-glass-strong)] bg-sgp-app-panel-deep/90 px-3 py-2 text-sm text-slate-200 outline-none focus:ring-2 focus:ring-sgp-blue-bright/25"
+                    />
+                  </label>
+
+                  <label className="mt-4 block text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">
+                    Tempo (minutos)
+                    <input
+                      type="number"
+                      min={1}
+                      step={1}
+                      inputMode="numeric"
+                      value={extraMinutesStr}
+                      onChange={(e) => setExtraMinutesStr(e.target.value)}
+                      className="mt-1.5 w-full rounded-xl border border-[color:var(--semantic-border-glass-strong)] bg-sgp-app-panel-deep/90 px-3 py-2 text-sm text-slate-200 outline-none focus:ring-2 focus:ring-sgp-blue-bright/25"
+                    />
+                  </label>
+
+                  <label className="mt-4 block text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">
+                    Observação (opcional)
+                    <textarea
+                      value={extraNotes}
+                      onChange={(e) => setExtraNotes(e.target.value)}
+                      rows={3}
+                      className="mt-1.5 w-full resize-none rounded-xl border border-[color:var(--semantic-border-glass-strong)] bg-sgp-app-panel-deep/90 px-3 py-2 text-sm text-slate-200 outline-none focus:ring-2 focus:ring-sgp-blue-bright/25"
+                    />
+                  </label>
+
+                  {extraSubmitError ? (
+                    <p className="mt-3 text-sm text-rose-200">{extraSubmitError}</p>
+                  ) : null}
+
+                  <div className="mt-5">
                     <button
                       type="button"
-                      className="mt-3 text-xs font-bold text-sgp-blue-bright hover:underline"
-                      onClick={() => void load()}
+                      className="sgp-cta-primary w-full justify-center py-2 text-sm disabled:pointer-events-none disabled:opacity-50"
+                      onClick={() => void saveExtra()}
+                      disabled={
+                        extraSubmitting ||
+                        !extraMinutesValid ||
+                        !extraDescriptionId ||
+                        Boolean(extraUnavailableReason)
+                      }
                     >
-                      Tentar novamente
+                      {extraSubmitting ? 'A guardar…' : 'Salvar apontamento'}
                     </button>
                   </div>
-                ) : unavailableReason && items.length === 0 ? (
-                  <p className="text-sm text-slate-500">
-                    Não há atividades para apontar neste contexto.
-                  </p>
-                ) : items.length === 0 ? (
-                  <p className="text-sm text-slate-500">
-                    {debouncedSearch.trim()
-                      ? 'Nenhuma atividade corresponde à pesquisa.'
-                      : 'Sem atividades em aberto para apontamento.'}
-                  </p>
-                ) : (
-                  <ul className="space-y-3">
-                    {items.map((c) => (
-                      <li
-                        key={`${c.conveyorId}-${c.stepNodeId}`}
-                        className="rounded-2xl border border-white/[0.07] bg-white/[0.03] p-4 shadow-inner"
-                      >
-                        <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500">
-                          Esteira
-                        </p>
-                        <p className="mt-1 font-heading text-sm font-bold text-white">
-                          {c.conveyorName}
-                        </p>
-                        <p className="mt-2 text-xs text-slate-500">
-                          {buildContextLine(c)}
-                        </p>
-                        <p className="mt-3 text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500">
-                          Atividade
-                        </p>
-                        <p className="mt-0.5 text-sm font-semibold text-slate-200">
-                          {c.stepName}
-                        </p>
-                        <p className="mt-2 text-xs text-slate-500">
-                          {c.areaName} · {labelRoleInStep(c.roleInStep)}
-                          {c.assignmentType === 'TEAM' ? ' · Time' : ''}
-                        </p>
-                        <div className="mt-3 grid grid-cols-3 gap-2 text-[11px] text-slate-400">
-                          <div>
-                            <p className="text-[9px] uppercase tracking-wider text-slate-600">
-                              Previsto
+
+                  <div className="mt-6 border-t border-white/[0.06] pt-4">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500">
+                      Últimos apontamentos extra esteira
+                    </p>
+                    {extraEntriesLoading ? (
+                      <p className="mt-2 text-sm text-slate-500">Carregando...</p>
+                    ) : extraEntriesError ? (
+                      <p className="mt-2 text-sm text-rose-200">{extraEntriesError}</p>
+                    ) : extraEntries.length === 0 ? (
+                      <p className="mt-2 text-sm text-slate-500">Sem apontamentos recentes.</p>
+                    ) : (
+                      <ul className="mt-3 space-y-2">
+                        {extraEntries.map((e) => (
+                          <li
+                            key={e.id}
+                            className="rounded-xl border border-white/[0.07] bg-white/[0.03] px-3 py-2"
+                          >
+                            <p className="text-sm font-semibold text-slate-100">
+                              {e.description}
                             </p>
-                            <p className="font-semibold text-slate-200">
-                              {c.plannedMinutes != null
-                                ? formatHumanMinutes(c.plannedMinutes)
-                                : '—'}
+                            <p className="mt-1 text-xs text-slate-400">
+                              {e.entryDate} · {formatHumanMinutes(e.minutes)}
                             </p>
-                          </div>
-                          <div>
-                            <p className="text-[9px] uppercase tracking-wider text-slate-600">
-                              Realizado
-                            </p>
-                            <p className="font-semibold text-slate-200">
-                              {formatHumanMinutes(c.realizedMinutes)}
-                            </p>
-                          </div>
-                          <div>
-                            <p className="text-[9px] uppercase tracking-wider text-slate-600">
-                              Pendente
-                            </p>
-                            <p className="font-semibold text-slate-200">
-                              {formatHumanMinutes(c.pendingMinutes)}
-                            </p>
-                          </div>
-                        </div>
-                        <button
-                          type="button"
-                          className="sgp-cta-primary mt-4 w-full justify-center py-2 text-center text-xs"
-                          onClick={() => startForm(c)}
-                          disabled={Boolean(unavailableReason)}
-                        >
-                          Apontar
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
+                            {e.notes ? (
+                              <p className="mt-1 text-xs text-slate-500">{e.notes}</p>
+                            ) : null}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                </div>
+              )}
             </>
-          ) : selected ? (
-            <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 pb-8 pt-4 md:px-6">
-              <div className="rounded-2xl border border-white/[0.07] bg-white/[0.03] p-4">
-                <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500">
-                  Esteira
-                </p>
-                <p className="mt-1 font-heading text-base font-bold text-white">
-                  {selected.conveyorName}
-                </p>
-                <p className="mt-3 text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500">
-                  Atividade
-                </p>
-                <p className="mt-0.5 text-sm font-semibold text-slate-100">
-                  {selected.stepName}
-                </p>
-                <p className="mt-2 text-xs text-slate-500">
-                  {selected.areaName} · {labelRoleInStep(selected.roleInStep)}
-                </p>
-              </div>
-
-              <label className="mt-6 block text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">
-                Tempo (minutos)
-                <input
-                  type="number"
-                  min={1}
-                  step={1}
-                  inputMode="numeric"
-                  value={minutesStr}
-                  onChange={(e) => setMinutesStr(e.target.value)}
-                  className="mt-1.5 w-full rounded-xl border border-[color:var(--semantic-border-glass-strong)] bg-sgp-app-panel-deep/90 px-3 py-2 text-sm text-slate-200 outline-none focus:ring-2 focus:ring-sgp-blue-bright/25"
-                />
-              </label>
-
-              <label className="mt-4 block text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">
-                Descrição (opcional)
-                <textarea
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  rows={3}
-                  placeholder="Notas sobre o trabalho realizado…"
-                  className="mt-1.5 w-full resize-none rounded-xl border border-[color:var(--semantic-border-glass-strong)] bg-sgp-app-panel-deep/90 px-3 py-2 text-sm text-slate-200 outline-none focus:ring-2 focus:ring-sgp-blue-bright/25"
-                />
-              </label>
-
-              {submitError ? (
-                <p className="mt-3 text-sm text-rose-200">{submitError}</p>
-              ) : null}
-
-              <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:justify-end">
-                <button
-                  type="button"
-                  className="rounded-xl border border-white/12 px-4 py-2.5 text-sm font-semibold text-slate-300 transition hover:bg-white/[0.05]"
-                  onClick={backToList}
-                  disabled={submitting}
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="button"
-                  className="sgp-cta-primary px-4 py-2.5 text-sm disabled:pointer-events-none disabled:opacity-50"
-                  onClick={() => void save()}
-                  disabled={submitting || !minutesValid}
-                >
-                  {submitting ? 'A guardar…' : 'Salvar apontamento'}
-                </button>
-              </div>
-            </div>
-          ) : null}
+          )}
         </main>
 
         {toast ? (

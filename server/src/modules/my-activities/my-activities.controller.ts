@@ -11,6 +11,11 @@ import {
   serviceListTimeEntryCandidates,
 } from './my-activities.service.js'
 import { timeEntryCandidatesQuerySchema } from './my-activities.schemas.js'
+import {
+  getMyExtraTimeEntries as getMyExtraTimeEntriesController,
+  getMyExtraTimeEntryDescriptions as getMyExtraTimeEntryDescriptionsController,
+  postMyExtraTimeEntry as postMyExtraTimeEntryController,
+} from './extra-time-entries.controller.js'
 
 function queryString(v: unknown): string | undefined {
   if (typeof v === 'string') return v
@@ -86,3 +91,8 @@ export async function getMyOperationalJourney(
   const data = await serviceGetOperationalJourney(pool, { collaboratorId, query: q })
   res.json(ok(data))
 }
+
+export const getMyExtraTimeEntryDescriptions =
+  getMyExtraTimeEntryDescriptionsController
+export const getMyExtraTimeEntries = getMyExtraTimeEntriesController
+export const postMyExtraTimeEntry = postMyExtraTimeEntryController

@@ -54,6 +54,16 @@ export type OperationalJourneyData = {
     realizedMinutesInPeriod: number
     realizedMinutesTotal: number
   }
+  extraTimeEntriesSummary: {
+    totalMinutes: number
+    entriesCount: number
+    topDescriptions: Array<{
+      descriptionId: string
+      description: string
+      totalMinutes: number
+      entriesCount: number
+    }>
+  }
   risk: {
     byBucket: Record<MyActivityItem['operationalBucket'], number>
     overdueCount: number

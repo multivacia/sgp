@@ -11,7 +11,9 @@ import { serviceListActivitiesForCollaborator } from '../my-activities/my-activi
 import type { OperationalJourneyApi } from './operational-journey.dto.js'
 import {
   findCollaboratorBrief,
+  listTopExtraTimeEntryDescriptionsInPeriodForCollaborator,
   listTimeEntriesForCollaboratorInPeriod,
+  summarizeExtraTimeEntriesInPeriodForCollaborator,
   sumRealizedMinutesInPeriodForCollaborator,
   sumRealizedMinutesTotalForCollaborator,
 } from './operational-journey.repository.js'
@@ -21,6 +23,7 @@ const COBERTURA_FORMULA =
   'realizado_minutos_acumulados_nos_steps_alocados / soma_planned_minutes_nos_steps_alocados (escopo fechado; null se previsto ≤ 0)'
 
 const MAX_PENDENCIAS = 48
+const MAX_TOP_EXTRA_DESCRIPTIONS = 3
 
 function emptyBucketCounts(): Record<OperationalBucket, number> {
   return {
@@ -107,7 +110,8 @@ export async function serviceGetOperationalJourney(
 
   const cobertura = computeCoberturaTempo(realizadoAcumuladoEscopo, plannedSum)
 
-  const [realizedInPeriod, realizedTotal, rawEntries] = await Promise.all([
+  const [realizedInPeriod, realizedTotal, rawEntries, extraSummary, extraTopDescriptions] =
+    await Promise.all([
     sumRealizedMinutesInPeriodForCollaborator(pool, {
       collaboratorId: args.collaboratorId,
       from,
@@ -121,6 +125,17 @@ export async function serviceGetOperationalJourney(
       to,
       conveyorId,
       limit,
+    }),
+    summarizeExtraTimeEntriesInPeriodForCollaborator(pool, {
+      collaboratorId: args.collaboratorId,
+      from,
+      to,
+    }),
+    listTopExtraTimeEntryDescriptionsInPeriodForCollaborator(pool, {
+      collaboratorId: args.collaboratorId,
+      from,
+      to,
+      limit: MAX_TOP_EXTRA_DESCRIPTIONS,
     }),
   ])
 
@@ -192,6 +207,11 @@ export async function serviceGetOperationalJourney(
     execution: {
       realizedMinutesInPeriod: realizedInPeriod,
       realizedMinutesTotal: realizedTotal,
+    },
+    extraTimeEntriesSummary: {
+      totalMinutes: extraSummary.totalMinutes,
+      entriesCount: extraSummary.entriesCount,
+      topDescriptions: extraTopDescriptions,
     },
     risk: {
       byBucket,

@@ -25,6 +25,13 @@ export type PendenciaTempoItemApi = {
   gapMinutes: number
 }
 
+export type OperationalJourneyExtraTimeEntryTopDescriptionApi = {
+  descriptionId: string
+  description: string
+  totalMinutes: number
+  entriesCount: number
+}
+
 export type OperationalJourneyApi = {
   meta: {
     semanticsVersion: '1.5'
@@ -53,6 +60,11 @@ export type OperationalJourneyApi = {
     realizedMinutesInPeriod: number
     /** Minutos apontados (acumulado) no escopo (colaborador ± esteira). */
     realizedMinutesTotal: number
+  }
+  extraTimeEntriesSummary: {
+    totalMinutes: number
+    entriesCount: number
+    topDescriptions: OperationalJourneyExtraTimeEntryTopDescriptionApi[]
   }
   risk: {
     byBucket: Record<OperationalBucket, number>

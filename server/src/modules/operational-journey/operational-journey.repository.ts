@@ -73,6 +73,18 @@ export type TimeEntryHistoryRow = {
   notes: string | null
 }
 
+export type ExtraTimeEntriesSummaryRow = {
+  total_minutes: string
+  entries_count: string
+}
+
+export type ExtraTimeEntryTopDescriptionRow = {
+  description_id: string
+  description: string
+  total_minutes: string
+  entries_count: string
+}
+
 export async function listTimeEntriesForCollaboratorInPeriod(
   pool: pg.Pool,
   args: {
@@ -109,4 +121,80 @@ export async function listTimeEntriesForCollaboratorInPeriod(
     [args.collaboratorId, args.from, args.to, args.conveyorId, args.limit],
   )
   return r.rows
+}
+
+export async function summarizeExtraTimeEntriesInPeriodForCollaborator(
+  pool: pg.Pool,
+  args: {
+    collaboratorId: string
+    from: Date
+    to: Date
+  },
+): Promise<{ totalMinutes: number; entriesCount: number }> {
+  const r = await pool.query<ExtraTimeEntriesSummaryRow>(
+    `
+    SELECT
+      COALESCE(SUM(e.minutes), 0)::text AS total_minutes,
+      COUNT(*)::text AS entries_count
+    FROM operational_extra_time_entries e
+    INNER JOIN operational_extra_time_entry_descriptions d
+      ON d.id = e.description_id
+     AND d.deleted_at IS NULL
+    WHERE e.collaborator_id = $1::uuid
+      AND e.deleted_at IS NULL
+      AND e.entry_date >= $2::date
+      AND e.entry_date <= $3::date
+    `,
+    [args.collaboratorId, args.from, args.to],
+  )
+  const row = r.rows[0]
+  return {
+    totalMinutes: Number.parseInt(row?.total_minutes ?? '0', 10) || 0,
+    entriesCount: Number.parseInt(row?.entries_count ?? '0', 10) || 0,
+  }
+}
+
+export async function listTopExtraTimeEntryDescriptionsInPeriodForCollaborator(
+  pool: pg.Pool,
+  args: {
+    collaboratorId: string
+    from: Date
+    to: Date
+    limit: number
+  },
+): Promise<
+  Array<{
+    descriptionId: string
+    description: string
+    totalMinutes: number
+    entriesCount: number
+  }>
+> {
+  const r = await pool.query<ExtraTimeEntryTopDescriptionRow>(
+    `
+    SELECT
+      e.description_id::text AS description_id,
+      d.description,
+      COALESCE(SUM(e.minutes), 0)::text AS total_minutes,
+      COUNT(*)::text AS entries_count
+    FROM operational_extra_time_entries e
+    INNER JOIN operational_extra_time_entry_descriptions d
+      ON d.id = e.description_id
+     AND d.deleted_at IS NULL
+    WHERE e.collaborator_id = $1::uuid
+      AND e.deleted_at IS NULL
+      AND e.entry_date >= $2::date
+      AND e.entry_date <= $3::date
+    GROUP BY e.description_id, d.description
+    ORDER BY SUM(e.minutes) DESC, COUNT(*) DESC, d.description ASC
+    LIMIT $4::int
+    `,
+    [args.collaboratorId, args.from, args.to, args.limit],
+  )
+  return r.rows.map((row) => ({
+    descriptionId: row.description_id,
+    description: row.description,
+    totalMinutes: Number.parseInt(row.total_minutes, 10) || 0,
+    entriesCount: Number.parseInt(row.entries_count, 10) || 0,
+  }))
 }
