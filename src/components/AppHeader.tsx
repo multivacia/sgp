@@ -10,6 +10,7 @@ import { shellContextForPath } from '../lib/page-meta'
 import { useAuth } from '../lib/use-auth'
 import { isSupportTicketsEnabled } from '../lib/api/env'
 import { OpenSupportTicketDialog } from '../features/support/OpenSupportTicketDialog'
+import { QuickTimeEntryDrawer } from '../features/shell/QuickTimeEntryDrawer'
 
 function displayNameFromEmail(email: string) {
   const local = email.split('@')[0] ?? 'gestor'
@@ -42,6 +43,7 @@ export function AppHeader({ onMenuClick }: Props) {
   const [avatarFailed, setAvatarFailed] = useState(false)
   const [profileMenuOpen, setProfileMenuOpen] = useState(false)
   const [supportDialogOpen, setSupportDialogOpen] = useState(false)
+  const [quickTimeEntryOpen, setQuickTimeEntryOpen] = useState(false)
   const profileWrapRef = useRef<HTMLDivElement>(null)
   const supportEnabled = isSupportTicketsEnabled()
 
@@ -153,6 +155,14 @@ export function AppHeader({ onMenuClick }: Props) {
               title="Busca visual (mock)"
             />
           </label>
+
+          <button
+            type="button"
+            onClick={() => setQuickTimeEntryOpen(true)}
+            className="rounded-xl border border-white/12 bg-white/[0.04] px-3 py-2 text-xs font-bold text-slate-200 shadow-inner transition hover:border-sgp-blue-bright/30 hover:bg-white/[0.07] hover:text-white"
+          >
+            Apontar horas
+          </button>
 
           <div className="relative ml-auto sm:ml-0" ref={profileWrapRef}>
             <button
@@ -303,6 +313,10 @@ export function AppHeader({ onMenuClick }: Props) {
       <OpenSupportTicketDialog
         open={supportDialogOpen}
         onClose={() => setSupportDialogOpen(false)}
+      />
+      <QuickTimeEntryDrawer
+        open={quickTimeEntryOpen}
+        onClose={() => setQuickTimeEntryOpen(false)}
       />
     </header>
   )

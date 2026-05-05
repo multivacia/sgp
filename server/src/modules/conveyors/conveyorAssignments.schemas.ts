@@ -71,12 +71,26 @@ const isoDateTime = z
   .refine((s) => !Number.isNaN(Date.parse(s)), 'Data/hora inválida.')
 
 /** POST time-entries: colaborador vem da sessão (`app_users.collaborator_id`). */
-export const postTimeEntryBodySchema = z.object({
-  minutes: z.number().int().positive(),
-  entryAt: isoDateTime.optional(),
-  notes: z.union([z.string(), z.null()]).optional(),
-  entryMode: z.enum(['manual', 'guided', 'imported']).optional(),
-})
+export const postTimeEntryBodySchema = z
+  .object({
+    minutes: z.number().int().positive(),
+    entryAt: isoDateTime.optional(),
+    notes: z.union([z.string(), z.null()]).optional(),
+    /** Alias opcional de `notes` (compatível com clientes que enviam `description`). */
+    description: z.union([z.string(), z.null()]).optional(),
+    entryMode: z.enum(['manual', 'guided', 'imported']).optional(),
+  })
+  .transform((b) => ({
+    minutes: b.minutes,
+    entryAt: b.entryAt,
+    notes:
+      b.notes !== undefined && b.notes !== null
+        ? b.notes
+        : b.description !== undefined
+          ? b.description
+          : undefined,
+    entryMode: b.entryMode,
+  }))
 
 export type PostTimeEntryBody = z.infer<typeof postTimeEntryBodySchema>
 

@@ -53,6 +53,8 @@ export type ConveyorStepTimeEntryCreated = TimeEntryDelegationClient & {
 export type PostConveyorStepTimeEntryBody = {
   minutes: number
   notes?: string | null
+  /** Alias aceite pelo backend (mapeia para `notes`). */
+  description?: string | null
   entryAt?: string
   entryMode?: 'manual' | 'guided' | 'imported'
 }

@@ -1,5 +1,23 @@
 import type { OperationalBucket } from '../../shared/operationalBucket.js'
 
+/** Item de GET /api/v1/me/time-entry-candidates — atividades ainda apontáveis. */
+export type TimeEntryCandidateItemApi = {
+  conveyorId: string
+  conveyorCode: string | null
+  conveyorName: string
+  clientName: string | null
+  vehicleLabel: string | null
+  plate: string | null
+  stepNodeId: string
+  stepName: string
+  areaName: string
+  roleInStep: 'primary' | 'support'
+  assignmentType: 'COLLABORATOR' | 'TEAM'
+  plannedMinutes: number | null
+  realizedMinutes: number
+  pendingMinutes: number
+}
+
 /** Item de GET /api/v1/my-activities — alocação real em STEP + contexto da esteira. */
 export type MyActivityItemApi = {
   assigneeId: string

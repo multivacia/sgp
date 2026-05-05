@@ -25,3 +25,21 @@ export type MyActivityItem = {
   plannedMinutes: number | null
   realizedMinutes: number | null
 }
+
+/** GET /api/v1/me/time-entry-candidates — item alinhado ao backend. */
+export type TimeEntryCandidateItem = {
+  conveyorId: string
+  conveyorCode: string | null
+  conveyorName: string
+  clientName: string | null
+  vehicleLabel: string | null
+  plate: string | null
+  stepNodeId: string
+  stepName: string
+  areaName: string
+  roleInStep: MyActivityRoleInStep
+  assignmentType: 'COLLABORATOR' | 'TEAM'
+  plannedMinutes: number | null
+  realizedMinutes: number
+  pendingMinutes: number
+}

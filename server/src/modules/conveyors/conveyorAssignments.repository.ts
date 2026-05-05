@@ -20,6 +20,20 @@ export async function findConveyorNodeById(
   return r.rows[0] ?? null
 }
 
+/** `operational_status` do STEP (null se nó inexistente). */
+export async function findStepOperationalStatusByNodeId(
+  pool: pg.Pool,
+  conveyorNodeId: string,
+): Promise<string | null> {
+  const r = await pool.query<{ operational_status: string | null }>(
+    `SELECT operational_status
+     FROM conveyor_nodes
+     WHERE id = $1::uuid AND deleted_at IS NULL`,
+    [conveyorNodeId],
+  )
+  return r.rows[0]?.operational_status ?? null
+}
+
 export type InsertConveyorNodeAssigneeRow = {
   id: string
   conveyor_id: string
@@ -171,12 +185,31 @@ export async function findAssigneeIdForStepAndCollaborator(
 ): Promise<string | null> {
   const r = await pool.query<{ id: string }>(
     `SELECT id::text
-     FROM conveyor_node_assignees
-     WHERE conveyor_id = $1::uuid
-       AND conveyor_node_id = $2::uuid
-       AND assignment_type = 'COLLABORATOR'
-       AND collaborator_id = $3::uuid
-       AND deleted_at IS NULL
+     FROM (
+       SELECT cna.id,
+              CASE WHEN cna.assignment_type = 'COLLABORATOR' THEN 0 ELSE 1 END AS sort_pri
+       FROM conveyor_node_assignees cna
+       WHERE cna.conveyor_id = $1::uuid
+         AND cna.conveyor_node_id = $2::uuid
+         AND cna.deleted_at IS NULL
+         AND (
+           (
+             cna.assignment_type = 'COLLABORATOR'
+             AND cna.collaborator_id = $3::uuid
+           )
+           OR (
+             cna.assignment_type = 'TEAM'
+             AND EXISTS (
+               SELECT 1
+               FROM team_members tm
+               WHERE tm.team_id = cna.team_id
+                 AND tm.collaborator_id = $3::uuid
+                 AND tm.is_active = TRUE
+             )
+           )
+         )
+     ) x
+     ORDER BY x.sort_pri, x.id
      LIMIT 1`,
     [conveyorId, conveyorNodeId, collaboratorId],
   )

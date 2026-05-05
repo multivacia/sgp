@@ -1,0 +1,440 @@
+import { useCallback, useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
+import { SgpToast, type SgpToastVariant } from '../../components/ui/SgpToast'
+import { formatHumanMinutes } from '../../lib/formatters'
+import { postConveyorStepTimeEntry } from '../../services/conveyors/conveyorStepAssignmentsApiService'
+import { listTimeEntryCandidates } from '../../services/my-activities/myActivitiesApiService'
+import type { TimeEntryCandidateItem } from '../../domain/my-activities/my-activities.types'
+import { useAuth } from '../../lib/use-auth'
+import {
+  isBlockingSeverity,
+  presentationPlan,
+  reportClientError,
+} from '../../lib/errors'
+import { useSgpErrorSurface } from '../../lib/errors/SgpErrorPresentation'
+import { transversalUxCopy } from '../../lib/transversalUxCopy'
+import { labelRoleInStep } from '../colaborador/minhasAtividadesLabels'
+
+const SEARCH_DEBOUNCE_MS = 200
+
+type ToastState = { message: string; variant: SgpToastVariant } | null
+
+type Phase = 'list' | 'form'
+
+type Props = {
+  open: boolean
+  onClose: () => void
+}
+
+function buildContextLine(c: TimeEntryCandidateItem) {
+  const parts: string[] = [c.conveyorName]
+  if (c.clientName?.trim()) parts.push(c.clientName.trim())
+  if (c.vehicleLabel?.trim() || c.plate?.trim()) {
+    parts.push([c.vehicleLabel?.trim(), c.plate?.trim()].filter(Boolean).join(' · '))
+  }
+  return parts.join(' · ')
+}
+
+export function QuickTimeEntryDrawer({ open, onClose }: Props) {
+  const { user, ready: authReady } = useAuth()
+  const { presentBlocking } = useSgpErrorSurface()
+  const [phase, setPhase] = useState<Phase>('list')
+  const [search, setSearch] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
+  const [items, setItems] = useState<TimeEntryCandidateItem[]>([])
+  const [unavailableReason, setUnavailableReason] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [loadError, setLoadError] = useState<string | null>(null)
+  const [selected, setSelected] = useState<TimeEntryCandidateItem | null>(null)
+  const [minutesStr, setMinutesStr] = useState('30')
+  const [description, setDescription] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState<string | null>(null)
+  const [toast, setToast] = useState<ToastState>(null)
+
+  useEffect(() => {
+    const t = window.setTimeout(
+      () => setDebouncedSearch(search),
+      SEARCH_DEBOUNCE_MS,
+    )
+    return () => window.clearTimeout(t)
+  }, [search])
+
+  useEffect(() => {
+    if (!open) {
+      setPhase('list')
+      setSelected(null)
+      setSearch('')
+      setDebouncedSearch('')
+      setLoadError(null)
+      setSubmitError(null)
+      setToast(null)
+      setMinutesStr('30')
+      setDescription('')
+    }
+  }, [open])
+
+  const load = useCallback(async () => {
+    if (!open) return
+    setLoading(true)
+    setLoadError(null)
+    try {
+      const r = await listTimeEntryCandidates({
+        q: debouncedSearch || undefined,
+        limit: 50,
+      })
+      setItems(r.items)
+      setUnavailableReason(r.unavailableReason)
+    } catch (e) {
+      setItems([])
+      setUnavailableReason(null)
+      const n = reportClientError(e, {
+        module: 'shell',
+        action: 'time_entry_candidates',
+      })
+      if (isBlockingSeverity(n.severity)) {
+        presentBlocking(n)
+        onClose()
+        return
+      }
+      setLoadError(n.userMessage)
+    } finally {
+      setLoading(false)
+    }
+  }, [open, debouncedSearch, onClose, presentBlocking])
+
+  useEffect(() => {
+    if (!open || !authReady) return
+    void load()
+  }, [open, authReady, load])
+
+  useEffect(() => {
+    if (!open) return
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => {
+      document.body.style.overflow = prev
+      window.removeEventListener('keydown', onKey)
+    }
+  }, [open, onClose])
+
+  function pushToast(message: string, variant: SgpToastVariant = 'success') {
+    setToast({ message, variant })
+  }
+
+  const minutes = Number.parseInt(minutesStr, 10)
+  const minutesValid = Number.isInteger(minutes) && minutes >= 1
+
+  function startForm(c: TimeEntryCandidateItem) {
+    setSelected(c)
+    setPhase('form')
+    setSubmitError(null)
+    setMinutesStr('30')
+    setDescription('')
+  }
+
+  function backToList() {
+    setPhase('list')
+    setSelected(null)
+    setSubmitError(null)
+  }
+
+  async function save() {
+    if (!selected || !user || submitting || !minutesValid) return
+    if (!user.collaboratorId) {
+      pushToast(transversalUxCopy.collaboratorLinkMissingToast, 'error')
+      return
+    }
+    if (unavailableReason) {
+      pushToast(transversalUxCopy.collaboratorLinkMissingToast, 'error')
+      return
+    }
+    setSubmitting(true)
+    setSubmitError(null)
+    setToast(null)
+    try {
+      await postConveyorStepTimeEntry(selected.conveyorId, selected.stepNodeId, {
+        minutes,
+        description: description.trim() || null,
+        entryMode: 'manual',
+      })
+      pushToast('Apontamento registado com sucesso.', 'success')
+      setPhase('list')
+      setSelected(null)
+      setDescription('')
+      void load()
+    } catch (e) {
+      const n = reportClientError(e, {
+        module: 'shell',
+        action: 'quick_time_entry_save',
+        entityId: selected.conveyorId,
+      })
+      const plan = presentationPlan(n)
+      if (plan.surface === 'modal') {
+        presentBlocking(n)
+      } else {
+        setSubmitError(n.userMessage)
+      }
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  if (!open) return null
+  if (typeof document === 'undefined') return null
+
+  return createPortal(
+    <div className="fixed inset-0 z-[100]">
+      <button
+        type="button"
+        className="absolute inset-0 bg-slate-950/70 backdrop-blur-sm transition-opacity"
+        aria-label="Fechar"
+        onClick={onClose}
+      />
+      <aside
+        className="fixed right-0 top-0 z-[101] flex h-dvh w-full max-w-xl flex-col overflow-hidden border-l border-white/[0.09] bg-gradient-to-b from-sgp-navy/98 via-sgp-app-panel to-sgp-navy-deep shadow-[0_0_60px_-12px_rgba(0,0,0,0.85)]"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="qte-title"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <header className="shrink-0 border-b border-white/[0.07] bg-gradient-to-br from-sgp-navy-deep/95 to-black/20 px-5 py-4 md:px-6">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              {phase === 'form' ? (
+                <button
+                  type="button"
+                  onClick={backToList}
+                  className="mb-2 text-[11px] font-semibold text-sgp-blue-bright hover:text-sky-200"
+                >
+                  ← Voltar à lista
+                </button>
+              ) : null}
+              <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-sgp-gold">
+                Execução rápida
+              </p>
+              <h2
+                id="qte-title"
+                className="mt-1 font-heading text-lg font-bold tracking-tight text-white md:text-xl"
+              >
+                {phase === 'list' ? 'Apontar horas' : 'Registrar tempo'}
+              </h2>
+            </div>
+            <button
+              type="button"
+              className="rounded-lg border border-white/10 px-2 py-1 text-xs text-slate-400 transition hover:bg-white/[0.06] hover:text-slate-100"
+              onClick={onClose}
+            >
+              Fechar
+            </button>
+          </div>
+        </header>
+
+        <main className="flex min-h-0 flex-1 flex-col overflow-hidden">
+          {!authReady ? (
+            <p className="p-5 text-sm text-slate-500">Carregando sessão…</p>
+          ) : phase === 'list' ? (
+            <>
+              <div className="shrink-0 space-y-3 border-b border-white/[0.06] p-4 md:p-5">
+                {unavailableReason ? (
+                  <div className="rounded-xl border border-amber-500/30 bg-amber-500/[0.07] px-3 py-2.5 text-xs leading-relaxed text-amber-100/95">
+                    <p className="font-bold text-amber-200">
+                      {transversalUxCopy.collaboratorLinkMissingTitle}
+                    </p>
+                    <p className="mt-1 text-amber-50/90">{unavailableReason}</p>
+                  </div>
+                ) : null}
+                <label className="block text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">
+                  Pesquisar
+                  <input
+                    type="search"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    placeholder="Esteira, cliente, veículo, área, atividade…"
+                    className="mt-1.5 w-full rounded-xl border border-[color:var(--semantic-border-glass-strong)] bg-sgp-app-panel-deep/90 px-3 py-2 text-sm text-slate-200 outline-none ring-sgp-blue-bright/0 transition focus:ring-2 focus:ring-sgp-blue-bright/25"
+                  />
+                </label>
+              </div>
+
+              <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-6 pt-3 md:px-5">
+                {loading ? (
+                  <p className="text-sm text-slate-500">Carregando atividades…</p>
+                ) : loadError ? (
+                  <div className="rounded-xl border border-rose-500/25 bg-rose-500/[0.06] p-4 text-sm text-rose-100">
+                    <p>{loadError}</p>
+                    <button
+                      type="button"
+                      className="mt-3 text-xs font-bold text-sgp-blue-bright hover:underline"
+                      onClick={() => void load()}
+                    >
+                      Tentar novamente
+                    </button>
+                  </div>
+                ) : unavailableReason && items.length === 0 ? (
+                  <p className="text-sm text-slate-500">
+                    Não há atividades para apontar neste contexto.
+                  </p>
+                ) : items.length === 0 ? (
+                  <p className="text-sm text-slate-500">
+                    {debouncedSearch.trim()
+                      ? 'Nenhuma atividade corresponde à pesquisa.'
+                      : 'Sem atividades em aberto para apontamento.'}
+                  </p>
+                ) : (
+                  <ul className="space-y-3">
+                    {items.map((c) => (
+                      <li
+                        key={`${c.conveyorId}-${c.stepNodeId}`}
+                        className="rounded-2xl border border-white/[0.07] bg-white/[0.03] p-4 shadow-inner"
+                      >
+                        <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500">
+                          Esteira
+                        </p>
+                        <p className="mt-1 font-heading text-sm font-bold text-white">
+                          {c.conveyorName}
+                        </p>
+                        <p className="mt-2 text-xs text-slate-500">
+                          {buildContextLine(c)}
+                        </p>
+                        <p className="mt-3 text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500">
+                          Atividade
+                        </p>
+                        <p className="mt-0.5 text-sm font-semibold text-slate-200">
+                          {c.stepName}
+                        </p>
+                        <p className="mt-2 text-xs text-slate-500">
+                          {c.areaName} · {labelRoleInStep(c.roleInStep)}
+                          {c.assignmentType === 'TEAM' ? ' · Time' : ''}
+                        </p>
+                        <div className="mt-3 grid grid-cols-3 gap-2 text-[11px] text-slate-400">
+                          <div>
+                            <p className="text-[9px] uppercase tracking-wider text-slate-600">
+                              Previsto
+                            </p>
+                            <p className="font-semibold text-slate-200">
+                              {c.plannedMinutes != null
+                                ? formatHumanMinutes(c.plannedMinutes)
+                                : '—'}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-[9px] uppercase tracking-wider text-slate-600">
+                              Realizado
+                            </p>
+                            <p className="font-semibold text-slate-200">
+                              {formatHumanMinutes(c.realizedMinutes)}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-[9px] uppercase tracking-wider text-slate-600">
+                              Pendente
+                            </p>
+                            <p className="font-semibold text-slate-200">
+                              {formatHumanMinutes(c.pendingMinutes)}
+                            </p>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          className="sgp-cta-primary mt-4 w-full justify-center py-2 text-center text-xs"
+                          onClick={() => startForm(c)}
+                          disabled={Boolean(unavailableReason)}
+                        >
+                          Apontar
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </>
+          ) : selected ? (
+            <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 pb-8 pt-4 md:px-6">
+              <div className="rounded-2xl border border-white/[0.07] bg-white/[0.03] p-4">
+                <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500">
+                  Esteira
+                </p>
+                <p className="mt-1 font-heading text-base font-bold text-white">
+                  {selected.conveyorName}
+                </p>
+                <p className="mt-3 text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500">
+                  Atividade
+                </p>
+                <p className="mt-0.5 text-sm font-semibold text-slate-100">
+                  {selected.stepName}
+                </p>
+                <p className="mt-2 text-xs text-slate-500">
+                  {selected.areaName} · {labelRoleInStep(selected.roleInStep)}
+                </p>
+              </div>
+
+              <label className="mt-6 block text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">
+                Tempo (minutos)
+                <input
+                  type="number"
+                  min={1}
+                  step={1}
+                  inputMode="numeric"
+                  value={minutesStr}
+                  onChange={(e) => setMinutesStr(e.target.value)}
+                  className="mt-1.5 w-full rounded-xl border border-[color:var(--semantic-border-glass-strong)] bg-sgp-app-panel-deep/90 px-3 py-2 text-sm text-slate-200 outline-none focus:ring-2 focus:ring-sgp-blue-bright/25"
+                />
+              </label>
+
+              <label className="mt-4 block text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">
+                Descrição (opcional)
+                <textarea
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  rows={3}
+                  placeholder="Notas sobre o trabalho realizado…"
+                  className="mt-1.5 w-full resize-none rounded-xl border border-[color:var(--semantic-border-glass-strong)] bg-sgp-app-panel-deep/90 px-3 py-2 text-sm text-slate-200 outline-none focus:ring-2 focus:ring-sgp-blue-bright/25"
+                />
+              </label>
+
+              {submitError ? (
+                <p className="mt-3 text-sm text-rose-200">{submitError}</p>
+              ) : null}
+
+              <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:justify-end">
+                <button
+                  type="button"
+                  className="rounded-xl border border-white/12 px-4 py-2.5 text-sm font-semibold text-slate-300 transition hover:bg-white/[0.05]"
+                  onClick={backToList}
+                  disabled={submitting}
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  className="sgp-cta-primary px-4 py-2.5 text-sm disabled:pointer-events-none disabled:opacity-50"
+                  onClick={() => void save()}
+                  disabled={submitting || !minutesValid}
+                >
+                  {submitting ? 'A guardar…' : 'Salvar apontamento'}
+                </button>
+              </div>
+            </div>
+          ) : null}
+        </main>
+
+        {toast ? (
+          <div className="pointer-events-none absolute bottom-6 left-4 right-4 z-[1] flex justify-center md:left-auto md:right-6 md:justify-end">
+            <div className="pointer-events-auto max-w-md">
+              <SgpToast
+                message={toast.message}
+                variant={toast.variant}
+                onDismiss={() => setToast(null)}
+              />
+            </div>
+          </div>
+        ) : null}
+      </aside>
+    </div>,
+    document.body,
+  )
+}

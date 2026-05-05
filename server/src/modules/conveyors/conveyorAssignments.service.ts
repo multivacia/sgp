@@ -22,6 +22,7 @@ import {
   findConveyorNodeById,
   findConveyorNodeAssigneeById,
   findConveyorTimeEntryById,
+  findStepOperationalStatusByNodeId,
   insertConveyorNodeAssignee,
   insertConveyorTimeEntry,
   listConveyorNodeAssigneesByStep,
@@ -330,6 +331,16 @@ export async function serviceCreateConveyorTimeEntry(
     input.conveyorId,
     input.conveyorNodeId,
   )
+
+  const stepOp = await findStepOperationalStatusByNodeId(pool, input.conveyorNodeId)
+  const op = (stepOp ?? 'PENDING').trim() || 'PENDING'
+  if (op === 'COMPLETED') {
+    throw new AppError(
+      'Esta atividade já está concluída operacionalmente; não é possível novo apontamento.',
+      422,
+      ErrorCodes.VALIDATION_ERROR,
+    )
+  }
 
   const row: InsertConveyorTimeEntryRow = {
     id: newAssignmentId(),

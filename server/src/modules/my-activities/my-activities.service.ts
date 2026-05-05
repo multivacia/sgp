@@ -7,8 +7,15 @@ import {
   operationalBucketSortRank,
   parseFlexibleDeadlineToDate,
 } from '../../shared/operationalBucket.js'
-import type { MyActivityItemApi } from './my-activities.dto.js'
-import { listActivitiesRawForCollaborator } from './my-activities.repository.js'
+import type {
+  MyActivityItemApi,
+  TimeEntryCandidateItemApi,
+} from './my-activities.dto.js'
+import {
+  listActivitiesRawForCollaborator,
+  listTimeEntryCandidatesForCollaborator,
+  type TimeEntryCandidateRawRow,
+} from './my-activities.repository.js'
 
 export type GetMyActivitiesQuery = {
   userId: string
@@ -116,4 +123,64 @@ export async function serviceListActivitiesForCollaborator(
 ): Promise<MyActivityItemApi[]> {
   const raw = await listActivitiesRawForCollaborator(pool, collaboratorId, options)
   return mapAndSortActivities(raw)
+}
+
+function mapCandidateRow(row: TimeEntryCandidateRawRow): TimeEntryCandidateItemApi {
+  const planned =
+    row.planned_minutes === null || row.planned_minutes === ''
+      ? null
+      : Number(row.planned_minutes)
+  const realized = Number(row.realized_minutes ?? 0)
+  const plannedNum = planned == null || Number.isNaN(planned) ? 0 : Math.max(0, planned)
+  const pendingMinutes = Math.max(0, plannedNum - Math.max(0, realized))
+  const at =
+    row.assignment_type === 'TEAM' ? ('TEAM' as const) : ('COLLABORATOR' as const)
+  return {
+    conveyorId: row.conveyor_id,
+    conveyorCode: row.conveyor_code,
+    conveyorName: row.conveyor_name,
+    clientName: row.client_name,
+    vehicleLabel: row.vehicle_label,
+    plate: row.plate,
+    stepNodeId: row.step_node_id,
+    stepName: row.step_name,
+    areaName: row.area_name,
+    roleInStep: row.is_primary ? 'primary' : 'support',
+    assignmentType: at,
+    plannedMinutes: planned,
+    realizedMinutes: realized,
+    pendingMinutes,
+  }
+}
+
+export async function serviceListTimeEntryCandidates(
+  pool: pg.Pool,
+  input: {
+    collaboratorId: string | null
+    q: string | null
+    limit: number
+  },
+): Promise<{
+  items: TimeEntryCandidateItemApi[]
+  collaboratorId: string | null
+  unavailableReason: string | null
+}> {
+  if (!input.collaboratorId) {
+    return {
+      items: [],
+      collaboratorId: null,
+      unavailableReason:
+        'Operação indisponível: o seu utilizador não tem colaborador operacional vinculado (app_users.collaborator_id). Peça ao administrador de governança para associar o seu acesso a um colaborador.',
+    }
+  }
+
+  const raw = await listTimeEntryCandidatesForCollaborator(pool, input.collaboratorId, {
+    q: input.q,
+    limit: input.limit,
+  })
+  return {
+    items: raw.map(mapCandidateRow),
+    collaboratorId: input.collaboratorId,
+    unavailableReason: null,
+  }
 }
