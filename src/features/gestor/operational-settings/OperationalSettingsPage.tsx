@@ -29,9 +29,10 @@ import {
   patchOperationalCollaboratorRole,
   patchOperationalSector,
 } from '../../../services/admin/operationalSettingsApiService'
+import { ExtraTimeEntryDescriptionsTab } from './ExtraTimeEntryDescriptionsTab'
 import { OperationalCapacityTab } from './capacity/OperationalCapacityTab'
 
-type TabId = 'sectors' | 'roles' | 'capacity'
+type TabId = 'sectors' | 'roles' | 'capacity' | 'extraTimeDescriptions'
 
 type ToastState = { message: string; variant: SgpToastVariant } | null
 
@@ -167,10 +168,23 @@ export function OperationalSettingsPage() {
         >
           Capacidade operacional
         </button>
+        <button
+          type="button"
+          onClick={() => setTab('extraTimeDescriptions')}
+          className={`rounded-lg px-4 py-2 text-sm font-bold transition ${
+            tab === 'extraTimeDescriptions'
+              ? 'bg-sgp-gold/15 text-sgp-gold ring-1 ring-sgp-gold/35'
+              : 'text-slate-400 hover:bg-white/[0.04]'
+          }`}
+        >
+          Descrições de apontamentos
+        </button>
       </div>
 
       {tab === 'capacity' ? (
         <OperationalCapacityTab />
+      ) : tab === 'extraTimeDescriptions' ? (
+        <ExtraTimeEntryDescriptionsTab onError={govErr} onToast={pushToast} />
       ) : tab === 'sectors' ? (
         <section className="mt-6">
           <div className="sgp-panel sgp-panel-hover">

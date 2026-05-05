@@ -15,6 +15,12 @@ import {
   uuidParamSchema,
 } from './operational-settings.schemas.js'
 import {
+  deleteExtraTimeEntryDescription as deleteExtraTimeEntryDescriptionController,
+  getExtraTimeEntryDescriptions as getExtraTimeEntryDescriptionsController,
+  postExtraTimeEntryDescription as postExtraTimeEntryDescriptionController,
+  putExtraTimeEntryDescription as putExtraTimeEntryDescriptionController,
+} from './extra-time-entry-descriptions.controller.js'
+import {
   serviceCreateCollaboratorFunction,
   serviceCreateSector,
   serviceDeleteCollaboratorFunction,
@@ -284,3 +290,8 @@ export async function deleteCollaboratorCapacity(
   )
   res.status(204).send()
 }
+
+export const getExtraTimeEntryDescriptions = getExtraTimeEntryDescriptionsController
+export const postExtraTimeEntryDescription = postExtraTimeEntryDescriptionController
+export const putExtraTimeEntryDescription = putExtraTimeEntryDescriptionController
+export const deleteExtraTimeEntryDescription = deleteExtraTimeEntryDescriptionController

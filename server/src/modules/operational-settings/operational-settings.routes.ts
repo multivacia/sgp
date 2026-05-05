@@ -3,15 +3,19 @@ import { asyncRoute } from '../../shared/asyncRoute.js'
 import { requireAuth } from '../auth/auth.middleware.js'
 import { requirePermission } from '../permissions/permissions.middleware.js'
 import {
+  deleteExtraTimeEntryDescription,
   deleteCollaboratorCapacity,
   deleteOperationalCollaboratorRole,
   deleteOperationalSector,
+  getExtraTimeEntryDescriptions,
   getCollaboratorCapacity,
   getOperationalCapacitySettings,
   getOperationalCollaboratorRoles,
   getOperationalSectors,
+  postExtraTimeEntryDescription,
   putCollaboratorCapacity,
   putOperationalCapacitySettings,
+  putExtraTimeEntryDescription,
   patchOperationalCollaboratorRole,
   patchOperationalSector,
   postOperationalCollaboratorRole,
@@ -67,6 +71,27 @@ export function operationalSettingsRouter(): Router {
     '/admin/operational-settings/collaborators/:collaboratorId/capacity',
     ...ap(m),
     asyncRoute(deleteCollaboratorCapacity),
+  )
+
+  r.get(
+    '/operational-settings/extra-time-entry-descriptions',
+    ...ap(m),
+    asyncRoute(getExtraTimeEntryDescriptions),
+  )
+  r.post(
+    '/operational-settings/extra-time-entry-descriptions',
+    ...ap(m),
+    asyncRoute(postExtraTimeEntryDescription),
+  )
+  r.put(
+    '/operational-settings/extra-time-entry-descriptions/:id',
+    ...ap(m),
+    asyncRoute(putExtraTimeEntryDescription),
+  )
+  r.delete(
+    '/operational-settings/extra-time-entry-descriptions/:id',
+    ...ap(m),
+    asyncRoute(deleteExtraTimeEntryDescription),
   )
 
   return r
