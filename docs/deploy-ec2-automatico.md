@@ -2,6 +2,12 @@
 
 Este documento define o fluxo de deploy para demo/sprint sem alterar regra de negocio.
 
+## Política de branches (deploy produção)
+
+- Deploy automático na EC2 pelo workflow deste repositório ocorre **somente** com código da branch **main** (`push` em **main**, ou `workflow_dispatch` executado com **main** selecionada). Execuções manuais a partir de **develop**, **homol** ou outra ref são bloqueadas no pipeline.
+- **develop** e **homol** não disparam deploy de produção neste fluxo.
+- Estratégia completa de branches e sprint: **[estrategia-branches-e-releases.md](estrategia-branches-e-releases.md)**.
+
 Operação na instância (diretórios oficiais, portas 3333/3334/8080, Nginx, validação e troubleshooting de frontend): **[deploy-sgp-ec2.md](deploy-sgp-ec2.md)**.
 
 ## O que foi adicionado

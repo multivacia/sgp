@@ -92,15 +92,15 @@ export function CriarMatrizEstruturaManual({
 
   return (
     <div className="space-y-6">
-      <div className="rounded-2xl border border-amber-500/20 bg-amber-500/[0.05] px-4 py-3 text-sm text-amber-100/95">
-        <span className="font-semibold">Nova estrutura na matriz.</span> Defina
-        opções, áreas e etapas aqui; pode combinar com o catálogo acima.
+      <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] px-4 py-3 text-sm text-slate-200">
+        <span className="font-semibold text-slate-100">Nova estrutura na matriz.</span>{' '}
+        Defina tarefas, setores e atividades aqui; pode combinar com o catálogo acima.
       </div>
 
       {opcoes.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-white/[0.12] bg-black/20 px-6 py-10 text-center">
           <p className="text-sm text-slate-400">
-            Comece adicionando a primeira opção da matriz (produto ou linha de
+            Comece adicionando a primeira tarefa da matriz (produto ou linha de
             serviço).
           </p>
           <button
@@ -108,7 +108,7 @@ export function CriarMatrizEstruturaManual({
             onClick={addFirstOption}
             className="sgp-cta-primary mt-4"
           >
-            Adicionar primeira opção
+            Adicionar primeira tarefa
           </button>
         </div>
       ) : (
@@ -121,7 +121,7 @@ export function CriarMatrizEstruturaManual({
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <label className="block min-w-[200px] flex-1 text-sm">
                   <span className="text-slate-500">
-                    Opção {oi + 1}{' '}
+                    Tarefa {oi + 1}{' '}
                     <span className="rounded bg-white/[0.06] px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-slate-500">
                       matriz
                     </span>
@@ -150,7 +150,7 @@ export function CriarMatrizEstruturaManual({
                       onChange(opcoes.filter((o) => o.id !== op.id))
                     }
                   >
-                    Remover opção
+                    Remover tarefa
                   </button>
                 )}
               </div>
@@ -180,7 +180,7 @@ export function CriarMatrizEstruturaManual({
                   >
                     <div className="flex flex-wrap items-start justify-between gap-2">
                       <label className="block min-w-[180px] flex-1 text-sm">
-                        <span className="text-slate-500">Área {ai + 1}</span>
+                        <span className="text-slate-500">Setor {ai + 1}</span>
                         <div className="mt-1">
                           <LabelSuggestField
                             value={ar.name}
@@ -222,7 +222,7 @@ export function CriarMatrizEstruturaManual({
                           )
                         }
                       >
-                        Remover área
+                        Remover setor
                       </button>
                     </div>
 
@@ -242,7 +242,7 @@ export function CriarMatrizEstruturaManual({
                             <div className="flex flex-wrap gap-3">
                               <label className="block min-w-[160px] flex-1 text-sm">
                                 <span className="text-slate-500">
-                                  Etapa {si + 1}
+                                  Atividade {si + 1}
                                 </span>
                                 <div className="mt-1">
                                   <LabelSuggestField
@@ -262,7 +262,7 @@ export function CriarMatrizEstruturaManual({
                                       )
                                     }
                                     catalogEntries={matrixSuggestionCatalog.activities}
-                                    placeholder="Nome da etapa"
+                                    placeholder="Nome da atividade"
                                     inputClassName="mt-0 w-full rounded border border-white/10 bg-black/40 px-2 py-1.5 text-slate-100"
                                   />
                                 </div>
@@ -325,7 +325,7 @@ export function CriarMatrizEstruturaManual({
                                     )
                                   }
                                 >
-                                  Remover etapa
+                                  Remover atividade
                                 </button>
                               )}
                             </div>
@@ -394,7 +394,7 @@ export function CriarMatrizEstruturaManual({
                               {!collaboratorsLoading &&
                                 !collaboratorsError &&
                                 collaborators.length === 0 && (
-                                  <p className="mt-2 text-xs text-amber-200/90">
+                                  <p className="mt-2 text-xs text-slate-400">
                                     Não há colaboradores ativos.
                                   </p>
                                 )}
@@ -552,7 +552,7 @@ export function CriarMatrizEstruturaManual({
                                 + Colaborador
                               </button>
                               {ids.length > 1 && !etRec.primaryCollaboratorId && (
-                                <p className="mt-2 text-xs text-amber-200/90">
+                                <p className="mt-2 text-xs text-slate-400">
                                   Indique quem é o principal.
                                 </p>
                               )}
@@ -587,7 +587,7 @@ export function CriarMatrizEstruturaManual({
                       }
                       className="mt-3 text-xs font-bold text-sgp-gold"
                     >
-                      + Etapa nesta área
+                      + Atividade neste setor
                     </button>
                   </li>
                 ))}
@@ -606,7 +606,7 @@ export function CriarMatrizEstruturaManual({
                 }
                 className="mt-4 text-xs font-bold text-sgp-gold"
               >
-                + Área nesta opção
+                + Setor nesta tarefa
               </button>
             </li>
           ))}
@@ -619,7 +619,7 @@ export function CriarMatrizEstruturaManual({
           onClick={addAnotherOption}
           className="text-sm font-bold text-sgp-gold"
         >
-          + Outra opção
+          + Outra tarefa
         </button>
       )}
     </div>

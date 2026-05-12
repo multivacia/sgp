@@ -173,6 +173,10 @@ export async function serviceGetOperationalJourney(
     minutes: r.minutes,
     entryAt: r.entry_at.toISOString(),
     notes: r.notes,
+    entryOrigin: r.entry_origin,
+    exceptionJustification: r.exception_justification,
+    isOutOfSequence: Boolean(r.is_out_of_sequence),
+    outOfSequenceJustification: r.out_of_sequence_justification,
   }))
 
   const pressaoAtraso = byBucket.em_atraso

@@ -307,16 +307,16 @@ export function manualAssigneeRowsToApi(
 
 export function validateManualStructure(roots: ManualOptionDraft[]): string | null {
   if (roots.length === 0) {
-    return 'Inclua pelo menos uma opção com área e etapa.'
+    return 'Inclua pelo menos uma tarefa com setor e atividade.'
   }
   for (const op of roots) {
-    if (!op.titulo.trim()) return 'Cada opção precisa de um título.'
-    if (op.areas.length === 0) return 'Cada opção precisa de pelo menos uma área.'
+    if (!op.titulo.trim()) return 'Cada tarefa precisa de um título.'
+    if (op.areas.length === 0) return 'Cada tarefa precisa de pelo menos um setor.'
     for (const ar of op.areas) {
-      if (!ar.titulo.trim()) return 'Cada área precisa de um título.'
-      if (ar.steps.length === 0) return 'Cada área precisa de pelo menos uma etapa.'
+      if (!ar.titulo.trim()) return 'Cada setor precisa de um título.'
+      if (ar.steps.length === 0) return 'Cada setor precisa de pelo menos uma atividade.'
       for (const st of ar.steps) {
-        if (!st.titulo.trim()) return 'Cada etapa precisa de um título.'
+        if (!st.titulo.trim()) return 'Cada atividade precisa de um título.'
       }
     }
   }
@@ -342,14 +342,14 @@ export function validateManualStepAssignees(
           .filter((x): x is string => Boolean(x))
         const ids = new Set(collabIds)
         if (ids.size !== collabIds.length) {
-          return `“${st.titulo.trim()}”: o mesmo colaborador não pode repetir na etapa.`
+          return `“${st.titulo.trim()}”: o mesmo colaborador não pode repetir na atividade.`
         }
         const teamIds = rows
           .filter((r) => (r.type ?? 'COLLABORATOR') === 'TEAM')
           .map((r) => r.teamId)
           .filter((x): x is string => Boolean(x))
         if (new Set(teamIds).size !== teamIds.length) {
-          return `“${st.titulo.trim()}”: o mesmo time não pode repetir na etapa.`
+          return `“${st.titulo.trim()}”: o mesmo time não pode repetir na atividade.`
         }
         if (rows.some((r) => r.type === 'TEAM' && r.isPrimary)) {
           return `“${st.titulo.trim()}”: time não pode ser responsável principal.`

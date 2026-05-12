@@ -71,6 +71,10 @@ export type TimeEntryHistoryRow = {
   minutes: number
   entry_at: Date
   notes: string | null
+  entry_origin: 'ASSIGNED' | 'UNASSIGNED_EXCEPTION'
+  exception_justification: string | null
+  is_out_of_sequence: boolean
+  out_of_sequence_justification: string | null
 }
 
 export type ExtraTimeEntriesSummaryRow = {
@@ -105,7 +109,11 @@ export async function listTimeEntriesForCollaboratorInPeriod(
       step.name AS step_name,
       cte.minutes,
       cte.entry_at,
-      cte.notes
+      cte.notes,
+      cte.entry_origin,
+      cte.exception_justification,
+      cte.is_out_of_sequence,
+      cte.out_of_sequence_justification
     FROM conveyor_time_entries cte
     INNER JOIN conveyors cv ON cv.id = cte.conveyor_id AND cv.deleted_at IS NULL
     INNER JOIN conveyor_nodes step

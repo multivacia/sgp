@@ -4,7 +4,7 @@ Documentação de operação do **SGP** (este repositório) implantado na EC2 co
 
 ## Visão geral
 
-O fluxo automatizado compila frontend e backend, envia um release para a instância, atualiza o symlink `current`, reinicia o serviço `sgp-api` e valida health localmente. O **Nginx** na EC2 expõe **HTTP/HTTPS** (80/443), serve o **SPA** estático e faz **reverse proxy** do prefixo `/api/` para o processo Node do SGP em **127.0.0.1:3334**.
+O fluxo automatizado compila frontend e backend, envia um release para a instância, atualiza o symlink `current`, reinicia o serviço `sgp-api` e valida health localmente. O pipeline de produção na EC2 é disparado **apenas** a partir da branch **main** (ver [estrategia-branches-e-releases.md](estrategia-branches-e-releases.md)). O **Nginx** na EC2 expõe **HTTP/HTTPS** (80/443), serve o **SPA** estático e faz **reverse proxy** do prefixo `/api/` para o processo Node do SGP em **127.0.0.1:3334**.
 
 Resumo da pilha:
 

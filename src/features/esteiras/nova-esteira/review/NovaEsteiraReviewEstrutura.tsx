@@ -31,7 +31,7 @@ export function NovaEsteiraReviewEstrutura({
             Estrutura final
           </h3>
           <p className="mt-1 text-xs text-slate-500">
-            Opção → área → etapa, na ordem que será registrada.
+            Tarefa → setor → atividade, na ordem que será registrada.
           </p>
         </div>
         <button
@@ -46,19 +46,19 @@ export function NovaEsteiraReviewEstrutura({
 
       <dl className="mt-5 grid gap-3 border-t border-white/[0.06] pt-5 sm:grid-cols-4">
         <div>
-          <dt className="text-[10px] font-bold uppercase text-slate-500">Opções</dt>
+          <dt className="text-[10px] font-bold uppercase text-slate-500">Tarefas</dt>
           <dd className="mt-0.5 font-heading text-lg font-bold text-slate-100">
             {ord.length}
           </dd>
         </div>
         <div>
-          <dt className="text-[10px] font-bold uppercase text-slate-500">Áreas</dt>
+          <dt className="text-[10px] font-bold uppercase text-slate-500">Setores</dt>
           <dd className="mt-0.5 font-heading text-lg font-bold text-slate-100">
             {t.areas}
           </dd>
         </div>
         <div>
-          <dt className="text-[10px] font-bold uppercase text-slate-500">Etapas</dt>
+          <dt className="text-[10px] font-bold uppercase text-slate-500">Atividades</dt>
           <dd className="mt-0.5 font-heading text-lg font-bold text-slate-100">
             {t.etapas}
           </dd>
@@ -78,7 +78,7 @@ export function NovaEsteiraReviewEstrutura({
             className="rounded-xl border border-white/[0.07] bg-slate-950/40 p-4"
           >
             <p className="text-[10px] font-bold uppercase tracking-wider text-sgp-gold/90">
-              Opção {op.ordem}
+              Tarefa {op.ordem}
             </p>
             <p className="mt-1 font-heading text-sm font-bold text-slate-50">
               {op.titulo.trim() || '(sem título)'}

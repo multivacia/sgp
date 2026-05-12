@@ -67,9 +67,9 @@ export function OperationMatrixMacroView({ model }: Props) {
           Resumo executivo
         </h2>
         <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <SummaryCard label="Opções de serviço" value={g.taskCount} />
-          <SummaryCard label="Áreas de execução" value={g.sectorCount} />
-          <SummaryCard label="Etapas" value={g.activityCount} />
+          <SummaryCard label="Tarefas de serviço" value={g.taskCount} />
+          <SummaryCard label="Setores de execução" value={g.sectorCount} />
+          <SummaryCard label="Atividades" value={g.activityCount} />
           <SummaryCard
             label="Tempo total previsto"
             value={formatMinutosHumanos(g.plannedMinutesSum)}
@@ -82,7 +82,7 @@ export function OperationMatrixMacroView({ model }: Props) {
           </span>
           <span className="text-slate-600">·</span>
           <span>
-            Etapas sem responsável padrão:{' '}
+            Atividades sem responsável padrão:{' '}
             <span className="font-semibold text-slate-300">
               {g.activitiesWithoutResponsible}
             </span>
@@ -100,7 +100,7 @@ export function OperationMatrixMacroView({ model }: Props) {
 
         {model.tasks.length === 0 ? (
           <p className="rounded-xl border border-dashed border-white/10 px-4 py-8 text-center text-sm text-slate-500">
-            Nenhuma opção de serviço cadastrada nesta oferta.
+            Nenhuma tarefa de serviço cadastrada nesta oferta.
           </p>
         ) : (
           <div className="space-y-8">
@@ -135,7 +135,7 @@ export function OperationMatrixMacroView({ model }: Props) {
                 <div className="divide-y divide-white/[0.05]">
                   {task.sectors.length === 0 ? (
                     <p className="px-5 py-6 text-sm text-slate-500">
-                      Sem áreas nesta opção.
+                      Sem setores nesta tarefa.
                     </p>
                   ) : (
                     task.sectors.map((sector) => (
@@ -145,7 +145,7 @@ export function OperationMatrixMacroView({ model }: Props) {
                         </p>
                         <h4 className="mt-1 text-base font-medium text-slate-200">{sector.name}</h4>
                         {sector.activities.length === 0 ? (
-                          <p className="mt-2 text-sm text-slate-500">Sem etapas nesta área.</p>
+                          <p className="mt-2 text-sm text-slate-500">Sem atividades neste setor.</p>
                         ) : (
                           <ul className="mt-3 space-y-2">
                             {sector.activities.map((a) => (

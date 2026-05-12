@@ -20,7 +20,7 @@ export function OperationMatrixPreviewPage() {
           to={itemId ? `/app/matrizes-operacao/${itemId}` : '/app/matrizes-operacao'}
           className="text-sm font-medium text-sgp-gold/95 no-underline hover:underline"
         >
-          ← Voltar ao editor
+          ← Voltar para alterar matriz
         </Link>
         <button
           type="button"

@@ -209,7 +209,7 @@ export function NovaEsteiraCreateTotemShell(props: NovaEsteiraCreateTotemShellPr
           <dd className="tabular-nums text-slate-100">{nSetores}</dd>
         </div>
         <div className="flex justify-between gap-2">
-          <dt className="text-slate-500">Etapas</dt>
+          <dt className="text-slate-500">Atividades</dt>
           <dd className="tabular-nums text-slate-100">{nEtapas}</dd>
         </div>
         <div className="flex justify-between gap-2">
@@ -287,7 +287,7 @@ export function NovaEsteiraCreateTotemShell(props: NovaEsteiraCreateTotemShellPr
             Setores: <span className="text-slate-100">{nSetores}</span>
           </Chip>
           <Chip>
-            Etapas: <span className="text-slate-100">{nEtapas}</span>
+            Atividades: <span className="text-slate-100">{nEtapas}</span>
           </Chip>
           <Chip>
             Min: <span className="text-slate-100">{minutosCalculados}</span>

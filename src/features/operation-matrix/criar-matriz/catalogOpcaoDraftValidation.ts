@@ -37,27 +37,27 @@ export function validateCatalogOpcoesDraftForSubmit(
   for (const inst of instances) {
     const task = inst.draftRoot
     if (!task.name.trim()) {
-      return 'Cada opção reaproveitada precisa de um nome.'
+      return 'Cada tarefa reaproveitada precisa de um nome.'
     }
     for (const sector of sortMatrixChildNodes(task)) {
       if (sector.node_type !== 'SECTOR') continue
       if (!sector.name.trim()) {
-        return 'Cada área precisa de um nome.'
+        return 'Cada setor precisa de um nome.'
       }
       for (const act of sortMatrixChildNodes(sector)) {
         if (act.node_type !== 'ACTIVITY') continue
         if (!act.name.trim()) {
-          return 'Cada etapa precisa de um nome.'
+          return 'Cada atividade precisa de um nome.'
         }
         const r = activityToEtapaReconciled(act)
         if (
           r.primaryCollaboratorId &&
           !r.collaboratorIds.includes(r.primaryCollaboratorId)
         ) {
-          return 'O colaborador principal tem de estar entre os selecionados na etapa.'
+          return 'O colaborador principal tem de estar entre os selecionados na atividade.'
         }
         if (r.collaboratorIds.length > 1 && !r.primaryCollaboratorId) {
-          return 'Quando há mais do que um colaborador na etapa, indique quem é o principal.'
+          return 'Quando há mais do que um colaborador na atividade, indique quem é o principal.'
         }
       }
     }

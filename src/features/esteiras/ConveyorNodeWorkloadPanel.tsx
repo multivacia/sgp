@@ -66,7 +66,7 @@ export function ConveyorNodeWorkloadPanel({
           <div>
             <h3 className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
               {nodeWorkloadLabels.concentracaoPrevisto} /{' '}
-              {nodeWorkloadLabels.concentracaoRealizado} — por área
+              {nodeWorkloadLabels.concentracaoRealizado} — por setor
             </h3>
             <div className="mt-3 overflow-x-auto">
               <table className="w-full min-w-[640px] border-collapse text-left text-sm">

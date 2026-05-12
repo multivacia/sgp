@@ -19,6 +19,7 @@ import {
   serviceListConveyorNodeAssignees,
   serviceListConveyorTimeEntries,
 } from './conveyorAssignments.service.js'
+import { serviceAnalyzeConveyorActivitySequence } from './conveyorActivitySequence.service.js'
 import { servicePatchConveyorStepCompletion } from './conveyor-step-operational.service.js'
 
 export async function postConveyorStepAssignee(
@@ -91,6 +92,8 @@ export async function postConveyorStepTimeEntry(
     minutes: body.minutes,
     notes: body.notes,
     entryMode: body.entryMode,
+    exceptionJustification: body.exceptionJustification,
+    outOfSequenceJustification: body.outOfSequenceJustification,
   })
   res.status(201).json(ok(created))
 }
@@ -117,6 +120,7 @@ export async function postConveyorStepTimeEntryOnBehalf(
     minutes: body.minutes,
     notes: body.notes,
     reason: body.reason,
+    outOfSequenceJustification: body.outOfSequenceJustification?.trim(),
   })
   res.status(201).json(ok(created))
 }
@@ -135,6 +139,35 @@ export async function getConveyorStepTimeEntries(
   res.json(ok(data))
 }
 
+/** GET …/sequence-check — pré-checagem de sequência operacional recomendada (S3). */
+export async function getConveyorStepSequenceCheck(
+  req: Request,
+  res: Response,
+): Promise<void> {
+  const params = conveyorStepParamsSchema.parse(req.params)
+  const pool = req.app.locals.pool as pg.Pool
+  const seq = await serviceAnalyzeConveyorActivitySequence(
+    pool,
+    params.conveyorId,
+    params.stepNodeId,
+  )
+  res.json(
+    ok({
+      targetFound: seq.targetFound,
+      isOutOfSequence: seq.isOutOfSequence,
+      requiresJustification: seq.isOutOfSequence,
+      previousOpenCount: seq.previousOpenCount,
+      previousOpenActivities: seq.previousOpenActivities.slice(0, 10).map((a) => ({
+        activityNodeId: a.activityNodeId,
+        activityTitle: a.activityTitle,
+        sectorTitle: a.sectorTitle,
+        taskTitle: a.taskTitle,
+        orderPath: a.orderPath,
+      })),
+    }),
+  )
+}
+
 export async function patchConveyorStepCompletion(
   req: Request,
   res: Response,
@@ -149,6 +182,11 @@ export async function patchConveyorStepCompletion(
     actorAppUserId: req.authUser!.id,
     action: body.action,
     note: body.note,
+    outOfSequenceJustification:
+      body.outOfSequenceJustification === null ||
+      body.outOfSequenceJustification === undefined
+        ? undefined
+        : body.outOfSequenceJustification.trim(),
   })
   res.status(200).json(ok(out.detail, { stepCompletionIdempotent: out.idempotent }))
 }

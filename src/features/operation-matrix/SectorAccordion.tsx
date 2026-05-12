@@ -38,6 +38,7 @@ export const SectorAccordion = memo(function SectorAccordion({
       <button
         type="button"
         aria-expanded={open}
+        aria-label={open ? 'Recolher setor' : 'Expandir setor'}
         onClick={() => onOpenChange(!open)}
         className="flex w-full items-start gap-2 rounded-lg px-2 py-1.5 text-left transition hover:bg-white/[0.03]"
       >
@@ -47,10 +48,12 @@ export const SectorAccordion = memo(function SectorAccordion({
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-1">
             <span className="shrink-0 rounded border border-white/[0.07] bg-white/[0.03] px-1 py-px text-[8px] font-bold uppercase tracking-wide text-slate-500">
-              Área
+              Setor
             </span>
             <span className="text-[10px] tabular-nums text-slate-600">
-              {st.activityCount} etapas · {st.plannedMinutesSum} min
+              {st.activityCount}{' '}
+              {st.activityCount === 1 ? 'atividade' : 'atividades'} ·{' '}
+              {st.plannedMinutesSum} min
             </span>
           </div>
           <div className="mt-0.5 text-[11px] font-medium leading-tight text-slate-300">

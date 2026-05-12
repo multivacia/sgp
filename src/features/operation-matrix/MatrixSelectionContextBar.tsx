@@ -34,11 +34,11 @@ function SectorBranchSummaryCompact({
   return (
     <div className={ctxSeg}>
       <p className="text-[9px] font-bold uppercase tracking-wider text-slate-500">
-        Resumo desta área
+        Resumo deste setor
       </p>
       <dl className="mt-1.5 grid grid-cols-3 gap-2 text-[11px] text-slate-400">
         <div>
-          <dt className="text-slate-600">Etapas</dt>
+          <dt className="text-slate-600">Atividades</dt>
           <dd className="font-medium tabular-nums text-slate-200">{stats.activityCount}</dd>
         </div>
         <div>
@@ -70,15 +70,15 @@ function ItemMetricsPanelCompact({
       </p>
       <dl className="mt-1.5 grid grid-cols-2 gap-x-2 gap-y-1 text-[11px] sm:grid-cols-3">
         <div>
-          <dt className="text-slate-600">Opções</dt>
+          <dt className="text-slate-600">Tarefas</dt>
           <dd className="font-medium tabular-nums text-slate-200">{g.taskCount}</dd>
         </div>
         <div>
-          <dt className="text-slate-600">Áreas</dt>
+          <dt className="text-slate-600">Setores</dt>
           <dd className="font-medium tabular-nums text-slate-200">{g.sectorCount}</dd>
         </div>
         <div>
-          <dt className="text-slate-600">Etapas</dt>
+          <dt className="text-slate-600">Atividades</dt>
           <dd className="font-medium tabular-nums text-slate-200">{g.activityCount}</dd>
         </div>
         <div>
@@ -104,7 +104,7 @@ function ItemMetricsPanelCompact({
 
 export type MatrixSelectionContextBarProps = {
   selected: MatrixNodeTreeApi | null
-  /** Task cuja composição (áreas/etapas) deve aparecer; inclui ancestral quando a seleção é setor/etapa. */
+  /** Task cuja composição (setores/atividades) deve aparecer; inclui ancestral quando a seleção é setor/atividade. */
   compositionTask: MatrixNodeTreeApi | null
   breadcrumbSegments: BreadcrumbSegment[]
   aggregateMaps: MatrixTreeAggregateMaps | null
@@ -149,7 +149,7 @@ export type MatrixSelectionContextBarProps = {
   onSelectNode: (id: string) => void
   searchQuery: string
   matchIds: ReadonlySet<string>
-  /** TASK: composição (áreas/etapas) vs edição de metadados da opção. */
+  /** TASK: composição (setores/atividades) vs edição de metadados da tarefa. */
   taskPanelMode: 'composition' | 'editTaskMeta'
   onDuplicateSector?: (sectorId: string) => void | Promise<void>
   onRemoveSector?: (sectorId: string) => void | Promise<void>
@@ -160,15 +160,19 @@ export type MatrixSelectionContextBarProps = {
   ) => void | Promise<void>
   onDuplicateActivity?: (activityId: string) => void | Promise<void>
   onRemoveActivity?: (activityId: string) => void | Promise<void>
-  /** Subir/Descer áreas no cabeçalho (igual ao catálogo de opções). */
+  /** Subir/Descer setores no cabeçalho (igual ao catálogo de tarefas). */
   onCompositionSectorReorder?: (direction: 'up' | 'down') => void | Promise<void>
   compositionSectorReorderUpDisabled?: boolean
   compositionSectorReorderDownDisabled?: boolean
-  /** Etapa: mostrar formulário só quando true (clique na linha = só seleção). */
+  /** Atividade: mostrar formulário só quando true (clique na linha = só seleção). */
   activityEditMode?: boolean
   onEditActivity?: (activityId: string) => void
-  /** Catálogos locais (Opção / Área / Atividade); só preenchem texto. */
+  /** Catálogos locais (Tarefa / Setor / Atividade); só preenchem texto. */
   matrixSuggestionCatalog?: MatrixSuggestionCatalogData
+  /** Abre edição da estrutura em tela cheia (Editor de matriz). */
+  onExpandStructure?: () => void
+  /** Composição (setores/atividades) renderizada noutro bloco da página — mantém breadcrumbs e formulários. */
+  omitCompositionPanel?: boolean
 }
 
 /** Painel contextual da seleção — leitura em coluna, scroll próprio (rail à direita na página de matriz). */
@@ -235,6 +239,8 @@ export function MatrixSelectionContextBar({
     areas: [],
     activities: [],
   },
+  onExpandStructure,
+  omitCompositionPanel = false,
 }: MatrixSelectionContextBarProps) {
   const pathLine = breadcrumbLabel(breadcrumbSegments)
   const taskEditMetaMode =
@@ -269,7 +275,7 @@ export function MatrixSelectionContextBar({
     })
   }
 
-  /** Só setor: alinhar a linha da composição; etapa usa fluxo dedicado (rodapé de edição). */
+  /** Só setor: alinhar a linha da composição; atividade usa fluxo dedicado (rodapé de edição). */
   useEffect(() => {
     if (!selectedId || !selected) return
     if (selected.node_type !== 'SECTOR') return
@@ -336,7 +342,7 @@ export function MatrixSelectionContextBar({
     >
         {!selected ? (
           <p className="text-xs leading-relaxed text-slate-500">
-            Selecione uma oferta, opção ou etapa no catálogo à esquerda para ver detalhes e ajustes.
+            Selecione uma oferta, tarefa ou atividade no catálogo à esquerda para ver detalhes e ajustes.
           </p>
         ) : (
           <div className="flex flex-col gap-3.5">
@@ -367,9 +373,12 @@ export function MatrixSelectionContextBar({
               </div>
             </div>
 
-            {showCompositionPanel && compositionTask && aggregateMaps ? (
+            {showCompositionPanel &&
+            compositionTask &&
+            aggregateMaps &&
+            !omitCompositionPanel ? (
               <div className="flex min-h-0 flex-col overflow-hidden rounded-xl border border-white/[0.07] bg-black/15 ring-1 ring-white/[0.04]">
-                {/* Sticky no scroll da barra + lista com scroll próprio (como Opções de serviço). */}
+                {/* Sticky no scroll da barra + lista com scroll próprio (como tarefas de serviço). */}
                 <div
                   className="sticky top-0 z-20 rounded-t-xl border-b border-white/[0.1] bg-sgp-app-panel-deep/95 px-3 pb-3 pt-3 shadow-[0_6px_16px_-6px_rgba(0,0,0,0.55)] backdrop-blur-sm sm:px-4"
                 >
@@ -379,12 +388,23 @@ export function MatrixSelectionContextBar({
                       Composição
                     </h2>
                     {showCompositionToolbarAdd ||
-                    showCompositionToolbarReorder ? (
+                    showCompositionToolbarReorder ||
+                    onExpandStructure ? (
                       <div
                         className="flex min-w-0 w-full flex-nowrap items-center justify-end gap-1.5 overflow-x-auto sm:ml-auto sm:w-auto [scrollbar-width:thin]"
                         role="toolbar"
                         aria-label="Ações da composição"
                       >
+                        {onExpandStructure ? (
+                          <button
+                            type="button"
+                            disabled={busy}
+                            onClick={() => onExpandStructure()}
+                            className="shrink-0 rounded-lg border border-sgp-gold/40 bg-sgp-gold/[0.08] px-2.5 py-1 text-[11px] font-semibold text-sgp-gold-warm disabled:opacity-50"
+                          >
+                            Expandir estrutura
+                          </button>
+                        ) : null}
                         {showCompositionToolbarAdd ? (
                           <button
                             type="button"
@@ -426,6 +446,11 @@ export function MatrixSelectionContextBar({
                       </div>
                     ) : null}
                   </div>
+                  <p className="px-0.5 text-[11px] leading-relaxed text-slate-500">
+                    Arraste setores e atividades para organizar a sequência operacional da
+                    matriz. A ordem definida aqui será usada como sequência recomendada no
+                    planejamento e na execução. Use também Subir e Descer como alternativa.
+                  </p>
                   {taskCompositionMode && canAddChild && childType && addOpen ? (
                     <div className={ctxSeg}>
                       <form
@@ -483,7 +508,7 @@ export function MatrixSelectionContextBar({
                 <div
                   className="min-h-0 max-h-[min(68vh,40rem)] overflow-y-auto overscroll-contain bg-black/20 px-3 pb-3 pt-3 pr-0.5 sm:px-4 [scrollbar-width:thin] [scrollbar-color:rgba(148,163,184,0.35)_transparent] lg:max-h-[min(56vh,calc(100dvh-16rem))]"
                   role="region"
-                  aria-label="Lista de áreas e etapas"
+                  aria-label="Lista de setores e atividades"
                 >
                   <TaskCompositionPanel
                     task={compositionTask}
@@ -508,6 +533,17 @@ export function MatrixSelectionContextBar({
               </div>
             ) : null}
 
+            {omitCompositionPanel &&
+            taskCompositionMode &&
+            compositionTask &&
+            aggregateMaps ? (
+              <div className="rounded-lg border border-white/[0.06] bg-white/[0.02] px-3 py-2.5 text-[11px] leading-relaxed text-slate-500">
+                Composição desta tarefa está ao lado das tarefas. Selecione um setor ou
+                atividade abaixo para ajustes de nome ou responsável, ou vá à aba «Revisão»
+                para gravar alterações estruturais.
+              </div>
+            ) : null}
+
             {taskCompositionMode ? null : (
               <>
             <div
@@ -519,9 +555,9 @@ export function MatrixSelectionContextBar({
             >
             {activityBrowseOnly ? (
               <p className="rounded-lg border border-white/[0.06] bg-white/[0.02] px-3 py-2.5 text-[11px] leading-relaxed text-slate-400">
-                Etapa selecionada. Use{' '}
+                Atividade selecionada. Use{' '}
                 <span className="font-medium text-slate-300">Editar</span> na
-                linha da etapa para alterar nome, tempo previsto e responsável.
+                linha da atividade para alterar nome, tempo previsto e responsável.
               </p>
             ) : (
             <div className="flex flex-col gap-4">
@@ -584,17 +620,18 @@ export function MatrixSelectionContextBar({
                       onChange={(e) => setFormActive(e.target.checked)}
                       className="rounded border-white/20"
                     />
-                    Opção ativa no catálogo
+                    Tarefa ativa no catálogo
                   </label>
                 ) : null}
                 {selected.node_type === 'TASK' ||
                 selected.node_type === 'SECTOR' ||
                 selected.node_type === 'ACTIVITY' ? (
                   <p className="rounded border border-white/[0.06] bg-white/[0.02] px-2 py-1 text-[11px] text-slate-500">
-                    Ordem na lista:{' '}
-                    <span className="font-mono text-slate-300">{selected.order_index}</span>
-                    . Use Subir e Descer na área{' '}
-                    <span className="text-slate-400">Opções de serviço</span>.
+                    Ordem na árvore (índice atual):{' '}
+                    <span className="font-mono text-slate-300">{selected.order_index}</span>.
+                    Reordene por arraste ou Subir/Descer — tarefas de
+                    serviço no catálogo à esquerda; setores e atividades na composição.
+                    Salve para persistir alterações de ordem.
                   </p>
                 ) : null}
               </div>

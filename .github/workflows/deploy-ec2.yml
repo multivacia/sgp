@@ -1,5 +1,7 @@
 name: Deploy SGP to EC2
 
+# Produção na EC2: apenas branch main (push ou workflow_dispatch iniciado em main).
+# develop/homol não devem implantar neste alvo.
 on:
   workflow_dispatch:
     inputs:
@@ -23,6 +25,13 @@ jobs:
       MIGRATE_ON_DEPLOY: ${{ github.event.inputs.migrate_on_deploy || '0' }}
       RELEASE_ID: ${{ github.run_id }}-${{ github.sha }}
     steps:
+      - name: Enforce production deploy only from main
+        run: |
+          if [ "${GITHUB_REF}" != "refs/heads/main" ]; then
+            echo "::error::Deploy para EC2 (produção) só é permitido com a branch main. Ref atual: ${GITHUB_REF}"
+            exit 1
+          fi
+
       - name: Validate required secrets
         run: |
           set -euo pipefail

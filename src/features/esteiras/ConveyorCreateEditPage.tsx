@@ -529,7 +529,7 @@ export function ConveyorCreateEditPage({ mode }: { mode: Mode }) {
       const taskNode = findTaskNodeInItemTree(tree, payload.taskId)
       if (!taskNode) return setEstruturaHint('Tarefa não encontrada na árvore.')
       const option = matrixTaskSubtreeToManualOption(taskNode, `t:${taskNode.id}`)
-      if (!option) return setEstruturaHint('Tarefa sem setores/etapas utilizáveis.')
+      if (!option) return setEstruturaHint('Tarefa sem setores ou atividades utilizáveis.')
       setManualRoots([...prev, option])
     },
     [treeByMatrixId],
@@ -806,7 +806,7 @@ export function ConveyorCreateEditPage({ mode }: { mode: Mode }) {
             Setores: <span className="text-slate-100">{nSetores}</span>
           </Chip>
           <Chip>
-            Etapas: <span className="text-slate-100">{nEtapas}</span>
+            Atividades: <span className="text-slate-100">{nEtapas}</span>
           </Chip>
           <Chip>
             Min: <span className="text-slate-100">{minutosCalculados}</span>
@@ -952,7 +952,7 @@ export function ConveyorCreateEditPage({ mode }: { mode: Mode }) {
                   <dd className="tabular-nums text-slate-100">{nSetores}</dd>
                 </div>
                 <div className="flex justify-between gap-2">
-                  <dt className="text-slate-500">Etapas</dt>
+                  <dt className="text-slate-500">Atividades</dt>
                   <dd className="tabular-nums text-slate-100">{nEtapas}</dd>
                 </div>
                 <div className="flex justify-between gap-2">

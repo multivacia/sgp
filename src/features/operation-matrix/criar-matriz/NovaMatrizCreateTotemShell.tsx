@@ -1,4 +1,11 @@
-import { useMemo, type Dispatch, type SetStateAction } from 'react'
+import type { DragEndEvent } from '@dnd-kit/core'
+import {
+  useMemo,
+  useState,
+  type Dispatch,
+  type ReactNode,
+  type SetStateAction,
+} from 'react'
 import type { MatrixSuggestionCatalogData } from '../../../catalog/matrixSuggestion/types'
 import type { Collaborator } from '../../../domain/collaborators/collaborator.types'
 import type { Team } from '../../../domain/teams/team.types'
@@ -9,14 +16,11 @@ import type { MatrixCatalogTaskEntry } from './extractMatrixTasksForCatalog'
 import type { NovaMatrizAddCatalogResult } from './novaMatrizEstruturaDnD'
 import {
   aggregateNovaMatrizCombos,
-  deriveMatrizJornadaStepperSteps,
   matrizEstruturaOk,
   pendenciasNovaMatrizResumo,
-  type MatrizJornadaStepDefinition,
-  type MatrizJornadaStepId,
 } from './novaMatrizTotemUi'
 
-function Chip({ children }: { children: React.ReactNode }) {
+function Chip({ children }: { children: ReactNode }) {
   return (
     <span className="inline-flex items-center rounded-full border border-white/[0.08] bg-white/[0.04] px-2.5 py-0.5 text-[11px] font-medium tabular-nums text-slate-300">
       {children}
@@ -24,67 +28,37 @@ function Chip({ children }: { children: React.ReactNode }) {
   )
 }
 
-function scrollToMatrizJornadaPasso(id: MatrizJornadaStepId) {
-  if (id === 'dados') {
-    document.getElementById('nova-matriz-passo-dados')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-    return
-  }
-  if (id === 'estrutura') {
-    document.getElementById('nova-matriz-passo-montagem')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-    return
-  }
-  if (typeof window !== 'undefined' && window.matchMedia('(min-width: 1280px)').matches) {
-    document.getElementById('nova-matriz-passo-revisao')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
-  } else {
-    document.querySelector<HTMLElement>('[data-jornada-matriz-revisao-movel]')?.scrollIntoView({
-      behavior: 'smooth',
-      block: 'start',
-    })
-  }
-}
+type NovaMatrizTabId = 'dados' | 'estrutura' | 'revisao'
 
-function NovaMatrizJornadaStepper({ steps }: { steps: MatrizJornadaStepDefinition[] }) {
+function NovaMatrizTabs({
+  activeTab,
+  onSelectTab,
+  name,
+  estruturaOk,
+}: {
+  activeTab: NovaMatrizTabId
+  onSelectTab: (tab: NovaMatrizTabId) => void
+  name: string
+  estruturaOk: boolean
+}) {
+  const baseCls =
+    'rounded-lg border px-3 py-2 text-xs font-semibold transition'
+  const tabCls = (tab: NovaMatrizTabId) =>
+    activeTab === tab
+      ? `${baseCls} border-sgp-gold/45 bg-sgp-gold/[0.12] text-sgp-gold-warm ring-1 ring-sgp-gold/20`
+      : `${baseCls} border-white/[0.08] bg-black/25 text-slate-300 hover:bg-white/[0.06]`
+
   return (
-    <nav aria-label="Jornada de criação da matriz" className="mt-3">
-      <p className="sr-only">Três passos: dados básicos, estrutura do combo e revisão antes de salvar.</p>
-      <ol className="flex flex-wrap items-center gap-1 sm:gap-1.5">
-        {steps.map((step, i) => {
-          const isLast = i === steps.length - 1
-          const base =
-            'flex min-w-0 flex-1 basis-[30%] items-center justify-center rounded-lg border px-2 py-2 text-center text-[11px] font-semibold leading-tight transition sm:px-3 sm:text-xs'
-          const cls =
-            step.status === 'atual'
-              ? `${base} border-sgp-gold/45 bg-sgp-gold/[0.12] text-sgp-gold-warm shadow-[inset_0_1px_0_0_rgba(255,255,255,0.06)] ring-1 ring-sgp-gold/20`
-              : step.status === 'concluida'
-                ? `${base} border-emerald-500/25 bg-emerald-500/[0.08] text-emerald-100/95`
-                : `${base} border-white/[0.06] bg-black/25 text-slate-500`
-          return (
-            <li key={step.id} className="flex min-w-0 flex-1 items-center gap-1 sm:gap-1.5">
-              <button
-                type="button"
-                className={cls}
-                aria-current={step.status === 'atual' ? 'step' : undefined}
-                title={`Ir para: ${step.label}`}
-                onClick={() => scrollToMatrizJornadaPasso(step.id)}
-              >
-                <span className="flex flex-col items-center gap-0.5 sm:flex-row sm:gap-1.5">
-                  {step.status === 'concluida' ? (
-                    <span className="text-emerald-300/90" aria-hidden>
-                      ✓
-                    </span>
-                  ) : null}
-                  <span>{step.label}</span>
-                </span>
-              </button>
-              {!isLast ? (
-                <span className="shrink-0 text-[10px] text-slate-600 select-none" aria-hidden>
-                  →
-                </span>
-              ) : null}
-            </li>
-          )
-        })}
-      </ol>
+    <nav aria-label="Seções da nova matriz" className="mt-4 flex flex-wrap gap-2">
+      <button type="button" className={tabCls('dados')} onClick={() => onSelectTab('dados')}>
+        Dados Básicos {name.trim() ? '✓' : ''}
+      </button>
+      <button type="button" className={tabCls('estrutura')} onClick={() => onSelectTab('estrutura')}>
+        Estrutura {estruturaOk ? '✓' : ''}
+      </button>
+      <button type="button" className={tabCls('revisao')} onClick={() => onSelectTab('revisao')}>
+        Revisão
+      </button>
     </nav>
   )
 }
@@ -103,7 +77,10 @@ export type NovaMatrizCreateTotemShellProps = {
   structureLoading: boolean
   structureError: string | null
   onRetryLoadCatalog: () => void
-  onAddCatalog: (taskId: string) => NovaMatrizAddCatalogResult
+  onAddCatalog: (
+    taskId: string,
+    insertIndex?: number,
+  ) => NovaMatrizAddCatalogResult
   onAddBlankCatalogOpcao: (name: string, description?: string) => void
   onRemoveCatalog: (instanceId: string) => void
   onChangeCatalogDraft: (instanceId: string, draftRoot: CatalogOpcaoDraftInstance['draftRoot']) => void
@@ -118,6 +95,7 @@ export type NovaMatrizCreateTotemShellProps = {
   onCancel: () => void
   onSave: () => void
   saving: boolean
+  novaMatrizStructureDragEnd?: (event: DragEndEvent) => void
 }
 
 export function NovaMatrizCreateTotemShell(props: NovaMatrizCreateTotemShellProps) {
@@ -150,21 +128,18 @@ export function NovaMatrizCreateTotemShell(props: NovaMatrizCreateTotemShellProp
     onCancel,
     onSave,
     saving,
+    novaMatrizStructureDragEnd,
   } = props
 
   const collaboratorIdSet = useMemo(
     () => new Set(collaborators.map((c) => c.id)),
     [collaborators],
   )
+  const [activeTab, setActiveTab] = useState<NovaMatrizTabId>('dados')
 
   const estruturaOk = useMemo(
     () => matrizEstruturaOk(manualOpcoes, catalogOpcoesDraft),
     [manualOpcoes, catalogOpcoesDraft],
-  )
-
-  const jornadaSteps = useMemo(
-    () => deriveMatrizJornadaStepperSteps(name, estruturaOk),
-    [name, estruturaOk],
   )
 
   const pendencias = useMemo(
@@ -190,15 +165,15 @@ export function NovaMatrizCreateTotemShell(props: NovaMatrizCreateTotemShellProp
       </div>
       <dl className="space-y-2 text-[13px]">
         <div className="flex justify-between gap-2">
-          <dt className="text-slate-500">Opções</dt>
+          <dt className="text-slate-500">Tarefas</dt>
           <dd className="tabular-nums text-slate-100">{nOpcoes}</dd>
         </div>
         <div className="flex justify-between gap-2">
-          <dt className="text-slate-500">Áreas</dt>
+          <dt className="text-slate-500">Setores</dt>
           <dd className="tabular-nums text-slate-100">{nAreas}</dd>
         </div>
         <div className="flex justify-between gap-2">
-          <dt className="text-slate-500">Etapas</dt>
+          <dt className="text-slate-500">Atividades</dt>
           <dd className="tabular-nums text-slate-100">{nEtapas}</dd>
         </div>
         <div className="flex justify-between gap-2">
@@ -250,31 +225,29 @@ export function NovaMatrizCreateTotemShell(props: NovaMatrizCreateTotemShellProp
               onClick={onCancel}
               disabled={saving}
             >
-              Cancelar
-            </button>
-            <button
-              type="button"
-              className="sgp-cta-primary text-sm"
-              disabled={saving || !podeSalvar}
-              onClick={() => void onSave()}
-            >
-              {saving ? 'A guardar…' : 'Salvar matriz'}
+              Fechar
             </button>
           </div>
         </div>
 
-        <NovaMatrizJornadaStepper steps={jornadaSteps} />
+        <NovaMatrizTabs
+          activeTab={activeTab}
+          onSelectTab={setActiveTab}
+          name={name}
+          estruturaOk={estruturaOk}
+        />
 
-        <div id="nova-matriz-passo-dados" className="scroll-mt-6">
+        {activeTab === 'dados' ? (
+          <div id="nova-matriz-passo-dados" className="scroll-mt-6">
           <div className="mt-4 flex flex-wrap items-center gap-2">
             <Chip>
-              Opções: <span className="text-slate-100">{nOpcoes}</span>
+              Tarefas: <span className="text-slate-100">{nOpcoes}</span>
             </Chip>
             <Chip>
-              Áreas: <span className="text-slate-100">{nAreas}</span>
+              Setores: <span className="text-slate-100">{nAreas}</span>
             </Chip>
             <Chip>
-              Etapas: <span className="text-slate-100">{nEtapas}</span>
+              Atividades: <span className="text-slate-100">{nEtapas}</span>
             </Chip>
             <Chip>
               Min: <span className="text-slate-100">{minutos}</span>
@@ -321,23 +294,21 @@ export function NovaMatrizCreateTotemShell(props: NovaMatrizCreateTotemShellProp
               />
             </label>
           </div>
-        </div>
+          </div>
+        ) : null}
       </header>
 
-      <div className="mt-6 flex flex-col gap-5 xl:grid xl:grid-cols-[minmax(0,1fr)_minmax(0,16rem)] xl:items-start xl:gap-4">
-        <div
-          id="nova-matriz-passo-montagem"
-          className="scroll-mt-6 min-w-0 space-y-4 rounded-2xl border border-white/[0.08] bg-white/[0.03] p-4 xl:max-h-[calc(100vh-10rem)] xl:overflow-y-auto"
-        >
+      {activeTab === 'estrutura' ? (
+        <div className="mt-6 min-w-0 space-y-4 rounded-2xl border border-white/[0.08] bg-white/[0.03] p-4">
           <div className="border-b border-white/[0.06] pb-3">
             <h2 className="font-heading text-base font-semibold text-white">Sua matriz em montagem</h2>
             <p className="mt-0.5 text-xs text-slate-500">
-              «Bases e extras» e o painel âmbar montam o combo. Expanda cada cartão para áreas, etapas e
-              responsáveis.
+              «Bases e extras», o catálogo à esquerda e o rascunho à direita montam o combo. Arraste, reordene e refine antes da revisão.
             </p>
           </div>
           <CriarMatrizEtapaEstrutura
             totemMode
+            novaMatrizStructureDragEnd={novaMatrizStructureDragEnd}
             loading={structureLoading}
             loadError={structureError}
             entries={catalogEntries}
@@ -359,20 +330,16 @@ export function NovaMatrizCreateTotemShell(props: NovaMatrizCreateTotemShellProp
             onContinuar={() => {}}
             onVoltar={() => {}}
             onRetryLoad={onRetryLoadCatalog}
+            draftMatrixTitle={name.trim() || undefined}
+            structureBusy={saving}
+            showExpandStructureButton={false}
           />
         </div>
+      ) : null}
 
-        <aside
-          id="nova-matriz-passo-revisao"
-          className="hidden scroll-mt-6 xl:block xl:sticky xl:top-4 xl:self-start"
-        >
-          {cartContent}
-        </aside>
-      </div>
-
-      <div className="mt-5 scroll-mt-6 xl:hidden" data-jornada-matriz-revisao-movel>
-        {cartContent}
-      </div>
+      {activeTab === 'revisao' ? (
+        <div className="mt-6 max-w-lg">{cartContent}</div>
+      ) : null}
     </div>
   )
 }

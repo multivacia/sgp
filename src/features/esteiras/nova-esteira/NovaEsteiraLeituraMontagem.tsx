@@ -46,11 +46,11 @@ export function NovaEsteiraLeituraMontagem({
         </div>
         <div className="rounded-xl border border-white/[0.06] bg-white/[0.03] px-3 py-2.5">
           <dt className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
-            Opções / áreas / etapas
+            Tarefas / setores / atividades
           </dt>
           <dd className="mt-1 text-sm tabular-nums text-slate-100">
-            {resumo.totalOpcoes} opção(ões) · {resumo.totalAreas} área(s) ·{' '}
-            {resumo.totalEtapas} etapa(s)
+            {resumo.totalOpcoes} tarefa(s) · {resumo.totalAreas} setor(es) ·{' '}
+            {resumo.totalEtapas} atividade(s)
           </dd>
         </div>
         <div className="rounded-xl border border-white/[0.06] bg-white/[0.03] px-3 py-2.5">

@@ -6,6 +6,7 @@ import {
   deleteConveyorStepAssignee,
   deleteConveyorStepTimeEntry,
   getConveyorStepAssignees,
+  getConveyorStepSequenceCheck,
   getConveyorStepTimeEntries,
   patchConveyorStepCompletion,
   postConveyorStepAssignee,
@@ -22,6 +23,11 @@ export function conveyorAssignmentsRouter(): Router {
     requireAuth(),
     requirePermission('conveyors.create'),
     asyncRoute(patchConveyorStepCompletion),
+  )
+  r.get(
+    '/conveyors/:conveyorId/steps/:stepNodeId/sequence-check',
+    ...auth,
+    asyncRoute(getConveyorStepSequenceCheck),
   )
   r.post(
     '/conveyors/:conveyorId/steps/:stepNodeId/assignees',

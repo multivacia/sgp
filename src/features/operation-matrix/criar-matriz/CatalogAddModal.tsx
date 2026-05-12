@@ -68,7 +68,7 @@ export function CatalogAddModal({
             type="search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Pesquisar por opção ou matriz…"
+            placeholder="Pesquisar por tarefa ou matriz…"
             autoComplete="off"
             className="sgp-input-app mt-3 w-full rounded-xl border border-white/10 bg-sgp-void/80 px-3 py-2 text-sm text-slate-200"
             aria-label="Pesquisar no catálogo"
@@ -97,7 +97,7 @@ export function CatalogAddModal({
           )}
           {!loading && !loadError && entries.length === 0 && (
             <p className="px-2 py-6 text-center text-sm text-slate-500">
-              Não há opções noutras matrizes para reaproveitar.
+              Não há tarefas noutras matrizes para reaproveitar.
             </p>
           )}
           {!loading && !loadError && entries.length > 0 && filtered.length === 0 && (

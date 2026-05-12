@@ -1,6 +1,5 @@
 import type pg from 'pg'
 import { AppError } from '../../shared/errors/AppError.js'
-import { ErrorCodes } from '../../shared/errors/errorCodes.js'
 import { serviceCreateConveyorOperationalEvent } from './operational-events/conveyor-operational-events.service.js'
 import { getStepCompletionFacts } from './operational-events/conveyor-operational-events.repository.js'
 import {
@@ -11,6 +10,8 @@ import {
 import { canTransitionStepStatus, type ConveyorNodeStepOperationalStatusDb } from './stepOperationalStatus.js'
 import type { ConveyorDetailApi } from './conveyors.dto.js'
 import { loadConveyorStructureWithAssignees, mapDetailRowToApi } from './conveyors.service.js'
+import { serviceAnalyzeConveyorActivitySequence } from './conveyorActivitySequence.service.js'
+import { ErrorCodes } from '../../shared/errors/errorCodes.js'
 
 const NOTE_MAX = 2000
 
@@ -37,6 +38,8 @@ export async function servicePatchConveyorStepCompletion(
     actorAppUserId: string
     action: ConveyorStepCompletionAction
     note?: string | null
+    /** Obrigatória em COMPLETE quando a atividade está fora da sequência recomendada. */
+    outOfSequenceJustification?: string
   },
 ): Promise<{ detail: ConveyorDetailApi; idempotent: boolean }> {
   const conveyor = await findConveyorById(pool, input.conveyorId)
@@ -69,6 +72,7 @@ async function serviceCompleteStep(
     stepNodeId: string
     actorAppUserId: string
     note?: string | null
+    outOfSequenceJustification?: string
   },
   conveyor: NonNullable<Awaited<ReturnType<typeof findConveyorById>>>,
   current: ConveyorNodeStepOperationalStatusDb,
@@ -85,6 +89,32 @@ async function serviceCompleteStep(
       422,
       ErrorCodes.INVALID_STATUS_TRANSITION,
     )
+  }
+
+  const seq = await serviceAnalyzeConveyorActivitySequence(
+    pool,
+    input.conveyorId,
+    input.stepNodeId,
+  )
+  if (!seq.targetFound) {
+    throw new AppError(
+      'Esta atividade não está incluída na sequência operacional recomendada.',
+      422,
+      ErrorCodes.VALIDATION_ERROR,
+    )
+  }
+
+  let outOfSeqJustificationStored: string | null = null
+  if (seq.isOutOfSequence) {
+    const j = (input.outOfSequenceJustification ?? '').trim()
+    if (!j.length) {
+      throw new AppError(
+        'Informe uma justificativa para executar esta atividade fora da sequência recomendada.',
+        422,
+        ErrorCodes.STEP_COMPLETION_OUT_OF_SEQUENCE_REQUIRES_JUSTIFICATION,
+      )
+    }
+    outOfSeqJustificationStored = j
   }
 
   const occurredAt = new Date()
@@ -124,6 +154,12 @@ async function serviceCompleteStep(
         reason: 'EXPLICITLY_COMPLETED',
         note: noteSafe,
         idempotencyKey,
+        activityNodeId: input.stepNodeId,
+        outOfSequence: seq.isOutOfSequence,
+        outOfSequenceJustification: outOfSeqJustificationStored,
+        previousOpenCount: seq.previousOpenCount,
+        previousOpenActivityIds: seq.previousOpenActivities.map((a) => a.activityNodeId),
+        trigger: 'COMPLETE',
       },
     })
     await client.query('COMMIT')

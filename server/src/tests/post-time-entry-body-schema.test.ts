@@ -24,4 +24,16 @@ describe('postTimeEntryBodySchema', () => {
   it('rejeita minutes <= 0', () => {
     expect(() => postTimeEntryBodySchema.parse({ minutes: 0 })).toThrow()
   })
+
+  it('aceita exceptionJustification opcional', () => {
+    expect(
+      postTimeEntryBodySchema.parse({
+        minutes: 20,
+        exceptionJustification: ' apoio ',
+      }),
+    ).toMatchObject({
+      minutes: 20,
+      exceptionJustification: 'apoio',
+    })
+  })
 })

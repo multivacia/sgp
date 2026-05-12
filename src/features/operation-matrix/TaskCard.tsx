@@ -1,4 +1,5 @@
-import { memo } from 'react'
+import { memo, type DragEventHandler } from 'react'
+import type { DraggableAttributes } from '@dnd-kit/core'
 import type { MatrixNodeTreeApi } from '../../domain/operation-matrix/operation-matrix.types'
 import type { MatrixTreeAggregateMaps } from './matrixTreeAggregates'
 import { getBranchStats } from './matrixTreeAggregates'
@@ -19,6 +20,20 @@ export type TaskCardProps = {
   busy: boolean
   onRemoveTask: () => void
   onDuplicateTask: () => void
+  /** Expandir/recolher composição (setores/atividades) no painel atual. */
+  compositionExpanded?: boolean
+  onToggleCompositionExpanded?: () => void
+  /** Alça de arraste (somente edição / reordenação local). */
+  dragHandle?: {
+    attributes: DraggableAttributes
+    listeners: Record<string, unknown>
+    /** Número de sequência na lista de tarefas (1-based), exibido junto à alça. */
+    sequencePosition?: number
+  }
+  /** Arrastar de volta ao catálogo (Alterar Matriz / paridade Nova Matriz). */
+  persistedCatalogDragBack?: {
+    onDragStart: DragEventHandler
+  }
 }
 
 export const TaskCard = memo(function TaskCard({
@@ -34,6 +49,10 @@ export const TaskCard = memo(function TaskCard({
   busy,
   onRemoveTask,
   onDuplicateTask,
+  compositionExpanded,
+  onToggleCompositionExpanded,
+  dragHandle,
+  persistedCatalogDragBack,
 }: TaskCardProps) {
   const branch = getBranchStats(aggregateMaps, task.id)
   const warnBranch = branch.activitiesWithoutResponsibleInBranch > 0
@@ -61,8 +80,8 @@ export const TaskCard = memo(function TaskCard({
   const warnEdge = warnBranch ? 'border-l-[3px] border-l-amber-500/55' : ''
 
   const metricsLine = [
-    `${aggregate.sectorsCount} áreas`,
-    `${aggregate.activitiesCount} etapas`,
+    `${aggregate.sectorsCount} ${aggregate.sectorsCount === 1 ? 'setor' : 'setores'}`,
+    `${aggregate.activitiesCount} ${aggregate.activitiesCount === 1 ? 'atividade' : 'atividades'}`,
     `${aggregate.totalMinutes} min`,
   ].join(' · ')
 
@@ -77,14 +96,50 @@ export const TaskCard = memo(function TaskCard({
       ].join(' ')}
       title={
         warnBranch
-          ? 'Há etapas sem responsável definido nesta opção'
+          ? 'Há atividades sem responsável definido nesta tarefa'
           : undefined
       }
     >
+      {dragHandle ? (
+        <div className="flex shrink-0 flex-col justify-center border-r border-white/[0.08] bg-black/20 py-1 pl-1 pr-0.5">
+          {dragHandle.sequencePosition != null ? (
+            <span className="select-none px-0.5 text-center font-mono text-[10px] font-semibold tabular-nums text-slate-500">
+              {dragHandle.sequencePosition}
+            </span>
+          ) : null}
+          <button
+            type="button"
+            {...dragHandle.attributes}
+            {...dragHandle.listeners}
+            aria-label="Arrastar para reordenar tarefa"
+            className="cursor-grab touch-none rounded-md border border-transparent px-1 py-1.5 text-sm leading-none text-slate-500 active:cursor-grabbing hover:border-white/10 hover:bg-white/[0.05] hover:text-slate-300"
+          >
+            <span aria-hidden className="block font-mono text-[10px] tracking-tighter">
+              ⋮⋮
+            </span>
+          </button>
+        </div>
+      ) : null}
+      {persistedCatalogDragBack ? (
+        <div className="flex shrink-0 flex-col items-center justify-center border-r border-white/[0.08] bg-black/15 px-0.5 py-1">
+          <span
+            draggable={!busy}
+            onDragStart={persistedCatalogDragBack.onDragStart}
+            className={`cursor-grab text-[11px] text-slate-400 tabular-nums${busy ? ' cursor-not-allowed opacity-50' : ''}`}
+            title="Arrastar para «Bases e extras» à esquerda para remover esta tarefa da matriz"
+            aria-label="Arrastar para Bases e extras para remover esta tarefa"
+          >
+            ↩
+          </span>
+        </div>
+      ) : null}
       <button
         type="button"
         onClick={() => onSelectComposition(task.id)}
-        className="flex h-full min-h-[5.25rem] min-w-0 flex-1 flex-col rounded-l-xl rounded-r-none p-2.5 text-left sm:p-3"
+        className={
+          'flex h-full min-h-[5.25rem] min-w-0 flex-1 flex-col p-2.5 text-left sm:p-3' +
+          (dragHandle || persistedCatalogDragBack ? ' rounded-none' : ' rounded-l-xl rounded-r-none')
+        }
       >
         <div className="flex min-h-0 flex-1 flex-col">
           <p className="line-clamp-2 font-heading text-sm font-bold leading-snug tracking-tight text-slate-50">
@@ -105,6 +160,14 @@ export const TaskCard = memo(function TaskCard({
           menuKey={`matrix-task-${task.id}`}
           disabled={busy}
           items={[
+            ...(onToggleCompositionExpanded
+              ? [
+                  {
+                    label: compositionExpanded ? 'Recolher' : 'Expandir',
+                    onClick: () => onToggleCompositionExpanded(),
+                  },
+                ]
+              : []),
             {
               label: 'Editar',
               onClick: () => onSelectEditMeta(task.id),

@@ -32,12 +32,17 @@ export async function getTimeEntryCandidates(
   const parsed = timeEntryCandidatesQuerySchema.parse({
     q: queryString(req.query.q),
     limit: queryString(req.query.limit),
+    includeUnassigned:
+      typeof req.query.includeUnassigned === 'boolean'
+        ? req.query.includeUnassigned
+        : queryString(req.query.includeUnassigned),
   })
   const collaboratorId = await findCollaboratorIdByAppUserId(pool, auth.id)
   const result = await serviceListTimeEntryCandidates(pool, {
     collaboratorId,
     q: parsed.q?.trim() ? parsed.q.trim() : null,
     limit: parsed.limit,
+    includeUnassigned: Boolean(parsed.includeUnassigned),
   })
   res.json(
     ok(result.items, {

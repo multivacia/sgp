@@ -59,7 +59,7 @@ export function CriarMatrizEtapaRevisao({
             </dd>
           </div>
           <div className="sm:col-span-2">
-            <dt className="text-slate-500">Opções reaproveitadas do catálogo</dt>
+            <dt className="text-slate-500">Tarefas reaproveitadas do catálogo</dt>
             <dd className="text-slate-200">
               {chosenCatalogDrafts.length === 0 ? (
                 <span className="text-slate-400">Nenhuma.</span>
@@ -80,12 +80,12 @@ export function CriarMatrizEtapaRevisao({
                     return (
                       <li key={inst.instanceId}>
                         <span className="font-medium">
-                          {i + 1}. {task.name.trim() || 'Opção'}
+                          {i + 1}. {task.name.trim() || 'Tarefa'}
                         </span>
                         <span className="text-slate-500">
                           {' '}
                           (origem: {inst.sourceMatrixItemName} · {sectorCount}{' '}
-                          área(s), {activityCount} etapa(s))
+                          setor(es), {activityCount} atividade(s))
                         </span>
                         <div className="mt-1 ml-4 text-[12px] leading-relaxed text-slate-500">
                           <ul className="list-inside list-[circle] space-y-1">
@@ -93,7 +93,7 @@ export function CriarMatrizEtapaRevisao({
                               .filter((c) => c.node_type === 'SECTOR')
                               .map((sector) => (
                                 <li key={sector.id}>
-                                  Área: {sector.name.trim() || '—'}
+                                  Setor: {sector.name.trim() || '—'}
                                   <ul className="ml-4 mt-0.5 list-inside list-disc">
                                     {sortMatrixChildNodes(sector)
                                       .filter((c) => c.node_type === 'ACTIVITY')
@@ -121,7 +121,7 @@ export function CriarMatrizEtapaRevisao({
                                         return (
                                           <li key={act.id}>
                                             <span className="text-slate-300">
-                                              {act.name.trim() || 'Etapa'}
+                                              {act.name.trim() || 'Atividade'}
                                             </span>
                                             <div>
                                               Principal:{' '}
@@ -165,7 +165,7 @@ export function CriarMatrizEtapaRevisao({
             </dd>
           </div>
           <div className="sm:col-span-2">
-            <dt className="text-slate-500">Novas opções (estrutura manual)</dt>
+            <dt className="text-slate-500">Novas tarefas (estrutura manual)</dt>
             <dd className="text-slate-200">
               {manualOpcoes.length === 0 ? (
                 <span className="text-slate-400">Nenhuma.</span>
@@ -184,18 +184,18 @@ export function CriarMatrizEtapaRevisao({
                       ) : null}
                       <div className="mt-1 ml-4 text-[13px] leading-relaxed text-slate-400">
                         {op.areas.length === 0 ? (
-                          <span>Sem áreas definidas.</span>
+                          <span>Sem setores definidos.</span>
                         ) : (
                           <ul className="list-inside list-[circle] space-y-1">
                             {op.areas.map((ar) => (
                               <li key={ar.id}>
                                 <span className="text-slate-300">
-                                  Área: {ar.name.trim() || '—'}
+                                  Setor: {ar.name.trim() || '—'}
                                 </span>
                                 {ar.etapas.length === 0 ? (
                                   <span className="text-slate-500">
                                     {' '}
-                                    (sem etapas)
+                                    (sem atividades)
                                   </span>
                                 ) : (
                                   <ul className="ml-4 mt-0.5 list-inside list-disc text-slate-400">
@@ -209,7 +209,7 @@ export function CriarMatrizEtapaRevisao({
                                       return (
                                         <li key={et.id}>
                                           <span className="text-slate-200">
-                                            {et.name.trim() || 'Etapa'}
+                                            {et.name.trim() || 'Atividade'}
                                           </span>
                                           {r.plannedMinutes != null &&
                                           !Number.isNaN(r.plannedMinutes)
@@ -233,7 +233,7 @@ export function CriarMatrizEtapaRevisao({
                                                   </div>
                                                 ) : (
                                                   <div className="text-amber-200/90">
-                                                    Indique o principal na etapa
+                                                    Indique o principal na atividade na
                                                     Estrutura (várias pessoas
                                                     selecionadas).
                                                   </div>

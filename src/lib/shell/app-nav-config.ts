@@ -76,6 +76,13 @@ export const GESTAO_NAV_ITEMS: ShellNavItem[] = [
     anyOfPermissions: ['dashboard.view_operational', 'dashboard.view_executive'],
   },
   {
+    to: '/app/planejamento-semanal',
+    label: 'Planejamento',
+    section: 'gestao',
+    navGroup: 'gestao',
+    permission: 'conveyors.create',
+  },
+  {
     to: '/app/equipes',
     label: 'Equipes',
     section: 'gestao',
@@ -141,6 +148,7 @@ export const GESTAO_NAV_ITEMS: ShellNavItem[] = [
 ]
 
 export const COLABORADOR_NAV_ITEMS: ShellNavItem[] = [
+  { to: '/app/minha-fila', label: 'Minha fila', section: 'colaborador', navGroup: 'colaborador' },
   { to: '/app/meu-trabalho', label: 'Meu Trabalho', section: 'colaborador', navGroup: 'colaborador' },
   {
     to: '/app/minhas-atividades',
@@ -195,6 +203,7 @@ export function filterShellNavItems(
 
 /** Prefixos de rota que contam como área Colaborador (alinhado ao menu e ao switcher). */
 const COLABORADOR_PATH_PREFIXES = [
+  '/app/minha-fila',
   '/app/minhas-atividades',
   '/app/meu-trabalho',
   '/app/chamados',
@@ -254,5 +263,5 @@ export function inferShellFunctionFromPath(pathname: string): AppShellFunctionId
 }
 
 export function defaultRouteForShellFunction(id: AppShellFunctionId): string {
-  return id === 'colaborador' ? '/app/minhas-atividades' : '/app/backlog'
+  return id === 'colaborador' ? '/app/minha-fila' : '/app/backlog'
 }

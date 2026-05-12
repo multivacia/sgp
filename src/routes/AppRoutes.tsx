@@ -21,10 +21,12 @@ import { OperationMatrixNewPage } from '../features/operation-matrix/OperationMa
 import { OperationMatrixEditorPage } from '../features/operation-matrix/OperationMatrixEditorPage'
 import { OperationMatrixPreviewPage } from '../features/operation-matrix/OperationMatrixPreviewPage'
 import { DashboardPage } from '../features/gestor/DashboardPage'
+import { OperationalPlanningPage } from '../features/operational-planning/OperationalPlanningPage'
 import { ApontamentoGestorPage } from '../features/gestor/ApontamentoGestorPage'
 import { MinhasAtividadesPage } from '../features/colaborador/MinhasAtividadesPage'
 import { ApontamentoPage } from '../features/colaborador/ApontamentoPage'
 import { JornadaPage } from '../features/colaborador/JornadaPage'
+import { MyWorkQueuePage } from '../features/my-work-queue/MyWorkQueuePage'
 import { MeuTrabalhoCockpitPage } from '../features/cockpits/MeuTrabalhoCockpitPage'
 import { SupportTicketsPage } from '../features/support/SupportTicketsPage'
 import { ChangePasswordPage } from '../pages/ChangePasswordPage'
@@ -82,6 +84,14 @@ export function AppRoutes() {
                 >
                   <DashboardPage />
                 </RequireAnyPermission>
+              }
+            />
+            <Route
+              path="planejamento-semanal"
+              element={
+                <RequirePermission permission="conveyors.create">
+                  <OperationalPlanningPage />
+                </RequirePermission>
               }
             />
             <Route
@@ -197,6 +207,7 @@ export function AppRoutes() {
               }
             />
             <Route path="minhas-atividades" element={<MinhasAtividadesPage />} />
+            <Route path="minha-fila" element={<MyWorkQueuePage />} />
             <Route path="chamados" element={<SupportTicketsPage />} />
             <Route path="meu-trabalho" element={<MeuTrabalhoCockpitPage />} />
             <Route path="jornada" element={<JornadaPage />} />

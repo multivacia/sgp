@@ -1,6 +1,16 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import {
+  DndContext,
+  KeyboardSensor,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core'
+import { sortableKeyboardCoordinates } from '@dnd-kit/sortable'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useMatrixSuggestionCatalog } from '../../catalog/matrixSuggestion/matrixSuggestionCatalogCache'
-import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { PageCanvas } from '../../components/ui/PageCanvas'
 import { SgpToast, type SgpToastVariant } from '../../components/ui/SgpToast'
 import type {
@@ -19,16 +29,26 @@ import {
   duplicateMatrixNode,
   getMatrixTree,
   isApiNotFound,
+  listMatrixItems,
   patchMatrixNode,
-  reorderMatrixNode,
   restoreMatrixNode,
 } from '../../services/operation-matrix/operationMatrixApiService'
 import { getCollaboratorsService } from '../../services/collaborators/collaboratorsServiceFactory'
 import type { Collaborator } from '../../domain/collaborators/collaborator.types'
 import type { Team } from '../../domain/teams/team.types'
+import { useShellFunction } from '../../lib/shell/shell-function-context'
 import { listTeams } from '../../services/teams/teamsApiService'
-import { MatrixTreeCompact } from './MatrixTreeCompact'
 import { MatrixSelectionContextBar } from './MatrixSelectionContextBar'
+import { AlterarMatrizEstruturaDraftPanel } from './AlterarMatrizEstruturaDraftPanel'
+import { revisaoAlterarMatrizPendencias } from './operationMatrixEditorRevision'
+import {
+  computeOrderPatches,
+  orderTreeMatchesBaseline,
+  reorderItemChildTasksToOrder,
+  reorderSiblingStep,
+  reorderSiblingsRelativeToOver,
+  snapshotOrderMap,
+} from './matrixStructureReorder'
 import { OperationMatrixEditorWorkbench } from './OperationMatrixEditorWorkbench'
 import { OperationMatrixMetricsStrip } from './OperationMatrixMetricsStrip'
 import {
@@ -50,8 +70,37 @@ import {
   generatePreviewDraftToken,
   writePreviewSnapshotToSession,
 } from './operationMatrixPreviewSnapshot'
+import { cloneTaskSubtreeUnderItem } from './criar-matriz/cloneMatrixTaskSubtree'
+import {
+  extractCatalogTasksFromItemTree,
+  type MatrixCatalogTaskEntry,
+} from './criar-matriz/extractMatrixTasksForCatalog'
+import { matrixCatalogEntryOverlapsCurrentMatrix } from './criar-matriz/matrixCatalogEntryOverlapsMatrix'
+import { NovaMatrizEstruturaCatalogPanel } from './criar-matriz/NovaMatrizEstruturaCatalogPanel'
+import { clampInsertIndex } from './criar-matriz/novaMatrizCatalogDropInsert'
 
 type ToastState = { message: string; variant: SgpToastVariant } | null
+
+function sortReuseCatalogEntries(
+  a: MatrixCatalogTaskEntry,
+  b: MatrixCatalogTaskEntry,
+): number {
+  const m = a.matrixItemName.localeCompare(b.matrixItemName, 'pt-BR')
+  if (m !== 0) return m
+  return a.taskName.localeCompare(b.taskName, 'pt-BR')
+}
+
+function sortedRootTaskIds(root: MatrixNodeTreeApi): string[] {
+  return root.children
+    .filter((c) => c.node_type === 'TASK')
+    .slice()
+    .sort(
+      (a, b) =>
+        a.order_index - b.order_index ||
+        a.name.localeCompare(b.name, 'pt-BR'),
+    )
+    .map((t) => t.id)
+}
 
 function findNodeInTree(
   node: MatrixNodeTreeApi,
@@ -102,12 +151,37 @@ function nextSelectionAfterDelete(
   return newTree.id
 }
 
+type AlterarMatrizTab = 'dados' | 'estrutura' | 'revisao'
+
+function pickPostDadosSelection(
+  treeRoot: MatrixNodeTreeApi,
+  restoreId: string | null,
+): string {
+  if (
+    restoreId &&
+    restoreId !== treeRoot.id &&
+    findNodeInTree(treeRoot, restoreId)
+  ) {
+    return restoreId
+  }
+  const tasks = treeRoot.children
+    .filter((c) => c.node_type === 'TASK')
+    .slice()
+    .sort(
+      (a, b) =>
+        a.order_index - b.order_index ||
+        a.name.localeCompare(b.name, 'pt-BR'),
+    )
+  return tasks[0]?.id ?? treeRoot.id
+}
+
 export function OperationMatrixEditorPage() {
   const { catalog: matrixSuggestionCatalog } = useMatrixSuggestionCatalog()
   const { itemId } = useParams<{ itemId: string }>()
   const { pathname } = useLocation()
   const { presentBlocking } = useSgpErrorSurface()
   const navigate = useNavigate()
+  const { requestNavigateWithTransientGuard } = useShellFunction()
   const [tree, setTree] = useState<MatrixNodeTreeApi | null>(null)
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -126,9 +200,18 @@ export function OperationMatrixEditorPage() {
   const [formResponsible, setFormResponsible] = useState('')
   const [formTeamIds, setFormTeamIds] = useState<string[]>([])
   const [formRequired, setFormRequired] = useState(true)
-  const [treeSearch, setTreeSearch] = useState('')
-  const [debouncedTreeSearch, setDebouncedTreeSearch] = useState('')
-  /** Rascunho do formulário «+ Adicionar opção» no catálogo (TASK sob ITEM). */
+  const debouncedTreeSearch = ''
+  const [reuseCatalogEntries, setReuseCatalogEntries] = useState<
+    MatrixCatalogTaskEntry[]
+  >([])
+  const [reuseCatalogLoading, setReuseCatalogLoading] = useState(false)
+  const [reuseCatalogError, setReuseCatalogError] = useState<string | null>(
+    null,
+  )
+  const [structureExpandedTaskIds, setStructureExpandedTaskIds] = useState<
+    ReadonlySet<string>
+  >(() => new Set())
+  /** Rascunho do formulário «+ Adicionar tarefa» no catálogo (TASK sob ITEM). */
   const [serviceOptionAddOpen, setServiceOptionAddOpen] = useState(false)
   const [serviceOptionNewName, setServiceOptionNewName] = useState('')
   const [serviceOptionNewDescription, setServiceOptionNewDescription] =
@@ -136,8 +219,21 @@ export function OperationMatrixEditorPage() {
   const [taskPanelMode, setTaskPanelMode] = useState<
     'composition' | 'editTaskMeta'
   >('composition')
-  /** Etapa: formulário só após "Editar"; clique na linha = só seleção. */
+  /** Atividade: formulário só após "Editar"; clique na linha = só seleção. */
   const [activityEditMode, setActivityEditMode] = useState(false)
+  const [activeTab, setActiveTab] = useState<AlterarMatrizTab>('dados')
+  const [estruturaDrawerOpen, setEstruturaDrawerOpen] = useState(false)
+  const selectedBeforeDadosRef = useRef<string | null>(null)
+  const orderBaselineRef = useRef<Map<string, number>>(new Map())
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 8 },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
+  )
 
   const collaboratorIdSet = useMemo(
     () => new Set(collaborators.map((c) => c.id)),
@@ -175,10 +271,11 @@ export function OperationMatrixEditorPage() {
     return collectMatchingNodeIds(tree, debouncedTreeSearch)
   }, [tree, debouncedTreeSearch])
 
-  useEffect(() => {
-    const t = window.setTimeout(() => setDebouncedTreeSearch(treeSearch), 200)
-    return () => window.clearTimeout(t)
-  }, [treeSearch])
+  const reuseCatalogByTaskId = useMemo(() => {
+    const m = new Map<string, MatrixCatalogTaskEntry>()
+    for (const e of reuseCatalogEntries) m.set(e.taskId, e)
+    return m
+  }, [reuseCatalogEntries])
 
   const loadTree = useCallback(async (): Promise<MatrixNodeTreeApi | null> => {
     if (!itemId) return null
@@ -187,6 +284,7 @@ export function OperationMatrixEditorPage() {
     try {
       const t = await getMatrixTree(itemId)
       setTree(t)
+      orderBaselineRef.current = snapshotOrderMap(t)
       setSelectedId((prev) => {
         if (prev && findNodeInTree(t, prev)) return prev
         return t.id
@@ -210,15 +308,64 @@ export function OperationMatrixEditorPage() {
         }
       }
       setTree(null)
+      orderBaselineRef.current = new Map()
       return null
     } finally {
       setLoading(false)
     }
   }, [itemId, pathname, presentBlocking])
 
+  const loadReuseCatalog = useCallback(async () => {
+    if (!itemId) return
+    setReuseCatalogLoading(true)
+    setReuseCatalogError(null)
+    try {
+      const items = await listMatrixItems({ isActive: true })
+      const entries: MatrixCatalogTaskEntry[] = []
+      await Promise.all(
+        items.map(async (it) => {
+          if (it.id === itemId) return
+          try {
+            const t = await getMatrixTree(it.id)
+            entries.push(
+              ...extractCatalogTasksFromItemTree(it.id, it.name, t),
+            )
+          } catch {
+            /* matriz pode estar indisponível; omitir entrada */
+          }
+        }),
+      )
+      entries.sort(sortReuseCatalogEntries)
+      setReuseCatalogEntries(entries)
+    } catch (e) {
+      const n = reportClientError(e, {
+        module: 'operation-matrix',
+        action: 'matrix_editor_load_reuse_catalog',
+        route: pathname,
+        entityId: itemId,
+      })
+      setReuseCatalogEntries([])
+      if (isBlockingSeverity(n.severity)) {
+        presentBlocking(n)
+      } else {
+        setReuseCatalogError(n.userMessage)
+      }
+    } finally {
+      setReuseCatalogLoading(false)
+    }
+  }, [itemId, pathname, presentBlocking])
+
   useEffect(() => {
     void loadTree()
   }, [loadTree])
+
+  useEffect(() => {
+    void loadReuseCatalog()
+  }, [loadReuseCatalog])
+
+  useEffect(() => {
+    setStructureExpandedTaskIds(new Set())
+  }, [itemId])
 
   useEffect(() => {
     let cancelled = false
@@ -299,6 +446,30 @@ export function OperationMatrixEditorPage() {
     formRequired,
   ])
 
+  const matrixStructureDirty = useMemo(() => {
+    if (!tree) return false
+    return !orderTreeMatchesBaseline(tree, orderBaselineRef.current)
+  }, [tree])
+
+  const revisaoLista = useMemo(
+    () =>
+      aggregateMaps
+        ? revisaoAlterarMatrizPendencias({
+            matrixStructureDirty,
+            matrixEditorHasUnsavedChanges,
+            activitiesWithoutResponsible:
+              aggregateMaps.global.activitiesWithoutResponsible,
+            orphanResponsibleAssignments:
+              aggregateMaps.global.activitiesWithOrphanResponsible,
+          })
+        : [],
+    [
+      aggregateMaps,
+      matrixStructureDirty,
+      matrixEditorHasUnsavedChanges,
+    ],
+  )
+
   const serviceOptionDraftDirty = useMemo(
     () =>
       serviceOptionAddOpen &&
@@ -319,6 +490,13 @@ export function OperationMatrixEditorPage() {
     }
   }, [selected?.node_type])
 
+  useEffect(() => {
+    if (activeTab !== 'estrutura') return
+    if (taskPanelMode === 'editTaskMeta' || activityEditMode) {
+      setEstruturaDrawerOpen(true)
+    }
+  }, [activeTab, taskPanelMode, activityEditMode])
+
   const compositionTask = useMemo(() => {
     if (!tree || !selectedId || !selected) return null
     if (selected.node_type === 'TASK') return selected
@@ -328,7 +506,7 @@ export function OperationMatrixEditorPage() {
     return findNodeInTree(tree, tid)
   }, [tree, selected, selectedId, parentMap, nodeTypeMap])
 
-  /** Área (SECTOR) em foco para Subir/Descer: só quando a área está selecionada na composição. */
+  /** Setor (SECTOR) em foco para Subir/Descer: só quando o setor está selecionado na composição. */
   const compositionFocusSectorId = useMemo(() => {
     if (!tree || !compositionTask || !selectedId) return null
     const sel = findNodeInTree(tree, selectedId)
@@ -383,12 +561,18 @@ export function OperationMatrixEditorPage() {
 
   useRegisterTransientContext({
     id: 'operation-matrix-editor',
-    isDirty: () => matrixEditorHasUnsavedChanges || serviceOptionDraftDirty,
+    isDirty: () =>
+      matrixEditorHasUnsavedChanges ||
+      matrixStructureDirty ||
+      serviceOptionDraftDirty,
     onReset: () => {
       if (selected) applyFormFromNode(selected)
       setServiceOptionAddOpen(false)
       setServiceOptionNewName('')
       setServiceOptionNewDescription('')
+      if (matrixStructureDirty && itemId) {
+        void loadTree()
+      }
     },
   })
 
@@ -439,9 +623,14 @@ export function OperationMatrixEditorPage() {
   }, [])
 
   async function handleSave() {
-    if (!selected) return
+    if (!selected || !tree) return
     setBusy(true)
     try {
+      const orderPatches = computeOrderPatches(tree, orderBaselineRef.current)
+      for (const p of orderPatches) {
+        await patchMatrixNode(p.id, { orderIndex: p.orderIndex })
+      }
+
       const patch: Parameters<typeof patchMatrixNode>[1] = {
         name: formName.trim(),
         code: formCode.trim() || null,
@@ -466,6 +655,7 @@ export function OperationMatrixEditorPage() {
       await patchMatrixNode(selected.id, patch)
       pushToast('Alterações salvas.')
       await loadTree()
+      void loadReuseCatalog()
       if (selected.node_type === 'TASK') {
         setTaskPanelMode('composition')
       }
@@ -519,7 +709,7 @@ export function OperationMatrixEditorPage() {
     if (!node || node.node_type !== 'TASK') return
     if (
       !window.confirm(
-        `Remover a opção de serviço "${node.name}" e toda a sua composição? Esta ação é lógica e pode ser desfeita com Restaurar.`,
+        `Remover a tarefa de serviço "${node.name}" e toda a sua composição? Esta ação é lógica e pode ser desfeita com Restaurar.`,
       )
     ) {
       return
@@ -528,7 +718,7 @@ export function OperationMatrixEditorPage() {
     try {
       await deleteMatrixNode(taskId)
       setLastDeletedId(taskId)
-      pushToast('Opção removida.')
+      pushToast('Tarefa removida.')
       const newTree = await loadTree()
       if (newTree) {
         setSelectedId(nextSelectionAfterDelete(newTree, 'TASK'))
@@ -547,7 +737,7 @@ export function OperationMatrixEditorPage() {
     }
     const n = name.trim()
     if (!n) {
-      pushToast('Informe o nome da opção.', 'error')
+      pushToast('Informe o nome da tarefa.', 'error')
       throw new Error('empty-name')
     }
     setBusy(true)
@@ -559,7 +749,7 @@ export function OperationMatrixEditorPage() {
         description: description?.trim() || null,
         isActive: true,
       })
-      pushToast('Opção de serviço criada.')
+      pushToast('Tarefa de serviço criada.')
       setServiceOptionAddOpen(false)
       setServiceOptionNewName('')
       setServiceOptionNewDescription('')
@@ -603,7 +793,7 @@ export function OperationMatrixEditorPage() {
     setBusy(true)
     try {
       await duplicateMatrixNode(sectorId)
-      pushToast('Área duplicada.')
+      pushToast('Setor duplicado.')
       const newTree = await loadTree()
       if (!newTree) return
       const taskAfter = findNodeInTree(newTree, taskNode.id)
@@ -631,10 +821,10 @@ export function OperationMatrixEditorPage() {
       const created = await createMatrixNode({
         nodeType: 'ACTIVITY',
         parentId: sectorId,
-        name: 'Nova etapa',
+        name: 'Nova atividade',
         isActive: true,
       })
-      pushToast('Etapa criada.')
+      pushToast('Atividade criada.')
       await loadTree()
       setSelectedId(created.id)
       setTaskPanelMode('composition')
@@ -646,7 +836,7 @@ export function OperationMatrixEditorPage() {
     }
   }
 
-  async function handleReorderActivityInSector(
+  function handleReorderActivityInSector(
     sectorId: string,
     dir: 'up' | 'down',
   ) {
@@ -655,25 +845,8 @@ export function OperationMatrixEditorPage() {
     if (!sel || sel.node_type !== 'ACTIVITY' || sel.parent_id !== sectorId) {
       return
     }
-    const parent = findNodeInTree(tree, sectorId)
-    if (!parent || parent.node_type !== 'SECTOR') return
-    const siblings = parent.children
-      .filter((c) => c.node_type === 'ACTIVITY')
-      .slice()
-      .sort((a, b) => a.order_index - b.order_index)
-    const idx = siblings.findIndex((s) => s.id === selectedId)
-    if (idx < 0) return
-    if (dir === 'up' && idx === 0) return
-    if (dir === 'down' && idx === siblings.length - 1) return
-    setBusy(true)
-    try {
-      await reorderMatrixNode(selectedId, dir)
-      await loadTree()
-    } catch (e) {
-      matrixOpError(e, 'matrix_editor_reorder_activity')
-    } finally {
-      setBusy(false)
-    }
+    const next = reorderSiblingStep(tree, selectedId, dir)
+    if (next) setTree(next)
   }
 
   async function handleDuplicateActivity(activityId: string) {
@@ -690,7 +863,7 @@ export function OperationMatrixEditorPage() {
     setBusy(true)
     try {
       await duplicateMatrixNode(activityId)
-      pushToast('Etapa duplicada.')
+      pushToast('Atividade duplicada.')
       const newTree = await loadTree()
       if (!newTree) return
       const sectorAfter = findNodeInTree(newTree, sector.id)
@@ -718,7 +891,7 @@ export function OperationMatrixEditorPage() {
     if (!sector || sector.node_type !== 'SECTOR') return
     if (
       !window.confirm(
-        `Remover a etapa "${node.name}"? Esta ação é lógica e pode ser desfeita com Restaurar.`,
+        `Remover a atividade "${node.name}"? Esta ação é lógica e pode ser desfeita com Restaurar.`,
       )
     ) {
       return
@@ -727,7 +900,7 @@ export function OperationMatrixEditorPage() {
     try {
       await deleteMatrixNode(activityId)
       setLastDeletedId(activityId)
-      pushToast('Etapa removida.')
+      pushToast('Atividade removida.')
       const newTree = await loadTree()
       if (newTree && findNodeInTree(newTree, sector.id)) {
         setSelectedId(sector.id)
@@ -740,30 +913,10 @@ export function OperationMatrixEditorPage() {
     }
   }
 
-  async function handleReorderSector(sectorId: string, dir: 'up' | 'down') {
+  function handleReorderSector(sectorId: string, dir: 'up' | 'down') {
     if (!tree) return
-    const sector = findNodeInTree(tree, sectorId)
-    if (!sector || sector.node_type !== 'SECTOR' || !sector.parent_id) return
-    const siblings = findNodeInTree(tree, sector.parent_id)?.children.filter(
-      (c) => c.node_type === 'SECTOR',
-    )
-    if (!siblings?.length) return
-    const ordered = siblings
-      .slice()
-      .sort((a, b) => a.order_index - b.order_index)
-    const idx = ordered.findIndex((s) => s.id === sectorId)
-    if (idx < 0) return
-    if (dir === 'up' && idx === 0) return
-    if (dir === 'down' && idx === ordered.length - 1) return
-    setBusy(true)
-    try {
-      await reorderMatrixNode(sectorId, dir)
-      await loadTree()
-    } catch (e) {
-      matrixOpError(e, 'matrix_editor_reorder_sector')
-    } finally {
-      setBusy(false)
-    }
+    const next = reorderSiblingStep(tree, sectorId, dir)
+    if (next) setTree(next)
   }
 
   async function handleDeleteSector(sectorId: string) {
@@ -772,7 +925,7 @@ export function OperationMatrixEditorPage() {
     if (!sector || sector.node_type !== 'SECTOR') return
     if (
       !window.confirm(
-        `Remover a área "${sector.name}" e todas as etapas? Esta ação é lógica e pode ser desfeita com Restaurar.`,
+        `Remover o setor "${sector.name}" e todas as atividades? Esta ação é lógica e pode ser desfeita com Restaurar.`,
       )
     ) {
       return
@@ -783,7 +936,7 @@ export function OperationMatrixEditorPage() {
     try {
       await deleteMatrixNode(sectorId)
       setLastDeletedId(sectorId)
-      pushToast('Área removida.')
+      pushToast('Setor removido.')
       const newTree = await loadTree()
       if (newTree && findNodeInTree(newTree, taskId)) {
         setSelectedId(taskId)
@@ -827,17 +980,109 @@ export function OperationMatrixEditorPage() {
     }
   }
 
-  async function handleReorder(dir: 'up' | 'down') {
-    if (!selected) return
+  function toggleStructureTaskExpand(taskId: string) {
+    setStructureExpandedTaskIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(taskId)) next.delete(taskId)
+      else next.add(taskId)
+      return next
+    })
+  }
+
+  async function handleCatalogDropAtPosition(
+    catalogSourceTaskId: string,
+    rawInsertIndex: number,
+  ) {
+    if (!tree || tree.node_type !== 'ITEM' || !itemId) {
+      pushToast('Matriz indisponível.', 'error')
+      return
+    }
+    const entry = reuseCatalogByTaskId.get(catalogSourceTaskId)
+    if (!entry) {
+      pushToast('Entrada do catálogo não encontrada.', 'error')
+      return
+    }
+    if (matrixCatalogEntryOverlapsCurrentMatrix(entry, tree)) {
+      pushToast(
+        'Esta tarefa já corresponde a uma entrada nesta matriz (nome ou chave de origem).',
+        'error',
+      )
+      return
+    }
+    if (entry.taskSubtree.node_type !== 'TASK') {
+      pushToast('Entrada inválida no catálogo.', 'error')
+      return
+    }
+    const sortedIds = sortedRootTaskIds(tree)
+    const insertIndex = clampInsertIndex(rawInsertIndex, sortedIds.length)
+    const oldIds = new Set(sortedIds)
+    const taskChildren = tree.children.filter((c) => c.node_type === 'TASK')
+    const nextOrder =
+      taskChildren.length === 0
+        ? 0
+        : Math.max(...taskChildren.map((t) => t.order_index), -1) + 1
+    const subtreeForClone = {
+      ...entry.taskSubtree,
+      order_index: nextOrder,
+    }
     setBusy(true)
     try {
-      await reorderMatrixNode(selected.id, dir)
-      await loadTree()
+      await cloneTaskSubtreeUnderItem(tree.id, subtreeForClone)
+      pushToast('Tarefa incluída na matriz a partir do catálogo.')
+      const newTree = await loadTree()
+      if (!newTree) return
+      const added = newTree.children
+        .filter((c) => c.node_type === 'TASK')
+        .find((t) => !oldIds.has(t.id))
+      if (!added) return
+      const desired = [
+        ...sortedIds.slice(0, insertIndex),
+        added.id,
+        ...sortedIds.slice(insertIndex),
+      ]
+      const reordered = reorderItemChildTasksToOrder(
+        newTree,
+        newTree.id,
+        desired,
+      )
+      setTree(reordered ?? newTree)
+      setStructureExpandedTaskIds((prev) => new Set(prev).add(added.id))
+      selectTaskComposition(added.id)
+      scrollMatrixTaskCardIntoView(added.id)
+      void loadReuseCatalog()
     } catch (e) {
-      matrixOpError(e, 'matrix_editor_reorder_node')
+      matrixOpError(e, 'matrix_editor_include_catalog_task')
     } finally {
       setBusy(false)
     }
+  }
+
+  async function handleIncludeCatalogTask(entry: MatrixCatalogTaskEntry) {
+    if (!tree) return
+    const n = sortedRootTaskIds(tree).length
+    await handleCatalogDropAtPosition(entry.taskId, n)
+  }
+
+  function handleReorder(dir: 'up' | 'down') {
+    if (!selected || !tree) return
+    const next = reorderSiblingStep(tree, selected.id, dir)
+    if (next) setTree(next)
+  }
+
+  function handleStructureDragEnd(event: DragEndEvent) {
+    if (!tree || busy) return
+    const { active, over } = event
+    if (!over) return
+    const aid = String(active.id)
+    const oid = String(over.id)
+    if (aid === oid) return
+    const pt = parentMap.get(aid)
+    const po = parentMap.get(oid)
+    if (pt !== po) return
+    const nt = nodeTypeMap.get(aid)
+    if (!nt || nodeTypeMap.get(oid) !== nt) return
+    const next = reorderSiblingsRelativeToOver(tree, aid, oid)
+    if (next) setTree(next)
   }
 
   const canAddChild = selected
@@ -889,6 +1134,33 @@ export function OperationMatrixEditorPage() {
     }
   }, [selected, applyFormFromNode])
 
+  function selectAlterarMatrizTab(next: AlterarMatrizTab) {
+    if (!tree) {
+      setActiveTab(next)
+      return
+    }
+    if (activeTab === 'dados' && next !== 'dados') {
+      if (selectedId === tree.id && matrixEditorHasUnsavedChanges) {
+        pushToast(
+          'Guarde ou cancele as alterações em «Dados básicos» antes de mudar de aba.',
+          'error',
+        )
+        return
+      }
+      const restore = selectedBeforeDadosRef.current
+      selectedBeforeDadosRef.current = null
+      if (next === 'estrutura' || next === 'revisao') {
+        setSelectedId(pickPostDadosSelection(tree, restore))
+      }
+    }
+    if (next === 'dados' && activeTab !== 'dados') {
+      selectedBeforeDadosRef.current = selectedId
+      setSelectedId(tree.id)
+    }
+    if (next !== 'estrutura') setEstruturaDrawerOpen(false)
+    setActiveTab(next)
+  }
+
   async function handleAddChild(e: React.FormEvent) {
     e.preventDefault()
     if (!selected || !childType) return
@@ -925,6 +1197,267 @@ export function OperationMatrixEditorPage() {
     )
   }
 
+  function renderMatrixSelectionContextBar(omitCompositionPanel: boolean) {
+    if (!tree || loadError || !aggregateMaps) return null
+    return (
+      <MatrixSelectionContextBar
+        selected={selected}
+        compositionTask={compositionTask}
+        breadcrumbSegments={breadcrumbSegments}
+        aggregateMaps={aggregateMaps}
+        selectedBranchStats={selectedBranchStats}
+        typeLabel={matrixUxNodeLabel}
+        addChildCta={matrixUxAddChildCta}
+        formName={formName}
+        setFormName={setFormName}
+        formCode={formCode}
+        setFormCode={setFormCode}
+        formDescription={formDescription}
+        setFormDescription={setFormDescription}
+        formActive={formActive}
+        setFormActive={setFormActive}
+        formPlanned={formPlanned}
+        setFormPlanned={setFormPlanned}
+        formResponsible={formResponsible}
+        setFormResponsible={setFormResponsible}
+        formTeamIds={formTeamIds}
+        setFormTeamIds={setFormTeamIds}
+        formRequired={formRequired}
+        setFormRequired={setFormRequired}
+        collaborators={collaborators}
+        teams={teams}
+        collaboratorIdSet={collaboratorIdSet}
+        teamIdSet={teamIdSet}
+        responsibleIsOrphan={responsibleIsOrphan}
+        busy={busy}
+        canAddChild={canAddChild}
+        childType={childType}
+        addOpen={addOpen}
+        setAddOpen={setAddOpen}
+        addName={addName}
+        setAddName={setAddName}
+        onSave={() => handleSave()}
+        onCancel={handleCancel}
+        onDelete={() => void handleDelete()}
+        onAddChild={(e) => void handleAddChild(e)}
+        collaboratorIdToName={collaboratorIdToName}
+        selectedId={selectedId}
+        activePathIds={activePathIds}
+        onSelectNode={selectTaskComposition}
+        searchQuery={debouncedTreeSearch}
+        matchIds={searchMatchIds}
+        taskPanelMode={taskPanelMode}
+        onDuplicateSector={(id) => void handleDuplicateSector(id)}
+        onRemoveSector={(id) => void handleDeleteSector(id)}
+        onAddActivityToSector={(id) => void handleAddActivityToSector(id)}
+        onReorderActivityInSector={(sectorId, dir) =>
+          void handleReorderActivityInSector(sectorId, dir)
+        }
+        onDuplicateActivity={(id) => void handleDuplicateActivity(id)}
+        onRemoveActivity={(id) => void handleDeleteActivity(id)}
+        activityEditMode={activityEditMode}
+        onEditActivity={(id) => selectActivityForEdit(id)}
+        onCompositionSectorReorder={(dir) => {
+          if (compositionFocusSectorId) {
+            handleReorderSector(compositionFocusSectorId, dir)
+          }
+        }}
+        compositionSectorReorderUpDisabled={
+          compositionSectorReorderUpDisabled
+        }
+        compositionSectorReorderDownDisabled={
+          compositionSectorReorderDownDisabled
+        }
+        matrixSuggestionCatalog={matrixSuggestionCatalog}
+        omitCompositionPanel={omitCompositionPanel}
+      />
+    )
+  }
+
+  const estruturaWorkbench =
+    tree && !loadError && aggregateMaps ? (
+      <OperationMatrixEditorWorkbench
+        columnLayout="wideRight"
+        metricsStrip={<OperationMatrixMetricsStrip global={aggregateMaps.global} />}
+        stripEnd={
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => setEstruturaDrawerOpen(true)}
+              className="rounded-lg border border-white/12 bg-white/[0.05] px-3 py-1.5 text-xs font-semibold text-white/90 transition hover:bg-white/[0.08] disabled:opacity-50"
+            >
+              Campos da seleção
+            </button>
+            <button
+              type="button"
+              disabled={
+                busy ||
+                (!matrixEditorHasUnsavedChanges && !matrixStructureDirty)
+              }
+              onClick={() => void handleSave()}
+              className="rounded-lg border border-sgp-gold/40 bg-sgp-gold/15 px-3 py-1.5 text-xs font-semibold text-sgp-gold-warm transition hover:border-sgp-gold/55 hover:bg-sgp-gold/20 disabled:opacity-50"
+            >
+              Salvar alterações
+            </button>
+          </div>
+        }
+        showSearchInput={false}
+        searchAriaLabel="Buscar na composição"
+        searchValue=""
+        onSearchChange={() => {}}
+        leftColumn={
+          <NovaMatrizEstruturaCatalogPanel
+            loading={reuseCatalogLoading}
+            loadError={reuseCatalogError}
+            entries={reuseCatalogEntries}
+            onRetryLoad={() => void loadReuseCatalog()}
+            resolveCollaboratorLabel={(id) => collaboratorIdToName.get(id) ?? id}
+            onDropDraftToRemove={() => {}}
+            onDropPersistedMatrixTask={(taskId) =>
+              void handleDeleteTaskFromCatalog(taskId)
+            }
+            headingTitle="Bases e extras"
+            headingHint="Arraste para o painel ao lado para incluir cópias na matriz atual. Para retirar uma tarefa persistida, arraste de volta para aqui. Tarefas com «Já na matriz» não podem ser duplicadas."
+            isCatalogEntryReuseBlocked={(e) =>
+              matrixCatalogEntryOverlapsCurrentMatrix(e, tree)
+            }
+            onIncludeCatalogEntry={(e) => void handleIncludeCatalogTask(e)}
+            includeBusy={busy}
+            includeButtonVariant="subtle"
+          />
+        }
+        rightColumn={
+          <AlterarMatrizEstruturaDraftPanel
+            tree={tree}
+            parentMap={parentMap}
+            selectedId={selectedId}
+            selected={selected}
+            activePathIds={activePathIds}
+            aggregateMaps={aggregateMaps}
+            collaboratorIdToName={collaboratorIdToName}
+            searchQuery={debouncedTreeSearch}
+            matchIds={searchMatchIds}
+            busy={busy}
+            matrixSuggestionCatalog={matrixSuggestionCatalog}
+            structureExpandedTaskIds={structureExpandedTaskIds}
+            onToggleTaskCompositionExpanded={toggleStructureTaskExpand}
+            onSelectTaskComposition={selectTaskComposition}
+            onSelectTaskEditMeta={selectTaskEditMeta}
+            onReorder={(dir) => void handleReorder(dir)}
+            onAddServiceOption={(name, description) =>
+              void handleAddServiceOption(name, description)
+            }
+            onRemoveTaskFromCatalog={(id) => void handleDeleteTaskFromCatalog(id)}
+            onDuplicateTask={(id) => void handleDuplicateTask(id)}
+            onDuplicateSector={(id) => void handleDuplicateSector(id)}
+            onRemoveSector={(id) => void handleDeleteSector(id)}
+            onAddActivityToSector={(id) => void handleAddActivityToSector(id)}
+            onReorderActivityInSector={(sectorId, dir) =>
+              void handleReorderActivityInSector(sectorId, dir)
+            }
+            onDuplicateActivity={(id) => void handleDuplicateActivity(id)}
+            onRemoveActivity={(id) => void handleDeleteActivity(id)}
+            onEditActivity={(id) => selectActivityForEdit(id)}
+            serviceOptionAddOpen={serviceOptionAddOpen}
+            setServiceOptionAddOpen={setServiceOptionAddOpen}
+            serviceOptionNewName={serviceOptionNewName}
+            setServiceOptionNewName={setServiceOptionNewName}
+            serviceOptionNewDescription={serviceOptionNewDescription}
+            setServiceOptionNewDescription={setServiceOptionNewDescription}
+            onDropCatalogTask={(catalogTaskId, insertIndex) =>
+              void handleCatalogDropAtPosition(catalogTaskId, insertIndex)
+            }
+          />
+        }
+      />
+    ) : null
+
+  const dadosBasicosContextBar = renderMatrixSelectionContextBar(false)
+
+  const revisaoPainel =
+    aggregateMaps ? (
+      <div className="space-y-4 rounded-2xl border border-sgp-gold/25 bg-gradient-to-b from-sgp-gold/[0.07] to-black/20 p-4 shadow-inner ring-1 ring-white/[0.05]">
+        <div>
+          <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-sgp-gold/90">
+            Resumo
+          </p>
+          <p className="mt-1 font-heading text-base font-semibold text-white">
+            Antes de salvar
+          </p>
+          <p className="mt-1 text-[11px] leading-relaxed text-slate-500">
+            Alterações ficam apenas locais até gravar na base.
+          </p>
+        </div>
+        <dl className="space-y-2 text-[13px]">
+          <div className="flex justify-between gap-2">
+            <dt className="text-slate-500">Tarefas</dt>
+            <dd className="tabular-nums text-slate-100">
+              {aggregateMaps.global.taskCount}
+            </dd>
+          </div>
+          <div className="flex justify-between gap-2">
+            <dt className="text-slate-500">Setores</dt>
+            <dd className="tabular-nums text-slate-100">
+              {aggregateMaps.global.sectorCount}
+            </dd>
+          </div>
+          <div className="flex justify-between gap-2">
+            <dt className="text-slate-500">Atividades</dt>
+            <dd className="tabular-nums text-slate-100">
+              {aggregateMaps.global.activityCount}
+            </dd>
+          </div>
+          <div className="flex justify-between gap-2">
+            <dt className="text-slate-500">Min planejados</dt>
+            <dd className="tabular-nums text-slate-100">
+              {aggregateMaps.global.plannedMinutesSum}
+            </dd>
+          </div>
+          <div className="flex justify-between gap-2">
+            <dt className="text-slate-500">Responsáveis vinc.</dt>
+            <dd className="tabular-nums text-slate-100">
+              {aggregateMaps.global.linkedDistinctResponsibles}
+            </dd>
+          </div>
+        </dl>
+        <div>
+          <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-amber-200/80">
+            Pendências
+          </p>
+          {revisaoLista.length === 0 ? (
+            <p className="mt-1 text-xs text-emerald-200/90">
+              Nenhum alerta adicional antes de gravar alterações estruturais ou de
+              formulário.
+            </p>
+          ) : (
+            <ul className="mt-1 list-inside list-disc space-y-0.5 text-xs text-amber-100/95">
+              {revisaoLista.map((ln) => (
+                <li key={ln}>{ln}</li>
+              ))}
+            </ul>
+          )}
+        </div>
+        <button
+          type="button"
+          className="sgp-cta-primary w-full"
+          disabled={
+            busy || (!matrixEditorHasUnsavedChanges && !matrixStructureDirty)
+          }
+          onClick={() => void handleSave()}
+        >
+          {busy ? 'A gravar…' : 'Salvar alterações'}
+        </button>
+      </div>
+    ) : null
+
+  const alterarTabsBase =
+    'rounded-lg border px-3 py-2 text-xs font-semibold transition'
+  const alterarTabCls = (tab: AlterarMatrizTab) =>
+    activeTab === tab
+      ? `${alterarTabsBase} border-sgp-gold/45 bg-sgp-gold/[0.12] text-sgp-gold-warm ring-1 ring-sgp-gold/20`
+      : `${alterarTabsBase} border-white/[0.08] bg-black/25 text-slate-300 hover:bg-white/[0.06]`
+
   return (
     <PageCanvas>
       {toast && (
@@ -937,163 +1470,172 @@ export function OperationMatrixEditorPage() {
       )}
 
       <div className="space-y-3">
-      {lastDeletedId ? (
-        <div className="flex flex-wrap items-center gap-3 rounded-xl border border-amber-500/25 bg-amber-500/10 px-4 py-3 text-sm text-amber-50/95">
-          <span>Última remoção pode ser desfeita.</span>
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => void handleRestore()}
-            className="rounded-lg border border-amber-400/40 bg-amber-500/20 px-3 py-1.5 text-xs font-semibold text-amber-50 disabled:opacity-50"
+        {lastDeletedId ? (
+          <div className="flex flex-wrap items-center gap-3 rounded-xl border border-amber-500/25 bg-amber-500/10 px-4 py-3 text-sm text-amber-50/95">
+            <span>Última remoção pode ser desfeita.</span>
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => void handleRestore()}
+              className="rounded-lg border border-amber-400/40 bg-amber-500/20 px-3 py-1.5 text-xs font-semibold text-amber-50 disabled:opacity-50"
+            >
+              Restaurar
+            </button>
+          </div>
+        ) : null}
+
+        {loadError ? (
+          <div
+            role="alert"
+            className="rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-100/90"
           >
-            Restaurar
-          </button>
-        </div>
-      ) : null}
+            {loadError}
+          </div>
+        ) : null}
 
-      {loadError ? (
-        <div
-          role="alert"
-          className="rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-100/90"
-        >
-          {loadError}
-        </div>
-      ) : null}
+        {loading && !tree ? (
+          <p className="text-sm text-slate-500">Carregando…</p>
+        ) : null}
 
-      {loading && !tree ? (
-        <p className="text-sm text-slate-500">Carregando…</p>
-      ) : null}
-
-      {tree && !loadError && aggregateMaps ? (
-        <OperationMatrixEditorWorkbench
-          metricsStrip={
-            <OperationMatrixMetricsStrip global={aggregateMaps.global} />
-          }
-          stripEnd={
-            <>
-              <button
-                type="button"
-                disabled={busy}
-                onClick={() => handlePreview()}
-                className="rounded-lg border border-sgp-gold/35 bg-sgp-gold/10 px-3 py-1.5 text-sm font-semibold text-sgp-gold/95 transition hover:border-sgp-gold/50 hover:bg-sgp-gold/15 disabled:opacity-50"
+        {tree && !loadError ? (
+          <div className="mx-auto mt-4 max-w-[1600px] space-y-4 pb-12">
+            <header className="rounded-2xl border border-white/[0.08] bg-gradient-to-r from-sgp-void via-sgp-navy-deep/80 to-sgp-void px-4 py-4 shadow-inner ring-1 ring-white/[0.04] sm:px-5">
+              <p className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-sgp-gold">
+                <span className="h-px w-8 bg-gradient-to-r from-sgp-gold to-transparent" aria-hidden />
+                Gestão
+              </p>
+              <div className="mt-2 flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                <div className="min-w-0">
+                  <h1 className="sgp-page-title">Alterar matriz</h1>
+                  <p className="mt-1 max-w-2xl text-sm text-slate-300">
+                    Revise dados, estrutura e responsáveis antes de salvar as alterações.
+                  </p>
+                </div>
+                <div className="flex shrink-0 flex-wrap items-start justify-end gap-2">
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => handlePreview()}
+                    className="rounded-lg border border-sgp-gold/35 bg-sgp-gold/10 px-3 py-1.5 text-sm font-semibold text-sgp-gold/95 transition hover:border-sgp-gold/50 hover:bg-sgp-gold/15 disabled:opacity-50"
+                  >
+                    Pré-visualizar
+                  </button>
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => requestNavigateWithTransientGuard('/app/matrizes-operacao')}
+                    className="rounded-lg border border-white/12 px-3 py-1.5 text-sm font-medium text-white/80 transition hover:border-white/20 hover:bg-white/[0.05] disabled:opacity-50"
+                  >
+                    Fechar
+                  </button>
+                </div>
+              </div>
+              <nav
+                aria-label="Seções da alteração da matriz"
+                className="mt-4 flex flex-wrap gap-2"
               >
-                Pré-visualizar
-              </button>
-              <Link
-                to="/app/matrizes-operacao"
-                className="rounded-lg border border-white/12 px-3 py-1.5 text-sm font-medium text-white/80 no-underline transition hover:border-white/20 hover:bg-white/[0.05]"
+                <button
+                  type="button"
+                  className={alterarTabCls('dados')}
+                  aria-current={activeTab === 'dados' ? 'step' : undefined}
+                  onClick={() => selectAlterarMatrizTab('dados')}
+                >
+                  Dados Básicos
+                </button>
+                <button
+                  type="button"
+                  className={alterarTabCls('estrutura')}
+                  aria-current={activeTab === 'estrutura' ? 'step' : undefined}
+                  onClick={() => selectAlterarMatrizTab('estrutura')}
+                >
+                  Estrutura
+                </button>
+                <button
+                  type="button"
+                  className={alterarTabCls('revisao')}
+                  aria-current={activeTab === 'revisao' ? 'step' : undefined}
+                  onClick={() => selectAlterarMatrizTab('revisao')}
+                >
+                  Revisão
+                </button>
+              </nav>
+            </header>
+
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={handleStructureDragEnd}
+            >
+              {activeTab === 'dados' && dadosBasicosContextBar ? (
+                <div className="mt-2 rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4">
+                  <h2 className="font-heading text-sm font-semibold text-white">
+                    Dados da oferta (ITEM)
+                  </h2>
+                  <p className="mt-0.5 text-xs text-slate-500">
+                    Nome, código, descrição e situação ativa para o cliente. Na aba
+                    «Estrutura», use «Campos da seleção» para formulários das tarefas,
+                    setores e atividades.
+                  </p>
+                  <div className="mt-4 max-w-2xl">{dadosBasicosContextBar}</div>
+                </div>
+              ) : null}
+
+              {activeTab === 'estrutura' && estruturaWorkbench ? (
+                <div className="mt-2 min-w-0 rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4">
+                  {estruturaWorkbench}
+                </div>
+              ) : null}
+
+              {activeTab === 'revisao' && revisaoPainel ? (
+                <div className="mt-2 max-w-lg">{revisaoPainel}</div>
+              ) : null}
+
+              {activeTab === 'estrutura' &&
+              !estruturaWorkbench &&
+              !loadError ? (
+                <p className="text-sm text-slate-500">Carregando estrutura…</p>
+              ) : null}
+            </DndContext>
+
+            {activeTab === 'estrutura' && estruturaDrawerOpen ? (
+              <div
+                className="fixed inset-0 z-[100] flex justify-end bg-black/45 p-2 sm:p-4"
+                role="presentation"
               >
-                Voltar à lista
-              </Link>
-            </>
-          }
-          searchValue={treeSearch}
-          onSearchChange={setTreeSearch}
-          leftColumn={
-            <MatrixTreeCompact
-              tree={tree}
-              parentMap={parentMap}
-              selectedId={selectedId}
-              selected={selected}
-              onSelectTaskComposition={selectTaskComposition}
-              onSelectTaskEditMeta={selectTaskEditMeta}
-              aggregateMaps={aggregateMaps}
-              searchQuery={debouncedTreeSearch}
-              matchIds={searchMatchIds}
-              busy={busy}
-              onReorder={(dir) => void handleReorder(dir)}
-              onAddServiceOption={(name, description) =>
-                void handleAddServiceOption(name, description)
-              }
-              onRemoveTaskFromCatalog={(id) =>
-                void handleDeleteTaskFromCatalog(id)
-              }
-              onDuplicateTask={(id) => void handleDuplicateTask(id)}
-              serviceOptionAddOpen={serviceOptionAddOpen}
-              setServiceOptionAddOpen={setServiceOptionAddOpen}
-              serviceOptionNewName={serviceOptionNewName}
-              setServiceOptionNewName={setServiceOptionNewName}
-              serviceOptionNewDescription={serviceOptionNewDescription}
-              setServiceOptionNewDescription={setServiceOptionNewDescription}
-              optionCatalogEntries={matrixSuggestionCatalog.options}
-            />
-          }
-          rightColumn={
-            <MatrixSelectionContextBar
-              selected={selected}
-              compositionTask={compositionTask}
-              breadcrumbSegments={breadcrumbSegments}
-              aggregateMaps={aggregateMaps}
-              selectedBranchStats={selectedBranchStats}
-              typeLabel={matrixUxNodeLabel}
-              addChildCta={matrixUxAddChildCta}
-              formName={formName}
-              setFormName={setFormName}
-              formCode={formCode}
-              setFormCode={setFormCode}
-              formDescription={formDescription}
-              setFormDescription={setFormDescription}
-              formActive={formActive}
-              setFormActive={setFormActive}
-              formPlanned={formPlanned}
-              setFormPlanned={setFormPlanned}
-              formResponsible={formResponsible}
-              setFormResponsible={setFormResponsible}
-              formTeamIds={formTeamIds}
-              setFormTeamIds={setFormTeamIds}
-              formRequired={formRequired}
-              setFormRequired={setFormRequired}
-              collaborators={collaborators}
-              teams={teams}
-              collaboratorIdSet={collaboratorIdSet}
-              teamIdSet={teamIdSet}
-              responsibleIsOrphan={responsibleIsOrphan}
-              busy={busy}
-              canAddChild={canAddChild}
-              childType={childType}
-              addOpen={addOpen}
-              setAddOpen={setAddOpen}
-              addName={addName}
-              setAddName={setAddName}
-              onSave={() => handleSave()}
-              onCancel={handleCancel}
-              onDelete={() => void handleDelete()}
-              onAddChild={(e) => void handleAddChild(e)}
-              collaboratorIdToName={collaboratorIdToName}
-              selectedId={selectedId}
-              activePathIds={activePathIds}
-              onSelectNode={selectTaskComposition}
-              searchQuery={debouncedTreeSearch}
-              matchIds={searchMatchIds}
-              taskPanelMode={taskPanelMode}
-              onDuplicateSector={(id) => void handleDuplicateSector(id)}
-              onRemoveSector={(id) => void handleDeleteSector(id)}
-              onAddActivityToSector={(id) =>
-                void handleAddActivityToSector(id)
-              }
-              onReorderActivityInSector={(sectorId, dir) =>
-                void handleReorderActivityInSector(sectorId, dir)
-              }
-              onDuplicateActivity={(id) => void handleDuplicateActivity(id)}
-              onRemoveActivity={(id) => void handleDeleteActivity(id)}
-              activityEditMode={activityEditMode}
-              onEditActivity={(id) => selectActivityForEdit(id)}
-              onCompositionSectorReorder={(dir) => {
-                if (compositionFocusSectorId) {
-                  void handleReorderSector(compositionFocusSectorId, dir)
-                }
-              }}
-              compositionSectorReorderUpDisabled={
-                compositionSectorReorderUpDisabled
-              }
-              compositionSectorReorderDownDisabled={
-                compositionSectorReorderDownDisabled
-              }
-              matrixSuggestionCatalog={matrixSuggestionCatalog}
-            />
-          }
-        />
-      ) : null}
+                <button
+                  type="button"
+                  aria-label="Fechar painel de seleção"
+                  className="absolute inset-0 z-0 cursor-default border-0 bg-transparent p-0"
+                  onClick={() => setEstruturaDrawerOpen(false)}
+                />
+                <aside
+                  className="relative z-[1] mt-auto flex h-[min(92dvh,calc(100dvh-2rem))] w-full max-w-xl flex-col overflow-hidden rounded-2xl border border-white/[0.08] bg-sgp-void shadow-2xl sm:mt-0 sm:h-full sm:max-h-[min(88dvh,calc(100dvh-4rem))] sm:rounded-l-2xl sm:rounded-r-xl"
+                  aria-label="Campos e composição da seleção"
+                >
+                  <div className="flex shrink-0 items-center justify-between gap-2 border-b border-white/[0.06] px-4 py-3">
+                    <h2 className="font-heading text-sm font-semibold text-white">
+                      Campos da seleção
+                    </h2>
+                    <button
+                      type="button"
+                      onClick={() => setEstruturaDrawerOpen(false)}
+                      className="rounded-lg px-2 py-1 text-xs font-medium text-slate-400 hover:bg-white/[0.06] hover:text-white"
+                    >
+                      Fechar
+                    </button>
+                  </div>
+                  <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-3 [scrollbar-width:thin]">
+                    {renderMatrixSelectionContextBar(true) ?? (
+                      <p className="text-xs text-slate-500">
+                        Sem painel contextual para a seleção atual.
+                      </p>
+                    )}
+                  </div>
+                </aside>
+              </div>
+            ) : null}
+          </div>
+        ) : null}
       </div>
     </PageCanvas>
   )

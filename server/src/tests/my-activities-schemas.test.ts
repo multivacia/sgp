@@ -5,10 +5,12 @@ describe('timeEntryCandidatesQuerySchema', () => {
   it('aplica limit por defeito e limita a 50', () => {
     expect(timeEntryCandidatesQuerySchema.parse({})).toEqual({
       limit: 50,
+      includeUnassigned: false,
     })
     expect(timeEntryCandidatesQuerySchema.parse({ limit: '25' })).toEqual({
       limit: 25,
       q: undefined,
+      includeUnassigned: false,
     })
     expect(() => timeEntryCandidatesQuerySchema.parse({ limit: 51 })).toThrow()
   })
@@ -17,6 +19,16 @@ describe('timeEntryCandidatesQuerySchema', () => {
     expect(timeEntryCandidatesQuerySchema.parse({ q: ' OS 123 ' })).toMatchObject({
       q: ' OS 123 ',
       limit: 50,
+      includeUnassigned: false,
+    })
+  })
+
+  it('interpreta includeUnassigned', () => {
+    expect(timeEntryCandidatesQuerySchema.parse({ includeUnassigned: 'true' })).toMatchObject({
+      includeUnassigned: true,
+    })
+    expect(timeEntryCandidatesQuerySchema.parse({ includeUnassigned: true })).toMatchObject({
+      includeUnassigned: true,
     })
   })
 })

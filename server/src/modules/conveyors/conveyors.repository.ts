@@ -240,6 +240,47 @@ export async function listConveyorNodesByConveyorId(
   }))
 }
 
+/** Campos mínimos para linearização OPTION → AREA → STEP (sequência recomendada). */
+export async function listConveyorNodesForSequenceAnalysis(
+  pool: pg.Pool | pg.PoolClient,
+  conveyorId: string,
+): Promise<
+  Array<{
+    id: string
+    parent_id: string | null
+    node_type: 'OPTION' | 'AREA' | 'STEP'
+    order_index: number
+    name: string
+    operational_status: ConveyorNodeStepOperationalStatusDb | null
+    is_active: boolean
+  }>
+> {
+  const r = await pool.query<{
+    id: string
+    parent_id: string | null
+    node_type: 'OPTION' | 'AREA' | 'STEP'
+    order_index: number
+    name: string
+    operational_status: ConveyorNodeStepOperationalStatusDb | null
+    is_active: boolean
+  }>(
+    `
+    SELECT
+      cn.id::text,
+      cn.parent_id::text,
+      cn.node_type,
+      cn.order_index,
+      cn.name,
+      cn.operational_status,
+      cn.is_active
+    FROM conveyor_nodes cn
+    WHERE cn.conveyor_id = $1::uuid AND cn.deleted_at IS NULL
+    `,
+    [conveyorId],
+  )
+  return r.rows
+}
+
 export async function updateConveyorNodeStepOperationalFields(
   pool: pg.Pool | pg.PoolClient,
   conveyorId: string,

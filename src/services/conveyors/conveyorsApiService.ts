@@ -199,6 +199,31 @@ export async function patchConveyorStepCompletion(
   )
 }
 
+/** GET …/sequence-check — esta recomendada vs. pendências anteriores (S3). */
+export type ConveyorStepSequenceCheckResult = {
+  targetFound: boolean
+  isOutOfSequence: boolean
+  requiresJustification: boolean
+  previousOpenCount: number
+  previousOpenActivities: Array<{
+    activityNodeId: string
+    activityTitle: string
+    sectorTitle: string
+    taskTitle: string
+    orderPath: string
+  }>
+}
+
+export async function getConveyorStepSequenceCheck(
+  conveyorId: string,
+  stepNodeId: string,
+): Promise<ConveyorStepSequenceCheckResult> {
+  return requestJson<ConveyorStepSequenceCheckResult>(
+    'GET',
+    `${BASE}/conveyors/${encodeURIComponent(conveyorId)}/steps/${encodeURIComponent(stepNodeId)}/sequence-check`,
+  )
+}
+
 export type { ConveyorStepCompletionAction } from '../../domain/conveyors/conveyor.types'
 
 /**

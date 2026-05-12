@@ -258,7 +258,7 @@ function MatrixTasksUnderMatrix({
   if (tasks.length === 0) {
     return (
       <p className="mt-2 text-xs text-amber-200/80">
-        Nenhuma tarefa com etapas nesta matriz.
+        Nenhuma tarefa com atividades nesta matriz.
       </p>
     )
   }

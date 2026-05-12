@@ -32,7 +32,7 @@ function emptyArea(): ManualAreaDraft {
 export function createInitialManualOption(order: number): ManualOptionDraft {
   return {
     key: newKey(),
-    titulo: order === 1 ? 'Opção 1' : `Opção ${order}`,
+    titulo: order === 1 ? 'Tarefa 1' : `Tarefa ${order}`,
     areas: [emptyArea()],
   }
 }
@@ -67,7 +67,7 @@ export function NovaEsteiraComposicaoManual({
 }: Props) {
   const totem = variant === 'totem'
   const rascunho = variant === 'rascunho' || totem
-  const areaLabel = rascunho ? 'Setor' : 'Área'
+  const areaLabel = 'Setor'
   const reorderBtnClass =
     'rounded border border-white/10 px-1.5 py-0.5 text-[10px] text-slate-400 hover:border-white/20 disabled:pointer-events-none disabled:opacity-35'
   const [openAreasByOption, setOpenAreasByOption] = useState<Record<string, string[]>>({})
@@ -367,7 +367,7 @@ export function NovaEsteiraComposicaoManual({
       {!rascunho ? (
         <div className="rounded-2xl border border-amber-500/25 bg-amber-500/[0.06] px-4 py-3 text-sm text-amber-100/95">
           <span className="font-semibold">Composição manual.</span> Tudo o que
-          você definir aqui será enviado como etapas de origem manual (sem vínculo
+          você definir aqui será enviado como atividades de origem manual (sem vínculo
           com matriz).
         </div>
       ) : null}
@@ -397,7 +397,7 @@ export function NovaEsteiraComposicaoManual({
           ) : (
             <>
               <p className="text-sm text-slate-400">
-                Comece adicionando a primeira opção da esteira (pedido / linha de
+                Comece adicionando a primeira tarefa da esteira (pedido / linha de
                 serviço).
               </p>
               <button
@@ -405,7 +405,7 @@ export function NovaEsteiraComposicaoManual({
                 onClick={() => onChangeRoots([createInitialManualOption(1)])}
                 className="sgp-cta-primary mt-4"
               >
-                Adicionar primeira opção
+                Adicionar primeira tarefa
               </button>
             </>
           )}
@@ -417,7 +417,7 @@ export function NovaEsteiraComposicaoManual({
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <label className="block min-w-[200px] flex-1 text-sm">
                   <span className="text-slate-500">
-                    {rascunho ? 'Tarefa' : 'Opção'} {oi + 1}{' '}
+                    Tarefa {oi + 1}{' '}
                     <span className="rounded bg-white/[0.06] px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-slate-500">
                       {rascunho ? 'rascunho' : 'manual'}
                     </span>
@@ -458,7 +458,7 @@ export function NovaEsteiraComposicaoManual({
                       className="text-xs font-semibold text-rose-300/90"
                       onClick={() => removeOption(op.key)}
                     >
-                      {totem ? 'Remover da esteira' : rascunho ? 'Remover tarefa' : 'Remover opção'}
+                      {totem ? 'Remover da esteira' : 'Remover tarefa'}
                     </button>
                   )}
                 </div>
@@ -517,9 +517,13 @@ export function NovaEsteiraComposicaoManual({
                           <button
                             type="button"
                             className="text-[11px] font-semibold text-sgp-gold/90"
+                            aria-expanded={areaOpen}
+                            aria-label={
+                              areaOpen ? 'Recolher setor' : 'Expandir setor'
+                            }
                             onClick={() => toggleAreaOpen(op.key, ar.key, ai)}
                           >
-                            {areaOpen ? 'Recolher setor' : 'Expandir setor'}
+                            {areaOpen ? 'Recolher' : 'Expandir'}
                           </button>
                         ) : null}
                         {op.areas.length > 1 && (
@@ -550,7 +554,7 @@ export function NovaEsteiraComposicaoManual({
                             className="pt-6 text-xs text-rose-300/90 sm:pt-1"
                             onClick={() => removeArea(op.key, ar.key)}
                           >
-                            Remover {rascunho ? 'setor' : 'área'}
+                            Remover setor
                           </button>
                         )}
                       </div>
@@ -558,7 +562,7 @@ export function NovaEsteiraComposicaoManual({
 
                     {totem ? (
                       <p className="mt-2 text-[11px] tabular-nums text-slate-500">
-                        {ar.steps.length} etapa(s) · {areaMinutes} min · {participantCount} participante(s)
+                        {ar.steps.length} atividade(s) · {areaMinutes} min · {participantCount} participante(s)
                       </p>
                     ) : null}
 
@@ -574,7 +578,7 @@ export function NovaEsteiraComposicaoManual({
                             <div className="flex flex-wrap items-end gap-3">
                               <label className="block min-w-[160px] flex-1 text-sm">
                                 <span className="text-slate-500">
-                                  Etapa {si + 1}
+                                  Atividade {si + 1}
                                 </span>
                                 <input
                                   className="mt-1 w-full rounded border border-white/10 bg-black/40 px-2 py-1.5 text-slate-100"
@@ -584,7 +588,7 @@ export function NovaEsteiraComposicaoManual({
                                       titulo: ev.target.value,
                                     })
                                   }
-                                  placeholder="Nome da etapa"
+                                  placeholder="Nome da atividade"
                                 />
                               </label>
                               <label className="block w-28 text-sm">
@@ -635,7 +639,7 @@ export function NovaEsteiraComposicaoManual({
                                     removeStep(op.key, ar.key, st.key)
                                   }
                                 >
-                                  Remover etapa
+                                  Remover atividade
                                 </button>
                               )}
                             </div>
@@ -869,7 +873,7 @@ export function NovaEsteiraComposicaoManual({
                       onClick={() => addStep(op.key, ar.key)}
                       className="mt-3 text-xs font-bold text-sgp-gold"
                     >
-                      + Etapa neste {rascunho ? 'setor' : 'área'}
+                      + Atividade neste setor
                     </button>
                     ) : null}
                   </li>
@@ -881,7 +885,7 @@ export function NovaEsteiraComposicaoManual({
                 onClick={() => addArea(op.key)}
                 className="mt-4 text-xs font-bold text-sgp-gold"
               >
-                + {rascunho ? 'Setor nesta tarefa' : 'Área nesta opção'}
+                + Setor nesta tarefa
               </button>
               </>
             )
@@ -924,7 +928,7 @@ export function NovaEsteiraComposicaoManual({
                             </span>
                           </div>
                           <p className="mt-1 text-[11px] tabular-nums text-slate-500">
-                            {nSec} setor(es) · {nSteps} etapa(s) · {mins} min
+                            {nSec} setor(es) · {nSteps} atividade(s) · {mins} min
                           </p>
                         </div>
                         <div className="flex flex-wrap items-center gap-2">
@@ -1087,7 +1091,7 @@ export function NovaEsteiraComposicaoManual({
 
       {roots.length > 0 && !totem ? (
         <button type="button" onClick={addOption} className="text-sm font-bold text-sgp-gold">
-          {rascunho ? '+ Tarefa em branco' : '+ Outra opção'}
+          {rascunho ? '+ Tarefa em branco' : '+ Outra tarefa'}
         </button>
       ) : null}
     </div>

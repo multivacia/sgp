@@ -3,6 +3,8 @@ export const conveyorOperationalEventTypeValues = [
   'CONVEYOR_LEFT_DELAY',
   'CONVEYOR_STEP_COMPLETED',
   'CONVEYOR_STEP_REOPENED',
+  /** Apontamento de tempo registado fora da sequência recomendada (R1-05 S3). */
+  'CONVEYOR_STEP_OUT_OF_SEQUENCE_TIME_ENTRY',
   'MANUAL_NOTE',
 ] as const
 

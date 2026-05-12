@@ -1,0 +1,182 @@
+import type pg from 'pg'
+import { findCollaboratorIdByAppUserId } from '../auth/auth.repository.js'
+import { analyzeConveyorActivitySequence } from '../conveyors/conveyorActivitySequence.logic.js'
+import type { SequenceAnalysisNode } from '../conveyors/conveyorActivitySequence.logic.js'
+import { listConveyorNodesForSequenceAnalysis } from '../conveyors/conveyors.repository.js'
+import { serviceResolveCollaboratorDailyCapacity } from '../operational-settings/operational-settings.service.js'
+import { mondayOfWeekContaining } from '../operational-planning/operational-planning.week.js'
+import type { MyWorkQueueItemApi, MyWorkQueueResponseApi } from './my-work-queue.dto.js'
+import {
+  findPublishedWorkPlanForWeek,
+  listMyWorkQueueRows,
+  type MyWorkQueueRawRow,
+} from './my-work-queue.repository.js'
+
+function todayIsoLocal(): string {
+  const t = new Date()
+  return [
+    t.getFullYear(),
+    String(t.getMonth() + 1).padStart(2, '0'),
+    String(t.getDate()).padStart(2, '0'),
+  ].join('-')
+}
+
+function emptyResponse(date: string): MyWorkQueueResponseApi {
+  return {
+    date,
+    planStatus: null,
+    summary: {
+      plannedItemsToday: 0,
+      plannedMinutesToday: 0,
+      overdueItems: 0,
+      completedItemsToday: 0,
+      outOfSequenceItems: 0,
+      unassignedExceptionItems: 0,
+      capacityMinutesToday: 0,
+      overload: false,
+    },
+    items: [],
+  }
+}
+
+function mapNodesForSequence(
+  nodes: Awaited<ReturnType<typeof listConveyorNodesForSequenceAnalysis>>,
+): SequenceAnalysisNode[] {
+  return nodes.map((n) => ({
+    id: n.id,
+    parent_id: n.parent_id,
+    node_type: n.node_type,
+    order_index: n.order_index,
+    name: n.name,
+    operational_status: n.operational_status,
+    is_active: n.is_active,
+  }))
+}
+
+export function groupWorkQueueItem(
+  row: Pick<MyWorkQueueRawRow, 'planned_date' | 'activity_operational_status'>,
+  date: string,
+): MyWorkQueueItemApi['group'] {
+  if (row.planned_date < date) return 'overdue'
+  if (row.activity_operational_status === 'COMPLETED') return 'completed'
+  return 'today'
+}
+
+export async function serviceGetMyWorkQueue(
+  pool: pg.Pool,
+  input: {
+    userId: string
+    date?: string | null
+    includePastDue?: boolean
+  },
+): Promise<{
+  data: MyWorkQueueResponseApi
+  meta: { collaboratorId: string | null; unavailableReason: string | null }
+}> {
+  const date = input.date?.trim() || todayIsoLocal()
+  const includePastDue = input.includePastDue ?? true
+  const collaboratorId = await findCollaboratorIdByAppUserId(pool, input.userId)
+  if (!collaboratorId) {
+    return {
+      data: emptyResponse(date),
+      meta: {
+        collaboratorId: null,
+        unavailableReason:
+          'Operação indisponível: o seu utilizador não tem colaborador operacional vinculado (app_users.collaborator_id). Peça ao administrador de governança para associar o seu acesso a um colaborador.',
+      },
+    }
+  }
+
+  const weekStartDate = mondayOfWeekContaining(date)
+  const plan = await findPublishedWorkPlanForWeek(pool, weekStartDate)
+  if (!plan) {
+    return {
+      data: emptyResponse(date),
+      meta: { collaboratorId, unavailableReason: null },
+    }
+  }
+
+  const raw = await listMyWorkQueueRows(pool, {
+    workPlanId: plan.id,
+    collaboratorId,
+    date,
+    includePastDue,
+  })
+
+  const capacity = await serviceResolveCollaboratorDailyCapacity(pool, collaboratorId, date)
+  const plannedMinutesToday = raw
+    .filter((row) => row.planned_date === date)
+    .reduce((sum, row) => sum + Math.max(0, Number(row.planned_minutes ?? 0) || 0), 0)
+  const plannedVsCapacity = {
+    plannedMinutesForDay: plannedMinutesToday,
+    capacityMinutesForDay: capacity.resolvedDailyMinutes,
+    overload: plannedMinutesToday > capacity.resolvedDailyMinutes,
+  }
+
+  const conveyorIds = [...new Set(raw.map((row) => row.conveyor_id))]
+  const nodesByConveyor = new Map<string, SequenceAnalysisNode[]>()
+  await Promise.all(
+    conveyorIds.map(async (conveyorId) => {
+      const nodes = await listConveyorNodesForSequenceAnalysis(pool, conveyorId)
+      nodesByConveyor.set(conveyorId, mapNodesForSequence(nodes))
+    }),
+  )
+
+  const items = raw.map((row): MyWorkQueueItemApi => {
+    const isActivityCompleted = row.activity_operational_status === 'COMPLETED'
+    const seq = analyzeConveyorActivitySequence(
+      nodesByConveyor.get(row.conveyor_id) ?? [],
+      row.activity_node_id,
+    )
+    const isOutOfSequence = !isActivityCompleted && seq.isOutOfSequence
+    return {
+      workPlanId: row.work_plan_id,
+      workPlanItemId: row.work_plan_item_id,
+      plannedDate: row.planned_date,
+      plannedOrder: row.planned_order,
+      plannedMinutes: row.planned_minutes,
+      status: row.status,
+      group: groupWorkQueueItem(row, date),
+      conveyorId: row.conveyor_id,
+      conveyorTitle: row.conveyor_title,
+      clientName: row.client_name,
+      vehicleDescription: row.vehicle_description,
+      licensePlate: row.license_plate,
+      taskTitle: row.task_title,
+      sectorTitle: row.sector_title,
+      activityNodeId: row.activity_node_id,
+      activityTitle: row.activity_title,
+      activityOperationalStatus: row.activity_operational_status,
+      isActivityCompleted,
+      isOverdue: row.planned_date < date,
+      isOutOfSequence,
+      requiresOutOfSequenceJustification: isOutOfSequence,
+      previousOpenCount: isOutOfSequence ? seq.previousOpenCount : 0,
+      previousOpenActivities: isOutOfSequence ? seq.previousOpenActivities.slice(0, 3) : [],
+      isAssignedToMe: row.is_assigned_to_me,
+      requiresUnassignedJustification: !row.is_assigned_to_me,
+      plannedVsCapacity,
+    }
+  })
+
+  const summary = {
+    plannedItemsToday: raw.filter((row) => row.planned_date === date).length,
+    plannedMinutesToday,
+    overdueItems: items.filter((item) => item.group === 'overdue').length,
+    completedItemsToday: items.filter((item) => item.group === 'completed').length,
+    outOfSequenceItems: items.filter((item) => item.isOutOfSequence).length,
+    unassignedExceptionItems: items.filter((item) => item.requiresUnassignedJustification).length,
+    capacityMinutesToday: capacity.resolvedDailyMinutes,
+    overload: plannedVsCapacity.overload,
+  }
+
+  return {
+    data: {
+      date,
+      planStatus: 'PUBLISHED',
+      summary,
+      items,
+    },
+    meta: { collaboratorId, unavailableReason: null },
+  }
+}

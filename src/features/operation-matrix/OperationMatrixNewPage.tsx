@@ -1,3 +1,4 @@
+import type { DragEndEvent } from '@dnd-kit/core'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useMatrixSuggestionCatalog } from '../../catalog/matrixSuggestion/matrixSuggestionCatalogCache'
 import { useLocation, useNavigate } from 'react-router-dom'
@@ -40,6 +41,16 @@ import {
   type MatrixCatalogTaskEntry,
 } from './criar-matriz/extractMatrixTasksForCatalog'
 import type { NovaMatrizAddCatalogResult } from './criar-matriz/novaMatrizEstruturaDnD'
+import { clampInsertIndex } from './criar-matriz/novaMatrizCatalogDropInsert'
+import {
+  buildSyntheticItemTreeFromDrafts,
+  orderedTaskRootsFromSyntheticItem,
+  reorderDraftInstancesAfterTaskReorder,
+} from './criar-matriz/novaMatrizDraftSyntheticTree'
+import {
+  findNodeById,
+  reorderSiblingsRelativeToOver,
+} from './matrixStructureReorder'
 
 type ToastState = { message: string; variant: SgpToastVariant } | null
 
@@ -83,6 +94,38 @@ export function OperationMatrixNewPage() {
 
   const [saving, setSaving] = useState(false)
   const [toast, setToast] = useState<ToastState>(null)
+
+  const handleNovaMatrizStructureDragEnd = useCallback(
+    (event: DragEndEvent) => {
+      const { active, over } = event
+      if (!over || active.id === over.id) return
+      const aid = String(active.id)
+      const oid = String(over.id)
+
+      setCatalogOpcoesDraft((prev) => {
+        const taskRootIds = new Set(prev.map((d) => d.draftRoot.id))
+        if (taskRootIds.has(aid) && taskRootIds.has(oid)) {
+          const synth = buildSyntheticItemTreeFromDrafts(prev)
+          const nextItem = reorderSiblingsRelativeToOver(synth, aid, oid)
+          if (!nextItem) return prev
+          const orderedTasks = orderedTaskRootsFromSyntheticItem(nextItem)
+          return reorderDraftInstancesAfterTaskReorder(prev, orderedTasks)
+        }
+
+        for (const inst of prev) {
+          if (!findNodeById(inst.draftRoot, aid)) continue
+          const nextRoot = reorderSiblingsRelativeToOver(inst.draftRoot, aid, oid)
+          if (nextRoot) {
+            return prev.map((x) =>
+              x.instanceId === inst.instanceId ? { ...x, draftRoot: nextRoot } : x,
+            )
+          }
+        }
+        return prev
+      })
+    },
+    [],
+  )
 
   const isDirty = useMemo(() => {
     return (
@@ -208,7 +251,10 @@ export function OperationMatrixNewPage() {
     [collaborators],
   )
 
-  function handleAddCatalogTask(taskId: string): NovaMatrizAddCatalogResult {
+  function handleAddCatalogTask(
+    taskId: string,
+    insertIndex?: number,
+  ): NovaMatrizAddCatalogResult {
     const entry = catalogByTaskId.get(taskId)
     if (!entry) return { outcome: 'noop' }
     let newInstanceId: string | null = null
@@ -218,17 +264,23 @@ export function OperationMatrixNewPage() {
       }
       newInstanceId = globalThis.crypto.randomUUID()
       const draftRoot = cloneTaskSubtreeWithNewIds(entry.taskSubtree)
-      return [
-        ...prev,
-        {
-          instanceId: newInstanceId!,
-          sourceTaskId: entry.taskId,
-          sourceMatrixItemId: entry.matrixItemId,
-          sourceMatrixItemName: entry.matrixItemName,
-          sourceTaskName: entry.taskName,
-          draftRoot,
-        },
-      ]
+      const at = clampInsertIndex(
+        insertIndex === undefined ? prev.length : insertIndex,
+        prev.length,
+      )
+      const added: CatalogOpcaoDraftInstance = {
+        instanceId: newInstanceId!,
+        sourceTaskId: entry.taskId,
+        sourceMatrixItemId: entry.matrixItemId,
+        sourceMatrixItemName: entry.matrixItemName,
+        sourceTaskName: entry.taskName,
+        draftRoot,
+      }
+      const next = [...prev.slice(0, at), added, ...prev.slice(at)]
+      return next.map((inst, i) => ({
+        ...inst,
+        draftRoot: { ...inst.draftRoot, order_index: i },
+      }))
     })
     if (!newInstanceId) return { outcome: 'duplicate' }
     return { outcome: 'added', instanceId: newInstanceId }
@@ -237,10 +289,13 @@ export function OperationMatrixNewPage() {
   function handleAddBlankCatalogOpcao(name: string, description?: string) {
     const n = name.trim()
     if (!n) return
-    setCatalogOpcoesDraft((prev) => [
-      ...prev,
-      buildBlankCatalogOpcaoDraftInstance(n, description),
-    ])
+    setCatalogOpcoesDraft((prev) => {
+      const next = [...prev, buildBlankCatalogOpcaoDraftInstance(n, description)]
+      return next.map((inst, i) => ({
+        ...inst,
+        draftRoot: { ...inst.draftRoot, order_index: i },
+      }))
+    })
   }
 
   function handleRemoveCatalogInstance(instanceId: string) {
@@ -270,7 +325,10 @@ export function OperationMatrixNewPage() {
       if (j < 0 || j >= prev.length) return prev
       const next = [...prev]
       ;[next[idx], next[j]] = [next[j]!, next[idx]!]
-      return next
+      return next.map((inst, i) => ({
+        ...inst,
+        draftRoot: { ...inst.draftRoot, order_index: i },
+      }))
     })
   }
 
@@ -279,7 +337,7 @@ export function OperationMatrixNewPage() {
       const src = prev.find((x) => x.instanceId === instanceId)
       if (!src) return prev
       const draftRoot = cloneTaskSubtreeWithNewIds(src.draftRoot)
-      return [
+      const next = [
         ...prev,
         {
           instanceId: globalThis.crypto.randomUUID(),
@@ -290,6 +348,10 @@ export function OperationMatrixNewPage() {
           draftRoot,
         },
       ]
+      return next.map((inst, i) => ({
+        ...inst,
+        draftRoot: { ...inst.draftRoot, order_index: i },
+      }))
     })
   }
 
@@ -376,6 +438,7 @@ export function OperationMatrixNewPage() {
       )}
 
       <NovaMatrizCreateTotemShell
+        novaMatrizStructureDragEnd={handleNovaMatrizStructureDragEnd}
         name={name}
         setName={setName}
         code={code}

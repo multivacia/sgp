@@ -12,9 +12,16 @@ export type NovaMatrizDraftDragPayload = {
   instanceId: string
 }
 
+/** Tarefa TASK já persistida na matriz — arrastar ao catálogo remove do ITEM (Alterar Matriz). */
+export type NovaMatrizPersistedMatrixDragPayload = {
+  kind: 'persisted-matrix-task'
+  taskId: string
+}
+
 export type NovaMatrizEstruturaDragPayload =
   | NovaMatrizCatalogDragPayload
   | NovaMatrizDraftDragPayload
+  | NovaMatrizPersistedMatrixDragPayload
 
 export function stringifyNovaMatrizEstruturaDrag(
   payload: NovaMatrizEstruturaDragPayload,
@@ -34,6 +41,9 @@ export function parseNovaMatrizEstruturaDrag(
     }
     if (o.kind === 'draft-task' && typeof o.instanceId === 'string') {
       return { kind: 'draft-task', instanceId: o.instanceId }
+    }
+    if (o.kind === 'persisted-matrix-task' && typeof o.taskId === 'string') {
+      return { kind: 'persisted-matrix-task', taskId: o.taskId }
     }
     return null
   } catch {

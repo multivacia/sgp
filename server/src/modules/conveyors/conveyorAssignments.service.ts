@@ -34,6 +34,8 @@ import {
   type InsertConveyorTimeEntryRow,
 } from './conveyorAssignments.repository.js'
 import { findTeamById } from '../teams/teams.repository.js'
+import { serviceAnalyzeConveyorActivitySequence } from './conveyorActivitySequence.service.js'
+import { serviceCreateConveyorOperationalEvent } from './operational-events/conveyor-operational-events.service.js'
 
 function isPgUniqueViolation(err: unknown): boolean {
   return err instanceof DatabaseError && err.code === '23505'
@@ -231,6 +233,13 @@ export type CreateTimeEntryInput = {
   notes?: string | null
   entryMode?: 'manual' | 'guided' | 'imported'
   metadataJson?: unknown | null
+  entryOrigin?: 'ASSIGNED' | 'UNASSIGNED_EXCEPTION'
+  exceptionJustification?: string | null
+  /** Derivado da análise de sequência; quando true, `outOfSequenceJustification` é obrigatória. */
+  isOutOfSequence?: boolean
+  outOfSequenceJustification?: string | null
+  /** Para evento operacional opcional após insert. */
+  actorAppUserId?: string | null
 }
 
 export type CreateTimeEntryForAppUserInput = {
@@ -239,6 +248,8 @@ export type CreateTimeEntryForAppUserInput = {
   conveyorNodeId: string
   minutes: number
   notes?: string | null
+  exceptionJustification?: string
+  outOfSequenceJustification?: string
   entryAt?: Date
   entryMode?: 'manual' | 'guided' | 'imported'
 }
@@ -252,13 +263,16 @@ export type CreateTimeEntryOnBehalfInput = {
   minutes: number
   notes?: string | null
   reason: string
+  outOfSequenceJustification?: string
 }
 
 const DELEGATION_REASON_MAX = 4000
 
 /**
  * Apontamento pelo colaborador autenticado (`app_users.collaborator_id`).
- * Exige alocação ativa no STEP; ignora qualquer collaboratorId no cliente.
+ * Com alocação no STEP: apontamento normal. Sem alocação: exige `exceptionJustification`
+ * (apontamento por exceção — não cria alocação).
+ * Fora da sequência recomendada: exige `outOfSequenceJustification`.
  */
 export async function serviceCreateConveyorTimeEntryForAppUser(
   pool: pg.Pool,
@@ -270,6 +284,32 @@ export async function serviceCreateConveyorTimeEntryForAppUser(
     input.conveyorNodeId,
   )
 
+  const seq = await serviceAnalyzeConveyorActivitySequence(
+    pool,
+    input.conveyorId,
+    input.conveyorNodeId,
+  )
+  if (!seq.targetFound) {
+    throw new AppError(
+      'Esta atividade não está incluída na sequência operacional recomendada.',
+      422,
+      ErrorCodes.VALIDATION_ERROR,
+    )
+  }
+
+  let outSeqJust: string | null = null
+  if (seq.isOutOfSequence) {
+    const j = (input.outOfSequenceJustification ?? '').trim()
+    if (!j.length) {
+      throw new AppError(
+        'Informe uma justificativa para executar esta atividade fora da sequência recomendada.',
+        422,
+        ErrorCodes.TIME_ENTRY_OUT_OF_SEQUENCE_REQUIRES_JUSTIFICATION,
+      )
+    }
+    outSeqJust = j
+  }
+
   const collaboratorId = await findCollaboratorIdByAppUserId(pool, input.appUserId)
   if (!collaboratorId) {
     throw new AppError(
@@ -279,17 +319,40 @@ export async function serviceCreateConveyorTimeEntryForAppUser(
     )
   }
 
+  const commonSeq = {
+    isOutOfSequence: seq.isOutOfSequence,
+    outOfSequenceJustification: outSeqJust,
+    actorAppUserId: input.appUserId,
+  }
+
   const assigneeId = await findAssigneeIdForStepAndCollaborator(
     pool,
     input.conveyorId,
     input.conveyorNodeId,
     collaboratorId,
   )
-  if (!assigneeId) {
+  if (assigneeId) {
+    return serviceCreateConveyorTimeEntry(pool, {
+      conveyorId: input.conveyorId,
+      conveyorNodeId: input.conveyorNodeId,
+      collaboratorId,
+      conveyorNodeAssigneeId: assigneeId,
+      entryAt: input.entryAt,
+      minutes: input.minutes,
+      notes: input.notes ?? null,
+      entryMode: input.entryMode,
+      entryOrigin: 'ASSIGNED',
+      exceptionJustification: null,
+      ...commonSeq,
+    })
+  }
+
+  const justification = (input.exceptionJustification ?? '').trim()
+  if (!justification.length) {
     throw new AppError(
-      'Não está alocado nesta atividade. Não é possível apontar.',
-      403,
-      ErrorCodes.FORBIDDEN,
+      'Para apontar horas em uma atividade onde você não está alocado, informe uma justificativa.',
+      422,
+      ErrorCodes.TIME_ENTRY_UNASSIGNED_REQUIRES_JUSTIFICATION,
     )
   }
 
@@ -297,11 +360,14 @@ export async function serviceCreateConveyorTimeEntryForAppUser(
     conveyorId: input.conveyorId,
     conveyorNodeId: input.conveyorNodeId,
     collaboratorId,
-    conveyorNodeAssigneeId: assigneeId,
+    conveyorNodeAssigneeId: null,
     entryAt: input.entryAt,
     minutes: input.minutes,
     notes: input.notes ?? null,
     entryMode: input.entryMode,
+    entryOrigin: 'UNASSIGNED_EXCEPTION',
+    exceptionJustification: justification,
+    ...commonSeq,
   })
 }
 
@@ -342,6 +408,41 @@ export async function serviceCreateConveyorTimeEntry(
     )
   }
 
+  const entryOrigin = input.entryOrigin ?? 'ASSIGNED'
+  let exceptionJustification: string | null = null
+  if (entryOrigin === 'UNASSIGNED_EXCEPTION') {
+    const j = input.exceptionJustification?.trim() ?? ''
+    if (!j.length) {
+      throw new AppError(
+        'Para apontar horas em uma atividade onde você não está alocado, informe uma justificativa.',
+        422,
+        ErrorCodes.TIME_ENTRY_UNASSIGNED_REQUIRES_JUSTIFICATION,
+      )
+    }
+    exceptionJustification = j
+    if (input.conveyorNodeAssigneeId != null) {
+      throw new AppError(
+        'Apontamento por exceção não pode referenciar alocação.',
+        422,
+        ErrorCodes.VALIDATION_ERROR,
+      )
+    }
+  }
+
+  const isOos = Boolean(input.isOutOfSequence)
+  let oosJustDb: string | null = null
+  if (isOos) {
+    const t = input.outOfSequenceJustification?.trim() ?? ''
+    if (!t.length) {
+      throw new AppError(
+        'Informe uma justificativa para executar esta atividade fora da sequência recomendada.',
+        422,
+        ErrorCodes.TIME_ENTRY_OUT_OF_SEQUENCE_REQUIRES_JUSTIFICATION,
+      )
+    }
+    oosJustDb = t
+  }
+
   const row: InsertConveyorTimeEntryRow = {
     id: newAssignmentId(),
     conveyor_id: input.conveyorId,
@@ -353,6 +454,10 @@ export async function serviceCreateConveyorTimeEntry(
     notes: input.notes ?? null,
     entry_mode: input.entryMode ?? 'manual',
     metadata_json: input.metadataJson ?? null,
+    entry_origin: entryOrigin,
+    exception_justification: exceptionJustification,
+    is_out_of_sequence: isOos,
+    out_of_sequence_justification: isOos ? oosJustDb : null,
   }
 
   try {
@@ -366,6 +471,27 @@ export async function serviceCreateConveyorTimeEntry(
       )
     }
     throw err
+  }
+
+  if (isOos && input.actorAppUserId) {
+    await serviceCreateConveyorOperationalEvent(pool, {
+      conveyorId: input.conveyorId,
+      nodeId: input.conveyorNodeId,
+      eventType: 'CONVEYOR_STEP_OUT_OF_SEQUENCE_TIME_ENTRY',
+      previousValue: null,
+      newValue: 'OUT_OF_SEQUENCE_TIME_ENTRY',
+      reason: 'TIME_ENTRY_OUT_OF_SEQUENCE',
+      source: 'USER_ACTION',
+      occurredAt: new Date().toISOString(),
+      createdBy: input.actorAppUserId,
+      metadataJson: {
+        activityNodeId: input.conveyorNodeId,
+        timeEntryId: row.id,
+        justification: oosJustDb,
+        trigger: 'TIME_ENTRY',
+      },
+      idempotencyKey: `oos_te:${row.id}`,
+    })
   }
 
   const created = await findConveyorTimeEntryById(pool, row.id)
@@ -424,6 +550,32 @@ export async function serviceCreateConveyorTimeEntryOnBehalf(
     input.conveyorNodeId,
   )
 
+  const seq = await serviceAnalyzeConveyorActivitySequence(
+    pool,
+    input.conveyorId,
+    input.conveyorNodeId,
+  )
+  if (!seq.targetFound) {
+    throw new AppError(
+      'Esta atividade não está incluída na sequência operacional recomendada.',
+      422,
+      ErrorCodes.VALIDATION_ERROR,
+    )
+  }
+
+  let outSeqJust: string | null = null
+  if (seq.isOutOfSequence) {
+    const j = (input.outOfSequenceJustification ?? '').trim()
+    if (!j.length) {
+      throw new AppError(
+        'Informe uma justificativa para executar esta atividade fora da sequência recomendada.',
+        422,
+        ErrorCodes.TIME_ENTRY_OUT_OF_SEQUENCE_REQUIRES_JUSTIFICATION,
+      )
+    }
+    outSeqJust = j
+  }
+
   const assigneeId = await findAssigneeIdForStepAndCollaborator(
     pool,
     input.conveyorId,
@@ -455,6 +607,10 @@ export async function serviceCreateConveyorTimeEntryOnBehalf(
     notes: input.notes ?? null,
     entry_mode: 'manual',
     metadata_json: metadataJson,
+    entry_origin: 'ASSIGNED',
+    exception_justification: null,
+    is_out_of_sequence: seq.isOutOfSequence,
+    out_of_sequence_justification: seq.isOutOfSequence ? outSeqJust : null,
   }
 
   const client = await pool.connect()
@@ -462,6 +618,26 @@ export async function serviceCreateConveyorTimeEntryOnBehalf(
     await client.query('BEGIN')
     try {
       await insertConveyorTimeEntry(client, row)
+      if (seq.isOutOfSequence) {
+        await serviceCreateConveyorOperationalEvent(client, {
+          conveyorId: input.conveyorId,
+          nodeId: input.conveyorNodeId,
+          eventType: 'CONVEYOR_STEP_OUT_OF_SEQUENCE_TIME_ENTRY',
+          previousValue: null,
+          newValue: 'OUT_OF_SEQUENCE_TIME_ENTRY',
+          reason: 'TIME_ENTRY_OUT_OF_SEQUENCE',
+          source: 'USER_ACTION',
+          occurredAt: new Date().toISOString(),
+          createdBy: input.actorAppUserId,
+          metadataJson: {
+            activityNodeId: input.conveyorNodeId,
+            timeEntryId: row.id,
+            justification: outSeqJust,
+            trigger: 'TIME_ENTRY_ON_BEHALF',
+          },
+          idempotencyKey: `oos_te_ob:${row.id}`,
+        })
+      }
     } catch (err) {
       if (isPgCheckOrRaise(err)) {
         throw new AppError(

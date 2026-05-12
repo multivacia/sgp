@@ -10,6 +10,10 @@ export type OperationalJourneyTimeEntryApi = {
   minutes: number
   entryAt: string
   notes: string | null
+  entryOrigin: 'ASSIGNED' | 'UNASSIGNED_EXCEPTION'
+  exceptionJustification: string | null
+  isOutOfSequence: boolean
+  outOfSequenceJustification: string | null
 }
 
 export type PendenciaTempoItemApi = {

@@ -79,18 +79,34 @@ export const postTimeEntryBodySchema = z
     /** Alias opcional de `notes` (compatível com clientes que enviam `description`). */
     description: z.union([z.string(), z.null()]).optional(),
     entryMode: z.enum(['manual', 'guided', 'imported']).optional(),
+    /** Obrigatória quando o colaborador não está alocado na atividade (origem derivada no servidor). */
+    exceptionJustification: z.union([z.string().max(4000), z.null()]).optional(),
+    /** Obrigatória quando existem atividades anteriores ainda não concluídas nesta esteira. */
+    outOfSequenceJustification: z.union([z.string().max(4000), z.null()]).optional(),
   })
-  .transform((b) => ({
-    minutes: b.minutes,
-    entryAt: b.entryAt,
-    notes:
-      b.notes !== undefined && b.notes !== null
-        ? b.notes
-        : b.description !== undefined
-          ? b.description
-          : undefined,
-    entryMode: b.entryMode,
-  }))
+  .transform((b) => {
+    const ejRaw =
+      b.exceptionJustification === null || b.exceptionJustification === undefined
+        ? undefined
+        : b.exceptionJustification.trim()
+    const oosRaw =
+      b.outOfSequenceJustification === null || b.outOfSequenceJustification === undefined
+        ? undefined
+        : b.outOfSequenceJustification.trim()
+    return {
+      minutes: b.minutes,
+      entryAt: b.entryAt,
+      notes:
+        b.notes !== undefined && b.notes !== null
+          ? b.notes
+          : b.description !== undefined
+            ? b.description
+            : undefined,
+      entryMode: b.entryMode,
+      exceptionJustification: ejRaw && ejRaw.length > 0 ? ejRaw : undefined,
+      outOfSequenceJustification: oosRaw && oosRaw.length > 0 ? oosRaw : undefined,
+    }
+  })
 
 export type PostTimeEntryBody = z.infer<typeof postTimeEntryBodySchema>
 
@@ -103,6 +119,7 @@ export const postTimeEntryOnBehalfBodySchema = z.object({
     .string()
     .min(1, 'Indique o motivo.')
     .max(4000),
+  outOfSequenceJustification: z.union([z.string().max(4000), z.null()]).optional(),
 })
 
 export type PostTimeEntryOnBehalfBody = z.infer<typeof postTimeEntryOnBehalfBodySchema>
@@ -116,6 +133,7 @@ export type DeleteTimeEntryBody = z.infer<typeof deleteTimeEntryBodySchema>
 export const patchConveyorStepCompletionBodySchema = z.object({
   action: z.enum(['COMPLETE', 'REOPEN']),
   note: z.string().max(2000).optional(),
+  outOfSequenceJustification: z.union([z.string().max(4000), z.null()]).optional(),
 })
 
 export type PatchConveyorStepCompletionBody = z.infer<

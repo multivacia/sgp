@@ -614,7 +614,33 @@ export function JornadaColaboradorGestorPage() {
                 {journey.recentTimeEntries.map((e) => (
                   <li key={e.id} className="flex flex-col gap-1 px-4 py-3 text-sm md:flex-row md:items-center md:justify-between">
                     <div>
-                      <p className="font-medium text-slate-200">{e.conveyorName}</p>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="font-medium text-slate-200">{e.conveyorName}</p>
+                        {e.entryOrigin === 'UNASSIGNED_EXCEPTION' ? (
+                          <span
+                            className="shrink-0 rounded border border-amber-500/35 bg-amber-500/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-amber-100/95"
+                            title={
+                              e.exceptionJustification?.trim()
+                                ? e.exceptionJustification.trim()
+                                : 'Exceção — sem alocação nesta atividade'
+                            }
+                          >
+                            Exceção
+                          </span>
+                        ) : null}
+                        {e.isOutOfSequence ? (
+                          <span
+                            className="shrink-0 rounded border border-sky-500/35 bg-sky-500/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-sky-100/95"
+                            title={
+                              e.outOfSequenceJustification?.trim()
+                                ? e.outOfSequenceJustification.trim()
+                                : 'Fora da sequência recomendada'
+                            }
+                          >
+                            Fora de sequência
+                          </span>
+                        ) : null}
+                      </div>
                       <p className="text-xs text-slate-500">
                         {e.stepName} · {formatHumanMinutes(e.minutes)}
                       </p>

@@ -76,4 +76,36 @@ describe('buildStepAnaliticoDetalheFromApi', () => {
     expect(d.apontamentos.totalMinutosApontados).toBe(0)
     expect(d.apontamentos.statusLeitura).toBe('no_prazo')
   })
+
+  it('propaga fora da sequência a partir da API', () => {
+    const d = buildStepAnaliticoDetalheFromApi({
+      conveyorId: 'c1',
+      stepNodeId: 's1',
+      planejadoMin: 60,
+      assignees: [],
+      timeEntries: [
+        {
+          id: 't1',
+          collaboratorId: 'col-a',
+          collaboratorName: 'Ana',
+          conveyorNodeAssigneeId: null,
+          minutes: 30,
+          notes: null,
+          entryMode: 'manual',
+          entryOrigin: 'ASSIGNED',
+          entryAt: '2026-01-02T12:00:00.000Z',
+          createdAt: '2026-01-02T12:00:00.000Z',
+          updatedAt: '2026-01-02T12:00:00.000Z',
+          isDelegated: false,
+          recordedByAppUserId: null,
+          recordedByUserEmail: null,
+          delegationReason: null,
+          isOutOfSequence: true,
+          outOfSequenceJustification: 'Material antecipado.',
+        },
+      ],
+    })
+    expect(d.historicoPreview[0]?.foraDaSequencia).toBe(true)
+    expect(d.historicoPreview[0]?.justificativaForaSequencia).toBe('Material antecipado.')
+  })
 })

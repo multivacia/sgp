@@ -26,6 +26,12 @@ export type MyActivityItem = {
   realizedMinutes: number | null
 }
 
+export type TimeEntryCandidatePreviousOpen = {
+  taskTitle: string
+  sectorTitle: string
+  activityTitle: string
+}
+
 /** GET /api/v1/me/time-entry-candidates — item alinhado ao backend. */
 export type TimeEntryCandidateItem = {
   conveyorId: string
@@ -36,10 +42,20 @@ export type TimeEntryCandidateItem = {
   plate: string | null
   stepNodeId: string
   stepName: string
+  activityTitle: string
+  /** Tarefa (nó OPTION) — alinhado ao backend `taskTitle`. */
+  taskTitle?: string
   areaName: string
+  sectorTitle: string
   roleInStep: MyActivityRoleInStep
   assignmentType: 'COLLABORATOR' | 'TEAM'
   plannedMinutes: number | null
   realizedMinutes: number
   pendingMinutes: number
+  isAssignedToMe: boolean
+  requiresJustification: boolean
+  isOutOfSequence: boolean
+  requiresOutOfSequenceJustification: boolean
+  previousOpenCount: number
+  previousOpenActivities: TimeEntryCandidatePreviousOpen[]
 }

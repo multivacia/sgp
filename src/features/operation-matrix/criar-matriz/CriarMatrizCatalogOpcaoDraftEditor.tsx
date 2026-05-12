@@ -1,7 +1,15 @@
+/* eslint-disable react-hooks/refs -- @dnd-kit useSortable */
+import { CSS } from '@dnd-kit/utilities'
+import {
+  SortableContext,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable'
 import type { MatrixSuggestionCatalogData } from '../../../catalog/matrixSuggestion/types'
 import type { Collaborator } from '../../../domain/collaborators/collaborator.types'
 import type { Team } from '../../../domain/teams/team.types'
 import type { MatrixNodeTreeApi } from '../../../domain/operation-matrix/operation-matrix.types'
+import type { ReactNode } from 'react'
 import { LabelSuggestField } from '../components/LabelSuggestField'
 import { sortMatrixChildNodes } from './cloneCatalogTaskSubtreeForDraft'
 import {
@@ -114,7 +122,7 @@ function blankSectorNode(
     root_id: rootTaskId,
     node_type: 'SECTOR',
     code: null,
-    name: 'Nova área',
+    name: 'Novo setor',
     description: null,
     order_index: orderIndex,
     level_depth: levelDepth,
@@ -146,7 +154,7 @@ function blankActivityNode(
     root_id: rootTaskId,
     node_type: 'ACTIVITY',
     code: null,
-    name: 'Nova etapa',
+    name: 'Nova atividade',
     description: null,
     order_index: orderIndex,
     level_depth: levelDepth,
@@ -181,6 +189,40 @@ const BTN_GHOST =
   'shrink-0 rounded-lg border border-white/12 bg-white/[0.04] px-2.5 py-1 text-[11px] font-medium text-white/90 disabled:opacity-40'
 const BTN_GOLD =
   'shrink-0 rounded-lg border border-sgp-gold/35 bg-sgp-gold/10 px-2.5 py-1 text-[11px] font-semibold text-sgp-gold-warm disabled:opacity-50'
+
+function SortableMatrixDraftLi({
+  id,
+  className,
+  children,
+}: {
+  id: string
+  className?: string
+  children: (drag: {
+    attributes: ReturnType<typeof useSortable>['attributes']
+    listeners: ReturnType<typeof useSortable>['listeners']
+  }) => ReactNode
+}) {
+  const sortable = useSortable({ id })
+  const style = {
+    transform: CSS.Transform.toString(sortable.transform),
+    transition: sortable.transition,
+  }
+  return (
+    <li
+      ref={sortable.setNodeRef}
+      style={style}
+      className={
+        [className ?? '', sortable.isDragging ? 'opacity-70' : ''].filter(Boolean).join(' ') ||
+        undefined
+      }
+    >
+      {children({
+        attributes: sortable.attributes,
+        listeners: sortable.listeners,
+      })}
+    </li>
+  )
+}
 
 export function CriarMatrizCatalogOpcaoDraftEditor({
   variant = 'default',
@@ -248,7 +290,11 @@ export function CriarMatrizCatalogOpcaoDraftEditor({
   }
 
   const sectorsList = (
-    <ul className={rail ? 'space-y-3' : 'space-y-6'}>
+    <SortableContext
+      items={sectors.map((s) => s.id)}
+      strategy={verticalListSortingStrategy}
+    >
+      <ul className={rail ? 'space-y-3' : 'space-y-6'}>
       {sectors.map((sector, si) => {
         const activities = sortMatrixChildNodes(sector).filter(
           (c) => c.node_type === 'ACTIVITY',
@@ -275,14 +321,35 @@ export function CriarMatrizCatalogOpcaoDraftEditor({
           )
         }
 
-        const activityItems = activities.map((act, ai) => {
+        const activityItems = (
+          <SortableContext
+            items={activities.map((a) => a.id)}
+            strategy={verticalListSortingStrategy}
+          >
+            {activities.map((act, ai) => {
           const etRec = activityToEtapa(act)
           const ids = etRec.collaboratorIds
           const canAddCollab = collaborators.some((c) => !ids.includes(c.id))
 
           return (
-            <li key={act.id} className={activityShell}>
+            <SortableMatrixDraftLi key={act.id} id={act.id} className={activityShell}>
+              {({ attributes: actAttrs, listeners: actListeners }) => (
+              <>
               <div className="flex flex-wrap items-start gap-2">
+                <div className="flex shrink-0 flex-col items-center gap-0.5 border-r border-white/[0.08] pr-2 pt-0.5">
+                  <span className="font-mono text-[9px] font-semibold tabular-nums text-slate-500">
+                    {ai + 1}
+                  </span>
+                  <button
+                    type="button"
+                    {...actAttrs}
+                    {...actListeners}
+                    aria-label="Arrastar para reordenar atividade"
+                    className="cursor-grab touch-none rounded-md border border-transparent px-1 py-1 text-[10px] leading-none text-slate-500 active:cursor-grabbing hover:border-white/12 hover:bg-white/[0.05]"
+                  >
+                    <span aria-hidden>⋮⋮</span>
+                  </button>
+                </div>
                 <div className="flex min-w-0 flex-1 flex-wrap gap-2">
                   <label
                     className={
@@ -293,10 +360,10 @@ export function CriarMatrizCatalogOpcaoDraftEditor({
                   >
                     {rail ? (
                       <span className="text-[8px] font-bold uppercase tracking-[0.12em] text-slate-500">
-                        Etapa
+                        Atividade
                       </span>
                     ) : (
-                      <span className="text-slate-500">Etapa {ai + 1}</span>
+                      <span className="text-slate-500">Atividade {ai + 1}</span>
                     )}
                     <div className="mt-1">
                       <LabelSuggestField
@@ -310,7 +377,7 @@ export function CriarMatrizCatalogOpcaoDraftEditor({
                           )
                         }
                         catalogEntries={matrixSuggestionCatalog.activities}
-                        placeholder="Nome da etapa"
+                        placeholder="Nome da atividade"
                         inputClassName={
                           rail
                             ? 'mt-0 w-full rounded-lg border border-white/10 bg-sgp-void/80 px-2 py-1.5 text-sm text-slate-200'
@@ -424,7 +491,7 @@ export function CriarMatrizCatalogOpcaoDraftEditor({
                         )
                       }
                     >
-                      Remover etapa
+                      Remover atividade
                     </button>
                   )}
                 </div>
@@ -636,12 +703,18 @@ export function CriarMatrizCatalogOpcaoDraftEditor({
                   </p>
                 )}
               </div>
-            </li>
+              </>
+              )}
+            </SortableMatrixDraftLi>
           )
-        })
+        })}
+          </SortableContext>
+        )
 
         return (
-          <li key={sector.id} className={sectorShell}>
+          <SortableMatrixDraftLi key={sector.id} id={sector.id} className={sectorShell}>
+            {({ attributes: secAttrs, listeners: secListeners }) => (
+            <>
             <div
               className={
                 rail
@@ -649,6 +722,22 @@ export function CriarMatrizCatalogOpcaoDraftEditor({
                   : 'flex flex-wrap items-start justify-between gap-2'
               }
             >
+              <div className="flex shrink-0 flex-col items-center gap-0.5 border-r border-white/[0.08] pr-2 pt-0.5">
+                <span className="font-mono text-[10px] font-semibold tabular-nums text-slate-500">
+                  {si + 1}
+                </span>
+                <button
+                  type="button"
+                  {...secAttrs}
+                  {...secListeners}
+                  aria-label="Arrastar para reordenar setor"
+                  className="cursor-grab touch-none rounded-md border border-transparent px-1 py-1.5 text-sm leading-none text-slate-500 active:cursor-grabbing hover:border-white/12 hover:bg-white/[0.06]"
+                >
+                  <span aria-hidden className="font-mono text-[10px] tracking-tighter">
+                    ⋮⋮
+                  </span>
+                </button>
+              </div>
               <label
                 className={
                   rail
@@ -658,10 +747,10 @@ export function CriarMatrizCatalogOpcaoDraftEditor({
               >
                 {rail ? (
                   <span className="text-[8px] font-bold uppercase tracking-[0.12em] text-slate-500">
-                    Área
+                    Setor
                   </span>
                 ) : (
-                  <span className="text-slate-500">Área {si + 1}</span>
+                  <span className="text-slate-500">Setor {si + 1}</span>
                 )}
                 <div className={rail ? 'mt-0.5' : 'mt-1'}>
                   <LabelSuggestField
@@ -745,7 +834,7 @@ export function CriarMatrizCatalogOpcaoDraftEditor({
                     })
                   }
                 >
-                  Remover área
+                  Remover setor
                 </button>
               </div>
             </div>
@@ -755,19 +844,19 @@ export function CriarMatrizCatalogOpcaoDraftEditor({
                 <div className="border-b border-white/[0.06] bg-black/[0.08] px-2 py-2">
                   <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
                     <h3 className="shrink-0 px-0.5 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">
-                      Etapas
+                      Atividades
                     </h3>
                     <div
                       className="flex min-w-0 flex-nowrap items-center justify-end gap-1.5 overflow-x-auto [scrollbar-width:thin]"
                       role="toolbar"
-                      aria-label="Ações das etapas desta área"
+                      aria-label="Ações das atividades deste setor"
                     >
                       <button
                         type="button"
                         className={BTN_GOLD}
                         onClick={addEtapaToSector}
                       >
-                        + Adicionar etapa
+                        + Adicionar atividade
                       </button>
                     </div>
                   </div>
@@ -782,19 +871,22 @@ export function CriarMatrizCatalogOpcaoDraftEditor({
                   onClick={addEtapaToSector}
                   className={`mt-3 ${BTN_GOLD}`}
                 >
-                  + Etapa nesta área
+                  + Atividade neste setor
                 </button>
               </>
             )}
-          </li>
+            </>
+            )}
+          </SortableMatrixDraftLi>
         )
       })}
     </ul>
+    </SortableContext>
   )
 
   const addAreaBtn = (
     <button type="button" onClick={addArea} className={BTN_GOLD}>
-      + Área nesta opção
+      + Setor nesta tarefa
     </button>
   )
 
@@ -804,7 +896,7 @@ export function CriarMatrizCatalogOpcaoDraftEditor({
         <div className="border-b border-white/[0.06] pb-2.5">
           <div className="flex min-w-0 flex-wrap items-center gap-1.5 text-[11px] leading-tight">
             <span className="shrink-0 rounded border border-white/[0.1] bg-white/[0.05] px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-slate-300">
-              Opção
+              Tarefa
             </span>
             <span className="shrink-0 text-slate-600" aria-hidden>
               ·
@@ -831,18 +923,18 @@ export function CriarMatrizCatalogOpcaoDraftEditor({
 
       {!rail ? (
         <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
-          Composição desta opção (rascunho local)
+          Composição desta tarefa (rascunho local)
         </p>
       ) : null}
 
       <label className={labelCls}>
-        <span className="text-slate-500">Nome da opção</span>
+        <span className="text-slate-500">Nome da tarefa</span>
         <div className="mt-1">
           <LabelSuggestField
             value={task.name}
             onChange={(next) => patchTask({ ...task, name: next })}
             catalogEntries={matrixSuggestionCatalog.options}
-            placeholder="Nome da opção"
+            placeholder="Nome da tarefa"
             inputClassName={suggestCls}
           />
         </div>

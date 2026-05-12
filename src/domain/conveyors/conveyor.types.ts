@@ -246,6 +246,8 @@ export type ConveyorStepCompletionAction = 'COMPLETE' | 'REOPEN'
 export type PatchConveyorStepCompletionBody = {
   action: ConveyorStepCompletionAction
   note?: string
+  /** Obrigatório quando a conclusão está fora da sequência recomendada (S3). */
+  outOfSequenceJustification?: string
 }
 
 /** Item do GET /api/v1/conveyors */

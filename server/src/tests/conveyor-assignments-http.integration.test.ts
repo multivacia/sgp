@@ -447,7 +447,7 @@ describe.skipIf(!hasDb)('conveyor assignees + time entries HTTP (integração)',
     expect(res.status).toBe(422)
   })
 
-  it('time entry: colaborador não alocado no STEP → 403', async () => {
+  it('time entry: colaborador não alocado sem justificativa → 422', async () => {
     const created = await serviceCreateConveyor(
       pool,
       minimalConveyorBody(`HTTP na ${randomUUID().slice(0, 8)}`),
@@ -460,8 +460,38 @@ describe.skipIf(!hasDb)('conveyor assignees + time entries HTTP (integração)',
         await sessionCookieForUser(pool, MARIA_APP_USER_ID, MARIA_EMAIL),
       )
       .send({ minutes: 3 })
-    expect(res.status).toBe(403)
-    expect(res.body.error.code).toBe('FORBIDDEN')
+    expect(res.status).toBe(422)
+    expect(res.body.error.code).toBe('TIME_ENTRY_UNASSIGNED_REQUIRES_JUSTIFICATION')
+  })
+
+  it('time entry: colaborador não alocado com justificativa → 201 exceção', async () => {
+    const created = await serviceCreateConveyor(
+      pool,
+      minimalConveyorBody(`HTTP ex ${randomUUID().slice(0, 8)}`),
+    )
+    const stepId = await firstNodeId(created.id, 'STEP')
+    const res = await request(app)
+      .post(timeEntriesPath(created.id, stepId))
+      .set(
+        'Cookie',
+        await sessionCookieForUser(pool, MARIA_APP_USER_ID, MARIA_EMAIL),
+      )
+      .send({
+        minutes: 12,
+        description: 'apoio',
+        exceptionJustification: 'Apoio operacional sem alocação prévia.',
+      })
+    expect(res.status).toBe(201)
+    expect(res.body.data.entryOrigin).toBe('UNASSIGNED_EXCEPTION')
+    expect(res.body.data.exceptionJustification).toContain('Apoio operacional')
+    expect(res.body.data.conveyorNodeAssigneeId).toBeNull()
+
+    const rows = await pool.query<{ c: string }>(
+      `SELECT COUNT(*)::text AS c FROM conveyor_node_assignees
+       WHERE conveyor_node_id = $1::uuid AND deleted_at IS NULL`,
+      [stepId],
+    )
+    expect(rows.rows[0]?.c).toBe('0')
   })
 
   it('time entry: step inexistente → 404', async () => {

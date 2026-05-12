@@ -35,6 +35,7 @@ import {
   getConveyorById,
   getConveyorOperationalEvents,
   getConveyorNodeWorkload,
+  getConveyorStepSequenceCheck,
   patchConveyorStatus,
   patchConveyorStepCompletion,
   reopenConveyorStep,
@@ -268,18 +269,46 @@ function EsteiraDetalheBasicoReal({ id }: { id: string | undefined }) {
     stepName: string
   } | null>(null)
   const [reopenNote, setReopenNote] = useState('')
+  const [completeOosDialog, setCompleteOosDialog] = useState<{
+    stepId: string
+    stepName: string
+    previousOpenCount: number
+    samples: { taskTitle: string; sectorTitle: string; activityTitle: string }[]
+  } | null>(null)
+  const [completeOosJustification, setCompleteOosJustification] = useState('')
 
   const handleLoadMoreOperationalEvents = useCallback(() => {
     setOperationalEventsLimit((n) => Math.min(200, n + 25))
   }, [])
 
-  const handleCompleteStep = useCallback(
-    async (stepId: string) => {
+  const resolveStepName = useCallback(
+    (stepId: string) => {
+      if (!detail?.structure?.options) return 'Atividade'
+      for (const opt of detail.structure.options) {
+        for (const area of opt.areas ?? []) {
+          for (const step of area.steps ?? []) {
+            if (step.id === stepId) return step.name
+          }
+        }
+      }
+      return 'Atividade'
+    },
+    [detail],
+  )
+
+  const executeCompleteStep = useCallback(
+    async (stepId: string, outOfSequenceJustification?: string) => {
       if (!detail?.id) return
-      if (!window.confirm('Confirmar conclusão desta etapa?')) return
       setStepCompletingId(stepId)
       try {
-        await patchConveyorStepCompletion(detail.id, stepId, { action: 'COMPLETE' })
+        await patchConveyorStepCompletion(detail.id, stepId, {
+          action: 'COMPLETE',
+          ...(outOfSequenceJustification?.trim()
+            ? { outOfSequenceJustification: outOfSequenceJustification.trim() }
+            : {}),
+        })
+        setCompleteOosDialog(null)
+        setCompleteOosJustification('')
         const [dNext, evNext, wNext] = await Promise.all([
           getConveyorById(detail.id),
           getConveyorOperationalEvents(detail.id, { limit: operationalEventsLimit }),
@@ -295,6 +324,16 @@ function EsteiraDetalheBasicoReal({ id }: { id: string | undefined }) {
           route: location.pathname,
           entityId: detail.id,
         })
+        if (n.code === 'STEP_COMPLETION_OUT_OF_SEQUENCE_REQUIRES_JUSTIFICATION') {
+          setCompleteOosJustification('')
+          setCompleteOosDialog({
+            stepId,
+            stepName: resolveStepName(stepId),
+            previousOpenCount: 0,
+            samples: [],
+          })
+          return
+        }
         if (isBlockingSeverity(n.severity)) {
           presentBlocking(n)
         } else {
@@ -304,7 +343,49 @@ function EsteiraDetalheBasicoReal({ id }: { id: string | undefined }) {
         setStepCompletingId(null)
       }
     },
-    [detail, location.pathname, presentBlocking, operationalEventsLimit],
+    [
+      detail,
+      location.pathname,
+      presentBlocking,
+      operationalEventsLimit,
+      resolveStepName,
+    ],
+  )
+
+  const handleCompleteStepClick = useCallback(
+    async (stepId: string) => {
+      if (!detail?.id) return
+      let prefetch: Awaited<ReturnType<typeof getConveyorStepSequenceCheck>> | null =
+        null
+      try {
+        prefetch = await getConveyorStepSequenceCheck(detail.id, stepId)
+      } catch {
+        prefetch = null
+      }
+      if (prefetch && !prefetch.targetFound) {
+        setLoadError(
+          'Esta atividade não foi encontrada na estrutura actual desta esteira.',
+        )
+        return
+      }
+      if (prefetch?.isOutOfSequence) {
+        setCompleteOosJustification('')
+        setCompleteOosDialog({
+          stepId,
+          stepName: resolveStepName(stepId),
+          previousOpenCount: prefetch.previousOpenCount,
+          samples: prefetch.previousOpenActivities.slice(0, 3).map((x) => ({
+            taskTitle: x.taskTitle,
+            sectorTitle: x.sectorTitle,
+            activityTitle: x.activityTitle,
+          })),
+        })
+        return
+      }
+      if (!window.confirm('Confirmar conclusão desta atividade?')) return
+      await executeCompleteStep(stepId)
+    },
+    [detail, executeCompleteStep, resolveStepName],
   )
 
   const handleConfirmReopenStep = useCallback(async () => {
@@ -324,7 +405,7 @@ function EsteiraDetalheBasicoReal({ id }: { id: string | undefined }) {
       if (wNext) setNodeWorkload(wNext)
       setReopenDialog(null)
       setReopenNote('')
-      setRouteToast('Etapa reaberta.')
+      setRouteToast('Atividade reaberta.')
     } catch (e) {
       const n = reportClientError(e, {
         module: 'esteiras',
@@ -335,7 +416,7 @@ function EsteiraDetalheBasicoReal({ id }: { id: string | undefined }) {
       if (isBlockingSeverity(n.severity)) {
         presentBlocking(n)
       } else {
-        setLoadError(n.userMessage || 'Não foi possível reabrir a etapa.')
+        setLoadError(n.userMessage || 'Não foi possível reabrir a atividade.')
       }
     } finally {
       setStepReopeningId(null)
@@ -537,7 +618,7 @@ function EsteiraDetalheBasicoReal({ id }: { id: string | undefined }) {
       const errKey = `${detail.id}|${stepParam}|invalid`
       if (stepErrorMarkRef.current !== errKey) {
         stepErrorMarkRef.current = errKey
-        setStepNotice('Identificador de etapa inválido.')
+        setStepNotice('Identificador de atividade inválido.')
       }
       return
     }
@@ -546,7 +627,7 @@ function EsteiraDetalheBasicoReal({ id }: { id: string | undefined }) {
       const errKey = `${detail.id}|${stepParam}|missing`
       if (stepErrorMarkRef.current !== errKey) {
         stepErrorMarkRef.current = errKey
-        setStepNotice('Etapa não encontrada nesta estrutura.')
+        setStepNotice('Atividade não encontrada nesta estrutura.')
       }
       return
     }
@@ -700,10 +781,10 @@ function EsteiraDetalheBasicoReal({ id }: { id: string | undefined }) {
               id="reopen-step-title"
               className="font-heading text-lg font-bold tracking-tight text-slate-50"
             >
-              Reabrir etapa?
+              Reabrir atividade?
             </h2>
             <p className="mt-3 text-sm leading-relaxed text-slate-400">
-              A etapa voltará a ter pendência calculada normalmente. Os apontamentos e o histórico de
+              A atividade voltará a ter pendência calculada normalmente. Os apontamentos e o histórico de
               conclusão serão mantidos.
             </p>
             <label className="mt-4 block text-xs font-semibold uppercase tracking-wide text-slate-500">
@@ -737,7 +818,111 @@ function EsteiraDetalheBasicoReal({ id }: { id: string | undefined }) {
                 onClick={() => void handleConfirmReopenStep()}
                 className="rounded-xl border border-sgp-gold/35 bg-sgp-gold/10 px-4 py-2.5 text-sm font-bold text-sgp-gold-warm shadow-inner transition hover:border-sgp-gold/50 hover:bg-sgp-gold/[0.14] disabled:opacity-50"
               >
-                {stepReopeningId ? 'Reabrindo etapa…' : 'Reabrir etapa'}
+                {stepReopeningId ? 'Reabrindo atividade…' : 'Reabrir atividade'}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+      {completeOosDialog ? (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/55 p-4 backdrop-blur-[2px]"
+          role="dialog"
+          aria-modal
+          aria-labelledby="complete-oos-title"
+          onClick={() => {
+            if (stepCompletingId) return
+            setCompleteOosDialog(null)
+            setCompleteOosJustification('')
+          }}
+        >
+          <div
+            className="w-full max-w-md rounded-2xl border border-white/[0.1] bg-gradient-to-b from-sgp-app-panel/95 to-sgp-app-panel-deep/98 p-6 shadow-[0_24px_80px_-24px_rgba(0,0,0,0.85)] ring-1 ring-white/[0.05]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2
+              id="complete-oos-title"
+              className="font-heading text-lg font-bold tracking-tight text-slate-50"
+            >
+              Concluir atividade
+            </h2>
+            <div className="mt-3 rounded-xl border border-sky-500/25 bg-sky-500/[0.07] px-3 py-2.5 text-sm text-sky-50/95">
+              <p className="font-semibold text-sky-100">
+                Esta atividade está fora da sequência recomendada.
+              </p>
+              <p className="mt-2 text-xs leading-relaxed text-sky-100/90">
+                {completeOosDialog.previousOpenCount > 0 ? (
+                  <>
+                    Existem atividades anteriores ainda pendentes nesta esteira — antes dela ainda existem{' '}
+                    <span className="font-semibold">{completeOosDialog.previousOpenCount}</span>{' '}
+                    {completeOosDialog.previousOpenCount === 1
+                      ? 'atividade pendente'
+                      : 'atividades pendentes'}
+                    .
+                  </>
+                ) : (
+                  <>
+                    Informe uma justificativa para executar esta atividade fora da sequência recomendada.
+                  </>
+                )}
+              </p>
+              {completeOosDialog.samples.length > 0 ? (
+                <ul className="mt-2 list-inside list-disc text-[11px] text-sky-100/85">
+                  {completeOosDialog.samples.map((p, i) => (
+                    <li key={`${p.activityTitle}-${i}`}>
+                      <span className="font-semibold">{p.taskTitle}</span>
+                      {' › '}
+                      <span className="font-semibold">{p.sectorTitle}</span>
+                      {' › '}
+                      {p.activityTitle}
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+            </div>
+            <p className="mt-3 text-xs text-slate-500">
+              Atividade: <span className="text-slate-300">{completeOosDialog.stepName}</span>
+            </p>
+            <label className="mt-4 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+              Justificativa para executar fora da sequência
+              <textarea
+                value={completeOosJustification}
+                onChange={(e) => setCompleteOosJustification(e.target.value)}
+                maxLength={4000}
+                rows={4}
+                disabled={Boolean(stepCompletingId)}
+                className="mt-2 w-full resize-y rounded-xl border border-white/12 bg-white/[0.04] px-3 py-2 text-sm text-slate-100 placeholder:text-slate-600 focus:border-sgp-gold/35 focus:outline-none focus:ring-1 focus:ring-sgp-gold/25 disabled:opacity-50"
+                placeholder="Explique o motivo operacional…"
+              />
+            </label>
+            <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end sm:gap-3">
+              <button
+                type="button"
+                disabled={Boolean(stepCompletingId)}
+                onClick={() => {
+                  setCompleteOosDialog(null)
+                  setCompleteOosJustification('')
+                }}
+                className="rounded-xl border border-white/12 bg-white/[0.04] px-4 py-2.5 text-sm font-semibold text-slate-200 transition hover:border-sgp-gold/30 hover:bg-white/[0.07] disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                disabled={
+                  Boolean(stepCompletingId) || completeOosJustification.trim().length === 0
+                }
+                onClick={() =>
+                  void executeCompleteStep(
+                    completeOosDialog.stepId,
+                    completeOosJustification,
+                  )
+                }
+                className="rounded-xl border border-sgp-gold/35 bg-sgp-gold/10 px-4 py-2.5 text-sm font-bold text-sgp-gold-warm shadow-inner transition hover:border-sgp-gold/50 hover:bg-sgp-gold/[0.14] disabled:opacity-50"
+              >
+                {stepCompletingId === completeOosDialog.stepId
+                  ? 'A concluir…'
+                  : 'Confirmar conclusão'}
               </button>
             </div>
           </div>
@@ -856,7 +1041,7 @@ function EsteiraDetalheBasicoReal({ id }: { id: string | undefined }) {
         <dl className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <div>
             <dt className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
-              Opções
+              Tarefas
             </dt>
             <dd className="mt-1 font-heading text-2xl tabular-nums text-slate-100">
               {detail.totalOptions}
@@ -864,7 +1049,7 @@ function EsteiraDetalheBasicoReal({ id }: { id: string | undefined }) {
           </div>
           <div>
             <dt className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
-              Áreas
+              Setores
             </dt>
             <dd className="mt-1 font-heading text-2xl tabular-nums text-slate-100">
               {detail.totalAreas}
@@ -872,7 +1057,7 @@ function EsteiraDetalheBasicoReal({ id }: { id: string | undefined }) {
           </div>
           <div>
             <dt className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
-              Etapas
+              Atividades
             </dt>
             <dd className="mt-1 font-heading text-2xl tabular-nums text-slate-100">
               {detail.totalSteps}
@@ -948,7 +1133,7 @@ function EsteiraDetalheBasicoReal({ id }: { id: string | undefined }) {
           </div>
           <div>
             <dt className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
-              Etapas (total)
+              Atividades (total)
             </dt>
             <dd className="mt-1 text-sm tabular-nums text-slate-200">
               {detail.totalSteps}
@@ -1014,7 +1199,7 @@ function EsteiraDetalheBasicoReal({ id }: { id: string | undefined }) {
           Estrutura operacional
         </p>
         <p className="mt-2 text-sm text-slate-500">
-          Opções, áreas e etapas persistidas na base (ordenadas como na criação).
+          Tarefas, setores e atividades persistidas na base (ordenadas como na criação).
         </p>
         <div className="mt-6 space-y-6">
           {detail.structure.options.length === 0 ? (
@@ -1026,7 +1211,7 @@ function EsteiraDetalheBasicoReal({ id }: { id: string | undefined }) {
                 className="rounded-xl border border-white/[0.08] bg-sgp-app-panel-deep/40 p-4"
               >
                 <p className="text-[10px] font-bold uppercase tracking-wider text-sgp-gold">
-                  Opção {opt.orderIndex}
+                  Tarefa {opt.orderIndex}
                 </p>
                 <h3 className="mt-1 font-heading text-lg font-semibold text-slate-100">
                   {opt.name}
@@ -1035,7 +1220,7 @@ function EsteiraDetalheBasicoReal({ id }: { id: string | undefined }) {
                   {opt.areas.map((area) => (
                     <div key={area.id}>
                       <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
-                        Área {area.orderIndex}
+                        Setor {area.orderIndex}
                       </p>
                       <p className="font-medium text-slate-200">{area.name}</p>
                       <ul className="mt-2 space-y-2">
@@ -1062,7 +1247,7 @@ function EsteiraDetalheBasicoReal({ id }: { id: string | undefined }) {
                               <span className="flex flex-wrap items-center gap-2">
                                 {isStepOperationallyCompleted(st) ? (
                                   <span className="rounded-md border border-emerald-400/35 bg-emerald-500/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-100">
-                                    Concluída
+                                    Atividade concluída
                                   </span>
                                 ) : null}
                                 <span className="text-xs tabular-nums text-slate-400">
@@ -1086,7 +1271,7 @@ function EsteiraDetalheBasicoReal({ id }: { id: string | undefined }) {
                                       setReopenDialog({ stepId: st.id, stepName: st.name })
                                     }}
                                   >
-                                    Reabrir etapa
+                                    Reabrir atividade
                                   </button>
                                 ) : null}
                                 {canCompleteStep(st, canAlterConveyor) ? (
@@ -1096,9 +1281,9 @@ function EsteiraDetalheBasicoReal({ id }: { id: string | undefined }) {
                                       stepCompletingId === st.id || stepReopeningId === st.id
                                     }
                                     className="rounded-lg border border-white/15 bg-white/[0.06] px-3 py-1.5 text-xs font-semibold text-slate-100 hover:bg-white/[0.09] disabled:opacity-50"
-                                    onClick={() => void handleCompleteStep(st.id)}
+                                    onClick={() => void handleCompleteStepClick(st.id)}
                                   >
-                                    {stepCompletingId === st.id ? 'A concluir…' : 'Concluir etapa'}
+                                    {stepCompletingId === st.id ? 'A concluir…' : 'Concluir atividade'}
                                   </button>
                                 ) : null}
                               </div>
@@ -1408,6 +1593,8 @@ export function EsteiraDetalheMockPage({ id }: { id: string | undefined }) {
                 <button
                   type="button"
                   onClick={() => toggle(b.id)}
+                  aria-expanded={expanded}
+                  aria-label={expanded ? 'Recolher tarefa' : 'Expandir tarefa'}
                   className="flex w-full items-start gap-3 px-4 py-4 text-left transition hover:bg-white/[0.02] md:px-5 md:py-4"
                 >
                   <span
@@ -1433,12 +1620,12 @@ export function EsteiraDetalheMockPage({ id }: { id: string | undefined }) {
                     {b.opcaoNome && b.areaNome && (
                       <p className="mt-2 text-[11px] leading-snug text-slate-500">
                         <span className="font-semibold text-slate-400">
-                          Opção (matriz)
+                          Tarefa (matriz)
                         </span>{' '}
                         · {b.opcaoNome}
                         <span className="mx-1.5 text-slate-600">|</span>
                         <span className="font-semibold text-slate-400">
-                          Área
+                          Setor
                         </span>{' '}
                         · {b.areaNome}
                       </p>

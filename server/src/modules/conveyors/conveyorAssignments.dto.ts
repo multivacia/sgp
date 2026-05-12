@@ -50,6 +50,10 @@ export type TimeEntryCreatedDto = TimeEntryDelegationPublic & {
   minutes: number
   notes: string | null
   entryMode: 'manual' | 'guided' | 'imported'
+  entryOrigin: 'ASSIGNED' | 'UNASSIGNED_EXCEPTION'
+  exceptionJustification: string | null
+  isOutOfSequence: boolean
+  outOfSequenceJustification: string | null
   entryAt: string
   createdAt: string
 }
@@ -62,6 +66,10 @@ export type TimeEntryListItemDto = TimeEntryDelegationPublic & {
   minutes: number
   notes: string | null
   entryMode: 'manual' | 'guided' | 'imported'
+  entryOrigin: 'ASSIGNED' | 'UNASSIGNED_EXCEPTION'
+  exceptionJustification: string | null
+  isOutOfSequence: boolean
+  outOfSequenceJustification: string | null
   entryAt: string
   createdAt: string
   updatedAt: string
@@ -144,6 +152,10 @@ export function timeEntryRowToCreated(
     minutes: row.minutes,
     notes: row.notes,
     entryMode: row.entry_mode,
+    entryOrigin: row.entry_origin,
+    exceptionJustification: row.exception_justification,
+    isOutOfSequence: Boolean(row.is_out_of_sequence),
+    outOfSequenceJustification: row.out_of_sequence_justification,
     entryAt: row.entry_at.toISOString(),
     createdAt: row.created_at.toISOString(),
   }
@@ -163,6 +175,10 @@ export function timeEntryListRowToDto(row: ConveyorTimeEntryListRow): TimeEntryL
     minutes: row.minutes,
     notes: row.notes,
     entryMode: row.entry_mode,
+    entryOrigin: row.entry_origin,
+    exceptionJustification: row.exception_justification,
+    isOutOfSequence: Boolean(row.is_out_of_sequence),
+    outOfSequenceJustification: row.out_of_sequence_justification,
     entryAt: row.entry_at.toISOString(),
     createdAt: row.created_at.toISOString(),
     updatedAt: row.updated_at.toISOString(),

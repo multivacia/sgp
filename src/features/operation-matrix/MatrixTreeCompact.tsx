@@ -1,4 +1,9 @@
-import { useEffect, useMemo, type FormEvent, type ReactNode } from 'react'
+import {
+  useEffect,
+  useMemo,
+  type FormEvent,
+  type ReactNode,
+} from 'react'
 import type { LabelCatalogEntry } from '../../catalog/matrixSuggestion/types'
 import type { MatrixNodeTreeApi } from '../../domain/operation-matrix/operation-matrix.types'
 import { LabelSuggestField } from './components/LabelSuggestField'
@@ -27,25 +32,41 @@ export type MatrixTreeCompactProps = {
   matchIds: ReadonlySet<string>
   busy: boolean
   onReorder: (dir: 'up' | 'down') => void
-  /** Cria uma nova opção de serviço (TASK) sob a oferta atual. */
+  /** Cria uma nova tarefa de serviço (TASK) sob a oferta atual. */
   onAddServiceOption: (name: string, description?: string) => void | Promise<void>
-  /** Remove uma opção de serviço a partir do catálogo (card). */
+  /** Remove uma tarefa a partir do catálogo (card). */
   onRemoveTaskFromCatalog: (taskId: string) => void | Promise<void>
-  /** Duplica uma opção pelo id (ações inline no card). */
+  /** Duplica uma tarefa pelo id (ações inline no card). */
   onDuplicateTask: (taskId: string) => void | Promise<void>
-  /** Rascunho «+ Adicionar opção» — estado no pai para o guard de contexto transitório. */
+  /** Rascunho «+ Adicionar tarefa» — estado no pai para o guard de contexto transitório. */
   serviceOptionAddOpen: boolean
   setServiceOptionAddOpen: (v: boolean) => void
   serviceOptionNewName: string
   setServiceOptionNewName: (v: string) => void
   serviceOptionNewDescription: string
   setServiceOptionNewDescription: (v: string) => void
-  /** Catálogo local de nomes de opção (TASK) para sugestão. */
+  /** Catálogo local de nomes de tarefa (TASK) para sugestão. */
   optionCatalogEntries: readonly LabelCatalogEntry[]
+  /** Abre editor de estrutura em tela cheia (quando definido). */
+  onExpandStructure?: () => void
   /** Conteúdo extra na toolbar (ex.: «Do catálogo» na Nova Matriz). */
   toolbarExtra?: ReactNode
-  /** Substitui o texto quando não há opções e não há busca ativa. */
+  /** Substitui o texto quando não há tarefas e não há busca ativa. */
   emptyWithoutTasksMessage?: string
+  /** Título da lista de tarefas (painel atual da matriz). */
+  taskGroupLabel?: string
+  /** Texto introdutório abaixo do título. */
+  taskGroupIntro?: ReactNode
+  /** Composição (setores/atividades) expandida por tarefa. */
+  compositionExpandedTaskIds?: ReadonlySet<string>
+  onToggleTaskCompositionExpanded?: (taskId: string) => void
+  /** Bloco opcional sob cada tarefa (ex.: lista de setores). */
+  renderTaskCompositionFooter?: (task: MatrixNodeTreeApi) => ReactNode
+  taskCardWidthClass?: string
+  /** Lista de tarefas herda scroll do pai (painel alto flexível na Alterar Matriz). */
+  embedListInFlexibleScroll?: boolean
+  /** Área da secção distribui altura quando embutida em painel scroll flex. */
+  embedSectionFlexible?: boolean
 }
 
 function subtreeTouchesIds(
@@ -69,6 +90,7 @@ export function MatrixTreeCompact(props: MatrixTreeCompactProps) {
     matchIds,
     busy,
     onReorder,
+    onExpandStructure,
     onAddServiceOption,
     onRemoveTaskFromCatalog,
     onDuplicateTask,
@@ -81,10 +103,26 @@ export function MatrixTreeCompact(props: MatrixTreeCompactProps) {
     optionCatalogEntries,
     toolbarExtra,
     emptyWithoutTasksMessage,
+    taskGroupLabel = 'Opções de serviço',
+    taskGroupIntro,
+    compositionExpandedTaskIds,
+    onToggleTaskCompositionExpanded,
+    renderTaskCompositionFooter,
+    taskCardWidthClass,
+    embedListInFlexibleScroll = false,
+    embedSectionFlexible = false,
   } = props
 
   const taskNodes = useMemo(
-    () => tree.children.filter((c) => c.node_type === 'TASK'),
+    () =>
+      tree.children
+        .filter((c) => c.node_type === 'TASK')
+        .slice()
+        .sort(
+          (a, b) =>
+            a.order_index - b.order_index ||
+            a.name.localeCompare(b.name, 'pt-BR'),
+        ),
     [tree],
   )
 
@@ -98,11 +136,11 @@ export function MatrixTreeCompact(props: MatrixTreeCompactProps) {
     () => [
       {
         id: 'service-options',
-        label: 'Opções de serviço',
+        label: taskGroupLabel,
         tasks: visibleTaskNodes,
       },
     ],
-    [visibleTaskNodes],
+    [visibleTaskNodes, taskGroupLabel],
   )
 
   const nodeTypeMap = useMemo(() => buildNodeTypeMap(tree), [tree])
@@ -158,25 +196,51 @@ export function MatrixTreeCompact(props: MatrixTreeCompactProps) {
     busy || !selected || selected.node_type === 'ITEM'
 
   return (
-    <div className="select-none space-y-8">
+    <div
+      className={
+        embedSectionFlexible
+              ? 'flex min-h-0 flex-1 select-none flex-col gap-8'
+              : 'select-none space-y-8'
+      }
+    >
       {taskGroups.map((group) => (
         <section
           key={group.id}
-          className="min-w-0 rounded-xl border border-white/[0.07] bg-black/15 px-3 py-3 ring-1 ring-white/[0.04] sm:px-4"
+          className={
+            'min-w-0 rounded-xl border border-white/[0.07] bg-black/15 px-3 py-3 ring-1 ring-white/[0.04] sm:px-4 ' +
+            (embedSectionFlexible
+              ? 'flex min-h-0 flex-1 flex-col '
+              : ' ')
+          }
           aria-labelledby={`matrix-task-group-${group.id}`}
         >
-          <div className="flex flex-col gap-3">
-            <div className="flex flex-col gap-2.5 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+          <div
+            className={
+              'flex flex-col gap-3 ' +
+              (embedSectionFlexible ? 'min-h-0 flex-1 ' : '')
+            }
+          >
+          <div className="flex flex-col gap-2.5 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+            <div className="min-w-0 space-y-2">
               <h2
                 id={`matrix-task-group-${group.id}`}
                 className="shrink-0 px-0.5 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500"
               >
                 {group.label}
               </h2>
+              {taskGroupIntro ?? (
+                <p className="max-w-xl px-0.5 text-[11px] leading-relaxed text-slate-500">
+                  Arraste setores e atividades na composição (abaixo de cada tarefa
+                  expandida) ou use as alças &quot;⋮⋮&quot; para organizar a sequência
+                  operacional. A ordem definida aqui será usada como sequência recomendada
+                  no planejamento e na execução.
+                </p>
+              )}
+            </div>
               <div
                 className="flex flex-wrap gap-1.5 sm:justify-end"
                 role="toolbar"
-                aria-label="Catálogo de opções de serviço"
+                aria-label="Catálogo de tarefas de serviço"
               >
                 {!addOpen ? (
                   <button
@@ -185,7 +249,7 @@ export function MatrixTreeCompact(props: MatrixTreeCompactProps) {
                     onClick={() => setAddOpen(true)}
                     className="rounded-lg border border-sgp-gold/35 bg-sgp-gold/10 px-2.5 py-1 text-[11px] font-semibold text-sgp-gold-warm disabled:opacity-50"
                   >
-                    + Adicionar opção
+                    + Adicionar tarefa
                   </button>
                 ) : (
                   <form
@@ -193,7 +257,7 @@ export function MatrixTreeCompact(props: MatrixTreeCompactProps) {
                     onSubmit={(e) => void handleSubmitAdd(e)}
                   >
                     <label className="flex flex-col gap-0.5 text-[11px]">
-                      <span className="text-slate-500">Nome da opção</span>
+                      <span className="text-slate-500">Nome da tarefa</span>
                       <LabelSuggestField
                         value={newName}
                         onChange={setNewName}
@@ -218,7 +282,7 @@ export function MatrixTreeCompact(props: MatrixTreeCompactProps) {
                         disabled={busy || !newName.trim()}
                         className="rounded-lg bg-sgp-gold/20 px-2.5 py-1 text-[11px] font-semibold text-sgp-gold-warm disabled:opacity-50"
                       >
-                        Criar opção
+                        Criar tarefa
                       </button>
                       <button
                         type="button"
@@ -235,6 +299,16 @@ export function MatrixTreeCompact(props: MatrixTreeCompactProps) {
                     </div>
                   </form>
                 )}
+                {onExpandStructure ? (
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => onExpandStructure()}
+                    className="rounded-lg border border-sgp-gold/40 bg-sgp-gold/[0.08] px-2.5 py-1 text-[11px] font-semibold text-sgp-gold-warm disabled:opacity-50"
+                  >
+                    Expandir estrutura
+                  </button>
+                ) : null}
                 <button
                   type="button"
                   disabled={reorderDisabled}
@@ -255,15 +329,19 @@ export function MatrixTreeCompact(props: MatrixTreeCompactProps) {
               </div>
             </div>
             <div
-              className="min-h-0 max-h-[min(68vh,40rem)] overflow-y-auto overscroll-contain pr-0.5 [scrollbar-width:thin] [scrollbar-color:rgba(148,163,184,0.35)_transparent] lg:max-h-[min(72vh,calc(100dvh-12rem))]"
+              className={
+                embedListInFlexibleScroll
+                  ? 'min-h-0 flex-1 max-h-none overflow-y-auto overscroll-contain pr-0.5 [scrollbar-width:thin] [scrollbar-color:rgba(148,163,184,0.35)_transparent]'
+                  : 'min-h-0 max-h-[min(68vh,40rem)] overflow-y-auto overscroll-contain pr-0.5 [scrollbar-width:thin] [scrollbar-color:rgba(148,163,184,0.35)_transparent] lg:max-h-[min(72vh,calc(100dvh-12rem))]'
+              }
               role="region"
-              aria-label="Lista de opções de serviço"
+              aria-label="Lista de tarefas de serviço"
             >
               {group.tasks.length === 0 ? (
                 <p className="px-1 py-6 text-center text-xs leading-relaxed text-slate-500">
                   {taskNodes.length === 0 && !searchQuery.trim()
                     ? emptyWithoutTasksMessage ??
-                      'Nenhuma opção de serviço nesta oferta. Use “+ Adicionar opção” acima para incluir a primeira.'
+                      'Nenhuma tarefa de serviço nesta oferta. Use “+ Adicionar tarefa” acima para incluir a primeira.'
                     : 'Nenhum resultado para esta busca.'}
                 </p>
               ) : (
@@ -281,6 +359,12 @@ export function MatrixTreeCompact(props: MatrixTreeCompactProps) {
                   busy={busy}
                   onRemoveTaskFromCatalog={onRemoveTaskFromCatalog}
                   onDuplicateTask={onDuplicateTask}
+                  renderTaskFooter={renderTaskCompositionFooter}
+                  taskCardWidthClass={taskCardWidthClass}
+                  compositionExpandedByTaskId={compositionExpandedTaskIds}
+                  onToggleTaskCompositionExpanded={
+                    onToggleTaskCompositionExpanded
+                  }
                 />
               )}
             </div>

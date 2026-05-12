@@ -14,8 +14,12 @@ import type {
 import {
   listActivitiesRawForCollaborator,
   listTimeEntryCandidatesForCollaborator,
+  listTimeEntryUnassignedOpenStepsForCollaborator,
   type TimeEntryCandidateRawRow,
 } from './my-activities.repository.js'
+import { analyzeConveyorActivitySequence } from '../conveyors/conveyorActivitySequence.logic.js'
+import type { SequenceAnalysisNode } from '../conveyors/conveyorActivitySequence.logic.js'
+import { listConveyorNodesForSequenceAnalysis } from '../conveyors/conveyors.repository.js'
 
 export type GetMyActivitiesQuery = {
   userId: string
@@ -125,7 +129,11 @@ export async function serviceListActivitiesForCollaborator(
   return mapAndSortActivities(raw)
 }
 
-function mapCandidateRow(row: TimeEntryCandidateRawRow): TimeEntryCandidateItemApi {
+function mapCandidateRow(
+  row: TimeEntryCandidateRawRow,
+  opts: { isAssignedToMe: boolean },
+  nodesByConveyor: Map<string, SequenceAnalysisNode[]>,
+): TimeEntryCandidateItemApi {
   const planned =
     row.planned_minutes === null || row.planned_minutes === ''
       ? null
@@ -135,6 +143,13 @@ function mapCandidateRow(row: TimeEntryCandidateRawRow): TimeEntryCandidateItemA
   const pendingMinutes = Math.max(0, plannedNum - Math.max(0, realized))
   const at =
     row.assignment_type === 'TEAM' ? ('TEAM' as const) : ('COLLABORATOR' as const)
+  const nodes = nodesByConveyor.get(row.conveyor_id) ?? []
+  const seq = analyzeConveyorActivitySequence(nodes, row.step_node_id)
+  const prevSlice = seq.previousOpenActivities.slice(0, 3).map((p) => ({
+    taskTitle: p.taskTitle,
+    sectorTitle: p.sectorTitle,
+    activityTitle: p.activityTitle,
+  }))
   return {
     conveyorId: row.conveyor_id,
     conveyorCode: row.conveyor_code,
@@ -144,12 +159,21 @@ function mapCandidateRow(row: TimeEntryCandidateRawRow): TimeEntryCandidateItemA
     plate: row.plate,
     stepNodeId: row.step_node_id,
     stepName: row.step_name,
+    activityTitle: row.step_name,
+    taskTitle: row.option_name,
     areaName: row.area_name,
+    sectorTitle: row.area_name,
     roleInStep: row.is_primary ? 'primary' : 'support',
     assignmentType: at,
     plannedMinutes: planned,
     realizedMinutes: realized,
     pendingMinutes,
+    isAssignedToMe: opts.isAssignedToMe,
+    requiresJustification: !opts.isAssignedToMe,
+    isOutOfSequence: seq.isOutOfSequence,
+    requiresOutOfSequenceJustification: seq.isOutOfSequence,
+    previousOpenCount: seq.previousOpenCount,
+    previousOpenActivities: prevSlice,
   }
 }
 
@@ -159,6 +183,7 @@ export async function serviceListTimeEntryCandidates(
     collaboratorId: string | null
     q: string | null
     limit: number
+    includeUnassigned: boolean
   },
 ): Promise<{
   items: TimeEntryCandidateItemApi[]
@@ -174,12 +199,52 @@ export async function serviceListTimeEntryCandidates(
     }
   }
 
-  const raw = await listTimeEntryCandidatesForCollaborator(pool, input.collaboratorId, {
-    q: input.q,
-    limit: input.limit,
-  })
+  const rawAssigned = await listTimeEntryCandidatesForCollaborator(
+    pool,
+    input.collaboratorId,
+    {
+      q: input.q,
+      limit: input.limit,
+    },
+  )
+
+  const qOk =
+    input.includeUnassigned &&
+    Boolean(input.q && input.q.trim().length >= 2)
+
+  let tagged: Array<{ row: TimeEntryCandidateRawRow; isAssignedToMe: boolean }> =
+    rawAssigned.map((r) => ({ row: r, isAssignedToMe: true }))
+
+  if (qOk) {
+    const rawUnassigned = await listTimeEntryUnassignedOpenStepsForCollaborator(
+      pool,
+      input.collaboratorId,
+      { q: input.q, limit: input.limit },
+    )
+    const seenStep = new Set(rawAssigned.map((r) => r.step_node_id))
+    tagged = [
+      ...tagged,
+      ...rawUnassigned
+        .filter((r) => !seenStep.has(r.step_node_id))
+        .map((r) => ({ row: r, isAssignedToMe: false })),
+    ]
+  }
+
+  const conveyorIds = [...new Set(tagged.map((t) => t.row.conveyor_id))]
+  const nodesByConveyor = new Map<string, SequenceAnalysisNode[]>()
+  await Promise.all(
+    conveyorIds.map(async (cid) => {
+      const nodes = await listConveyorNodesForSequenceAnalysis(pool, cid)
+      nodesByConveyor.set(cid, nodes as SequenceAnalysisNode[])
+    }),
+  )
+
+  const items = tagged.map(({ row, isAssignedToMe }) =>
+    mapCandidateRow(row, { isAssignedToMe }, nodesByConveyor),
+  )
+
   return {
-    items: raw.map(mapCandidateRow),
+    items,
     collaboratorId: input.collaboratorId,
     unavailableReason: null,
   }

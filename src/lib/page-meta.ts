@@ -25,6 +25,7 @@ export function pageTitleForPath(pathname: string): string {
   if (pathname.startsWith('/app/usuarios')) return 'Usuários de acesso'
   if (pathname.startsWith('/app/matrizes-operacao/nova')) return 'Nova matriz de operação'
   if (pathname.startsWith('/app/matrizes-operacao')) return 'Matrizes de operação'
+  if (pathname.startsWith('/app/minha-fila')) return 'Minha fila'
   if (pathname.startsWith('/app/meu-trabalho')) return 'Meu Trabalho'
   if (pathname.startsWith('/app/minhas-atividades')) return 'Minhas Atividades'
   if (pathname.startsWith('/app/chamados')) return 'Chamados'

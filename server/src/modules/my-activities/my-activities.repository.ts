@@ -90,6 +90,7 @@ export type TimeEntryCandidateRawRow = {
   step_node_id: string
   step_name: string
   area_name: string
+  option_name: string
   is_primary: boolean
   assignment_type: 'COLLABORATOR' | 'TEAM'
   planned_minutes: string | null
@@ -124,6 +125,7 @@ export async function listTimeEntryCandidatesForCollaborator(
         step.id::text AS step_node_id,
         step.name AS step_name,
         area.name AS area_name,
+        opt.name AS option_name,
         cna.is_primary,
         cna.assignment_type::text AS assignment_type,
         step.planned_minutes::text AS planned_minutes,
@@ -204,6 +206,7 @@ export async function listTimeEntryCandidatesForCollaborator(
       step_node_id,
       step_name,
       area_name,
+      option_name,
       is_primary,
       assignment_type,
       planned_minutes,
@@ -217,6 +220,109 @@ export async function listTimeEntryCandidatesForCollaborator(
       opt_order_index::int,
       area_order_index::int,
       step_order_index::int
+    LIMIT $3::int
+    `,
+    [collaboratorId, q, limit],
+  )
+  return r.rows
+}
+
+/**
+ * STEPs em aberto nas quais o colaborador não tem alocação (direta nem via time).
+ * Usado em conjunto com `listTimeEntryCandidatesForCollaborator` quando `includeUnassigned=true`.
+ */
+export async function listTimeEntryUnassignedOpenStepsForCollaborator(
+  pool: pg.Pool,
+  collaboratorId: string,
+  options: { q: string | null; limit: number },
+): Promise<TimeEntryCandidateRawRow[]> {
+  const q = options.q?.trim() || null
+  const limit = options.limit
+  const r = await pool.query<TimeEntryCandidateRawRow>(
+    `
+    SELECT
+      ''::text AS assignee_id,
+      cv.id::text AS conveyor_id,
+      cv.code AS conveyor_code,
+      cv.name AS conveyor_name,
+      cv.client_name AS client_name,
+      cv.vehicle AS vehicle_label,
+      cv.plate AS plate,
+      step.id::text AS step_node_id,
+      step.name AS step_name,
+      area.name AS area_name,
+      opt.name AS option_name,
+      false AS is_primary,
+      'COLLABORATOR'::text AS assignment_type,
+      step.planned_minutes::text AS planned_minutes,
+      (
+        SELECT COALESCE(SUM(cte.minutes), 0)::text
+        FROM conveyor_time_entries cte
+        WHERE cte.deleted_at IS NULL
+          AND cte.conveyor_node_id = step.id
+          AND cte.collaborator_id = $1::uuid
+      ) AS realized_minutes,
+      opt.order_index::text AS opt_order_index,
+      area.order_index::text AS area_order_index,
+      step.order_index::text AS step_order_index
+    FROM conveyor_nodes step
+    INNER JOIN conveyors cv
+      ON cv.id = step.conveyor_id
+      AND cv.deleted_at IS NULL
+      AND cv.operational_status <> 'CONCLUIDA'
+    INNER JOIN conveyor_nodes area
+      ON area.id = step.parent_id
+      AND area.deleted_at IS NULL
+      AND area.is_active = TRUE
+      AND area.node_type = 'AREA'
+    INNER JOIN conveyor_nodes opt
+      ON opt.id = area.parent_id
+      AND opt.deleted_at IS NULL
+      AND opt.is_active = TRUE
+      AND opt.node_type = 'OPTION'
+    WHERE step.deleted_at IS NULL
+      AND step.is_active = TRUE
+      AND step.node_type = 'STEP'
+      AND (step.operational_status IS DISTINCT FROM 'COMPLETED')
+      AND NOT EXISTS (
+        SELECT 1
+        FROM conveyor_node_assignees cna
+        WHERE cna.conveyor_node_id = step.id
+          AND cna.deleted_at IS NULL
+          AND cna.conveyor_id = step.conveyor_id
+          AND (
+            (
+              cna.assignment_type = 'COLLABORATOR'
+              AND cna.collaborator_id = $1::uuid
+            )
+            OR (
+              cna.assignment_type = 'TEAM'
+              AND EXISTS (
+                SELECT 1
+                FROM team_members tm
+                WHERE tm.team_id = cna.team_id
+                  AND tm.collaborator_id = $1::uuid
+                  AND tm.is_active = TRUE
+              )
+            )
+          )
+      )
+      AND (
+        $2::text IS NULL
+        OR trim($2) = ''
+        OR cv.name ILIKE '%' || $2 || '%'
+        OR COALESCE(cv.code, '') ILIKE '%' || $2 || '%'
+        OR COALESCE(cv.client_name, '') ILIKE '%' || $2 || '%'
+        OR COALESCE(cv.vehicle, '') ILIKE '%' || $2 || '%'
+        OR COALESCE(cv.plate, '') ILIKE '%' || $2 || '%'
+        OR area.name ILIKE '%' || $2 || '%'
+        OR opt.name ILIKE '%' || $2 || '%'
+        OR step.name ILIKE '%' || $2 || '%'
+      )
+    ORDER BY
+      opt.order_index::int,
+      area.order_index::int,
+      step.order_index::int
     LIMIT $3::int
     `,
     [collaboratorId, q, limit],

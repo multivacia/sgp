@@ -12,12 +12,21 @@ describe('TimeEntryCandidateItem (shape)', () => {
       plate: null,
       stepNodeId: '00000000-0000-4000-8000-000000000002',
       stepName: 'PASSO',
+      activityTitle: 'PASSO',
+      taskTitle: 'Tarefa X',
       areaName: 'Área',
+      sectorTitle: 'Área',
       roleInStep: 'primary',
       assignmentType: 'COLLABORATOR',
       plannedMinutes: 60,
       realizedMinutes: 15,
       pendingMinutes: 45,
+      isAssignedToMe: true,
+      requiresJustification: false,
+      isOutOfSequence: false,
+      requiresOutOfSequenceJustification: false,
+      previousOpenCount: 0,
+      previousOpenActivities: [],
     }
     expect(x.pendingMinutes).toBe(45)
     expect(x.realizedMinutes).toBe(15)

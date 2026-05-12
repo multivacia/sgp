@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { SgpToast, type SgpToastVariant } from '../../components/ui/SgpToast'
 import { formatHumanMinutes } from '../../lib/formatters'
@@ -34,6 +34,7 @@ type DrawerTab = 'conveyor' | 'extra'
 type Props = {
   open: boolean
   onClose: () => void
+  initialCandidate?: TimeEntryCandidateItem | null
 }
 
 function buildContextLine(c: TimeEntryCandidateItem) {
@@ -45,13 +46,19 @@ function buildContextLine(c: TimeEntryCandidateItem) {
   return parts.join(' · ')
 }
 
-export function QuickTimeEntryDrawer({ open, onClose }: Props) {
+function candidateNeedsJustification(c: TimeEntryCandidateItem) {
+  return c.requiresJustification === true || c.isAssignedToMe === false
+}
+
+export function QuickTimeEntryDrawer({ open, onClose, initialCandidate = null }: Props) {
   const { user, ready: authReady } = useAuth()
   const { presentBlocking } = useSgpErrorSurface()
   const [phase, setPhase] = useState<Phase>('list')
   const [tab, setTab] = useState<DrawerTab>('conveyor')
   const [search, setSearch] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
+  /** Inclui atividades em aberto fora da alocação do colaborador (com critério no servidor). */
+  const [searchOtherActivities, setSearchOtherActivities] = useState(false)
   const [items, setItems] = useState<TimeEntryCandidateItem[]>([])
   const [unavailableReason, setUnavailableReason] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
@@ -59,6 +66,8 @@ export function QuickTimeEntryDrawer({ open, onClose }: Props) {
   const [selected, setSelected] = useState<TimeEntryCandidateItem | null>(null)
   const [minutesStr, setMinutesStr] = useState('30')
   const [description, setDescription] = useState('')
+  const [exceptionJustification, setExceptionJustification] = useState('')
+  const [outOfSequenceJustification, setOutOfSequenceJustification] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [toast, setToast] = useState<ToastState>(null)
@@ -93,11 +102,14 @@ export function QuickTimeEntryDrawer({ open, onClose }: Props) {
       setSelected(null)
       setSearch('')
       setDebouncedSearch('')
+      setSearchOtherActivities(false)
       setLoadError(null)
       setSubmitError(null)
       setToast(null)
       setMinutesStr('30')
       setDescription('')
+      setExceptionJustification('')
+      setOutOfSequenceJustification('')
       setExtraDescriptions([])
       setExtraDescriptionsLoading(false)
       setExtraDescriptionsError(null)
@@ -122,6 +134,7 @@ export function QuickTimeEntryDrawer({ open, onClose }: Props) {
       const r = await listTimeEntryCandidates({
         q: debouncedSearch || undefined,
         limit: 50,
+        includeUnassigned: searchOtherActivities,
       })
       setItems(r.items)
       setUnavailableReason(r.unavailableReason)
@@ -141,7 +154,7 @@ export function QuickTimeEntryDrawer({ open, onClose }: Props) {
     } finally {
       setLoading(false)
     }
-  }, [open, debouncedSearch, onClose, presentBlocking])
+  }, [open, debouncedSearch, searchOtherActivities, onClose, presentBlocking])
 
   useEffect(() => {
     if (!open || !authReady) return
@@ -230,16 +243,42 @@ export function QuickTimeEntryDrawer({ open, onClose }: Props) {
 
   const minutes = Number.parseInt(minutesStr, 10)
   const minutesValid = Number.isInteger(minutes) && minutes >= 1
+  const assignedCandidates = useMemo(
+    () => items.filter((c) => !candidateNeedsJustification(c)),
+    [items],
+  )
+  const otherCandidates = useMemo(
+    () => items.filter((c) => candidateNeedsJustification(c)),
+    [items],
+  )
+  const formNeedsJustification = selected
+    ? candidateNeedsJustification(selected)
+    : false
+  const formNeedsOutOfSequence = selected
+    ? selected.requiresOutOfSequenceJustification === true || selected.isOutOfSequence === true
+    : false
+  const canSubmitForm =
+    minutesValid &&
+    (!formNeedsJustification || exceptionJustification.trim().length > 0) &&
+    (!formNeedsOutOfSequence || outOfSequenceJustification.trim().length > 0)
   const extraMinutes = Number.parseInt(extraMinutesStr, 10)
   const extraMinutesValid = Number.isInteger(extraMinutes) && extraMinutes >= 1
 
-  function startForm(c: TimeEntryCandidateItem) {
+  const startForm = useCallback((c: TimeEntryCandidateItem) => {
     setSelected(c)
     setPhase('form')
     setSubmitError(null)
     setMinutesStr('30')
     setDescription('')
-  }
+    setExceptionJustification('')
+    setOutOfSequenceJustification('')
+  }, [])
+
+  useEffect(() => {
+    if (!open || !initialCandidate) return
+    setTab('conveyor')
+    startForm(initialCandidate)
+  }, [open, initialCandidate, startForm])
 
   function backToList() {
     setPhase('list')
@@ -257,6 +296,24 @@ export function QuickTimeEntryDrawer({ open, onClose }: Props) {
       pushToast(transversalUxCopy.collaboratorLinkMissingToast, 'error')
       return
     }
+    const needsJ = candidateNeedsJustification(selected)
+    const ej = exceptionJustification.trim()
+    if (needsJ && !ej.length) {
+      setSubmitError(
+        'Para apontar horas nesta atividade, informe a justificativa da exceção.',
+      )
+      return
+    }
+    const needsOos =
+      selected.requiresOutOfSequenceJustification === true ||
+      selected.isOutOfSequence === true
+    const oos = outOfSequenceJustification.trim()
+    if (needsOos && !oos.length) {
+      setSubmitError(
+        'Informe uma justificativa para executar esta atividade fora da sequência recomendada.',
+      )
+      return
+    }
     setSubmitting(true)
     setSubmitError(null)
     setToast(null)
@@ -265,11 +322,15 @@ export function QuickTimeEntryDrawer({ open, onClose }: Props) {
         minutes,
         description: description.trim() || null,
         entryMode: 'manual',
+        ...(needsJ ? { exceptionJustification: ej } : {}),
+        ...(needsOos ? { outOfSequenceJustification: oos } : {}),
       })
       pushToast('Apontamento registado com sucesso.', 'success')
       setPhase('list')
       setSelected(null)
       setDescription('')
+      setExceptionJustification('')
+      setOutOfSequenceJustification('')
       void load()
     } catch (e) {
       const n = reportClientError(e, {
@@ -437,9 +498,25 @@ export function QuickTimeEntryDrawer({ open, onClose }: Props) {
                           type="search"
                           value={search}
                           onChange={(e) => setSearch(e.target.value)}
-                          placeholder="Esteira, cliente, veículo, área, atividade…"
+                          placeholder="Esteira, cliente, veículo, placa, setor, tarefa, atividade…"
                           className="mt-1.5 w-full rounded-xl border border-[color:var(--semantic-border-glass-strong)] bg-sgp-app-panel-deep/90 px-3 py-2 text-sm text-slate-200 outline-none ring-sgp-blue-bright/0 transition focus:ring-2 focus:ring-sgp-blue-bright/25"
                         />
+                      </label>
+                      <label className="flex cursor-pointer items-start gap-2.5 rounded-xl border border-white/[0.06] bg-black/15 px-3 py-2.5 text-xs text-slate-300">
+                        <input
+                          type="checkbox"
+                          className="mt-0.5"
+                          checked={searchOtherActivities}
+                          onChange={(e) => setSearchOtherActivities(e.target.checked)}
+                          disabled={Boolean(unavailableReason)}
+                        />
+                        <span>
+                          <span className="font-semibold text-slate-100">Buscar outras atividades</span>
+                          <span className="mt-0.5 block text-[11px] leading-snug text-slate-500">
+                            Inclui atividades em aberto fora da sua alocação. Use pelo menos 2 caracteres na
+                            pesquisa. Será necessária uma justificativa ao apontar.
+                          </span>
+                        </span>
                       </label>
                     </div>
 
@@ -468,68 +545,158 @@ export function QuickTimeEntryDrawer({ open, onClose }: Props) {
                             : 'Sem atividades em aberto para apontamento.'}
                         </p>
                       ) : (
-                        <ul className="space-y-3">
-                          {items.map((c) => (
-                            <li
-                              key={`${c.conveyorId}-${c.stepNodeId}`}
-                              className="rounded-2xl border border-white/[0.07] bg-white/[0.03] p-4 shadow-inner"
-                            >
-                              <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500">
-                                Esteira
+                        <div className="space-y-6">
+                          {assignedCandidates.length > 0 ? (
+                            <section>
+                              <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">
+                                Minhas atividades
                               </p>
-                              <p className="mt-1 font-heading text-sm font-bold text-white">
-                                {c.conveyorName}
+                              <ul className="space-y-3">
+                                {assignedCandidates.map((c) => (
+                                  <li
+                                    key={`${c.conveyorId}-${c.stepNodeId}`}
+                                    className="rounded-2xl border border-white/[0.07] bg-white/[0.03] p-4 shadow-inner"
+                                  >
+                                    <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500">
+                                      Esteira
+                                    </p>
+                                    <p className="mt-1 font-heading text-sm font-bold text-white">
+                                      {c.conveyorName}
+                                    </p>
+                                    <p className="mt-2 text-xs text-slate-500">{buildContextLine(c)}</p>
+                                    <p className="mt-3 text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500">
+                                      Tarefa
+                                    </p>
+                                    <p className="mt-0.5 text-xs text-slate-400">{c.taskTitle ?? '—'}</p>
+                                    <p className="mt-3 text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500">
+                                      Atividade
+                                    </p>
+                                    <p className="mt-0.5 text-sm font-semibold text-slate-200">
+                                      {c.stepName}
+                                    </p>
+                                    <p className="mt-2 text-xs text-slate-500">
+                                      {c.areaName} · {labelRoleInStep(c.roleInStep)}
+                                      {c.assignmentType === 'TEAM' ? ' · Time' : ''}
+                                    </p>
+                                    <div className="mt-3 grid grid-cols-3 gap-2 text-[11px] text-slate-400">
+                                      <div>
+                                        <p className="text-[9px] uppercase tracking-wider text-slate-600">
+                                          Previsto
+                                        </p>
+                                        <p className="font-semibold text-slate-200">
+                                          {c.plannedMinutes != null
+                                            ? formatHumanMinutes(c.plannedMinutes)
+                                            : '—'}
+                                        </p>
+                                      </div>
+                                      <div>
+                                        <p className="text-[9px] uppercase tracking-wider text-slate-600">
+                                          Realizado
+                                        </p>
+                                        <p className="font-semibold text-slate-200">
+                                          {formatHumanMinutes(c.realizedMinutes)}
+                                        </p>
+                                      </div>
+                                      <div>
+                                        <p className="text-[9px] uppercase tracking-wider text-slate-600">
+                                          Pendente
+                                        </p>
+                                        <p className="font-semibold text-slate-200">
+                                          {formatHumanMinutes(c.pendingMinutes)}
+                                        </p>
+                                      </div>
+                                    </div>
+                                    <button
+                                      type="button"
+                                      className="sgp-cta-primary mt-4 w-full justify-center py-2 text-center text-xs"
+                                      onClick={() => startForm(c)}
+                                      disabled={Boolean(unavailableReason)}
+                                    >
+                                      Apontar
+                                    </button>
+                                  </li>
+                                ))}
+                              </ul>
+                            </section>
+                          ) : null}
+                          {otherCandidates.length > 0 ? (
+                            <section>
+                              <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">
+                                Fora da sua alocação
                               </p>
-                              <p className="mt-2 text-xs text-slate-500">{buildContextLine(c)}</p>
-                              <p className="mt-3 text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500">
-                                Atividade
-                              </p>
-                              <p className="mt-0.5 text-sm font-semibold text-slate-200">
-                                {c.stepName}
-                              </p>
-                              <p className="mt-2 text-xs text-slate-500">
-                                {c.areaName} · {labelRoleInStep(c.roleInStep)}
-                                {c.assignmentType === 'TEAM' ? ' · Time' : ''}
-                              </p>
-                              <div className="mt-3 grid grid-cols-3 gap-2 text-[11px] text-slate-400">
-                                <div>
-                                  <p className="text-[9px] uppercase tracking-wider text-slate-600">
-                                    Previsto
-                                  </p>
-                                  <p className="font-semibold text-slate-200">
-                                    {c.plannedMinutes != null
-                                      ? formatHumanMinutes(c.plannedMinutes)
-                                      : '—'}
-                                  </p>
-                                </div>
-                                <div>
-                                  <p className="text-[9px] uppercase tracking-wider text-slate-600">
-                                    Realizado
-                                  </p>
-                                  <p className="font-semibold text-slate-200">
-                                    {formatHumanMinutes(c.realizedMinutes)}
-                                  </p>
-                                </div>
-                                <div>
-                                  <p className="text-[9px] uppercase tracking-wider text-slate-600">
-                                    Pendente
-                                  </p>
-                                  <p className="font-semibold text-slate-200">
-                                    {formatHumanMinutes(c.pendingMinutes)}
-                                  </p>
-                                </div>
-                              </div>
-                              <button
-                                type="button"
-                                className="sgp-cta-primary mt-4 w-full justify-center py-2 text-center text-xs"
-                                onClick={() => startForm(c)}
-                                disabled={Boolean(unavailableReason)}
-                              >
-                                Apontar
-                              </button>
-                            </li>
-                          ))}
-                        </ul>
+                              <ul className="space-y-3">
+                                {otherCandidates.map((c) => (
+                                  <li
+                                    key={`${c.conveyorId}-${c.stepNodeId}`}
+                                    className="rounded-2xl border border-amber-500/20 bg-amber-500/[0.04] p-4 shadow-inner"
+                                  >
+                                    <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-amber-200/90">
+                                      Esteira
+                                    </p>
+                                    <p className="mt-1 font-heading text-sm font-bold text-white">
+                                      {c.conveyorName}
+                                    </p>
+                                    <p className="mt-2 text-xs text-slate-500">{buildContextLine(c)}</p>
+                                    <div className="mt-2 flex flex-wrap gap-2">
+                                      <span className="rounded border border-amber-500/35 bg-amber-500/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-100">
+                                        Fora da sua alocação
+                                      </span>
+                                    </div>
+                                    <p className="mt-3 text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500">
+                                      Tarefa
+                                    </p>
+                                    <p className="mt-0.5 text-xs text-slate-400">{c.taskTitle ?? '—'}</p>
+                                    <p className="mt-3 text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500">
+                                      Atividade
+                                    </p>
+                                    <p className="mt-0.5 text-sm font-semibold text-slate-200">
+                                      {c.stepName}
+                                    </p>
+                                    <p className="mt-2 text-xs text-slate-500">
+                                      {c.areaName} · {labelRoleInStep(c.roleInStep)}
+                                    </p>
+                                    <div className="mt-3 grid grid-cols-3 gap-2 text-[11px] text-slate-400">
+                                      <div>
+                                        <p className="text-[9px] uppercase tracking-wider text-slate-600">
+                                          Previsto
+                                        </p>
+                                        <p className="font-semibold text-slate-200">
+                                          {c.plannedMinutes != null
+                                            ? formatHumanMinutes(c.plannedMinutes)
+                                            : '—'}
+                                        </p>
+                                      </div>
+                                      <div>
+                                        <p className="text-[9px] uppercase tracking-wider text-slate-600">
+                                          Realizado
+                                        </p>
+                                        <p className="font-semibold text-slate-200">
+                                          {formatHumanMinutes(c.realizedMinutes)}
+                                        </p>
+                                      </div>
+                                      <div>
+                                        <p className="text-[9px] uppercase tracking-wider text-slate-600">
+                                          Pendente
+                                        </p>
+                                        <p className="font-semibold text-slate-200">
+                                          {formatHumanMinutes(c.pendingMinutes)}
+                                        </p>
+                                      </div>
+                                    </div>
+                                    <button
+                                      type="button"
+                                      className="sgp-cta-primary mt-4 w-full justify-center py-2 text-center text-xs"
+                                      onClick={() => startForm(c)}
+                                      disabled={Boolean(unavailableReason)}
+                                    >
+                                      Apontar
+                                    </button>
+                                  </li>
+                                ))}
+                              </ul>
+                            </section>
+                          ) : null}
+                        </div>
                       )}
                     </div>
                   </>
@@ -577,6 +744,76 @@ export function QuickTimeEntryDrawer({ open, onClose }: Props) {
                       />
                     </label>
 
+                    {formNeedsJustification ? (
+                      <>
+                        <div className="mt-4 rounded-xl border border-amber-500/25 bg-amber-500/[0.07] px-3 py-2.5 text-xs text-amber-50/95">
+                          <p className="font-semibold text-amber-100">
+                            Você não está alocado nesta atividade. Para apontar horas, informe uma justificativa
+                            (apontamento por exceção).
+                          </p>
+                        </div>
+                        <label className="mt-4 block text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">
+                          Justificativa da exceção
+                          <textarea
+                            value={exceptionJustification}
+                            onChange={(e) => setExceptionJustification(e.target.value)}
+                            rows={3}
+                            placeholder="Descreva o motivo operacional…"
+                            className="mt-1.5 w-full resize-none rounded-xl border border-[color:var(--semantic-border-glass-strong)] bg-sgp-app-panel-deep/90 px-3 py-2 text-sm text-slate-200 outline-none focus:ring-2 focus:ring-sgp-blue-bright/25"
+                          />
+                        </label>
+                      </>
+                    ) : null}
+
+                    {formNeedsOutOfSequence ? (
+                      <>
+                        <div className="mt-4 rounded-xl border border-sky-500/25 bg-sky-500/[0.07] px-3 py-2.5 text-xs text-sky-50/95">
+                          <p className="font-semibold text-sky-100">
+                            Esta atividade está fora da sequência recomendada.
+                          </p>
+                          <p className="mt-1.5 leading-relaxed text-sky-100/90">
+                            Existem atividades anteriores ainda pendentes nesta esteira
+                            {selected && selected.previousOpenCount > 0 ? (
+                              <>
+                                {' '}
+                                — antes dela ainda existem{' '}
+                                <span className="font-semibold">{selected.previousOpenCount}</span>{' '}
+                                {selected.previousOpenCount === 1
+                                  ? 'atividade pendente'
+                                  : 'atividades pendentes'}
+                                .
+                              </>
+                            ) : (
+                              '.'
+                            )}
+                          </p>
+                          {selected && selected.previousOpenActivities.length > 0 ? (
+                            <ul className="mt-2 list-inside list-disc space-y-1 text-[11px] text-sky-100/85">
+                              {selected.previousOpenActivities.map((p, i) => (
+                                <li key={`${p.activityTitle}-${i}`}>
+                                  <span className="font-semibold">{p.taskTitle}</span>
+                                  {' › '}
+                                  <span className="font-semibold">{p.sectorTitle}</span>
+                                  {' › '}
+                                  {p.activityTitle}
+                                </li>
+                              ))}
+                            </ul>
+                          ) : null}
+                        </div>
+                        <label className="mt-4 block text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">
+                          Justificativa para executar fora da sequência
+                          <textarea
+                            value={outOfSequenceJustification}
+                            onChange={(e) => setOutOfSequenceJustification(e.target.value)}
+                            rows={3}
+                            placeholder="Explique o motivo operacional para executar esta atividade antes das anteriores…"
+                            className="mt-1.5 w-full resize-none rounded-xl border border-[color:var(--semantic-border-glass-strong)] bg-sgp-app-panel-deep/90 px-3 py-2 text-sm text-slate-200 outline-none focus:ring-2 focus:ring-sgp-blue-bright/25"
+                          />
+                        </label>
+                      </>
+                    ) : null}
+
                     {submitError ? (
                       <p className="mt-3 text-sm text-rose-200">{submitError}</p>
                     ) : null}
@@ -594,7 +831,7 @@ export function QuickTimeEntryDrawer({ open, onClose }: Props) {
                         type="button"
                         className="sgp-cta-primary px-4 py-2.5 text-sm disabled:pointer-events-none disabled:opacity-50"
                         onClick={() => void save()}
-                        disabled={submitting || !minutesValid}
+                        disabled={submitting || !canSubmitForm}
                       >
                         {submitting ? 'A guardar…' : 'Salvar apontamento'}
                       </button>

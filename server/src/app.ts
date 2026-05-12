@@ -14,8 +14,10 @@ import { conveyorAssignmentsRouter } from './modules/conveyors/conveyorAssignmen
 import { createArgosDocumentDraftAdapter } from './modules/argos-integration/createArgosDocumentDraftAdapter.js'
 import { conveyorsRouter } from './modules/conveyors/conveyors.routes.js'
 import { myActivitiesRouter } from './modules/my-activities/my-activities.routes.js'
+import { myWorkQueueRouter } from './modules/my-work-queue/my-work-queue.routes.js'
 import { operationalSettingsRouter } from './modules/operational-settings/operational-settings.routes.js'
 import { operationMatrixRouter } from './modules/operation-matrix/operation-matrix.routes.js'
+import { operationalPlanningRouter } from './modules/operational-planning/operational-planning.routes.js'
 import { healthRouter } from './modules/health/health.routes.js'
 import { rbacRouter } from './modules/rbac/rbac.routes.js'
 import { rolesRouter } from './modules/roles/roles.routes.js'
@@ -46,10 +48,12 @@ export function createApp(pool: pg.Pool, logger: Logger, env: Env): Express {
   app.use('/api/v1', teamsRouter())
   app.use('/api/v1', collaboratorsRouter())
   app.use('/api/v1', operationMatrixRouter())
+  app.use('/api/v1', operationalPlanningRouter())
   app.locals.argosDocumentDraftAdapter = createArgosDocumentDraftAdapter(env, pool)
   app.use('/api/v1', conveyorsRouter(env))
   app.use('/api/v1', conveyorAssignmentsRouter())
   app.use('/api/v1', myActivitiesRouter())
+  app.use('/api/v1', myWorkQueueRouter())
   app.use('/api/v1', dashboardRouter())
   app.use('/api/v1', supportRouter())
 

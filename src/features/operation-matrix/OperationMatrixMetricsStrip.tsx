@@ -16,13 +16,13 @@ export function OperationMatrixMetricsStrip({ global }: Props) {
       aria-label="Resumo da composição de serviço"
     >
       <span className={pill}>
-        <span className={n}>{global.taskCount}</span> opções
+        <span className={n}>{global.taskCount}</span> tarefas
       </span>
       <span className={pill}>
-        <span className={n}>{global.sectorCount}</span> áreas
+        <span className={n}>{global.sectorCount}</span> setores
       </span>
       <span className={pill}>
-        <span className={n}>{global.activityCount}</span> etapas
+        <span className={n}>{global.activityCount}</span> atividades
       </span>
       <span className={pill}>
         <span className={n}>{global.plannedMinutesSum}</span> min

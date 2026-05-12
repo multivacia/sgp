@@ -1,7 +1,18 @@
+import {
+  DndContext,
+  KeyboardSensor,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core'
+import { sortableKeyboardCoordinates } from '@dnd-kit/sortable'
 import { useMemo, useState } from 'react'
 import type { MatrixSuggestionCatalogData } from '../../../catalog/matrixSuggestion/types'
 import type { Collaborator } from '../../../domain/collaborators/collaborator.types'
 import type { Team } from '../../../domain/teams/team.types'
+import { MatrixStructureExpandedShell } from '../MatrixStructureExpandedShell'
 import { OperationMatrixEditorWorkbench } from '../OperationMatrixEditorWorkbench'
 import { OperationMatrixMetricsStrip } from '../OperationMatrixMetricsStrip'
 import { buildMatrixTreeAggregateMaps } from '../matrixTreeAggregates'
@@ -20,7 +31,10 @@ type Props = {
   loadError: string | null
   entries: MatrixCatalogTaskEntry[]
   catalogDrafts: CatalogOpcaoDraftInstance[]
-  onAddCatalog: (taskId: string) => NovaMatrizAddCatalogResult
+  onAddCatalog: (
+    taskId: string,
+    insertIndex?: number,
+  ) => NovaMatrizAddCatalogResult
   onAddBlankCatalogOpcao: (name: string, description?: string) => void
   onRemoveCatalog: (instanceId: string) => void
   onChangeCatalogDraft: (
@@ -45,6 +59,14 @@ type Props = {
   onRetryLoad?: () => void
   /** Totem de criação: sem CTAs Voltar/Continuar; catálogo e rascunho com copy alinhada ao combo. */
   totemMode?: boolean
+  /** Nome em rascunho (Nova Matriz) para o cabeçalho do modo expandido. */
+  draftMatrixTitle?: string
+  /** Bloqueia fechar o modo expandido (ex.: enquanto grava no servidor). */
+  structureBusy?: boolean
+  /** Nova Matriz: DnD @dnd-kit para reordenar tarefas/setores/atividades no rascunho. */
+  novaMatrizStructureDragEnd?: (event: DragEndEvent) => void
+  /** Oculta botão "Expandir estrutura" quando a tela já está no workspace expandido. */
+  showExpandStructureButton?: boolean
 }
 
 export function CriarMatrizEtapaEstrutura({
@@ -70,7 +92,24 @@ export function CriarMatrizEtapaEstrutura({
   onVoltar,
   onRetryLoad,
   totemMode = false,
+  draftMatrixTitle,
+  structureBusy = false,
+  novaMatrizStructureDragEnd,
+  showExpandStructureButton = true,
 }: Props) {
+  const [structureExpanded, setStructureExpanded] = useState(false)
+
+  const dndSensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
+  )
+
+  const hasStructureDraft = useMemo(
+    () => catalogDrafts.length > 0 || manualOpcoes.length > 0,
+    [catalogDrafts.length, manualOpcoes.length],
+  )
   const [catalogModalOpen, setCatalogModalOpen] = useState(false)
 
   const draftTree = useMemo(
@@ -109,6 +148,56 @@ export function CriarMatrizEtapaEstrutura({
     </button>
   )
 
+  const estruturaWorkbench = (
+    <OperationMatrixEditorWorkbench
+      columnLayout="wideRight"
+      showSearchInput={false}
+      metricsStrip={<OperationMatrixMetricsStrip global={aggregateMaps.global} />}
+      stripEnd={flowActions}
+      searchValue=""
+      onSearchChange={() => {}}
+      leftColumn={
+        <NovaMatrizEstruturaCatalogPanel
+          loading={loading}
+          loadError={loadError}
+          entries={entries}
+          onRetryLoad={onRetryLoad}
+          resolveCollaboratorLabel={resolveCollaboratorLabel}
+          onDropDraftToRemove={onRemoveCatalog}
+          toolbarExtra={catalogToolbarBtn}
+          headingTitle={totemMode ? 'Bases e extras' : undefined}
+          headingHint={
+            totemMode
+              ? 'Arraste para o combo ao lado. Para retirar uma tarefa, arraste de volta para aqui.'
+              : undefined
+          }
+        />
+      }
+      rightColumn={
+        <NovaMatrizEstruturaDraftPanel
+          catalogDrafts={catalogDrafts}
+          onAddCatalog={onAddCatalog}
+          onAddBlankCatalogOpcao={onAddBlankCatalogOpcao}
+          onRemoveCatalog={onRemoveCatalog}
+          onChangeCatalogDraft={onChangeCatalogDraft}
+          onReorderCatalogDraft={onReorderCatalogDraft}
+          onDuplicateCatalogInstance={onDuplicateCatalogInstance}
+          collaborators={collaborators}
+          teams={teams}
+          collaboratorsLoading={collaboratorsLoading}
+          collaboratorsError={collaboratorsError}
+          matrixSuggestionCatalog={matrixSuggestionCatalog}
+          expandOnAdd={!totemMode}
+          showDraftIntro={!totemMode}
+          expandControlLabel="Expandir"
+          onExpandStructure={
+            showExpandStructureButton ? () => setStructureExpanded(true) : undefined
+          }
+        />
+      }
+    />
+  )
+
   return (
     <section className="space-y-4">
       <CatalogAddModal
@@ -123,52 +212,26 @@ export function CriarMatrizEtapaEstrutura({
         }}
       />
 
-      <OperationMatrixEditorWorkbench
-        columnLayout="wideRight"
-        showSearchInput={false}
-        metricsStrip={
-          <OperationMatrixMetricsStrip global={aggregateMaps.global} />
-        }
-        stripEnd={flowActions}
-        searchValue=""
-        onSearchChange={() => {}}
-        leftColumn={
-          <NovaMatrizEstruturaCatalogPanel
-            loading={loading}
-            loadError={loadError}
-            entries={entries}
-            onRetryLoad={onRetryLoad}
-            resolveCollaboratorLabel={resolveCollaboratorLabel}
-            onDropDraftToRemove={onRemoveCatalog}
-            toolbarExtra={catalogToolbarBtn}
-            headingTitle={totemMode ? 'Bases e extras' : undefined}
-            headingHint={
-              totemMode
-                ? 'Arraste para o combo ao lado. Para retirar uma opção, arraste de volta para aqui.'
-                : undefined
-            }
-          />
-        }
-        rightColumn={
-          <NovaMatrizEstruturaDraftPanel
-            catalogDrafts={catalogDrafts}
-            onAddCatalog={onAddCatalog}
-            onAddBlankCatalogOpcao={onAddBlankCatalogOpcao}
-            onRemoveCatalog={onRemoveCatalog}
-            onChangeCatalogDraft={onChangeCatalogDraft}
-            onReorderCatalogDraft={onReorderCatalogDraft}
-            onDuplicateCatalogInstance={onDuplicateCatalogInstance}
-            collaborators={collaborators}
-            teams={teams}
-            collaboratorsLoading={collaboratorsLoading}
-            collaboratorsError={collaboratorsError}
-            matrixSuggestionCatalog={matrixSuggestionCatalog}
-            expandOnAdd={!totemMode}
-            showDraftIntro={!totemMode}
-            expandControlLabel={totemMode ? 'Expandir' : 'Editar'}
-          />
-        }
-      />
+      <MatrixStructureExpandedShell
+        active={structureExpanded}
+        matrixName={draftMatrixTitle}
+        hasDraftChanges={hasStructureDraft}
+        busy={structureBusy}
+        onClose={() => setStructureExpanded(false)}
+        showHeaderSaveButton={false}
+      >
+        {novaMatrizStructureDragEnd ? (
+          <DndContext
+            sensors={dndSensors}
+            collisionDetection={closestCenter}
+            onDragEnd={novaMatrizStructureDragEnd}
+          >
+            {estruturaWorkbench}
+          </DndContext>
+        ) : (
+          estruturaWorkbench
+        )}
+      </MatrixStructureExpandedShell>
 
       <div className="space-y-2 border-t border-white/[0.06] pt-4">
         <h3 className="text-[11px] font-bold uppercase tracking-wider text-slate-500">

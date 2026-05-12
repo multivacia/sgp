@@ -29,13 +29,13 @@ describe('validateManualOpcoesForSubmit', () => {
     expect(validateManualOpcoesForSubmit([])).toBeNull()
   })
 
-  it('exige nome da opção', () => {
+  it('exige nome da tarefa', () => {
     expect(
       validateManualOpcoesForSubmit([baseOp({ name: '   ' })]),
-    ).toMatch(/opção/i)
+    ).toMatch(/tarefa/i)
   })
 
-  it('exige nome da área', () => {
+  it('exige nome do setor', () => {
     expect(
       validateManualOpcoesForSubmit([
         baseOp({
@@ -48,10 +48,10 @@ describe('validateManualOpcoesForSubmit', () => {
           ],
         }),
       ]),
-    ).toMatch(/área/i)
+    ).toMatch(/setor/i)
   })
 
-  it('exige nome da etapa', () => {
+  it('exige nome da atividade', () => {
     expect(
       validateManualOpcoesForSubmit([
         baseOp({
@@ -64,10 +64,10 @@ describe('validateManualOpcoesForSubmit', () => {
           ],
         }),
       ]),
-    ).toMatch(/etapa/i)
+    ).toMatch(/atividade/i)
   })
 
-  it('valida opção com área e etapa nomeadas', () => {
+  it('valida tarefa com setor e atividade nomeados', () => {
     expect(
       validateManualOpcoesForSubmit([
         baseOp({
@@ -83,7 +83,7 @@ describe('validateManualOpcoesForSubmit', () => {
     ).toBeNull()
   })
 
-  it('exige principal quando há mais do que um colaborador na etapa', () => {
+  it('exige principal quando há mais do que um colaborador na atividade', () => {
     expect(
       validateManualOpcoesForSubmit([
         baseOp({

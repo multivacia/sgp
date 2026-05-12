@@ -24,7 +24,7 @@ export const NOVA_ESTEIRA_MODE_LABEL: Record<
   manual: {
     title: 'Montar manualmente',
     description:
-      'Começa vazio: você define opções, áreas e etapas sem depender de uma matriz base.',
+      'Começa vazio: você define tarefas, setores e atividades sem depender de uma matriz base.',
   },
 }
 

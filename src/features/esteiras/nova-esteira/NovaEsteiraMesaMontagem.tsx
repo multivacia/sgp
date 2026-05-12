@@ -101,12 +101,12 @@ export function NovaEsteiraMesaMontagem({
           Mesa de montagem
         </h2>
         <p className="mt-1 text-sm text-slate-500">
-          Opções de pedido, áreas e etapas. À esquerda a lista de opções; à
-          direita o detalhe da opção selecionada.
+          Tarefas de pedido, setores e atividades. À esquerda a lista de tarefas; à
+          direita o detalhe da tarefa selecionada.
         </p>
         {opcoes.length > 0 && (
           <p className="mt-2 text-xs text-slate-500">
-            {totais.areas} áreas · {totais.etapas} etapas ·{' '}
+            {totais.areas} setores · {totais.etapas} atividades ·{' '}
             {formatMinutosHumanos(totais.minutos)} estimados
           </p>
         )}
@@ -116,7 +116,7 @@ export function NovaEsteiraMesaMontagem({
         <div className="sgp-panel !p-5">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-              Opções
+              Tarefas
             </p>
             <div className="flex flex-wrap gap-2">
               <button
@@ -133,14 +133,14 @@ export function NovaEsteiraMesaMontagem({
                 onClick={onAddOpcaoManual}
                 className="rounded-lg border border-sgp-gold/35 bg-sgp-gold/[0.07] px-2 py-1 text-[11px] font-semibold text-sgp-gold"
               >
-                Nova opção
+                Nova tarefa
               </button>
             </div>
           </div>
 
           {opcoes.length === 0 ? (
             <p className="mt-6 text-sm text-slate-500">
-              Nenhuma opção ainda. Use <strong>Nova opção</strong> ou{' '}
+              Nenhuma tarefa ainda. Use <strong>Nova tarefa</strong> ou{' '}
               <strong>Reaproveitar</strong> para começar.
             </p>
           ) : (
@@ -168,7 +168,7 @@ export function NovaEsteiraMesaMontagem({
                             {o.titulo.trim() || '(sem título)'}
                           </p>
                           <p className="mt-0.5 text-[10px] text-slate-500">
-                            {o.areas.length} área(s) · origem {o.origem}
+                            {o.areas.length} setor(es) · origem {o.origem}
                           </p>
                         </button>
                         <div className="flex flex-wrap gap-1 border-t border-white/[0.06] pt-2">
@@ -216,13 +216,13 @@ export function NovaEsteiraMesaMontagem({
         <div className="sgp-panel !p-5">
           {!opcaoAtiva ? (
             <p className="text-sm text-slate-500">
-              Crie ou selecione uma opção para editar áreas e etapas.
+              Crie ou selecione uma tarefa para editar setores e atividades.
             </p>
           ) : (
             <div className="space-y-5">
               <div>
                 <label className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-                  Nome da opção
+                  Nome da tarefa
                 </label>
                 <input
                   value={opcaoAtiva.titulo}
@@ -236,7 +236,7 @@ export function NovaEsteiraMesaMontagem({
 
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-                  Áreas
+                  Setores
                 </p>
                 <div className="flex flex-wrap gap-2">
                   <button
@@ -245,7 +245,7 @@ export function NovaEsteiraMesaMontagem({
                     onClick={() => setDialogArea(opcaoAtiva.id)}
                     className="rounded-lg border border-white/12 px-2 py-1 text-[11px] font-semibold text-slate-200"
                   >
-                    Área do catálogo…
+                    Setor do catálogo…
                   </button>
                   <button
                     type="button"
@@ -253,7 +253,7 @@ export function NovaEsteiraMesaMontagem({
                     onClick={() => onAddAreaManual(opcaoAtiva.id)}
                     className="rounded-lg border border-sgp-gold/35 bg-sgp-gold/[0.07] px-2 py-1 text-[11px] font-semibold text-sgp-gold"
                   >
-                    Nova área
+                    Novo setor
                   </button>
                 </div>
               </div>
@@ -298,14 +298,14 @@ export function NovaEsteiraMesaMontagem({
                             onClick={() => onRemoveArea(opcaoAtiva.id, ar.id)}
                             className="rounded border border-rose-500/30 px-2 py-0.5 text-[10px] text-rose-200"
                           >
-                            Remover área
+                            Remover setor
                           </button>
                         </div>
                       </div>
 
                       <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-white/[0.06] pt-3">
                         <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">
-                          Etapas
+                          Atividades
                         </p>
                         <div className="flex gap-2">
                           <button
@@ -324,7 +324,7 @@ export function NovaEsteiraMesaMontagem({
                             onClick={() => onAddEtapaManual(opcaoAtiva.id, ar.id)}
                             className="rounded border border-sgp-gold/30 px-2 py-0.5 text-[10px] text-sgp-gold"
                           >
-                            + etapa
+                            + atividade
                           </button>
                         </div>
                       </div>
@@ -423,7 +423,7 @@ export function NovaEsteiraMesaMontagem({
             onClick={(e) => e.stopPropagation()}
           >
             <p className="font-heading text-base font-bold text-slate-100">
-              Reaproveitar opção do catálogo
+              Reaproveitar tarefa do catálogo
             </p>
             <ul className="mt-4 space-y-2">
               {listOpcoesReferenciaCatalogo().map((ref) => (
@@ -466,7 +466,7 @@ export function NovaEsteiraMesaMontagem({
             onClick={(e) => e.stopPropagation()}
           >
             <p className="font-heading text-base font-bold text-slate-100">
-              Reaproveitar área
+              Reaproveitar setor
             </p>
             <ul className="mt-4 space-y-2">
               {listAreasReferenciaCatalogo().map((ref) => (
@@ -481,7 +481,7 @@ export function NovaEsteiraMesaMontagem({
                   >
                     {ref.titulo}
                     <span className="ml-2 text-[11px] text-slate-500">
-                      ({ref.etapas.length} etapas)
+                      ({ref.etapas.length} atividades)
                     </span>
                   </button>
                 </li>
@@ -509,7 +509,7 @@ export function NovaEsteiraMesaMontagem({
             onClick={(e) => e.stopPropagation()}
           >
             <p className="font-heading text-base font-bold text-slate-100">
-              Reaproveitar etapa
+              Reaproveitar atividade
             </p>
             <ul className="mt-4 space-y-2">
               {listEtapasReferenciaCatalogo().map((ref) => (

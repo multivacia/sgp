@@ -94,6 +94,10 @@ export type InsertConveyorTimeEntryRow = {
   notes: string | null
   entry_mode: 'manual' | 'guided' | 'imported'
   metadata_json: unknown | null
+  entry_origin: 'ASSIGNED' | 'UNASSIGNED_EXCEPTION'
+  exception_justification: string | null
+  is_out_of_sequence: boolean
+  out_of_sequence_justification: string | null
 }
 
 export async function insertConveyorTimeEntry(
@@ -103,10 +107,14 @@ export async function insertConveyorTimeEntry(
   const r = await pool.query<{ id: string }>(
     `INSERT INTO conveyor_time_entries (
       id, conveyor_id, conveyor_node_id, collaborator_id,
-      conveyor_node_assignee_id, entry_at, minutes, notes, entry_mode, metadata_json
+      conveyor_node_assignee_id, entry_at, minutes, notes, entry_mode, metadata_json,
+      entry_origin, exception_justification,
+      is_out_of_sequence, out_of_sequence_justification
     ) VALUES (
       $1, $2, $3, $4,
-      $5, $6, $7, $8, $9, $10::jsonb
+      $5, $6, $7, $8, $9, $10::jsonb,
+      $11, $12,
+      $13, $14
     )
     RETURNING id`,
     [
@@ -122,6 +130,10 @@ export async function insertConveyorTimeEntry(
       row.metadata_json === null || row.metadata_json === undefined
         ? null
         : JSON.stringify(row.metadata_json),
+      row.entry_origin,
+      row.exception_justification,
+      row.is_out_of_sequence,
+      row.out_of_sequence_justification,
     ],
   )
   const out = r.rows[0]
@@ -315,6 +327,10 @@ export type ConveyorTimeEntryRow = {
   notes: string | null
   entry_mode: 'manual' | 'guided' | 'imported'
   metadata_json: unknown | null
+  entry_origin: 'ASSIGNED' | 'UNASSIGNED_EXCEPTION'
+  exception_justification: string | null
+  is_out_of_sequence: boolean
+  out_of_sequence_justification: string | null
   created_at: Date
   updated_at: Date
 }
@@ -328,6 +344,10 @@ export type ConveyorTimeEntryListRow = {
   notes: string | null
   entry_mode: 'manual' | 'guided' | 'imported'
   metadata_json: unknown | null
+  entry_origin: 'ASSIGNED' | 'UNASSIGNED_EXCEPTION'
+  exception_justification: string | null
+  is_out_of_sequence: boolean
+  out_of_sequence_justification: string | null
   recorded_by_user_email: string | null
   entry_at: Date
   created_at: Date
@@ -341,7 +361,8 @@ export async function findConveyorTimeEntryById(
   const r = await pool.query<ConveyorTimeEntryRow>(
     `SELECT id, conveyor_id, conveyor_node_id, collaborator_id,
             conveyor_node_assignee_id, entry_at, minutes, notes, entry_mode,
-            metadata_json,
+            metadata_json, entry_origin, exception_justification,
+            is_out_of_sequence, out_of_sequence_justification,
             created_at, updated_at
      FROM conveyor_time_entries
      WHERE id = $1::uuid AND deleted_at IS NULL`,
@@ -358,7 +379,8 @@ export async function listConveyorTimeEntriesByStep(
   const r = await pool.query<ConveyorTimeEntryListRow>(
     `SELECT cte.id, cte.collaborator_id, c.full_name AS collaborator_name,
             cte.conveyor_node_assignee_id, cte.minutes, cte.notes, cte.entry_mode,
-            cte.metadata_json,
+            cte.metadata_json, cte.entry_origin, cte.exception_justification,
+            cte.is_out_of_sequence, cte.out_of_sequence_justification,
             au.email AS recorded_by_user_email,
             cte.entry_at, cte.created_at, cte.updated_at
      FROM conveyor_time_entries cte

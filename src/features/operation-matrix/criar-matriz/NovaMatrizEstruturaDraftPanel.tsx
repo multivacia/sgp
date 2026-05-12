@@ -1,4 +1,11 @@
-import { useRef, useState, type FormEvent } from 'react'
+/* eslint-disable react-hooks/refs -- @dnd-kit useSortable */
+import { CSS } from '@dnd-kit/utilities'
+import {
+  SortableContext,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable'
+import { useRef, useState, type FormEvent, type ReactNode } from 'react'
 import type { MatrixSuggestionCatalogData } from '../../../catalog/matrixSuggestion/types'
 import type { Collaborator } from '../../../domain/collaborators/collaborator.types'
 import type { Team } from '../../../domain/teams/team.types'
@@ -11,11 +18,55 @@ import {
   parseNovaMatrizEstruturaDrag,
   type NovaMatrizAddCatalogResult,
 } from './novaMatrizEstruturaDnD'
+import { computeInsertIndexFromPointerAndRows } from './novaMatrizCatalogDropInsert'
 import { summarizeMatrixTaskDraftRoot } from './novaMatrizTotemUi'
+
+function SortableDraftOpcaoShell({
+  draftRootId,
+  disabled,
+  children,
+}: {
+  draftRootId: string
+  disabled?: boolean
+  children: (args: {
+    dragHandleProps: {
+      attributes: ReturnType<typeof useSortable>['attributes']
+      listeners: ReturnType<typeof useSortable>['listeners']
+    }
+    isDragging: boolean
+  }) => ReactNode
+}) {
+  const sortable = useSortable({
+    id: draftRootId,
+    disabled: !!disabled,
+  })
+  const style = {
+    transform: CSS.Transform.toString(sortable.transform),
+    transition: sortable.transition,
+  }
+  return (
+    <li
+      ref={sortable.setNodeRef}
+      style={style}
+      className={sortable.isDragging ? 'opacity-75' : undefined}
+    >
+      {children({
+        dragHandleProps: {
+          attributes: sortable.attributes,
+          listeners: sortable.listeners,
+        },
+        isDragging: sortable.isDragging,
+      })}
+    </li>
+  )
+}
 
 type Props = {
   catalogDrafts: CatalogOpcaoDraftInstance[]
-  onAddCatalog: (taskId: string) => NovaMatrizAddCatalogResult
+  onAddCatalog: (
+    taskId: string,
+    insertIndex?: number,
+  ) => NovaMatrizAddCatalogResult
   onAddBlankCatalogOpcao: (name: string, description?: string) => void
   onRemoveCatalog: (instanceId: string) => void
   onChangeCatalogDraft: (
@@ -29,11 +80,14 @@ type Props = {
   collaboratorsLoading: boolean
   collaboratorsError: string | null
   matrixSuggestionCatalog: MatrixSuggestionCatalogData
-  /** Quando falso, novas opções ficam recolhidas (totem de criação). Predefinição: true. */
+  /** Quando falso, novas tarefas ficam recolhidas (totem de criação). Predefinição: true. */
   expandOnAdd?: boolean
   /** Quando falso, omite o bloco introdutório no topo (totem define o título fora). */
   showDraftIntro?: boolean
-  expandControlLabel?: 'Editar' | 'Expandir'
+  /** Rótulo do botão quando a tarefa está recolhida (abrindo edição/expansão do rascunho). */
+  expandControlLabel?: 'Expandir'
+  /** Abre modo tela cheia da montagem (combo + catálogo). */
+  onExpandStructure?: () => void
 }
 
 export function NovaMatrizEstruturaDraftPanel({
@@ -51,7 +105,8 @@ export function NovaMatrizEstruturaDraftPanel({
   matrixSuggestionCatalog,
   expandOnAdd = true,
   showDraftIntro = true,
-  expandControlLabel = 'Editar',
+  expandControlLabel = 'Expandir',
+  onExpandStructure,
 }: Props) {
   const [expanded, setExpanded] = useState<ReadonlySet<string>>(() => new Set())
   const [dropHighlight, setDropHighlight] = useState(false)
@@ -108,7 +163,13 @@ export function NovaMatrizEstruturaDraftPanel({
     const raw = e.dataTransfer.getData(NOVA_MATRIZ_ESTRUTURA_DND_MIME)
     const p = parseNovaMatrizEstruturaDrag(raw)
     if (p?.kind === 'catalog-task') {
-      const r = onAddCatalog(p.taskId)
+      const orderedIds = catalogDrafts.map((d) => d.instanceId)
+      const insertIndex = computeInsertIndexFromPointerAndRows(
+        e.clientY,
+        orderedIds,
+        (id) => rowRefs.current.get(id),
+      )
+      const r = onAddCatalog(p.taskId, insertIndex)
       if (r.outcome === 'duplicate') {
         const inst = catalogDrafts.find((d) => d.sourceTaskId === p.taskId)
         if (inst) {
@@ -150,10 +211,10 @@ export function NovaMatrizEstruturaDraftPanel({
 
   return (
     <div
-      className={`flex h-full min-h-0 w-full flex-col rounded-2xl border bg-gradient-to-b from-amber-950/45 to-black/25 px-3 py-3 shadow-inner ring-1 ring-amber-300/15 sm:px-4 ${
+      className={`flex h-full min-h-0 w-full flex-col rounded-2xl border border-white/[0.08] bg-sgp-app-panel-deep/50 px-3 py-3 shadow-inner ring-1 ring-white/[0.04] sm:px-4 ${
         dropHighlight
-          ? 'border-amber-200 ring-2 ring-amber-300/45'
-          : 'border-amber-300/40'
+          ? 'border-sgp-gold/45 ring-2 ring-sgp-gold/25 bg-sgp-gold/[0.03]'
+          : ''
       }`}
       role="region"
       aria-label="Rascunho da nova matriz"
@@ -163,33 +224,42 @@ export function NovaMatrizEstruturaDraftPanel({
       onDrop={handleDropOnDraft}
     >
       {showDraftIntro ? (
-        <div className="shrink-0 border-b border-amber-300/25 pb-3">
-          <h2 className="font-heading text-sm font-semibold text-amber-100/95">
+        <div className="shrink-0 border-b border-white/[0.06] pb-3">
+          <h2 className="font-heading text-sm font-semibold text-slate-100">
             Rascunho da matriz
           </h2>
-          <p className="mt-0.5 text-[11px] leading-relaxed text-amber-100/55">
+          <p className="mt-0.5 text-[11px] leading-relaxed text-slate-500">
             Arraste tarefas do catálogo à esquerda. Edite nome, setores e atividades ao expandir.
-            Para remover uma opção do rascunho, arraste de volta ao painel laranja.
+            Para remover uma tarefa do rascunho, arraste de volta ao painel do catálogo à esquerda.
           </p>
         </div>
       ) : null}
 
-      <div className="mt-3 flex shrink-0 flex-wrap items-center justify-end gap-2 border-b border-amber-300/15 pb-3">
+      <div className="mt-3 flex shrink-0 flex-wrap items-center justify-end gap-2 border-b border-white/[0.06] pb-3">
+        {onExpandStructure ? (
+          <button
+            type="button"
+            onClick={() => onExpandStructure()}
+            className="rounded-lg border border-sgp-gold/40 bg-sgp-gold/[0.08] px-2.5 py-1 text-[11px] font-semibold text-sgp-gold-warm hover:border-sgp-gold/55 hover:bg-sgp-gold/15"
+          >
+            Expandir estrutura
+          </button>
+        ) : null}
         {!addOpen ? (
           <button
             type="button"
             onClick={() => setAddOpen(true)}
-            className="rounded-lg border border-amber-300/35 bg-amber-500/15 px-2.5 py-1 text-[11px] font-semibold text-amber-100/95 hover:bg-amber-500/22"
+            className="rounded-lg border border-sgp-gold/35 bg-sgp-gold/10 px-2.5 py-1 text-[11px] font-semibold text-sgp-gold-warm hover:border-sgp-gold/50 hover:bg-sgp-gold/15"
           >
-            + Opção em branco
+            + Tarefa em branco
           </button>
         ) : (
           <form
-            className="flex w-full flex-col gap-2 rounded-xl border border-amber-300/20 bg-black/25 p-3 sm:max-w-lg"
+            className="flex w-full flex-col gap-2 rounded-xl border border-white/[0.08] bg-black/20 p-3 sm:max-w-lg"
             onSubmit={(e) => void handleSubmitAdd(e)}
           >
             <label className="flex flex-col gap-0.5 text-[11px]">
-              <span className="text-slate-500">Nome da opção</span>
+              <span className="text-slate-500">Nome da tarefa</span>
               <LabelSuggestField
                 value={newName}
                 onChange={setNewName}
@@ -211,9 +281,9 @@ export function NovaMatrizEstruturaDraftPanel({
               <button
                 type="submit"
                 disabled={!newName.trim()}
-                className="rounded-lg bg-amber-500/25 px-2.5 py-1 text-[11px] font-semibold text-amber-100 disabled:opacity-50"
+                className="rounded-lg border border-sgp-gold/40 bg-sgp-gold/15 px-2.5 py-1 text-[11px] font-semibold text-sgp-gold-warm hover:border-sgp-gold/55 hover:bg-sgp-gold/20 disabled:opacity-50"
               >
-                Criar opção
+                Criar tarefa
               </button>
               <button
                 type="button"
@@ -231,16 +301,23 @@ export function NovaMatrizEstruturaDraftPanel({
         )}
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain py-3 pr-0.5 [scrollbar-width:thin] [scrollbar-color:rgba(250,204,21,0.35)_transparent]">
+      <div
+        className="min-h-0 flex-1 overflow-y-auto overscroll-contain py-3 pr-0.5 [scrollbar-width:thin] [scrollbar-color:rgba(148,163,184,0.45)_transparent]"
+        onDragOver={handleDragOverDraft}
+      >
         {catalogDrafts.length === 0 ? (
-          <div className="flex min-h-[12rem] flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-amber-300/35 bg-amber-950/20 px-4 py-10 text-center">
-            <p className="text-sm font-medium text-amber-100/90">Rascunho vazio</p>
-            <p className="max-w-sm text-xs leading-relaxed text-amber-100/55">
-              Arraste tarefas do catálogo laranja para cá para montar a estrutura. Você também pode
-              usar «Opção em branco» para criar uma opção nova sem partir do catálogo.
+          <div className="flex min-h-[12rem] flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-white/10 bg-black/20 px-4 py-10 text-center">
+            <p className="text-sm font-medium text-slate-200">Rascunho vazio</p>
+            <p className="max-w-sm text-xs leading-relaxed text-slate-500">
+              Arraste tarefas do catálogo à esquerda para cá para montar a estrutura. Você também pode
+              usar «Tarefa em branco» para criar uma tarefa nova sem partir do catálogo.
             </p>
           </div>
         ) : (
+          <SortableContext
+            items={catalogDrafts.map((d) => d.draftRoot.id)}
+            strategy={verticalListSortingStrategy}
+          >
           <ul className="space-y-3">
             {catalogDrafts.map((inst, index) => {
               const taskId = inst.draftRoot.id
@@ -249,25 +326,50 @@ export function NovaMatrizEstruturaDraftPanel({
               const downDisabled = index >= catalogDrafts.length - 1
               const sum = summarizeMatrixTaskDraftRoot(inst.draftRoot)
               return (
-                <li key={inst.instanceId}>
+                <SortableDraftOpcaoShell key={inst.instanceId} draftRootId={taskId}>
+                  {({ dragHandleProps }) => (
                   <div
                     ref={(el) => setRowRef(inst.instanceId, el)}
-                    draggable
-                    onDragStart={(e) => handleDragStartDraft(e, inst.instanceId)}
-                    className="rounded-xl border border-amber-300/25 bg-amber-950/25 px-3 py-2.5 shadow-sm"
+                    className="rounded-xl border border-white/[0.08] bg-black/20 px-3 py-2.5 shadow-sm"
                   >
-                    <div className="flex flex-wrap items-start justify-between gap-2">
+                    <div className="flex flex-wrap items-start gap-2">
+                      <div className="flex shrink-0 flex-col items-center gap-0.5 border-r border-white/[0.08] pr-2">
+                        <span className="font-mono text-[10px] font-semibold tabular-nums text-slate-500">
+                          {index + 1}
+                        </span>
+                        <button
+                          type="button"
+                          {...dragHandleProps.attributes}
+                          {...dragHandleProps.listeners}
+                          aria-label="Arrastar para reordenar tarefa"
+                          className="cursor-grab touch-none rounded-md border border-transparent px-1 py-1 text-sm leading-none text-slate-400 active:cursor-grabbing hover:border-white/14 hover:bg-white/[0.05]"
+                        >
+                          <span aria-hidden className="font-mono text-[10px] tracking-tighter">
+                            ⋮⋮
+                          </span>
+                        </button>
+                        <span
+                          draggable
+                          onDragStart={(e) => handleDragStartDraft(e, inst.instanceId)}
+                          className="cursor-grab text-[11px] text-slate-400"
+                          title="Arrastar para o painel do catálogo à esquerda para remover do rascunho"
+                          aria-label="Arrastar para o catálogo para remover"
+                        >
+                          ↩
+                        </span>
+                      </div>
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-medium text-slate-100">
                           {inst.draftRoot.name}
                         </p>
                         <p className="mt-0.5 text-[11px] tabular-nums text-slate-400">
-                          {sum.nAreas} área{sum.nAreas === 1 ? '' : 's'} · {sum.nEtapas} etapa
-                          {sum.nEtapas === 1 ? '' : 's'} · {sum.minutos} min
+                          {sum.nAreas} setor{sum.nAreas === 1 ? '' : 'es'} · {sum.nEtapas}{' '}
+                          atividade{sum.nEtapas === 1 ? '' : 's'} · {sum.minutos} min
                         </p>
                         <p className="mt-0.5 text-[11px] text-slate-500">
-                          {inst.sourceMatrixItemName === 'Opção nova'
-                            ? 'Opção nova (manual)'
+                          {inst.sourceMatrixItemName === 'Tarefa nova' ||
+                          inst.sourceMatrixItemName === 'Opção nova'
+                            ? 'Tarefa nova (manual)'
                             : `Origem: ${inst.sourceMatrixItemName} · ${inst.sourceTaskName}`}
                         </p>
                       </div>
@@ -304,16 +406,19 @@ export function NovaMatrizEstruturaDraftPanel({
                         </button>
                         <button
                           type="button"
-                          className="rounded-lg border border-amber-300/30 bg-amber-500/15 px-2 py-1 text-[10px] font-semibold text-amber-100/95 hover:bg-amber-500/25"
+                          className="rounded-lg border border-sgp-gold/35 bg-sgp-gold/10 px-2 py-1 text-[10px] font-semibold text-sgp-gold-warm hover:border-sgp-gold/50 hover:bg-sgp-gold/15"
                           onClick={() => toggleExpanded(inst.instanceId)}
                           aria-expanded={isOpen}
+                          aria-label={
+                            isOpen ? 'Recolher tarefa' : 'Expandir tarefa'
+                          }
                         >
                           {isOpen ? 'Recolher' : expandControlLabel}
                         </button>
                       </div>
                     </div>
                     {isOpen ? (
-                      <div className="mt-3 border-t border-amber-300/20 pt-3">
+                      <div className="mt-3 border-t border-white/[0.06] pt-3">
                         <CriarMatrizCatalogOpcaoDraftEditor
                           variant="contextRail"
                           draftRoot={inst.draftRoot}
@@ -331,10 +436,12 @@ export function NovaMatrizEstruturaDraftPanel({
                       </div>
                     ) : null}
                   </div>
-                </li>
+                  )}
+                </SortableDraftOpcaoShell>
               )
             })}
           </ul>
+          </SortableContext>
         )}
       </div>
     </div>

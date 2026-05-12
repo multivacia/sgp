@@ -70,16 +70,16 @@ export function formatCoberturaTempoRatio(ratio: number | null): string {
 
 /** V1 leitura por área/STEP no detalhe da esteira — sem «gargalo» como label principal. */
 export const nodeWorkloadLabels = {
-  sectionTitle: 'Pendência e concentração por área/STEP',
+  sectionTitle: 'Pendência e concentração por setor e atividade',
   pendenciaTempoStep: 'Pendência de tempo (STEP)',
   concentracaoPrevisto: 'Concentração de trabalho — previsto',
   concentracaoRealizado: 'Concentração de trabalho — realizado',
   pressaoAtrasoContexto: 'Pressão de atraso (contexto da esteira)',
   bucketOperacional: 'Bucket operacional (esteira)',
   colunas: {
-    opcao: 'Opção',
-    area: 'Área',
-    step: 'STEP',
+    opcao: 'Tarefa',
+    area: 'Setor',
+    step: 'Atividade',
     previsto: 'Previsto estrutural',
     realizado: 'Realizado (acum.)',
     pendencia: 'Pendência',

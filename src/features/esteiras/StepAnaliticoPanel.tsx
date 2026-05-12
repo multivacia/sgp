@@ -187,7 +187,27 @@ export function StepAnaliticoPanel({
                 key={h.id}
                 className="flex flex-wrap items-baseline justify-between gap-2 rounded-md bg-black/20 px-2 py-1.5"
               >
-                <span className="text-slate-300">{h.colaboradorNome}</span>
+                <span className="flex min-w-0 flex-1 flex-wrap items-center gap-2 text-slate-300">
+                  {h.apontamentoPorExcecao ? (
+                    <span
+                      className="shrink-0 rounded border border-amber-500/35 bg-amber-500/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-amber-100/95"
+                      title={h.justificativaExcecao ?? 'Apontamento por exceção'}
+                    >
+                      Exceção
+                    </span>
+                  ) : null}
+                  {h.foraDaSequencia ? (
+                    <span
+                      className="shrink-0 rounded border border-sky-500/35 bg-sky-500/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-sky-100/95"
+                      title={
+                        h.justificativaForaSequencia ?? 'Fora da sequência recomendada'
+                      }
+                    >
+                      Fora de sequência
+                    </span>
+                  ) : null}
+                  <span className="min-w-0">{h.colaboradorNome}</span>
+                </span>
                 <span className="tabular-nums text-slate-500">
                   {formatMinutosHumanos(h.minutos)} ·{' '}
                   {new Date(h.createdAt).toLocaleString('pt-BR', {

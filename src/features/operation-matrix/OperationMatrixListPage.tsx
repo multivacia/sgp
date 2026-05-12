@@ -182,6 +182,8 @@ export function OperationMatrixListPage() {
           </div>
           <Link
             to="/app/matrizes-operacao/nova"
+            target="_blank"
+            rel="noopener noreferrer"
             className="sgp-cta-primary px-6 no-underline"
           >
             Nova matriz
@@ -312,8 +314,14 @@ export function OperationMatrixListPage() {
                   items={
                     [
                       {
-                        label: 'Abrir matriz',
-                        onClick: () => navigate(`/app/matrizes-operacao/${item.id}`),
+                        label: 'Alterar matriz',
+                        onClick: () => {
+                          window.open(
+                            `/app/matrizes-operacao/${encodeURIComponent(item.id)}`,
+                            '_blank',
+                            'noopener,noreferrer',
+                          )
+                        },
                       },
                       canManageMatrix && item.is_active
                         ? {

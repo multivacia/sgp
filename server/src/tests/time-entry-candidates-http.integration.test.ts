@@ -179,6 +179,19 @@ describe.skipIf(!hasDb)('GET /api/v1/me/time-entry-candidates (integração)', (
     expect(row.pendingMinutes).toBeGreaterThanOrEqual(0)
     expect(typeof row.realizedMinutes).toBe('number')
 
+    const incOther = await request(app)
+      .get(
+        `/api/v1/me/time-entry-candidates?q=${encodeURIComponent('Cli')}&includeUnassigned=true`,
+      )
+      .set('Cookie', cookieMaria)
+    expect(incOther.status).toBe(200)
+    for (const x of incOther.body.data as Array<{
+      isAssignedToMe: boolean
+      requiresJustification: boolean
+    }>) {
+      expect(x.requiresJustification).toBe(!x.isAssignedToMe)
+    }
+
     const filt = await request(app)
       .get(`/api/v1/me/time-entry-candidates?q=${encodeURIComponent('ClienteFiltroX')}`)
       .set('Cookie', cookieMaria)

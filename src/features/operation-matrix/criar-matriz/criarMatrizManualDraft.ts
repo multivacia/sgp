@@ -33,7 +33,7 @@ export type CriarMatrizManualOpcao = {
 export function newManualOpcao(id: string): CriarMatrizManualOpcao {
   return {
     id,
-    name: 'Nova opção',
+    name: 'Nova tarefa',
     description: '',
     areas: [],
   }
@@ -42,7 +42,7 @@ export function newManualOpcao(id: string): CriarMatrizManualOpcao {
 export function newManualArea(id: string): CriarMatrizManualArea {
   return {
     id,
-    name: 'Nova área',
+    name: 'Novo setor',
     etapas: [],
   }
 }
@@ -50,7 +50,7 @@ export function newManualArea(id: string): CriarMatrizManualArea {
 export function newManualEtapa(id: string): CriarMatrizManualEtapa {
   return {
     id,
-    name: 'Nova etapa',
+    name: 'Nova atividade',
     plannedMinutes: null,
     teamIds: [],
     collaboratorIds: [],
@@ -87,25 +87,25 @@ export function validateManualOpcoesForSubmit(
 ): string | null {
   for (const op of opcoes) {
     if (!op.name.trim()) {
-      return 'Cada opção nova precisa de um nome.'
+      return 'Cada tarefa nova precisa de um nome.'
     }
     for (const ar of op.areas) {
       if (!ar.name.trim()) {
-        return 'Cada área precisa de um nome.'
+        return 'Cada setor precisa de um nome.'
       }
       for (const et of ar.etapas) {
         if (!et.name.trim()) {
-          return 'Cada etapa precisa de um nome.'
+          return 'Cada atividade precisa de um nome.'
         }
         const r = reconcileEtapaCollaborators(et)
         if (
           r.primaryCollaboratorId &&
           !r.collaboratorIds.includes(r.primaryCollaboratorId)
         ) {
-          return 'O colaborador principal tem de estar entre os selecionados na etapa.'
+          return 'O colaborador principal tem de estar entre os selecionados na atividade.'
         }
         if (r.collaboratorIds.length > 1 && !r.primaryCollaboratorId) {
-          return 'Quando há mais do que um colaborador na etapa, indique quem é o principal.'
+          return 'Quando há mais do que um colaborador na atividade, indique quem é o principal.'
         }
       }
     }

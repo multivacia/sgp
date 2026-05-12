@@ -31,6 +31,12 @@ export type ConveyorStepTimeEntryListItem = TimeEntryDelegationClient & {
   minutes: number
   notes: string | null
   entryMode: 'manual' | 'guided' | 'imported'
+  /** Ausente em respostas antigas — tratar como ASSIGNED. */
+  entryOrigin?: 'ASSIGNED' | 'UNASSIGNED_EXCEPTION'
+  exceptionJustification?: string | null
+  /** S3 — ausente em respostas antigas. */
+  isOutOfSequence?: boolean
+  outOfSequenceJustification?: string | null
   entryAt: string
   createdAt: string
   updatedAt: string
@@ -46,6 +52,10 @@ export type ConveyorStepTimeEntryCreated = TimeEntryDelegationClient & {
   minutes: number
   notes: string | null
   entryMode: 'manual' | 'guided' | 'imported'
+  entryOrigin?: 'ASSIGNED' | 'UNASSIGNED_EXCEPTION'
+  exceptionJustification?: string | null
+  isOutOfSequence?: boolean
+  outOfSequenceJustification?: string | null
   entryAt: string
   createdAt: string
 }
@@ -55,6 +65,10 @@ export type PostConveyorStepTimeEntryBody = {
   notes?: string | null
   /** Alias aceite pelo backend (mapeia para `notes`). */
   description?: string | null
+  /** Obrigatório quando o colaborador não está alocado na atividade. */
+  exceptionJustification?: string | null
+  /** Obrigatório quando a atividade está fora da sequência recomendada (S3). */
+  outOfSequenceJustification?: string | null
   entryAt?: string
   entryMode?: 'manual' | 'guided' | 'imported'
 }

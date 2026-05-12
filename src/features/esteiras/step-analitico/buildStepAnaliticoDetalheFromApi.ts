@@ -71,6 +71,16 @@ function buildHistoricoFromTimeEntries(
       te.collaboratorName?.trim() || te.collaboratorId || '—',
     minutos: te.minutes,
     observacao: te.notes ?? undefined,
+    apontamentoPorExcecao: te.entryOrigin === 'UNASSIGNED_EXCEPTION',
+    justificativaExcecao:
+      te.entryOrigin === 'UNASSIGNED_EXCEPTION' && te.exceptionJustification?.trim()
+        ? te.exceptionJustification.trim()
+        : undefined,
+    foraDaSequencia: te.isOutOfSequence === true,
+    justificativaForaSequencia:
+      te.isOutOfSequence === true && te.outOfSequenceJustification?.trim()
+        ? te.outOfSequenceJustification.trim()
+        : undefined,
     createdAt: te.entryAt,
     origem: 'api',
   }))

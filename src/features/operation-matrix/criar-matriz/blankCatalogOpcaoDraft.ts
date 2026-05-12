@@ -2,7 +2,7 @@ import type { MatrixNodeTreeApi } from '../../../domain/operation-matrix/operati
 import type { CatalogOpcaoDraftInstance } from './cloneCatalogTaskSubtreeForDraft'
 
 /**
- * Nova opção criada no editor (sem clone de catálogo) — apenas rascunho local.
+ * Nova tarefa criada no editor (sem clone de catálogo) — apenas rascunho local.
  * Metadados `source*` são placeholders para breadcrumb; não referenciam API.
  */
 export function buildBlankCatalogOpcaoDraftInstance(
@@ -38,8 +38,8 @@ export function buildBlankCatalogOpcaoDraftInstance(
     instanceId: globalThis.crypto.randomUUID(),
     sourceTaskId: `local-blank-${taskId}`,
     sourceMatrixItemId: 'local-draft',
-    sourceMatrixItemName: 'Opção nova',
-    sourceTaskName: n || 'Nova opção',
+    sourceMatrixItemName: 'Tarefa nova',
+    sourceTaskName: n || 'Nova tarefa',
     draftRoot,
   }
 }

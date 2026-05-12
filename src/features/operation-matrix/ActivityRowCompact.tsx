@@ -1,4 +1,5 @@
 import { memo } from 'react'
+import type { DraggableAttributes } from '@dnd-kit/core'
 import type { MatrixNodeTreeApi } from '../../domain/operation-matrix/operation-matrix.types'
 import { MatrixContextActionsMenu } from './MatrixContextActionsMenu'
 import { HighlightName } from './matrixTreeHighlight'
@@ -15,14 +16,21 @@ export type ActivityRowCompactProps = {
   warnOrphan: boolean
   /** Alvo para scroll no painel (Matrizes). */
   panelFocusId?: string
-  /** Quando falso, omite a badge “Etapa” (ex.: lista na Composição). Default: true. */
+  /** Quando falso, omite a badge “Atividade” (ex.: lista na Composição). Default: true. */
   showTypeBadge?: boolean
-  /** Ações por etapa (Composição): coluna à direita com separador. */
+  /** Ações por atividade (Composição): coluna à direita com separador. */
   inlineActions?: {
     onEdit: () => void
     onDuplicate: () => void
     onRemove: () => void
     busy?: boolean
+  }
+  /** Alça para reordenar (composição com DnD). */
+  dragHandle?: {
+    attributes: DraggableAttributes
+    listeners: Record<string, unknown>
+    /** 1-based dentro do setor */
+    sequencePosition?: number
   }
 }
 
@@ -39,6 +47,7 @@ export const ActivityRowCompact = memo(function ActivityRowCompact({
   panelFocusId,
   showTypeBadge = true,
   inlineActions,
+  dragHandle,
 }: ActivityRowCompactProps) {
   const pm = node.planned_minutes
   const timeStr = pm != null ? `${pm}′` : '—'
@@ -69,7 +78,7 @@ export const ActivityRowCompact = memo(function ActivityRowCompact({
     <>
       {showTypeBadge ? (
         <span className="mt-0.5 shrink-0 rounded-md border border-white/[0.1] bg-white/[0.04] px-1.5 py-px text-[8px] font-bold uppercase tracking-wide text-slate-500">
-          Etapa
+          Atividade
         </span>
       ) : null}
       {warnNoResponsible ? (
@@ -110,6 +119,24 @@ export const ActivityRowCompact = memo(function ActivityRowCompact({
         className={rowShell}
         {...(panelFocusId ? { 'data-matrix-panel-focus': panelFocusId } : {})}
       >
+        {dragHandle ? (
+          <div className="flex shrink-0 flex-col items-center justify-center gap-0.5 border-r border-white/[0.08] bg-black/15 py-1 pl-1 pr-0.5">
+            {dragHandle.sequencePosition != null ? (
+              <span className="font-mono text-[9px] font-semibold tabular-nums text-slate-500">
+                {dragHandle.sequencePosition}
+              </span>
+            ) : null}
+            <button
+              type="button"
+              {...dragHandle.attributes}
+              {...dragHandle.listeners}
+              aria-label="Arrastar para reordenar atividade"
+              className="cursor-grab touch-none rounded-md border border-transparent px-1 py-1 text-[10px] leading-none text-slate-500 active:cursor-grabbing hover:border-white/10 hover:bg-white/[0.05]"
+            >
+              <span aria-hidden>⋮⋮</span>
+            </button>
+          </div>
+        ) : null}
         <button
           type="button"
           onClick={onSelect}

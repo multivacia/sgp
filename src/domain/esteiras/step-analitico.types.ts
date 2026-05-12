@@ -33,6 +33,12 @@ export type ApontamentoAnaliticoItem = {
   colaboradorNome: string
   minutos: number
   observacao?: string
+  /** Apontamento por exceção (sem alocação na atividade). */
+  apontamentoPorExcecao?: boolean
+  justificativaExcecao?: string
+  /** Execução fora da sequência recomendada na esteira (S3). */
+  foraDaSequencia?: boolean
+  justificativaForaSequencia?: string
   /** ISO — na API costuma refletir entryAt. */
   createdAt: string
   origem: ApontamentoAnaliticoOrigem

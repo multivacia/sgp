@@ -25,10 +25,12 @@ export type TimeEntryCandidatesResult = {
 export async function listTimeEntryCandidates(options?: {
   q?: string
   limit?: number
+  includeUnassigned?: boolean
 }): Promise<TimeEntryCandidatesResult> {
   const sp = new URLSearchParams()
   if (options?.q?.trim()) sp.set('q', options.q.trim())
   if (options?.limit != null) sp.set('limit', String(options.limit))
+  if (options?.includeUnassigned) sp.set('includeUnassigned', 'true')
   const qs = sp.toString()
   const path = qs
     ? `${BASE}/me/time-entry-candidates?${qs}`
