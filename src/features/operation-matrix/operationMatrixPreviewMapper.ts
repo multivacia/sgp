@@ -5,8 +5,8 @@ export type MacroActivityRow = {
   id: string
   name: string
   plannedMinutes: number | null
+  defaultResponsibleId: string | null
   responsibleLabel: string | null
-  required: boolean
 }
 
 export type MacroSectorBlock = {
@@ -81,12 +81,16 @@ export function buildOperationMatrixMacroPreviewModel(
                 dr && dr.trim() !== ''
                   ? collaboratorIdToName.get(dr) ?? dr
                   : null
+              const drId =
+                act.default_responsible_id?.trim() === ''
+                  ? null
+                  : act.default_responsible_id?.trim() ?? null
               return {
                 id: act.id,
                 name: act.name,
                 plannedMinutes: act.planned_minutes,
+                defaultResponsibleId: drId,
                 responsibleLabel,
-                required: act.required,
               }
             })
           return {

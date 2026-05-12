@@ -206,38 +206,42 @@ html[data-theme="slate-dark"] {
 /* Light Executive — paleta executiva premium (apenas este bloco no tema light) */
 html[data-theme="light-executive"] {
   /* Referência explícita da paleta aprovada (mapeamento interno) */
-  --color-bg-app: #f4f7fb;
-  --color-bg-app-secondary: #edf2f8;
+  --color-bg-app: #f3f6fa;
+  --color-bg-page: #f8fafc;
+  --color-bg-app-secondary: #f8fafc;
   --color-surface: #ffffff;
-  --color-surface-secondary: #f8fafd;
-  --color-surface-elevated: #eef3f8;
-  --color-sidebar-bg: #e9eff6;
-  --color-sidebar-panel: #f7fafd;
+  --color-surface-secondary: #f8fafc;
+  --color-surface-elevated: #ffffff;
+  --color-card-bg: #ffffff;
+  --color-card-border: #d8e0ea;
+  --color-sidebar-bg: #eaf0f7;
+  --color-sidebar-panel: #f8fafc;
   --color-topbar-bg: rgba(255, 255, 255, 0.88);
-  --color-shell-border: #d6e0ea;
+  --color-shell-border: #d8e0ea;
   --color-text-primary: #0f172a;
   --color-text-secondary: #334155;
   --color-text-muted: #64748b;
   --color-text-soft: #94a3b8;
-  --color-border-subtle: #dce5ee;
-  --color-border-default: #cbd5e1;
+  --color-border-subtle: #d8e0ea;
+  --color-border-default: #d8e0ea;
   --color-border-strong: #b8c6d8;
-  --color-accent-gold: #c88a1a;
-  --color-accent-gold-hover: #a86f12;
-  --color-accent-soft: #f5e7bf;
+  --color-accent-gold: #d97706;
+  --color-accent-gold-hover: #b45309;
+  --color-accent-gold-text: #92400e;
+  --color-accent-soft: #fff7e6;
   --color-accent-navy: #1e3a5f;
   --color-accent-blue: #2f6d9b;
   --color-accent-blue-soft: #dceaf6;
-  --color-hover-surface: #f1f5f9;
-  --color-active-surface: #e7eef7;
-  --color-selected-surface: #eaf2fb;
+  --color-hover-surface: #eef3f8;
+  --color-active-surface: #fff7e6;
+  --color-selected-surface: #fff7e6;
   --color-focus-ring: rgba(47, 109, 155, 0.22);
   --shadow-card-approved: 0 10px 30px rgba(15, 23, 42, 0.06);
 
   /* ——— @theme / superfícies ——— */
   --semantic-sgp-void: var(--color-bg-app);
   --semantic-sgp-navy: var(--color-sidebar-bg);
-  --semantic-sgp-navy-deep: var(--color-bg-app-secondary);
+  --semantic-sgp-navy-deep: var(--color-bg-page);
   --semantic-sgp-navy-mid: #dbe4ee;
   --semantic-sgp-night: #ffffff;
   --semantic-sgp-blue: var(--color-accent-navy);
@@ -247,7 +251,7 @@ html[data-theme="light-executive"] {
   --semantic-sgp-gold-warm: #c99c5c;
   --semantic-sgp-amber: #d4a84b;
 
-  --semantic-sgp-canvas: var(--color-accent-blue-soft);
+  --semantic-sgp-canvas: var(--color-bg-page);
   --semantic-sgp-surface: var(--color-surface);
   --semantic-sgp-surface-elevated: var(--color-surface-elevated);
   --semantic-sgp-surface-muted: var(--color-bg-app-secondary);
@@ -263,8 +267,8 @@ html[data-theme="light-executive"] {
 
   --semantic-base-fg: var(--color-text-primary);
 
-  --semantic-border-glass: var(--color-border-subtle);
-  --semantic-border-glass-strong: var(--color-border-default);
+  --semantic-border-glass: var(--color-card-border);
+  --semantic-border-glass-strong: var(--color-border-strong);
   --semantic-white-overlay-04: rgba(30, 58, 95, 0.04);
   --semantic-white-overlay-06: rgba(30, 58, 95, 0.06);
   --semantic-white-overlay-08: rgba(30, 58, 95, 0.08);
@@ -274,8 +278,8 @@ html[data-theme="light-executive"] {
   --semantic-sidebar-gradient: linear-gradient(
     180deg,
     var(--color-sidebar-bg) 0%,
-    #edf2f8 46%,
-    var(--color-active-surface) 100%
+    #f1f5f9 46%,
+    #e2e8f0 100%
   );
   --semantic-focus-ring: var(--color-focus-ring);
 
@@ -286,22 +290,12 @@ html[data-theme="light-executive"] {
     linear-gradient(
       180deg,
       var(--color-bg-app) 0%,
-      var(--color-bg-app-secondary) 40%,
+      var(--color-bg-page) 40%,
       var(--color-bg-app) 100%
     );
 
-  --semantic-gradient-cta: linear-gradient(
-    118deg,
-    var(--color-accent-soft) 0%,
-    var(--color-accent-gold) 42%,
-    var(--color-accent-gold-hover) 100%
-  );
-  --semantic-gradient-cta-hover: linear-gradient(
-    118deg,
-    #faf3dd 0%,
-    #d4a84b 45%,
-    var(--color-accent-gold-hover) 100%
-  );
+  --semantic-gradient-cta: linear-gradient(118deg, #d97706 0%, #d97706 100%);
+  --semantic-gradient-cta-hover: linear-gradient(118deg, #b45309 0%, #b45309 100%);
   --semantic-gradient-header: linear-gradient(
     92deg,
     rgba(255, 255, 255, 0.98) 0%,
@@ -318,8 +312,8 @@ html[data-theme="light-executive"] {
     0 0 0 1px var(--color-border-subtle);
   --semantic-shadow-gold-glow: 0 4px 22px -4px rgba(200, 138, 26, 0.28);
 
-  --semantic-kpi-card-start: #ffffff;
-  --semantic-kpi-card-end: var(--color-surface-secondary);
+  --semantic-kpi-card-start: var(--color-card-bg);
+  --semantic-kpi-card-end: var(--color-card-bg);
   --semantic-kpi-card-hover-start: #ffffff;
   --semantic-kpi-card-hover-end: var(--color-hover-surface);
 
