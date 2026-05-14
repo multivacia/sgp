@@ -1,7 +1,7 @@
 import { memo, useMemo } from 'react'
 import type { MatrixNodeTreeApi } from '../../domain/operation-matrix/operation-matrix.types'
 import type { MatrixTreeAggregateMaps } from './matrixTreeAggregates'
-import { getBranchStats } from './matrixTreeAggregates'
+import { getBranchStats, matrixActivityPrimaryTeamId } from './matrixTreeAggregates'
 import { HighlightName } from './matrixTreeHighlight'
 import { ActivityRowCompact } from './ActivityRowCompact'
 
@@ -10,7 +10,7 @@ export type SectorAccordionProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
   aggregateMaps: MatrixTreeAggregateMaps
-  collaboratorIdToName: ReadonlyMap<string, string>
+  teamIdToName: ReadonlyMap<string, string>
   selectedId: string | null
   activePathIds: ReadonlySet<string>
   onSelect: (id: string) => void
@@ -23,7 +23,7 @@ export const SectorAccordion = memo(function SectorAccordion({
   open,
   onOpenChange,
   aggregateMaps,
-  collaboratorIdToName,
+  teamIdToName,
   selectedId,
   activePathIds,
   onSelect,
@@ -71,37 +71,37 @@ export const SectorAccordion = memo(function SectorAccordion({
           <div className="space-y-0.5 border-t border-white/[0.05] px-2 pb-2 pt-1">
             {open
               ? sector.children.map((act) => {
-              const active = act.id === selectedId
-              const onPath = activePathIds.has(act.id)
-              const dr = act.default_responsible_id?.trim() ?? ''
-              const isMatch = !!searchQuery.trim() && matchIds.has(act.id)
-              let responsibleLabel: string | null = null
-              let warnOrphan = false
-              if (!dr) {
-                responsibleLabel = null
-              } else {
-                const name = collaboratorIdToName.get(dr)
-                if (name) responsibleLabel = name
-                else {
-                  responsibleLabel = 'Não vinc.'
-                  warnOrphan = true
-                }
-              }
-              return (
-                <ActivityRowCompact
-                  key={act.id}
-                  node={act}
-                  selected={active}
-                  onPath={onPath}
-                  onSelect={() => onSelect(act.id)}
-                  searchQuery={searchQuery}
-                  isMatch={isMatch}
-                  responsibleLabel={responsibleLabel}
-                  warnNoResponsible={!dr}
-                  warnOrphan={warnOrphan}
-                />
-              )
-            })
+                  const active = act.id === selectedId
+                  const onPath = activePathIds.has(act.id)
+                  const primaryTeamId = matrixActivityPrimaryTeamId(act)
+                  const isMatch = !!searchQuery.trim() && matchIds.has(act.id)
+                  let teamLabel: string | null = null
+                  let warnOrphanTeam = false
+                  if (!primaryTeamId) {
+                    teamLabel = null
+                  } else {
+                    const name = teamIdToName.get(primaryTeamId)
+                    if (name) teamLabel = name
+                    else {
+                      teamLabel = 'Não vinc.'
+                      warnOrphanTeam = true
+                    }
+                  }
+                  return (
+                    <ActivityRowCompact
+                      key={act.id}
+                      node={act}
+                      selected={active}
+                      onPath={onPath}
+                      onSelect={() => onSelect(act.id)}
+                      searchQuery={searchQuery}
+                      isMatch={isMatch}
+                      teamLabel={teamLabel}
+                      warnNoDefaultTeam={primaryTeamId == null}
+                      warnOrphanTeam={warnOrphanTeam}
+                    />
+                  )
+                })
               : null}
           </div>
         </div>

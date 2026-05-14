@@ -5,9 +5,11 @@ import { requirePermission } from '../permissions/permissions.middleware.js'
 import {
   deleteMatrixNode,
   getMatrixItemTree,
+  getMatrixItemExportXlsx,
   getMatrixItems,
   getSuggestionCatalog,
   patchMatrixNode,
+  postMatrixItemDuplicate,
   postMatrixNode,
   postMatrixNodeDuplicate,
   postMatrixNodeReorder,
@@ -29,6 +31,16 @@ export function operationMatrixRouter(): Router {
     '/operation-matrix/items/:id/tree',
     ...view,
     asyncRoute(getMatrixItemTree),
+  )
+  r.get(
+    '/operation-matrix/items/:id/export.xlsx',
+    ...view,
+    asyncRoute(getMatrixItemExportXlsx),
+  )
+  r.post(
+    '/operation-matrix/items/:id/duplicate',
+    ...manage,
+    asyncRoute(postMatrixItemDuplicate),
   )
   r.post('/operation-matrix/nodes', ...manage, asyncRoute(postMatrixNode))
   r.patch('/operation-matrix/nodes/:id', ...manage, asyncRoute(patchMatrixNode))

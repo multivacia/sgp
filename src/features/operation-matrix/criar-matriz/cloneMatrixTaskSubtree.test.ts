@@ -11,7 +11,7 @@ describe('cloneTaskSubtreeUnderItem', () => {
     vi.clearAllMocks()
   })
 
-  it('preserva team_ids do draft ao criar ACTIVITY', async () => {
+  it('persiste apenas a primeira equipe padrão ao criar ACTIVITY', async () => {
     const mockedCreate = vi.mocked(createMatrixNode)
     mockedCreate
       .mockResolvedValueOnce({ id: 'task-created' } as never)
@@ -91,7 +91,7 @@ describe('cloneTaskSubtreeUnderItem', () => {
     expect(mockedCreate).toHaveBeenLastCalledWith(
       expect.objectContaining({
         nodeType: 'ACTIVITY',
-        teamIds: ['team-1', 'team-2'],
+        teamIds: ['team-1'],
       }),
     )
   })

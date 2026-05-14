@@ -307,4 +307,354 @@ describe.skipIf(!hasDb)('operation-matrix (integração)', () => {
       expect(act.team_ids).toContain(teamId)
     }
   })
+
+  it('POST /operation-matrix/items/:id/duplicate sem sessão → 401', async () => {
+    const res = await request(app).post(
+      `/api/v1/operation-matrix/items/${randomUUID()}/duplicate`,
+    )
+    expect(res.status).toBe(401)
+  })
+
+  it('POST /operation-matrix/items/:id/duplicate matriz ausente → 404', async () => {
+    const res = await request(app)
+      .post(`/api/v1/operation-matrix/items/${randomUUID()}/duplicate`)
+      .set(
+        'Cookie',
+        await sessionCookieForUser(pool, GOV_ADMIN_USER_ID, GOV_ADMIN_EMAIL),
+      )
+    expect(res.status).toBe(404)
+  })
+
+  it('POST /operation-matrix/items/:id/duplicate duplica matriz só com ITEM raiz', async () => {
+    const cookie = await sessionCookieForUser(
+      pool,
+      GOV_ADMIN_USER_ID,
+      GOV_ADMIN_EMAIL,
+    )
+    const nm = `SoloItem ${randomUUID().slice(0, 8)}`
+    const rItem = await request(app)
+      .post('/api/v1/operation-matrix/nodes')
+      .set('Cookie', cookie)
+      .send({ nodeType: 'ITEM', name: nm, isActive: true })
+    expect(rItem.status).toBe(201)
+    const id = rItem.body.data?.id as string
+
+    const rDup = await request(app)
+      .post(`/api/v1/operation-matrix/items/${id}/duplicate`)
+      .set('Cookie', cookie)
+    expect(rDup.status).toBe(201)
+    expect(rDup.body.data?.name).toBe(`${nm} (Cópia)`)
+    const tid = rDup.body.data?.id as string
+
+    const tr = await request(app)
+      .get(`/api/v1/operation-matrix/items/${tid}/tree`)
+      .set('Cookie', cookie)
+    expect(tr.status).toBe(200)
+    expect(tr.body.data?.children?.length ?? 0).toBe(0)
+
+    await request(app)
+      .delete(`/api/v1/operation-matrix/nodes/${tid}`)
+      .set('Cookie', cookie)
+    await request(app)
+      .delete(`/api/v1/operation-matrix/nodes/${id}`)
+      .set('Cookie', cookie)
+  })
+
+  it('POST /operation-matrix/items/:id/duplicate: cópia nomeada, estrutura, ordem, planned_minutes, equipe, is_active', async () => {
+    const cookie = await sessionCookieForUser(
+      pool,
+      GOV_ADMIN_USER_ID,
+      GOV_ADMIN_EMAIL,
+    )
+    const teamId = randomUUID()
+    await pool.query(
+      `INSERT INTO teams (id, name, is_active) VALUES ($1::uuid, $2, true)`,
+      [teamId, `Team itemdup ${teamId.slice(0, 6)}`],
+    )
+
+    const baseName = `ItemDup ${randomUUID().slice(0, 8)}`
+    const rItem = await request(app)
+      .post('/api/v1/operation-matrix/nodes')
+      .set('Cookie', cookie)
+      .send({
+        nodeType: 'ITEM',
+        name: baseName,
+        isActive: false,
+      })
+    expect(rItem.status).toBe(201)
+    const itemId = rItem.body.data?.id as string
+
+    const rTask1 = await request(app)
+      .post('/api/v1/operation-matrix/nodes')
+      .set('Cookie', cookie)
+      .send({ nodeType: 'TASK', parentId: itemId, name: 'Zebra' })
+    const rTask2 = await request(app)
+      .post('/api/v1/operation-matrix/nodes')
+      .set('Cookie', cookie)
+      .send({ nodeType: 'TASK', parentId: itemId, name: 'Alpha' })
+    expect(rTask1.status).toBe(201)
+    expect(rTask2.status).toBe(201)
+    const task1Id = rTask1.body.data?.id as string
+
+    const rSec = await request(app)
+      .post('/api/v1/operation-matrix/nodes')
+      .set('Cookie', cookie)
+      .send({ nodeType: 'SECTOR', parentId: task1Id, name: 'S1' })
+    expect(rSec.status).toBe(201)
+    const sectorId = rSec.body.data?.id as string
+
+    const rAct = await request(app)
+      .post('/api/v1/operation-matrix/nodes')
+      .set('Cookie', cookie)
+      .send({
+        nodeType: 'ACTIVITY',
+        parentId: sectorId,
+        name: 'Act77',
+        plannedMinutes: 77,
+        teamIds: [teamId],
+      })
+    expect(rAct.status).toBe(201)
+
+    const rTreeBefore = await request(app)
+      .get(`/api/v1/operation-matrix/items/${itemId}/tree`)
+      .set('Cookie', cookie)
+    expect(rTreeBefore.status).toBe(200)
+    const origOrder =
+      rTreeBefore.body.data?.children?.map((c: { name: string }) => c.name) ?? []
+
+    const rDup1 = await request(app)
+      .post(`/api/v1/operation-matrix/items/${itemId}/duplicate`)
+      .set('Cookie', cookie)
+    expect(rDup1.status).toBe(201)
+    expect(rDup1.body.data?.name).toBe(`${baseName} (Cópia)`)
+    expect(typeof rDup1.body.data?.id).toBe('string')
+    const newId1 = rDup1.body.data?.id as string
+    expect(newId1).not.toBe(itemId)
+
+    const rDup2 = await request(app)
+      .post(`/api/v1/operation-matrix/items/${itemId}/duplicate`)
+      .set('Cookie', cookie)
+    expect(rDup2.status).toBe(201)
+    expect(rDup2.body.data?.name).toBe(`${baseName} (Cópia 2)`)
+
+    const rTreeNew = await request(app)
+      .get(`/api/v1/operation-matrix/items/${newId1}/tree`)
+      .set('Cookie', cookie)
+    expect(rTreeNew.status).toBe(200)
+    const rootNew = rTreeNew.body.data
+    expect(rootNew?.children?.map((c: { name: string }) => c.name)).toEqual(
+      origOrder,
+    )
+    const zebra = rootNew?.children?.find(
+      (c: { name: string }) => c.name === 'Zebra',
+    )
+    const act = zebra?.children?.[0]?.children?.find(
+      (n: { node_type?: string }) => n.node_type === 'ACTIVITY',
+    )
+    expect(act?.planned_minutes).toBe(77)
+    expect(act?.team_ids).toContain(teamId)
+
+    const rBad = await request(app)
+      .post(`/api/v1/operation-matrix/items/${task1Id}/duplicate`)
+      .set('Cookie', cookie)
+    expect(rBad.status).toBe(404)
+
+    const newId2 = rDup2.body.data?.id as string
+    for (const nid of [newId2, newId1, itemId]) {
+      await request(app)
+        .delete(`/api/v1/operation-matrix/nodes/${nid}`)
+        .set('Cookie', cookie)
+    }
+    await pool.query(
+      `DELETE FROM matrix_node_assignment_teams WHERE team_id = $1::uuid`,
+      [teamId],
+    )
+    await pool.query(`DELETE FROM teams WHERE id = $1::uuid`, [teamId])
+  })
+
+  it('GET /operation-matrix/items/:id/export.xlsx sem sessão → 401', async () => {
+    const res = await request(app).get(
+      `/api/v1/operation-matrix/items/${randomUUID()}/export.xlsx`,
+    )
+    expect(res.status).toBe(401)
+  })
+
+  it('GET /operation-matrix/items/:id/export.xlsx matriz ausente → 404', async () => {
+    const res = await request(app)
+      .get(`/api/v1/operation-matrix/items/${randomUUID()}/export.xlsx`)
+      .set(
+        'Cookie',
+        await sessionCookieForUser(pool, GOV_ADMIN_USER_ID, GOV_ADMIN_EMAIL),
+      )
+    expect(res.status).toBe(404)
+  })
+
+  it('GET /operation-matrix/items/:id/export.xlsx gera XLSX com hierarquia, ordem, tempo e equipe', async () => {
+    const ExcelJS = (await import('exceljs')).default
+    const cookie = await sessionCookieForUser(
+      pool,
+      GOV_ADMIN_USER_ID,
+      GOV_ADMIN_EMAIL,
+    )
+    const teamId = randomUUID()
+    const teamName = `Team export ${teamId.slice(0, 6)}`
+    await pool.query(
+      `INSERT INTO teams (id, name, is_active) VALUES ($1::uuid, $2, true)`,
+      [teamId, teamName],
+    )
+
+    const baseName = `Export ${randomUUID().slice(0, 8)}`
+    const rItem = await request(app)
+      .post('/api/v1/operation-matrix/nodes')
+      .set('Cookie', cookie)
+      .send({
+        nodeType: 'ITEM',
+        name: baseName,
+        code: 'MX-EXP',
+        description: 'Descrição export',
+        isActive: true,
+      })
+    expect(rItem.status).toBe(201)
+    const itemId = rItem.body.data?.id as string
+
+    const rTask1 = await request(app)
+      .post('/api/v1/operation-matrix/nodes')
+      .set('Cookie', cookie)
+      .send({ nodeType: 'TASK', parentId: itemId, name: 'Alpha' })
+    const rTask2 = await request(app)
+      .post('/api/v1/operation-matrix/nodes')
+      .set('Cookie', cookie)
+      .send({ nodeType: 'TASK', parentId: itemId, name: 'Zebra' })
+    expect(rTask1.status).toBe(201)
+    expect(rTask2.status).toBe(201)
+    const task1Id = rTask1.body.data?.id as string
+    const task2Id = rTask2.body.data?.id as string
+
+    const rSec = await request(app)
+      .post('/api/v1/operation-matrix/nodes')
+      .set('Cookie', cookie)
+      .send({ nodeType: 'SECTOR', parentId: task1Id, name: 'Setor A' })
+    expect(rSec.status).toBe(201)
+    const sectorId = rSec.body.data?.id as string
+
+    const rSecZ = await request(app)
+      .post('/api/v1/operation-matrix/nodes')
+      .set('Cookie', cookie)
+      .send({ nodeType: 'SECTOR', parentId: task2Id, name: 'Setor Z' })
+    expect(rSecZ.status).toBe(201)
+    const sectorZId = rSecZ.body.data?.id as string
+
+    const rAct = await request(app)
+      .post('/api/v1/operation-matrix/nodes')
+      .set('Cookie', cookie)
+      .send({
+        nodeType: 'ACTIVITY',
+        parentId: sectorId,
+        name: 'Atividade A',
+        plannedMinutes: 77,
+        teamIds: [teamId],
+      })
+    expect(rAct.status).toBe(201)
+
+    const rActZ = await request(app)
+      .post('/api/v1/operation-matrix/nodes')
+      .set('Cookie', cookie)
+      .send({
+        nodeType: 'ACTIVITY',
+        parentId: sectorZId,
+        name: 'Atividade Z',
+        plannedMinutes: 12,
+      })
+    expect(rActZ.status).toBe(201)
+
+    const res = await request(app)
+      .get(`/api/v1/operation-matrix/items/${itemId}/export.xlsx`)
+      .set('Cookie', cookie)
+      .buffer(true)
+      .parse((response, callback) => {
+        const chunks: Buffer[] = []
+        response.on('data', (chunk: Buffer) => chunks.push(chunk))
+        response.on('end', () => callback(null, Buffer.concat(chunks)))
+      })
+
+    expect(res.status).toBe(200)
+    expect(res.headers['content-type']).toContain(
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    )
+    expect(String(res.headers['content-disposition'] ?? '')).toMatch(
+      /matriz-Export-[a-f0-9-]+-\d{4}-\d{2}-\d{2}\.xlsx/i,
+    )
+
+    const workbook = new ExcelJS.Workbook()
+    await workbook.xlsx.load(res.body as Buffer)
+    expect(workbook.worksheets.map((ws) => ws.name)).toEqual([
+      'Resumo',
+      'Estrutura',
+      'Leitura Operacional',
+      'Validação',
+    ])
+
+    const resumo = workbook.getWorksheet('Resumo')
+    const resumoValues = resumo
+      ?.getSheetValues()
+      .slice(2)
+      .map((row) => (Array.isArray(row) ? row[2] : undefined))
+    expect(resumoValues).toContain(baseName)
+    expect(resumoValues).toContain('MX-EXP')
+    expect(resumoValues).toContain('Descrição export')
+
+    const estrutura = workbook.getWorksheet('Estrutura')
+    const estruturaRows = (estrutura?.getSheetValues() ?? [])
+      .slice(2)
+      .filter((row) => Array.isArray(row))
+      .filter((row) => !String(row[1] ?? '').startsWith('TAREFA '))
+      .map((row) => ({
+        taskOrder: row[1],
+        task: row[2],
+        sectorOrder: row[3],
+        sector: row[4],
+        activityOrder: row[5],
+        activity: row[6],
+        minutes: row[7],
+        team: row[9],
+      }))
+    expect(estruturaRows.map((r) => r.task)).toEqual(['Alpha', 'Zebra'])
+    expect(estrutura?.getRow(2).getCell(1).value).toBe('TAREFA 1 — Alpha')
+    expect(estruturaRows[0]).toMatchObject({
+      taskOrder: 1,
+      sectorOrder: 1,
+      activityOrder: 1,
+      sector: 'Setor A',
+      activity: 'Atividade A',
+      minutes: 77,
+      team: teamName,
+    })
+
+    const validacao = workbook.getWorksheet('Validação')
+    expect(validacao?.getCell('A1').value).toContain(baseName)
+    expect(validacao?.getCell('A3').value).toContain('validação manual')
+    expect(validacao?.getRow(5).getCell(1).value).toBe('Seq.')
+    expect(validacao?.getRow(6).getCell(1).value).toBe('TAREFA 1 — Alpha')
+    expect(validacao?.getRow(7).getCell(1).value).toBe('1.1.1')
+    expect(validacao?.getRow(7).getCell(7).value).toBe('☐')
+    expect(validacao?.getRow(7).getCell(8).value).toBe('☐')
+    expect(validacao?.getRow(7).getCell(9).value).toBe('')
+    expect(validacao?.pageSetup.orientation).toBe('landscape')
+    expect(validacao?.pageSetup.paperSize).toBe(9)
+    expect(validacao?.pageSetup.fitToWidth).toBe(1)
+    expect(validacao?.pageSetup.printTitlesRow).toBe('5:5')
+
+    const leitura = workbook.getWorksheet('Leitura Operacional')
+    const pathCell = leitura?.getRow(2).getCell(1).value
+    expect(String(pathCell)).toContain('Alpha > Setor A > Atividade A')
+
+    await request(app)
+      .delete(`/api/v1/operation-matrix/nodes/${itemId}`)
+      .set('Cookie', cookie)
+    await pool.query(
+      `DELETE FROM matrix_node_assignment_teams WHERE team_id = $1::uuid`,
+      [teamId],
+    )
+    await pool.query(`DELETE FROM teams WHERE id = $1::uuid`, [teamId])
+  })
 })

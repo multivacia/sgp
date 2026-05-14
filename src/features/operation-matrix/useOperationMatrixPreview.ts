@@ -1,14 +1,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import type { MatrixNodeTreeApi } from '../../domain/operation-matrix/operation-matrix.types'
-import type { Collaborator } from '../../domain/collaborators/collaborator.types'
+import type { Team } from '../../domain/teams/team.types'
 import { reportClientError } from '../../lib/errors'
 import {
+  createMatrixNode,
+  deleteMatrixNode,
   getMatrixTree,
   isApiNotFound,
   patchMatrixNode,
 } from '../../services/operation-matrix/operationMatrixApiService'
-import { getCollaboratorsService } from '../../services/collaborators/collaboratorsServiceFactory'
+import { listTeams } from '../../services/teams/teamsApiService'
 import { buildMatrixTreeAggregateMaps } from './matrixTreeAggregates'
 import {
   buildOperationMatrixMacroPreviewModel,
@@ -16,12 +18,25 @@ import {
 } from './operationMatrixPreviewMapper'
 import {
   activityFieldsSignature,
-  collectActivityFieldDiffs,
+  isPreviewWorkingTreeDirty,
   patchActivityFieldsInTreeClone,
+  patchNodeNameInTreeClone,
+  structureNamesSignature,
   validatePreviewActivityTree,
 } from './operationMatrixPreviewEdits'
 import {
+  reorderSiblingsRelativeToOver,
+  snapshotOrderMap,
+} from './matrixStructureReorder'
+import { createInlineNameSaveRegistry } from './macroPreviewInlineNameSave'
+import {
+  appendPreviewPendingStructureNode,
+  removePreviewStructureNode,
+} from './operationMatrixPreviewStructureCreate'
+import { persistOperationMatrixPreviewToApi } from './operationMatrixPreviewPersist'
+import {
   deepCloneMatrixTree,
+  findNodeInTree,
   readPreviewSnapshotFromSession,
   writePreviewSnapshotToSession,
   OPERATION_MATRIX_PREVIEW_SNAPSHOT_VERSION,
@@ -48,32 +63,31 @@ export function useOperationMatrixPreview(params: {
   const { pathname } = useLocation()
   const { itemId, draftToken } = params
   const [treeState, setTreeState] = useState<TreeState>({ status: 'loading' })
-  const [collaborators, setCollaborators] = useState<Collaborator[]>([])
-  const [collaboratorsLoadFailed, setCollaboratorsLoadFailed] = useState(false)
+  const [teams, setTeams] = useState<Team[]>([])
+  const [teamsLoadFailed, setTeamsLoadFailed] = useState(false)
 
   const [workingTree, setWorkingTree] = useState<MatrixNodeTreeApi | null>(null)
+  const workingTreeRef = useRef<MatrixNodeTreeApi | null>(null)
+  const inlineNameSaveRegistry = useMemo(() => createInlineNameSaveRegistry(), [])
   const [baselineActivitySig, setBaselineActivitySig] = useState('')
+  const [baselineNamesSig, setBaselineNamesSig] = useState('')
 
   const [saveState, setSaveState] = useState<PreviewSaveState>('idle')
   const [saveErrorMessage, setSaveErrorMessage] = useState<string | null>(null)
+  const [bornInEditNodeId, setBornInEditNodeId] = useState<string | null>(null)
 
   useEffect(() => {
     let cancelled = false
     void (async () => {
       try {
-        const svc = getCollaboratorsService()
-        const list = await svc.listCollaborators({
-          status: 'active',
-          search: undefined,
-        })
-        if (!cancelled) {
-          setCollaborators(list)
-          setCollaboratorsLoadFailed(false)
-        }
+        const res = await listTeams({ isActive: 'all', limit: 200, offset: 0 })
+        if (cancelled) return
+        setTeams(res.items)
+        setTeamsLoadFailed(false)
       } catch {
         if (!cancelled) {
-          setCollaborators([])
-          setCollaboratorsLoadFailed(true)
+          setTeams([])
+          setTeamsLoadFailed(true)
         }
       }
     })()
@@ -82,16 +96,13 @@ export function useOperationMatrixPreview(params: {
     }
   }, [])
 
-  const collaboratorIdSet = useMemo(
-    () => new Set(collaborators.map((c) => c.id)),
-    [collaborators],
-  )
+  const teamIdSet = useMemo(() => new Set(teams.map((t) => t.id)), [teams])
 
-  const collaboratorIdToName = useMemo(() => {
+  const teamIdToName = useMemo(() => {
     const m = new Map<string, string>()
-    for (const c of collaborators) m.set(c.id, c.fullName)
+    for (const t of teams) m.set(t.id, t.name)
     return m
-  }, [collaborators])
+  }, [teams])
 
   useEffect(() => {
     if (!itemId) {
@@ -189,27 +200,40 @@ export function useOperationMatrixPreview(params: {
       if (baselineActivitySig !== '') {
         setBaselineActivitySig('')
       }
+      if (baselineNamesSig !== '') {
+        setBaselineNamesSig('')
+      }
     } else {
       const w = deepCloneMatrixTree(readyTree)
       setWorkingTree(w)
       setBaselineActivitySig(activityFieldsSignature(w))
+      setBaselineNamesSig(structureNamesSignature(w))
     }
   }
 
   const isDirty = useMemo(() => {
-    if (!workingTree || baselineActivitySig === '') return false
-    return activityFieldsSignature(workingTree) !== baselineActivitySig
-  }, [workingTree, baselineActivitySig])
+    if (!workingTree || !readyTree || baselineActivitySig === '' || baselineNamesSig === '') {
+      return false
+    }
+    return isPreviewWorkingTreeDirty(
+      workingTree,
+      baselineActivitySig,
+      snapshotOrderMap(readyTree),
+      baselineNamesSig,
+    )
+  }, [workingTree, baselineActivitySig, baselineNamesSig, readyTree])
+
+  workingTreeRef.current = workingTree
 
   const model: OperationMatrixMacroPreviewModel | null = useMemo(() => {
     if (!workingTree || treeState.status !== 'ready') return null
-    const maps = buildMatrixTreeAggregateMaps(workingTree, collaboratorIdSet)
+    const maps = buildMatrixTreeAggregateMaps(workingTree, teamIdSet)
     return buildOperationMatrixMacroPreviewModel(
       workingTree,
       maps.global,
-      collaboratorIdToName,
+      teamIdToName,
     )
-  }, [workingTree, treeState, collaboratorIdSet, collaboratorIdToName])
+  }, [workingTree, treeState, teamIdSet, teamIdToName])
 
   const source: PreviewDataSource | null =
     treeState.status === 'ready' ? treeState.source : null
@@ -219,20 +243,20 @@ export function useOperationMatrixPreview(params: {
       activityId: string,
       patch: Partial<{
         plannedMinutes: number | null
-        defaultResponsibleId: string | null
+        teamIds: string[]
       }>,
     ) => {
       setWorkingTree((prev) => {
         if (!prev) return prev
         const dbPatch: Partial<{
           planned_minutes: number | null
-          default_responsible_id: string | null
+          team_ids: string[]
         }> = {}
         if (patch.plannedMinutes !== undefined) {
           dbPatch.planned_minutes = patch.plannedMinutes
         }
-        if (patch.defaultResponsibleId !== undefined) {
-          dbPatch.default_responsible_id = patch.defaultResponsibleId
+        if (patch.teamIds !== undefined) {
+          dbPatch.team_ids = [...patch.teamIds]
         }
         return patchActivityFieldsInTreeClone(prev, activityId, dbPatch)
       })
@@ -242,37 +266,188 @@ export function useOperationMatrixPreview(params: {
     [],
   )
 
+  const applyNodeNamePatch = useCallback((nodeId: string, name: string) => {
+    setWorkingTree((prev) => {
+      if (!prev) return prev
+      const next = patchNodeNameInTreeClone(prev, nodeId, name)
+      workingTreeRef.current = next
+      return next
+    })
+    setSaveState('idle')
+    setSaveErrorMessage(null)
+  }, [])
+
+  const consumeBornInEditNode = useCallback((nodeId: string) => {
+    setBornInEditNodeId((current) => (current === nodeId ? null : current))
+  }, [])
+
+  const cancelPreviewPendingNode = useCallback((nodeId: string) => {
+    setWorkingTree((prev) => {
+      if (!prev) return prev
+      const next = removePreviewStructureNode(prev, nodeId)
+      workingTreeRef.current = next
+      return next
+    })
+    setBornInEditNodeId((current) => (current === nodeId ? null : current))
+    setSaveState('idle')
+    setSaveErrorMessage(null)
+  }, [])
+
+  const removePreviewStructureNodeLocal = useCallback((nodeId: string) => {
+    setWorkingTree((prev) => {
+      if (!prev) return prev
+      const next = removePreviewStructureNode(prev, nodeId)
+      workingTreeRef.current = next
+      return next
+    })
+    setBornInEditNodeId((current) => (current === nodeId ? null : current))
+    setSaveState('idle')
+    setSaveErrorMessage(null)
+  }, [])
+
+  const addPreviewTask = useCallback((): string | null => {
+    let createdId: string | null = null
+    setWorkingTree((prev) => {
+      if (!prev || prev.node_type !== 'ITEM') return prev
+      const appended = appendPreviewPendingStructureNode(prev, prev.id, 'TASK')
+      if (!appended) return prev
+      createdId = appended.node.id
+      return appended.tree
+    })
+    if (createdId) setBornInEditNodeId(createdId)
+    setSaveState('idle')
+    setSaveErrorMessage(null)
+    return createdId
+  }, [])
+
+  const addPreviewSector = useCallback((taskId: string) => {
+    let createdId: string | null = null
+    setWorkingTree((prev) => {
+      if (!prev) return prev
+      const appended = appendPreviewPendingStructureNode(prev, taskId, 'SECTOR')
+      if (!appended) return prev
+      createdId = appended.node.id
+      return appended.tree
+    })
+    if (createdId) setBornInEditNodeId(createdId)
+    setSaveState('idle')
+    setSaveErrorMessage(null)
+    return createdId
+  }, [])
+
+  const addPreviewActivity = useCallback((taskId: string, sectorId: string) => {
+    let createdId: string | null = null
+    setWorkingTree((prev) => {
+      if (!prev) return prev
+      const sector = findNodeInTree(prev, sectorId)
+      if (!sector || sector.node_type !== 'SECTOR' || sector.parent_id !== taskId) return prev
+      const appended = appendPreviewPendingStructureNode(prev, sectorId, 'ACTIVITY')
+      if (!appended) return prev
+      createdId = appended.node.id
+      return appended.tree
+    })
+    if (createdId) setBornInEditNodeId(createdId)
+    setSaveState('idle')
+    setSaveErrorMessage(null)
+    return createdId
+  }, [])
+
   const resetPreviewEdits = useCallback(() => {
     if (!readyTree) return
     setWorkingTree(deepCloneMatrixTree(readyTree))
+    setBornInEditNodeId(null)
     setSaveState('idle')
     setSaveErrorMessage(null)
   }, [readyTree])
 
-  const savePreviewEdits = useCallback(async (): Promise<boolean> => {
-    if (!itemId || !workingTree || treeState.status !== 'ready') return false
+  const reorderPreviewTasks = useCallback((activeId: string, overId: string) => {
+    setWorkingTree((prev) => {
+      if (!prev) return prev
+      const next = reorderSiblingsRelativeToOver(prev, activeId, overId)
+      return next ?? prev
+    })
+    setSaveState('idle')
+    setSaveErrorMessage(null)
+  }, [])
 
-    const validation = validatePreviewActivityTree(workingTree)
+  const reorderPreviewSectors = useCallback(
+    (taskId: string, activeSectorId: string, overSectorId: string) => {
+      setWorkingTree((prev) => {
+        if (!prev) return prev
+        const active = findNodeInTree(prev, activeSectorId)
+        const over = findNodeInTree(prev, overSectorId)
+        if (!active || !over || active.node_type !== 'SECTOR' || over.node_type !== 'SECTOR') {
+          return prev
+        }
+        if (active.parent_id !== taskId || over.parent_id !== taskId) return prev
+        const next = reorderSiblingsRelativeToOver(prev, activeSectorId, overSectorId)
+        return next ?? prev
+      })
+      setSaveState('idle')
+      setSaveErrorMessage(null)
+    },
+    [],
+  )
+
+  const reorderPreviewActivities = useCallback(
+    (
+      taskId: string,
+      sectorId: string,
+      activeActivityId: string,
+      overActivityId: string,
+    ) => {
+      setWorkingTree((prev) => {
+        if (!prev) return prev
+        const active = findNodeInTree(prev, activeActivityId)
+        const over = findNodeInTree(prev, overActivityId)
+        if (!active || !over || active.node_type !== 'ACTIVITY' || over.node_type !== 'ACTIVITY') {
+          return prev
+        }
+        if (active.parent_id !== sectorId || over.parent_id !== sectorId) return prev
+        const sector = findNodeInTree(prev, sectorId)
+        if (!sector || sector.node_type !== 'SECTOR' || sector.parent_id !== taskId) return prev
+        const next = reorderSiblingsRelativeToOver(prev, activeActivityId, overActivityId)
+        return next ?? prev
+      })
+      setSaveState('idle')
+      setSaveErrorMessage(null)
+    },
+    [],
+  )
+
+  const savePreviewEdits = useCallback(async (): Promise<boolean> => {
+    if (!itemId || treeState.status !== 'ready') return false
+    if (!workingTreeRef.current) return false
+
+    const commitResult = inlineNameSaveRegistry.commitAllForSave()
+    if (!commitResult.ok) {
+      setSaveErrorMessage(commitResult.message)
+      setSaveState('error')
+      return false
+    }
+
+    const treeToSave = workingTreeRef.current
+    if (!treeToSave) return false
+
+    const validation = validatePreviewActivityTree(treeToSave)
     if (!validation.ok) {
       setSaveErrorMessage(validation.message)
       setSaveState('error')
       return false
     }
 
+    const ts = treeState
+
     setSaveState('saving')
     setSaveErrorMessage(null)
 
-    const ts = treeState
-
     const persistApi = async () => {
       const baseline = ts.tree
-      const diffs = collectActivityFieldDiffs(baseline, workingTree)
-      for (const { id, patch } of diffs) {
-        await patchMatrixNode(id, {
-          plannedMinutes: patch.planned_minutes,
-          defaultResponsibleId: patch.default_responsible_id,
-        })
-      }
+      await persistOperationMatrixPreviewToApi(baseline, treeToSave, {
+        createNode: createMatrixNode,
+        patchNode: patchMatrixNode,
+        deleteNode: deleteMatrixNode,
+      })
       const fresh = await getMatrixTree(itemId)
       setTreeState({
         status: 'ready',
@@ -289,7 +464,7 @@ export function useOperationMatrixPreview(params: {
       const snapshot: OperationMatrixPreviewSnapshot = {
         schemaVersion: OPERATION_MATRIX_PREVIEW_SNAPSHOT_VERSION,
         itemId,
-        tree: deepCloneMatrixTree(workingTree),
+        tree: deepCloneMatrixTree(treeToSave),
         capturedAt: new Date().toISOString(),
       }
       const wr = writePreviewSnapshotToSession(draftToken, snapshot)
@@ -330,7 +505,7 @@ export function useOperationMatrixPreview(params: {
       setSaveState('error')
       return false
     }
-  }, [draftToken, itemId, pathname, treeState, workingTree])
+  }, [draftToken, itemId, inlineNameSaveRegistry, pathname, treeState])
 
   return {
     treeState,
@@ -339,11 +514,23 @@ export function useOperationMatrixPreview(params: {
     workingTree,
     isDirty,
     applyActivityPatch,
+    applyNodeNamePatch,
+    addPreviewTask,
+    addPreviewSector,
+    addPreviewActivity,
+    cancelPreviewPendingNode,
+    removePreviewStructureNodeLocal,
+    bornInEditNodeId,
+    consumeBornInEditNode,
+    reorderPreviewTasks,
+    reorderPreviewSectors,
+    reorderPreviewActivities,
     resetPreviewEdits,
     savePreviewEdits,
     saveState,
     saveErrorMessage,
-    collaborators,
-    collaboratorsLoadFailed,
+    inlineNameSaveRegistry,
+    teams,
+    teamsLoadFailed,
   }
 }

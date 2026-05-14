@@ -1,4 +1,5 @@
 import type { MatrixNodeTreeApi } from '../../domain/operation-matrix/operation-matrix.types'
+import { normalizeMatrixTeamIds } from './matrixTreeAggregates'
 
 export const OPERATION_MATRIX_PREVIEW_SNAPSHOT_VERSION = 1 as const
 
@@ -10,7 +11,8 @@ export type MatrixEditorFormSnapshot = {
   formDescription: string
   formActive: boolean
   formPlanned: string
-  formResponsible: string
+  /** No máximo uma equipe padrão (0 ou 1 id). */
+  formTeamIds: string[]
   formRequired: boolean
 }
 
@@ -78,7 +80,7 @@ export function applyEditorFormToTreeClone(
       const n = Number.parseInt(pm, 10)
       node.planned_minutes = Number.isNaN(n) ? node.planned_minutes : n
     }
-    node.default_responsible_id = form.formResponsible.trim() || null
+    node.team_ids = normalizeMatrixTeamIds(form.formTeamIds).slice(0, 1)
     node.required = form.formRequired
   }
 

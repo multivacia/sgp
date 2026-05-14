@@ -115,7 +115,7 @@ export function summarizeMatrixTaskDraftRoot(root: MatrixNodeTreeApi): {
 export function aggregateNovaMatrizCombos(
   catalogOpcoesDraft: CatalogOpcaoDraftInstance[],
   manualOpcoes: CriarMatrizManualOpcao[],
-  collaboratorIds: ReadonlySet<string>,
+  validTeamIdSet: ReadonlySet<string>,
 ): {
   nOpcoes: number
   nAreas: number
@@ -123,7 +123,7 @@ export function aggregateNovaMatrizCombos(
   minutos: number
 } {
   const draftTree = buildDraftCatalogItemTree(catalogOpcoesDraft)
-  const maps = buildMatrixTreeAggregateMaps(draftTree, collaboratorIds)
+  const maps = buildMatrixTreeAggregateMaps(draftTree, validTeamIdSet)
   const g = maps.global
   const man = manualAggregate(manualOpcoes)
   return {

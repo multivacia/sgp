@@ -28,19 +28,19 @@ export function OperationMatrixMetricsStrip({ global }: Props) {
         <span className={n}>{global.plannedMinutesSum}</span> min
       </span>
       <span className={pill}>
-        <span className={n}>{global.linkedDistinctResponsibles}</span> resp.
+        <span className={n}>{global.linkedDistinctDefaultTeams}</span> equipes
       </span>
       <span className={pill}>
-        <span className={n}>{global.activitiesWithoutResponsible}</span> sem
-        resp. padrão
+        <span className={n}>{global.activitiesWithoutDefaultTeam}</span> sem
+        equipe padrão
       </span>
-      {global.activitiesWithOrphanResponsible > 0 ? (
+      {global.activitiesWithOrphanDefaultTeam > 0 ? (
         <span
           className="inline-flex items-center gap-1 rounded-md border border-rose-500/25 bg-rose-500/[0.07] px-2 py-1 text-[10px] text-rose-100/90"
-          title="Responsável importado sem cadastro correspondente"
+          title="Equipe padrão importada sem cadastro correspondente"
         >
           <span className="font-semibold tabular-nums text-rose-50/95">
-            {global.activitiesWithOrphanResponsible}
+            {global.activitiesWithOrphanDefaultTeam}
           </span>{' '}
           órfão
         </span>

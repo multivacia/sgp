@@ -1,7 +1,9 @@
 import { ApiError } from '../../lib/api/apiErrors'
 import { requestJson } from '../../lib/api/client'
+import { getApiBaseUrl } from '../../lib/api/env'
 import type { MatrixSuggestionCatalogData } from '../../catalog/matrixSuggestion/types'
 import type {
+  DuplicateMatrixItemSummary,
   MatrixDeleteResult,
   MatrixNodeApi,
   MatrixNodeTreeApi,
@@ -10,6 +12,56 @@ import type {
 } from '../../domain/operation-matrix/operation-matrix.types'
 
 const base = '/api/v1'
+
+export const EXPORT_MATRIX_ITEM_ACTION_LABEL = 'Exportar para Excel'
+export const EXPORT_MATRIX_ITEM_FAIL_MESSAGE =
+  'Não foi possível exportar a Matriz para Excel.'
+
+function filenameFromContentDisposition(header: string | null): string | null {
+  if (!header) return null
+  const utfMatch = /filename\*=UTF-8''([^;]+)/i.exec(header)
+  if (utfMatch?.[1]) {
+    try {
+      return decodeURIComponent(utfMatch[1])
+    } catch {
+      return utfMatch[1]
+    }
+  }
+  const quoted = /filename="([^"]+)"/i.exec(header)
+  if (quoted?.[1]) return quoted[1]
+  const plain = /filename=([^;]+)/i.exec(header)
+  const raw = plain?.[1]?.trim()
+  return raw ? raw.replace(/^"|"$/g, '') : null
+}
+
+function sanitizeMatrixExportFilenamePart(value: string): string {
+  const trimmed = value.trim()
+  const sanitized = trimmed
+    .replace(/[^\w.-]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+    .slice(0, 80)
+  return sanitized || 'matriz'
+}
+
+function formatMatrixExportDate(date: Date): string {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+export function buildMatrixExportFallbackFilename(
+  matrixName: string,
+  matrixCode: string | null | undefined,
+  itemId: string,
+  exportedAt = new Date(),
+): string {
+  const primary = matrixName.trim() || matrixCode?.trim() || itemId.trim()
+  const part = sanitizeMatrixExportFilenamePart(primary)
+  const datePart = formatMatrixExportDate(exportedAt)
+  return `matriz-${part}-${datePart}.xlsx`
+}
 
 export type ListMatrixItemsParams = {
   search?: string
@@ -36,6 +88,61 @@ export async function getMatrixTree(itemId: string): Promise<MatrixNodeTreeApi> 
     'GET',
     `${base}/operation-matrix/items/${encodeURIComponent(itemId)}/tree`,
   )
+}
+
+export async function duplicateMatrixItem(
+  itemId: string,
+): Promise<DuplicateMatrixItemSummary> {
+  return requestJson<DuplicateMatrixItemSummary>(
+    'POST',
+    `${base}/operation-matrix/items/${encodeURIComponent(itemId)}/duplicate`,
+  )
+}
+
+export type ExportMatrixItemToExcelOptions = {
+  matrixName?: string
+  matrixCode?: string | null
+}
+
+export async function exportMatrixItemToExcel(
+  itemId: string,
+  options?: ExportMatrixItemToExcelOptions,
+): Promise<void> {
+  const baseUrl = getApiBaseUrl()
+  const pathPart = `${base}/operation-matrix/items/${encodeURIComponent(itemId)}/export.xlsx`
+  const url = baseUrl ? `${baseUrl}${pathPart}` : pathPart
+
+  let res: Response
+  try {
+    res = await fetch(url, { method: 'GET', credentials: 'include' })
+  } catch (e) {
+    throw new ApiError(EXPORT_MATRIX_ITEM_FAIL_MESSAGE, 503, {
+      code: 'NETWORK_ERROR',
+      cause: e,
+    })
+  }
+
+  if (!res.ok) {
+    throw new ApiError(EXPORT_MATRIX_ITEM_FAIL_MESSAGE, res.status)
+  }
+
+  const blob = await res.blob()
+  const filename =
+    filenameFromContentDisposition(res.headers.get('Content-Disposition')) ??
+    buildMatrixExportFallbackFilename(
+      options?.matrixName ?? '',
+      options?.matrixCode,
+      itemId,
+    )
+  const objectUrl = URL.createObjectURL(blob)
+  const anchor = document.createElement('a')
+  anchor.href = objectUrl
+  anchor.download = filename
+  anchor.rel = 'noopener'
+  document.body.appendChild(anchor)
+  anchor.click()
+  anchor.remove()
+  URL.revokeObjectURL(objectUrl)
 }
 
 export async function getMatrixSuggestionCatalog(): Promise<MatrixSuggestionCatalogData> {

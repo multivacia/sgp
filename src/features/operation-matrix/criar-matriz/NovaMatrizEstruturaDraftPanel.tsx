@@ -7,7 +7,6 @@ import {
 } from '@dnd-kit/sortable'
 import { useRef, useState, type FormEvent, type ReactNode } from 'react'
 import type { MatrixSuggestionCatalogData } from '../../../catalog/matrixSuggestion/types'
-import type { Collaborator } from '../../../domain/collaborators/collaborator.types'
 import type { Team } from '../../../domain/teams/team.types'
 import { LabelSuggestField } from '../components/LabelSuggestField'
 import { CriarMatrizCatalogOpcaoDraftEditor } from './CriarMatrizCatalogOpcaoDraftEditor'
@@ -75,10 +74,7 @@ type Props = {
   ) => void
   onReorderCatalogDraft: (dir: 'up' | 'down', taskId: string | null) => void
   onDuplicateCatalogInstance: (instanceId: string) => void
-  collaborators: Collaborator[]
   teams: Team[]
-  collaboratorsLoading: boolean
-  collaboratorsError: string | null
   matrixSuggestionCatalog: MatrixSuggestionCatalogData
   /** Quando falso, novas tarefas ficam recolhidas (totem de criação). Predefinição: true. */
   expandOnAdd?: boolean
@@ -98,10 +94,7 @@ export function NovaMatrizEstruturaDraftPanel({
   onChangeCatalogDraft,
   onReorderCatalogDraft,
   onDuplicateCatalogInstance,
-  collaborators,
   teams,
-  collaboratorsLoading,
-  collaboratorsError,
   matrixSuggestionCatalog,
   expandOnAdd = true,
   showDraftIntro = true,
@@ -428,10 +421,7 @@ export function NovaMatrizEstruturaDraftPanel({
                           }}
                           onChange={(next) => onChangeCatalogDraft(inst.instanceId, next)}
                           matrixSuggestionCatalog={matrixSuggestionCatalog}
-                          collaborators={collaborators}
                           teams={teams}
-                          collaboratorsLoading={collaboratorsLoading}
-                          collaboratorsError={collaboratorsError}
                         />
                       </div>
                     ) : null}

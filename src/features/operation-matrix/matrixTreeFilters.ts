@@ -1,4 +1,5 @@
 import type { MatrixNodeTreeApi } from '../../domain/operation-matrix/operation-matrix.types'
+import { activityHasMatrixDefaultTeam } from './matrixTreeAggregates'
 
 function norm(s: string): string {
   return s.trim().toLowerCase()
@@ -54,7 +55,7 @@ export function addAncestors(
 }
 
 /**
- * Filtro “só sem responsável”: caminhos até atividades sem default_responsible_id.
+ * Filtro “só sem responsável”: caminhos até atividades sem colaborador padrão nem equipe padrão.
  * Se `activitySearchQuery` estiver preenchido, restringe a atividades sem responsável que também casem com a busca.
  */
 export function buildVisibleIdsForNoResponsibleFilter(
@@ -67,8 +68,7 @@ export function buildVisibleIdsForNoResponsibleFilter(
 
   function walk(node: MatrixNodeTreeApi) {
     if (node.node_type === 'ACTIVITY') {
-      const dr = node.default_responsible_id?.trim() ?? ''
-      if (!dr) {
+      if (!activityHasMatrixDefaultTeam(node)) {
         if (!q || nodeMatchesQuery(node, q)) {
           activityIds.push(node.id)
         }

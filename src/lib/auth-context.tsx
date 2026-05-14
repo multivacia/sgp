@@ -8,13 +8,19 @@ import {
 import { flushSync } from 'react-dom'
 import { AuthContext } from './auth-context-instance'
 import type { AuthUser } from './auth-store'
+import type { SessionIdlePolicy } from '../domain/auth/sessionIdle.types'
 import { getMe, postLogin, postLogout } from '../services/auth/authApiService'
-import { SESSION_REVOKED_USER_MESSAGE } from './api/apiErrors'
+import {
+  SESSION_EXPIRED_USER_MESSAGE,
+  SESSION_REVOKED_USER_MESSAGE,
+} from './api/apiErrors'
 
 const SESSION_REVOKED_EVENT = 'sgp:session-revoked'
+const SESSION_EXPIRED_EVENT = 'sgp:session-expired'
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null)
+  const [sessionIdle, setSessionIdle] = useState<SessionIdlePolicy | null>(null)
   const [ready, setReady] = useState(false)
   const [sessionEndedMessage, setSessionEndedMessage] = useState<string | null>(
     null,
@@ -26,22 +32,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const bootstrap = useCallback(async () => {
     try {
-      const u = await getMe()
-      setUser(u)
+      const session = await getMe()
+      setUser(session.user)
+      setSessionIdle(session.sessionIdle)
       setSessionEndedMessage(null)
     } catch {
       setUser(null)
+      setSessionIdle(null)
     }
   }, [])
 
   const refreshUser = useCallback(async () => {
     try {
-      const u = await getMe()
-      setUser(u)
+      const session = await getMe()
+      setUser(session.user)
+      setSessionIdle(session.sessionIdle)
       setSessionEndedMessage(null)
-      return u
+      return session.user
     } catch {
       setUser(null)
+      setSessionIdle(null)
       return null
     }
   }, [])
@@ -50,13 +60,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     function onSessionRevoked(e: Event) {
       const detail = (e as CustomEvent<{ message?: string }>).detail
       setUser(null)
+      setSessionIdle(null)
       setSessionEndedMessage(
         detail?.message?.trim() || SESSION_REVOKED_USER_MESSAGE,
       )
     }
+    function onSessionExpired(e: Event) {
+      const detail = (e as CustomEvent<{ message?: string }>).detail
+      setUser(null)
+      setSessionIdle(null)
+      setSessionEndedMessage(
+        detail?.message?.trim() || SESSION_EXPIRED_USER_MESSAGE,
+      )
+    }
     window.addEventListener(SESSION_REVOKED_EVENT, onSessionRevoked)
+    window.addEventListener(SESSION_EXPIRED_EVENT, onSessionExpired)
     return () => {
       window.removeEventListener(SESSION_REVOKED_EVENT, onSessionRevoked)
+      window.removeEventListener(SESSION_EXPIRED_EVENT, onSessionExpired)
     }
   }, [])
 
@@ -72,13 +93,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [bootstrap])
 
   const login = useCallback(async (email: string, password: string) => {
-    const u = await postLogin(email, password)
-    /** Garante que o estado autenticado está aplicado antes de navegar (RequireAuth). */
+    const session = await postLogin(email, password)
     flushSync(() => {
-      setUser(u)
+      setUser(session.user)
+      setSessionIdle(session.sessionIdle)
       setSessionEndedMessage(null)
     })
-    return u
+    return session.user
   }, [])
 
   const logout = useCallback(async () => {
@@ -86,6 +107,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await postLogout()
     } finally {
       setUser(null)
+      setSessionIdle(null)
       setSessionEndedMessage(null)
     }
   }, [])
@@ -107,6 +129,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       user,
       ready,
       sessionEndedMessage,
+      sessionIdle,
       clearSessionEndedMessage,
       login,
       logout,
@@ -118,6 +141,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       user,
       ready,
       sessionEndedMessage,
+      sessionIdle,
       clearSessionEndedMessage,
       login,
       logout,

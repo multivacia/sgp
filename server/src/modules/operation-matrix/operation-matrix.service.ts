@@ -9,9 +9,13 @@ import type {
 } from './operation-matrix.dto.js'
 import { rowToMatrixNodeApi } from './operation-matrix.dto.js'
 import type { CreateMatrixNodeBody, PatchMatrixNodeBody } from './operation-matrix.schemas.js'
+import { pickDuplicateMatrixRootName } from './duplicateMatrixItemName.js'
+import {
+  buildMatrixExportFilename,
+  buildMatrixExportWorkbookBuffer,
+} from './operation-matrix.export.js'
 import {
   buildNestedTree,
-  collaboratorExists,
   findNodeRowById,
   insertNode,
   labelCatalogRowToApi,
@@ -20,7 +24,9 @@ import {
   listRootItems,
   listSubtreeFromNode,
   listSubtreeRowsForCopy,
+  listTeamNamesByIds,
   listTreeRowsByRootId,
+  matrixRootItemNameExists,
   nextSiblingOrderIndex,
   restoreCascade,
   replaceNodeTeamLinks,
@@ -58,6 +64,13 @@ function empty(s: string | undefined | null): string | null {
 function normalizeUniqueIds(ids: readonly string[] | undefined): string[] {
   if (!ids || ids.length === 0) return []
   return [...new Set(ids.map((x) => x.trim()).filter(Boolean))]
+}
+
+/** No máximo 1 equipe padrão por atividade (primeira id válida na ordem do payload). */
+function normalizeActivityTeamIdsForSave(
+  ids: readonly string[] | undefined,
+): string[] {
+  return normalizeUniqueIds(ids).slice(0, 1)
 }
 
 export async function serviceListRootItems(
@@ -99,6 +112,46 @@ export async function serviceGetTree(
     )
   }
   return buildNestedTree(rows)
+}
+
+function collectTeamIdsFromTree(tree: MatrixNodeTreeApi): string[] {
+  const ids = new Set<string>()
+  function walk(node: MatrixNodeTreeApi): void {
+    for (const teamId of node.team_ids) {
+      if (teamId) ids.add(teamId)
+    }
+    for (const child of node.children) {
+      walk(child)
+    }
+  }
+  walk(tree)
+  return [...ids]
+}
+
+export async function serviceExportMatrixXlsx(
+  pool: pg.Pool,
+  itemId: string,
+): Promise<{ buffer: Buffer; filename: string }> {
+  const tree = await serviceGetTree(pool, itemId)
+  const teamNamesById = await listTeamNamesByIds(
+    pool,
+    collectTeamIdsFromTree(tree),
+  )
+  const exportedAt = new Date()
+  const buffer = await buildMatrixExportWorkbookBuffer(
+    tree,
+    teamNamesById,
+    exportedAt,
+  )
+  return {
+    buffer,
+    filename: buildMatrixExportFilename(
+      tree.id,
+      tree.code,
+      tree.name,
+      exportedAt,
+    ),
+  }
 }
 
 export async function serviceCreateNode(
@@ -146,17 +199,7 @@ export async function serviceCreateNode(
     )
   }
 
-  if (body.defaultResponsibleId) {
-    const ok = await collaboratorExists(pool, body.defaultResponsibleId)
-    if (!ok) {
-      throw new AppError(
-        'Responsável padrão (colaborador) não encontrado.',
-        422,
-        ErrorCodes.VALIDATION_ERROR,
-      )
-    }
-  }
-  const teamIds = normalizeUniqueIds(body.teamIds)
+  const teamIds = normalizeActivityTeamIdsForSave(body.teamIds)
   if (teamIds.length > 0) {
     const existingTeamIds = await listExistingTeamIds(pool, teamIds)
     if (existingTeamIds.size !== teamIds.length) {
@@ -198,6 +241,17 @@ export async function serviceCreateNode(
   }
   assertAllowedChild(parent.node_type, body.nodeType)
 
+  if (
+    body.nodeType === 'ACTIVITY' &&
+    body.defaultResponsibleId !== undefined
+  ) {
+    throw new AppError(
+      'Colaborador padrão não é mais usado em Atividades da Matriz. Use teamIds (equipe padrão).',
+      422,
+      ErrorCodes.VALIDATION_ERROR,
+    )
+  }
+
   const level_depth = parent.level_depth + 1
   const order_index =
     body.orderIndex ?? (await nextSiblingOrderIndex(pool, parent.id))
@@ -214,9 +268,7 @@ export async function serviceCreateNode(
     level_depth,
     is_active: body.isActive ?? true,
     planned_minutes: isActivity ? (body.plannedMinutes ?? null) : null,
-    default_responsible_id: isActivity
-      ? (body.defaultResponsibleId ?? null)
-      : null,
+    default_responsible_id: null,
     required: body.required ?? true,
     source_key: empty(body.sourceKey),
     metadata_json: body.metadataJson ?? null,
@@ -278,6 +330,14 @@ function patchBodyToDb(
     }
   }
 
+  if (isActivity && body.defaultResponsibleId !== undefined) {
+    throw new AppError(
+      'Colaborador padrão não é mais usado em Atividades da Matriz. Use teamIds (equipe padrão).',
+      422,
+      ErrorCodes.VALIDATION_ERROR,
+    )
+  }
+
   const p: PatchNodeDbInput = {}
   if (body.name !== undefined) p.name = body.name.trim()
   if (body.code !== undefined) p.code = empty(body.code)
@@ -286,9 +346,6 @@ function patchBodyToDb(
   if (body.isActive !== undefined) p.is_active = body.isActive
   if (body.plannedMinutes !== undefined && isActivity) {
     p.planned_minutes = body.plannedMinutes
-  }
-  if (body.defaultResponsibleId !== undefined && isActivity) {
-    p.default_responsible_id = body.defaultResponsibleId
   }
   if (body.required !== undefined && isActivity) p.required = body.required
   if (body.sourceKey !== undefined) p.source_key = empty(body.sourceKey)
@@ -304,17 +361,7 @@ export async function servicePatchNode(
   const existing = await findNodeRowById(pool, id)
   if (!existing) return null
 
-  if (body.defaultResponsibleId) {
-    const ok = await collaboratorExists(pool, body.defaultResponsibleId)
-    if (!ok) {
-      throw new AppError(
-        'Responsável padrão (colaborador) não encontrado.',
-        422,
-        ErrorCodes.VALIDATION_ERROR,
-      )
-    }
-  }
-  const teamIds = normalizeUniqueIds(body.teamIds)
+  const teamIds = normalizeActivityTeamIdsForSave(body.teamIds)
   if (body.teamIds !== undefined && teamIds.length > 0) {
     const existingTeamIds = await listExistingTeamIds(pool, teamIds)
     if (existingTeamIds.size !== teamIds.length) {
@@ -327,6 +374,9 @@ export async function servicePatchNode(
   }
 
   const patch = patchBodyToDb(existing.node_type, body)
+  if (existing.node_type === 'ACTIVITY' && body.teamIds !== undefined) {
+    patch.default_responsible_id = null
+  }
   const row = await updateNode(pool, id, patch)
   if (!row) return null
   if (existing.node_type === 'ACTIVITY' && body.teamIds !== undefined) {
@@ -383,10 +433,16 @@ export async function serviceReorder(
   return row ? rowToMatrixNodeApi(row) : null
 }
 
+export type DuplicateItemAsNewRootOptions = {
+  /** Se definido, substitui apenas o nome do ITEM raiz clonado. */
+  newRootName?: string
+}
+
 /** ITEM → nova matriz raiz completa (novo ITEM raiz). */
 export async function serviceDuplicateItemAsNewRoot(
   pool: pg.Pool,
   itemId: string,
+  opts?: DuplicateItemAsNewRootOptions,
 ): Promise<MatrixNodeTreeApi> {
   const rows = await listSubtreeRowsForCopy(pool, itemId)
   const root = rows.find((r) => r.node_type === 'ITEM' && r.parent_id === null)
@@ -411,19 +467,26 @@ export async function serviceDuplicateItemAsNewRoot(
       const newId = idMap.get(r.id)!
       const newParentId =
         r.parent_id === null ? null : idMap.get(r.parent_id)!
+      const nodeName =
+        r.node_type === 'ITEM' &&
+        r.parent_id === null &&
+        opts?.newRootName !== undefined
+          ? opts.newRootName
+          : r.name
       const inserted = await insertNode(client, {
         id: newId,
         parent_id: newParentId,
         root_id: newRootId,
         node_type: r.node_type,
-        name: r.name,
+        name: nodeName,
         code: r.code,
         description: r.description,
         order_index: r.order_index,
         level_depth: r.level_depth,
         is_active: r.is_active,
         planned_minutes: r.planned_minutes,
-        default_responsible_id: r.default_responsible_id,
+        default_responsible_id:
+          r.node_type === 'ACTIVITY' ? null : r.default_responsible_id,
         required: r.required,
         source_key: r.source_key,
         metadata_json: r.metadata_json,
@@ -442,6 +505,28 @@ export async function serviceDuplicateItemAsNewRoot(
 
   const outRows = await listTreeRowsByRootId(pool, newRootId)
   return buildNestedTree(outRows)
+}
+
+/** Duplica matriz (ITEM raiz) com nome `Original (Cópia)` único e árvore operacional completa. */
+export async function serviceDuplicateMatrixItem(
+  pool: pg.Pool,
+  itemId: string,
+): Promise<MatrixNodeTreeApi> {
+  const root = await findNodeRowById(pool, itemId)
+  if (!root || root.node_type !== 'ITEM' || root.parent_id !== null) {
+    throw new AppError(
+      'Matriz (item) não encontrada.',
+      404,
+      ErrorCodes.NOT_FOUND,
+    )
+  }
+  const newName = await pickDuplicateMatrixRootName(
+    (candidate) => matrixRootItemNameExists(pool, candidate),
+    root.name,
+  )
+  return serviceDuplicateItemAsNewRoot(pool, itemId, {
+    newRootName: newName,
+  })
 }
 
 /** TASK / SECTOR / ACTIVITY → duplica subárvore como irmão (mesmo pai). */
@@ -505,7 +590,8 @@ export async function serviceDuplicateSubtreeUnderSameParent(
         level_depth: r.level_depth,
         is_active: r.is_active,
         planned_minutes: r.planned_minutes,
-        default_responsible_id: r.default_responsible_id,
+        default_responsible_id:
+          r.node_type === 'ACTIVITY' ? null : r.default_responsible_id,
         required: r.required,
         source_key: r.source_key,
         metadata_json: r.metadata_json,
@@ -534,7 +620,7 @@ export async function serviceDuplicate(
     throw new AppError('Nó não encontrado.', 404, ErrorCodes.NOT_FOUND)
   }
   if (row.node_type === 'ITEM') {
-    return serviceDuplicateItemAsNewRoot(pool, nodeId)
+    return serviceDuplicateItemAsNewRoot(pool, nodeId, undefined)
   }
   return serviceDuplicateSubtreeUnderSameParent(pool, nodeId)
 }

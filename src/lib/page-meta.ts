@@ -17,6 +17,9 @@ export function pageTitleForPath(pathname: string): string {
   if (pathname.startsWith('/app/configuracoes-operacionais')) {
     return 'Configurações operacionais'
   }
+  if (pathname.startsWith('/app/configuracoes/sistema')) {
+    return 'Configurações do sistema'
+  }
   if (pathname.startsWith('/app/equipes/nova')) return 'Nova equipe'
   if (pathname.startsWith('/app/equipes')) return 'Equipes'
   if (pathname.startsWith('/app/gestao/jornada-colaborador')) return 'Jornada por colaborador'

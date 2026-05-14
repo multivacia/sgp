@@ -94,6 +94,23 @@ export function buildNestedTree(rows: MatrixNodeRow[]): MatrixNodeTreeApi {
   return toTree(root)
 }
 
+/** Raiz ITEM ativa/inativa: nome já usado por outra matriz (não apagada). */
+export async function matrixRootItemNameExists(
+  pool: pg.Pool,
+  name: string,
+): Promise<boolean> {
+  const r = await pool.query<{ ok: string }>(
+    `SELECT 1::text AS ok FROM matrix_nodes
+     WHERE node_type = 'ITEM'
+       AND parent_id IS NULL
+       AND deleted_at IS NULL
+       AND name = $1
+     LIMIT 1`,
+    [name],
+  )
+  return Boolean(r.rows[0])
+}
+
 export async function listRootItems(
   pool: pg.Pool,
   filters: ListRootFilters,
@@ -184,6 +201,20 @@ export async function listExistingTeamIds(
   return new Set(r.rows.map((x) => x.id))
 }
 
+export async function listTeamNamesByIds(
+  pool: pg.Pool,
+  ids: string[],
+): Promise<Map<string, string>> {
+  if (ids.length === 0) return new Map()
+  const r = await pool.query<{ id: string; name: string }>(
+    `SELECT id::text AS id, name
+     FROM teams
+     WHERE id = ANY($1::uuid[])`,
+    [ids],
+  )
+  return new Map(r.rows.map((x) => [x.id, x.name] as const))
+}
+
 export async function nextSiblingOrderIndex(
   pool: pg.Pool | pg.PoolClient,
   parentId: string | null,
@@ -271,18 +302,28 @@ export async function replaceNodeTeamLinks(
   matrixNodeId: string,
   teamIds: string[],
 ): Promise<void> {
+  /** No máximo 1 equipe padrão por atividade (1ª id válida na ordem recebida). */
+  const primary: string[] = []
+  const seen = new Set<string>()
+  for (const raw of teamIds) {
+    const s = (raw ?? '').trim()
+    if (!s || seen.has(s)) continue
+    seen.add(s)
+    primary.push(s)
+    break
+  }
   await client.query(
     `UPDATE matrix_node_assignment_teams
      SET deleted_at = now(), updated_at = now()
      WHERE matrix_node_id = $1::uuid AND deleted_at IS NULL`,
     [matrixNodeId],
   )
-  if (teamIds.length === 0) return
+  if (primary.length === 0) return
   await client.query(
     `INSERT INTO matrix_node_assignment_teams (matrix_node_id, team_id, deleted_at)
      SELECT $1::uuid, x.team_id, NULL
      FROM UNNEST($2::uuid[]) AS x(team_id)`,
-    [matrixNodeId, teamIds],
+    [matrixNodeId, primary],
   )
 }
 

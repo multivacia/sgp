@@ -210,8 +210,11 @@ export function EquipesListPage() {
           <div>
             <h1 className="sgp-page-title">Equipes</h1>
             <p className="sgp-page-lead max-w-2xl">
-              Agrupamentos operacionais reutilizáveis. Membros são colaboradores ativos; alterações
-              de estado do colaborador permanecem visíveis na equipe.
+              Use equipes para grupos ou{' '}
+              <span className="font-medium text-slate-200">funções operacionais</span>, como
+              Ajudante, Costura, Montagem ou Acabamento — inclusive como padrão na Matriz de
+              operação. Membros são colaboradores ativos; alterações de estado do colaborador
+              permanecem visíveis na equipe.
             </p>
           </div>
           {can('teams.create') && (

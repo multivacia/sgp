@@ -5,6 +5,9 @@ import { AppError } from '../../shared/errors/AppError.js'
 import { ErrorCodes } from '../../shared/errors/errorCodes.js'
 import { signSessionToken } from './auth.jwt.js'
 import {
+  defaultSessionActivityAtLogin,
+} from './session-timeout.service.js'
+import {
   findAppUserForLoginByEmail,
   findAppUserForPasswordChange,
   findAppUserProfileById,
@@ -140,7 +143,8 @@ export async function serviceLogin(
   const pwdStampMs = row.password_changed_at
     ? row.password_changed_at.getTime()
     : 0
-  const token = signSessionToken(user.userId, user.email, pwdStampMs, env)
+  const activity = defaultSessionActivityAtLogin()
+  const token = signSessionToken(user.userId, user.email, pwdStampMs, activity, env)
   return { user, token }
 }
 

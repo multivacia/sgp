@@ -24,12 +24,24 @@ export function OperationMatrixPreviewPage() {
     model,
     isDirty,
     applyActivityPatch,
+    applyNodeNamePatch,
+    addPreviewTask,
+    addPreviewSector,
+    addPreviewActivity,
+    cancelPreviewPendingNode,
+    removePreviewStructureNodeLocal,
+    bornInEditNodeId,
+    consumeBornInEditNode,
+    reorderPreviewTasks,
+    reorderPreviewSectors,
+    reorderPreviewActivities,
     resetPreviewEdits,
     savePreviewEdits,
     saveState,
     saveErrorMessage,
-    collaborators,
-    collaboratorsLoadFailed,
+    inlineNameSaveRegistry,
+    teams,
+    teamsLoadFailed,
   } = useOperationMatrixPreview({
     itemId,
     draftToken,
@@ -97,8 +109,8 @@ export function OperationMatrixPreviewPage() {
           role="status"
           className="mt-3 rounded-lg border border-amber-300/80 bg-[#FFFBEB] px-3 py-2 text-xs leading-snug text-amber-950 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100/90"
         >
-          Algumas atividades estão sem tempo previsto ou sem responsável padrão. Você pode
-          salvar assim e completar depois.
+          Algumas atividades estão sem tempo previsto ou sem equipe padrão. Você pode salvar assim e
+          completar depois.
         </div>
       ) : null}
 
@@ -148,13 +160,22 @@ export function OperationMatrixPreviewPage() {
       {treeState.status === 'ready' && model ? (
         <OperationMatrixMacroView
           model={model}
+          inlineNameSaveRegistry={inlineNameSaveRegistry}
           edit={{
-            collaborators: collaborators.map((c) => ({
-              id: c.id,
-              fullName: c.fullName,
-            })),
-            collaboratorsListFailed: collaboratorsLoadFailed,
+            teams: teams.map((t) => ({ id: t.id, name: t.name })),
+            teamsListFailed: teamsLoadFailed,
             onPatchActivity: applyActivityPatch,
+            onPatchNodeName: applyNodeNamePatch,
+            onAddTask: addPreviewTask,
+            onAddSector: addPreviewSector,
+            onAddActivity: addPreviewActivity,
+            onCancelPendingCreate: cancelPreviewPendingNode,
+            onRemoveStructureNode: removePreviewStructureNodeLocal,
+            bornInEditNodeId,
+            onConsumeBornInEdit: consumeBornInEditNode,
+            onReorderTasks: reorderPreviewTasks,
+            onReorderSectors: reorderPreviewSectors,
+            onReorderActivities: reorderPreviewActivities,
           }}
         />
       ) : null}

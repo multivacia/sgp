@@ -51,8 +51,7 @@ describe('createManualOpcoesUnderItem', () => {
     expect(mockedCreate).toHaveBeenLastCalledWith(
       expect.objectContaining({
         nodeType: 'ACTIVITY',
-        teamIds: ['team-1', 'team-2'],
-        defaultResponsibleId: 'col-1',
+        teamIds: ['team-1'],
       }),
     )
   })

@@ -53,6 +53,8 @@ export type Env = {
   authCookieName: string
   loginMaxFailedAttempts: number
   loginLockoutMinutes: number
+  /** Limite absoluto da sessão autenticada (horas), independente da atividade. */
+  sessionAbsoluteTimeoutHours: number
   /**
    * Quando definido (≥32 caracteres), `GET /health/db` em produção aceita também
    * o header `X-SGP-Infra-Token` com este valor (comparação segura no servidor).
@@ -504,6 +506,18 @@ export function loadEnv(): Env {
   const smtpRequireTls =
     parseOptionalBooleanFlag(process.env.SMTP_REQUIRE_TLS) ?? smtpPort === 587
 
+  let sessionAbsoluteTimeoutHours = 8
+  const rawSessionAbs = process.env.SGP_SESSION_ABSOLUTE_TIMEOUT_HOURS?.trim()
+  if (rawSessionAbs !== undefined && rawSessionAbs !== '') {
+    const n = Number.parseInt(rawSessionAbs, 10)
+    if (Number.isNaN(n) || n < 1 || n > 168) {
+      throw new Error(
+        'SGP_SESSION_ABSOLUTE_TIMEOUT_HOURS deve ser um inteiro entre 1 e 168.',
+      )
+    }
+    sessionAbsoluteTimeoutHours = n
+  }
+
   const v = parsed.data
   const databaseUrl =
     'connectionString' in pgPoolConfig ? pgPoolConfig.connectionString : undefined
@@ -522,6 +536,7 @@ export function loadEnv(): Env {
     authCookieName: v.AUTH_COOKIE_NAME,
     loginMaxFailedAttempts: v.LOGIN_MAX_FAILED_ATTEMPTS,
     loginLockoutMinutes: v.LOGIN_LOCKOUT_MINUTES,
+    sessionAbsoluteTimeoutHours,
     healthInfraToken,
     argosIngestUrl,
     documentDraftAdapter,

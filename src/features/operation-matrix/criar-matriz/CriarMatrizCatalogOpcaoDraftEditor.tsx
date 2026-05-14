@@ -6,12 +6,12 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable'
 import type { MatrixSuggestionCatalogData } from '../../../catalog/matrixSuggestion/types'
-import type { Collaborator } from '../../../domain/collaborators/collaborator.types'
 import type { Team } from '../../../domain/teams/team.types'
 import type { MatrixNodeTreeApi } from '../../../domain/operation-matrix/operation-matrix.types'
 import type { ReactNode } from 'react'
 import { LabelSuggestField } from '../components/LabelSuggestField'
 import { sortMatrixChildNodes } from './cloneCatalogTaskSubtreeForDraft'
+import { matrixActivityPrimaryTeamId } from '../matrixTreeAggregates'
 import {
   reconcileEtapaCollaborators,
   type CriarMatrizManualEtapa,
@@ -29,24 +29,11 @@ type Props = {
   draftRoot: MatrixNodeTreeApi
   onChange: (next: MatrixNodeTreeApi) => void
   matrixSuggestionCatalog: MatrixSuggestionCatalogData
-  collaborators: Collaborator[]
   teams: Team[]
-  collaboratorsLoading: boolean
-  collaboratorsError: string | null
 }
 
 function nid(): string {
   return globalThis.crypto.randomUUID()
-}
-
-function collabOptionLabel(c: Collaborator): string {
-  const base =
-    c.fullName?.trim() ||
-    c.nickname?.trim() ||
-    c.email?.trim() ||
-    c.code?.trim() ||
-    'Colaborador'
-  return c.code ? `${base} (${c.code})` : base
 }
 
 function updateNodeDeep(
@@ -62,21 +49,15 @@ function updateNodeDeep(
 }
 
 function activityToEtapa(node: MatrixNodeTreeApi): CriarMatrizManualEtapa {
-  const primary = node.default_responsible_id
+  const tid = matrixActivityPrimaryTeamId(node)
   const support = parseMatrixActivitySupportIds(node.metadata_json)
-  const collabIds = [
-    ...new Set([
-      ...(primary ? [primary] : []),
-      ...support.filter((x) => x !== primary),
-    ]),
-  ]
   return reconcileEtapaCollaborators({
     id: node.id,
     name: node.name,
     plannedMinutes: node.planned_minutes,
-    teamIds: [...(node.team_ids ?? [])],
-    collaboratorIds: collabIds,
-    primaryCollaboratorId: primary,
+    teamIds: tid ? [tid] : [],
+    collaboratorIds: support,
+    primaryCollaboratorId: null,
   })
 }
 
@@ -85,27 +66,17 @@ function applyEtapaToActivity(
   et: CriarMatrizManualEtapa,
 ): MatrixNodeTreeApi {
   const r = reconcileEtapaCollaborators(et)
-  const primary = r.primaryCollaboratorId
-  const supportIds = r.collaboratorIds.filter((x) => x !== primary)
+  const teamPrimary = r.teamIds[0]
+  const teamIds = teamPrimary ? [teamPrimary] : []
+  const supportIds = r.collaboratorIds
   return {
     ...node,
     name: r.name.trim(),
     planned_minutes: r.plannedMinutes,
-    team_ids: [...new Set(r.teamIds)],
-    default_responsible_id: primary ?? null,
+    team_ids: teamIds,
+    default_responsible_id: null,
     metadata_json: buildMatrixActivityMetadataJson(supportIds) ?? null,
   }
-}
-
-function selectOptionsForRow(
-  collaborators: Collaborator[],
-  ids: string[],
-  rowIndex: number,
-): Collaborator[] {
-  const currentId = ids[rowIndex]
-  return collaborators.filter(
-    (c) => c.id === currentId || !ids.includes(c.id),
-  )
 }
 
 function blankSectorNode(
@@ -230,10 +201,7 @@ export function CriarMatrizCatalogOpcaoDraftEditor({
   draftRoot,
   onChange,
   matrixSuggestionCatalog,
-  collaborators,
   teams,
-  collaboratorsLoading,
-  collaboratorsError,
 }: Props) {
   const task = draftRoot
   if (task.node_type !== 'TASK') {
@@ -328,8 +296,6 @@ export function CriarMatrizCatalogOpcaoDraftEditor({
           >
             {activities.map((act, ai) => {
           const etRec = activityToEtapa(act)
-          const ids = etRec.collaboratorIds
-          const canAddCollab = collaborators.some((c) => !ids.includes(c.id))
 
           return (
             <SortableMatrixDraftLi key={act.id} id={act.id} className={activityShell}>
@@ -498,210 +464,57 @@ export function CriarMatrizCatalogOpcaoDraftEditor({
               </div>
 
               <div className="mt-3 border-t border-white/[0.05] pt-3">
-                <p
+                <label
                   className={
                     rail
-                      ? 'text-[9px] font-bold uppercase tracking-wider text-slate-500'
-                      : 'text-[11px] font-semibold uppercase tracking-wide text-slate-500'
+                      ? 'flex min-w-0 flex-col gap-1 text-[11px]'
+                      : 'flex min-w-0 flex-col gap-1 text-sm'
                   }
                 >
-                  Equipe de execução (opcional)
-                </p>
-                <div className="mt-2 space-y-1 rounded-lg border border-white/[0.08] bg-white/[0.02] p-2">
-                  <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
-                    Times
-                  </p>
-                  <div className="max-h-24 space-y-1 overflow-y-auto pr-1 [scrollbar-width:thin]">
-                    {teams.map((team) => {
-                      const checked = etRec.teamIds.includes(team.id)
-                      return (
-                        <label
-                          key={`${act.id}-team-${team.id}`}
-                          className="flex items-center gap-2 text-[11px] text-slate-300"
-                        >
-                          <input
-                            type="checkbox"
-                            checked={checked}
-                            onChange={(ev) =>
-                              patchTask(
-                                updateNodeDeep(task, act.id, (n) => {
-                                  const cur = activityToEtapa(n)
-                                  const nextIds = ev.target.checked
-                                    ? [...new Set([...cur.teamIds, team.id])]
-                                    : cur.teamIds.filter((id) => id !== team.id)
-                                  return applyEtapaToActivity(n, {
-                                    ...cur,
-                                    teamIds: nextIds,
-                                  })
-                                }),
-                              )
-                            }
-                            className="rounded border-white/20"
-                          />
-                          <span className="truncate">{team.name}</span>
-                        </label>
+                  <span
+                    className={
+                      rail
+                        ? 'text-[9px] font-bold uppercase tracking-wider text-slate-500'
+                        : 'text-[11px] font-semibold uppercase tracking-wide text-slate-500'
+                    }
+                  >
+                    Equipe padrão
+                  </span>
+                  <select
+                    aria-label="Equipe padrão da atividade"
+                    value={etRec.teamIds[0] ?? ''}
+                    onChange={(ev) => {
+                      const v = ev.target.value.trim()
+                      patchTask(
+                        updateNodeDeep(task, act.id, (n) => {
+                          const cur = activityToEtapa(n)
+                          return applyEtapaToActivity(n, {
+                            ...cur,
+                            teamIds: v ? [v] : [],
+                            collaboratorIds: [],
+                            primaryCollaboratorId: null,
+                          })
+                        }),
                       )
-                    })}
-                    {teams.length === 0 ? (
-                      <p className="text-[11px] text-slate-500">
-                        Nenhum time disponível.
-                      </p>
-                    ) : null}
-                  </div>
-                </div>
-                <p className="mt-3 text-[10px] font-semibold uppercase tracking-wide text-slate-400">
-                  Colaboradores
+                    }}
+                    className={
+                      rail
+                        ? 'sgp-input-app mt-0.5 w-full max-w-md rounded-lg border border-white/10 bg-sgp-void/80 px-2 py-1.5 text-sm text-slate-200'
+                        : 'mt-0.5 w-full max-w-md rounded border border-white/10 bg-black/40 px-2 py-1.5 text-sm text-slate-100'
+                    }
+                  >
+                    <option value="">— Sem equipe padrão —</option>
+                    {teams.map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {t.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <p className="mt-1.5 max-w-md text-[10px] leading-snug text-slate-500">
+                  Use Equipe para representar funções operacionais, como Ajudante, Costura ou Montagem.
+                  Colaboradores reais ficam na execução da Esteira.
                 </p>
-                {collaboratorsLoading && (
-                  <p className="mt-2 text-xs text-slate-500">
-                    Carregando colaboradores…
-                  </p>
-                )}
-                {collaboratorsError && (
-                  <p className="mt-2 text-xs text-rose-300">
-                    {collaboratorsError}
-                  </p>
-                )}
-                {!collaboratorsLoading &&
-                  !collaboratorsError &&
-                  collaborators.length === 0 && (
-                    <p className="mt-2 text-xs text-amber-200/90">
-                      Não há colaboradores ativos.
-                    </p>
-                  )}
-                {!collaboratorsLoading &&
-                  !collaboratorsError &&
-                  collaborators.length > 0 && (
-                    <div className="mt-2 space-y-2">
-                      {ids.map((cid, idx) => {
-                        const rowOptions = selectOptionsForRow(
-                          collaborators,
-                          ids,
-                          idx,
-                        )
-                        return (
-                          <div
-                            key={`${act.id}-${cid}-${idx}`}
-                            className="flex flex-wrap items-center gap-2"
-                          >
-                            <select
-                              className={
-                                rail
-                                  ? 'sgp-input-app min-w-[min(100%,12rem)] flex-1 rounded-lg border border-white/10 bg-sgp-void/80 px-2 py-1.5 text-sm text-slate-200'
-                                  : 'min-w-[min(100%,12rem)] flex-1 rounded border border-white/10 bg-black/40 px-2 py-1.5 text-sm text-slate-100'
-                              }
-                              value={cid}
-                              onChange={(ev) => {
-                                const newId = ev.target.value
-                                patchTask(
-                                  updateNodeDeep(task, act.id, (n) => {
-                                    const cur = activityToEtapa(n)
-                                    const next = [...cur.collaboratorIds]
-                                    if (next[idx] === newId) return n
-                                    if (next.includes(newId)) return n
-                                    next[idx] = newId
-                                    return applyEtapaToActivity(n, {
-                                      ...cur,
-                                      collaboratorIds: next,
-                                      primaryCollaboratorId:
-                                        cur.primaryCollaboratorId,
-                                    })
-                                  }),
-                                )
-                              }}
-                            >
-                              {rowOptions.map((c) => (
-                                <option key={c.id} value={c.id}>
-                                  {collabOptionLabel(c)}
-                                </option>
-                              ))}
-                            </select>
-                            <label className="flex items-center gap-1.5 text-xs text-slate-400">
-                              <input
-                                type="radio"
-                                className="accent-sgp-gold"
-                                name={`principal-${act.id}`}
-                                checked={
-                                  etRec.primaryCollaboratorId === cid
-                                }
-                                onChange={() =>
-                                  patchTask(
-                                    updateNodeDeep(task, act.id, (n) =>
-                                      applyEtapaToActivity(n, {
-                                        ...activityToEtapa(n),
-                                        primaryCollaboratorId: cid,
-                                      }),
-                                    ),
-                                  )
-                                }
-                              />
-                              Principal
-                            </label>
-                            <button
-                              type="button"
-                              className="text-xs font-semibold text-rose-300/90"
-                              onClick={() =>
-                                patchTask(
-                                  updateNodeDeep(task, act.id, (n) => {
-                                    const cur = activityToEtapa(n)
-                                    const next = cur.collaboratorIds.filter(
-                                      (_, i) => i !== idx,
-                                    )
-                                    let prim = cur.primaryCollaboratorId
-                                    if (prim === cid) prim = null
-                                    return applyEtapaToActivity(n, {
-                                      ...cur,
-                                      collaboratorIds: next,
-                                      primaryCollaboratorId: prim,
-                                    })
-                                  }),
-                                )
-                              }
-                            >
-                              Remover
-                            </button>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  )}
-                <button
-                  type="button"
-                  disabled={!canAddCollab || collaborators.length === 0}
-                  className={
-                    rail
-                      ? `mt-2 ${BTN_GOLD} disabled:opacity-40`
-                      : 'mt-2 text-xs font-bold text-sgp-gold disabled:opacity-40'
-                  }
-                  onClick={() =>
-                    patchTask(
-                      updateNodeDeep(task, act.id, (n) => {
-                        const cur = activityToEtapa(n)
-                        const nextCollab = collaborators.find(
-                          (c) => !cur.collaboratorIds.includes(c.id),
-                        )
-                        if (!nextCollab) return n
-                        const nextIds = [...cur.collaboratorIds, nextCollab.id]
-                        let prim = cur.primaryCollaboratorId
-                        if (nextIds.length === 1) {
-                          prim = nextIds[0]!
-                        }
-                        return applyEtapaToActivity(n, {
-                          ...cur,
-                          collaboratorIds: nextIds,
-                          primaryCollaboratorId: prim,
-                        })
-                      }),
-                    )
-                  }
-                >
-                  + Colaborador
-                </button>
-                {ids.length > 1 && !etRec.primaryCollaboratorId && (
-                  <p className="mt-2 text-xs text-amber-200/90">
-                    Indique quem é o principal.
-                  </p>
-                )}
               </div>
               </>
               )}

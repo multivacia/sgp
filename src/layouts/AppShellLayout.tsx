@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Outlet } from 'react-router-dom'
+import { SessionIdleWarningHost } from '../components/session/SessionIdleWarningHost'
 import { AppHeader } from '../components/AppHeader'
 import { AppSidebar } from '../components/AppSidebar'
 import { FunctionSwitchConfirmDialog } from '../components/shell/FunctionSwitchConfirmDialog'
@@ -75,6 +76,7 @@ export function AppShellLayout() {
           </main>
         </div>
       </ShellFunctionProvider>
+      <SessionIdleWarningHost />
     </div>
   )
 }

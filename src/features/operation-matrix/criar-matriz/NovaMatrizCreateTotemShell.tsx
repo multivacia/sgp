@@ -131,9 +131,9 @@ export function NovaMatrizCreateTotemShell(props: NovaMatrizCreateTotemShellProp
     novaMatrizStructureDragEnd,
   } = props
 
-  const collaboratorIdSet = useMemo(
-    () => new Set(collaborators.map((c) => c.id)),
-    [collaborators],
+  const teamIdSet = useMemo(
+    () => new Set(teams.map((t) => t.id)),
+    [teams],
   )
   const [activeTab, setActiveTab] = useState<NovaMatrizTabId>('dados')
 
@@ -148,8 +148,8 @@ export function NovaMatrizCreateTotemShell(props: NovaMatrizCreateTotemShellProp
   )
 
   const { nOpcoes, nAreas, nEtapas, minutos } = useMemo(
-    () => aggregateNovaMatrizCombos(catalogOpcoesDraft, manualOpcoes, collaboratorIdSet),
-    [catalogOpcoesDraft, manualOpcoes, collaboratorIdSet],
+    () => aggregateNovaMatrizCombos(catalogOpcoesDraft, manualOpcoes, teamIdSet),
+    [catalogOpcoesDraft, manualOpcoes, teamIdSet],
   )
 
   const podeSalvar = name.trim().length > 0 && estruturaOk

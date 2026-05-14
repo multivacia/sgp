@@ -1,4 +1,5 @@
 import type { MatrixNodeTreeApi } from '../../../domain/operation-matrix/operation-matrix.types'
+import { matrixActivityPrimaryTeamId } from '../matrixTreeAggregates'
 import {
   createMatrixNode,
   type CreateMatrixNodeInput,
@@ -25,12 +26,12 @@ function buildCreatePayload(
   }
 
   if (node.node_type === 'ACTIVITY') {
+    const tid = matrixActivityPrimaryTeamId(node)
     return {
       ...shared,
       nodeType: 'ACTIVITY',
       plannedMinutes: node.planned_minutes,
-      defaultResponsibleId: node.default_responsible_id,
-      teamIds: [...(node.team_ids ?? [])],
+      teamIds: tid ? [tid] : [],
     }
   }
 

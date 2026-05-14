@@ -1,12 +1,17 @@
 import type { MatrixNodeTreeApi } from '../../domain/operation-matrix/operation-matrix.types'
-import type { MatrixTreeGlobalStats } from './matrixTreeAggregates'
+import {
+  normalizeMatrixTeamIds,
+  type MatrixTreeGlobalStats,
+} from './matrixTreeAggregates'
 
 export type MacroActivityRow = {
   id: string
   name: string
   plannedMinutes: number | null
-  defaultResponsibleId: string | null
-  responsibleLabel: string | null
+  /** Equipe padrão (no máximo 1 id). */
+  teamIds: string[]
+  /** Nome da equipe para exibição; id sem cadastro aparece como texto cru. */
+  teamsShortLabel: string | null
 }
 
 export type MacroSectorBlock = {
@@ -45,7 +50,7 @@ function sortByOrder(a: MatrixNodeTreeApi, b: MatrixNodeTreeApi): number {
 export function buildOperationMatrixMacroPreviewModel(
   tree: MatrixNodeTreeApi,
   global: MatrixTreeGlobalStats,
-  collaboratorIdToName: ReadonlyMap<string, string>,
+  teamIdToName: ReadonlyMap<string, string>,
 ): OperationMatrixMacroPreviewModel {
   const root = tree.node_type === 'ITEM' ? tree : null
   if (!root) {
@@ -76,21 +81,17 @@ export function buildOperationMatrixMacroPreviewModel(
             .slice()
             .sort(sortByOrder)
             .map((act): MacroActivityRow => {
-              const dr = act.default_responsible_id
-              const responsibleLabel =
-                dr && dr.trim() !== ''
-                  ? collaboratorIdToName.get(dr) ?? dr
-                  : null
-              const drId =
-                act.default_responsible_id?.trim() === ''
-                  ? null
-                  : act.default_responsible_id?.trim() ?? null
+              const teamIds = normalizeMatrixTeamIds(act.team_ids)
+              const primary = teamIds[0]
+              const teamsShortLabel = primary
+                ? teamIdToName.get(primary) ?? primary
+                : null
               return {
                 id: act.id,
                 name: act.name,
                 plannedMinutes: act.planned_minutes,
-                defaultResponsibleId: drId,
-                responsibleLabel,
+                teamIds,
+                teamsShortLabel,
               }
             })
           return {

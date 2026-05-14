@@ -28,3 +28,10 @@ export type MatrixNodeTreeApi = MatrixNodeApi & {
 
 export type MatrixDeleteResult = { removedCount: number }
 export type MatrixRestoreResult = { restoredCount: number }
+
+/** Resposta de POST …/operation-matrix/items/:id/duplicate */
+export type DuplicateMatrixItemSummary = {
+  id: string
+  name: string
+  is_active: boolean
+}

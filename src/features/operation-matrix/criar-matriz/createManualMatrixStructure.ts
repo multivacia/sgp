@@ -41,8 +41,8 @@ async function createActivityUnderSector(
 ): Promise<void> {
   const r = reconcileEtapaCollaborators(etapa)
   const pm = r.plannedMinutes
-  const primary = r.primaryCollaboratorId
-  const supportIds = r.collaboratorIds.filter((id) => id !== primary)
+  const teamPrimary = r.teamIds[0]
+  const supportIds = r.collaboratorIds
 
   await createMatrixNode({
     nodeType: 'ACTIVITY',
@@ -50,8 +50,7 @@ async function createActivityUnderSector(
     name: r.name.trim(),
     isActive: true,
     plannedMinutes: pm == null || Number.isNaN(pm) ? null : Math.round(pm),
-    defaultResponsibleId: primary ?? null,
-    teamIds: [...new Set(r.teamIds)],
+    teamIds: teamPrimary ? [teamPrimary] : [],
     metadataJson: buildMatrixActivityMetadataJson(supportIds),
   })
 }

@@ -16,7 +16,7 @@ export function snapshotOrderMap(root: MatrixNodeTreeApi): Map<string, number> {
 
 export function orderTreeMatchesBaseline(
   tree: MatrixNodeTreeApi,
-  baseline: Map<string, number>,
+  baseline: ReadonlyMap<string, number>,
 ): boolean {
   const cur = snapshotOrderMap(tree)
   if (cur.size !== baseline.size) return false

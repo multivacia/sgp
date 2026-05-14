@@ -8,7 +8,7 @@ import {
 } from '@dnd-kit/sortable'
 import type { MatrixNodeTreeApi } from '../../domain/operation-matrix/operation-matrix.types'
 import type { MatrixTreeAggregateMaps } from './matrixTreeAggregates'
-import { getBranchStats } from './matrixTreeAggregates'
+import { getBranchStats, matrixActivityPrimaryTeamId } from './matrixTreeAggregates'
 import { HighlightName } from './matrixTreeHighlight'
 import { ActivityRowCompact } from './ActivityRowCompact'
 import { MatrixContextActionsMenu } from './MatrixContextActionsMenu'
@@ -16,7 +16,7 @@ import { MatrixContextActionsMenu } from './MatrixContextActionsMenu'
 type Props = {
   task: MatrixNodeTreeApi
   aggregateMaps: MatrixTreeAggregateMaps
-  collaboratorIdToName: ReadonlyMap<string, string>
+  teamIdToName: ReadonlyMap<string, string>
   selectedId: string | null
   activePathIds: ReadonlySet<string>
   onSelectNode: (id: string) => void
@@ -49,7 +49,7 @@ type SortableActivityProps = {
   onSelectNode: (id: string) => void
   searchQuery: string
   matchIds: ReadonlySet<string>
-  collaboratorIdToName: ReadonlyMap<string, string>
+  teamIdToName: ReadonlyMap<string, string>
   showActivityRowActions: boolean
   onEditActivity?: (activityId: string) => void
   onDuplicateActivity?: (activityId: string) => void | Promise<void>
@@ -68,22 +68,22 @@ function SortableActivityRow(p: SortableActivityProps) {
   }
   const active = p.act.id === p.selectedId
   const onPath = p.activePathIds.has(p.act.id)
-  const dr = p.act.default_responsible_id?.trim() ?? ''
+  const primaryTeamId = matrixActivityPrimaryTeamId(p.act)
   const isMatch =
     !!p.searchQuery.trim() &&
     (p.matchIds.has(p.act.id) ||
       p.matchIds.has(p.sector.id) ||
       p.matchIds.has(p.task.id))
-  let responsibleLabel: string | null = null
-  let warnOrphan = false
-  if (!dr) {
-    responsibleLabel = null
+  let teamLabel: string | null = null
+  let warnOrphanTeam = false
+  if (!primaryTeamId) {
+    teamLabel = null
   } else {
-    const name = p.collaboratorIdToName.get(dr)
-    if (name) responsibleLabel = name
+    const name = p.teamIdToName.get(primaryTeamId)
+    if (name) teamLabel = name
     else {
-      responsibleLabel = 'Não vinc.'
-      warnOrphan = true
+      teamLabel = 'Não vinc.'
+      warnOrphanTeam = true
     }
   }
 
@@ -113,9 +113,9 @@ function SortableActivityRow(p: SortableActivityProps) {
         onSelect={() => p.onSelectNode(p.act.id)}
         searchQuery={p.searchQuery}
         isMatch={isMatch}
-        responsibleLabel={responsibleLabel}
-        warnNoResponsible={!dr}
-        warnOrphan={warnOrphan}
+        teamLabel={teamLabel}
+        warnNoDefaultTeam={primaryTeamId == null}
+        warnOrphanTeam={warnOrphanTeam}
         panelFocusId={p.act.id}
         showTypeBadge={false}
         dragHandle={drag}
@@ -158,7 +158,7 @@ type SortableSectorProps = {
   onDuplicateActivity?: (activityId: string) => void | Promise<void>
   onRemoveActivity?: (activityId: string) => void | Promise<void>
   onEditActivity?: (activityId: string) => void
-  collaboratorIdToName: ReadonlyMap<string, string>
+  teamIdToName: ReadonlyMap<string, string>
 }
 
 function SortableSectorCard(p: SortableSectorProps) {
@@ -182,7 +182,7 @@ function SortableSectorCard(p: SortableSectorProps) {
     !!p.searchQuery.trim() &&
     p.matchIds.has(p.sector.id) &&
     !sectorSelected
-  const warnBranch = st.activitiesWithoutResponsibleInBranch > 0
+  const warnBranch = st.activitiesWithoutDefaultTeamInBranch > 0
 
   const frameSelected =
     sectorSelected &&
@@ -421,7 +421,7 @@ function SortableSectorCard(p: SortableSectorProps) {
                     onSelectNode={p.onSelectNode}
                     searchQuery={p.searchQuery}
                     matchIds={p.matchIds}
-                    collaboratorIdToName={p.collaboratorIdToName}
+                    teamIdToName={p.teamIdToName}
                     showActivityRowActions={showActivityRowActions}
                     onEditActivity={p.onEditActivity}
                     onDuplicateActivity={p.onDuplicateActivity}
@@ -441,7 +441,7 @@ function SortableSectorCard(p: SortableSectorProps) {
 export function TaskCompositionPanel({
   task,
   aggregateMaps,
-  collaboratorIdToName,
+  teamIdToName,
   selectedId,
   activePathIds,
   onSelectNode,
@@ -489,7 +489,7 @@ export function TaskCompositionPanel({
       onDuplicateActivity={onDuplicateActivity}
       onRemoveActivity={onRemoveActivity}
       onEditActivity={onEditActivity}
-      collaboratorIdToName={collaboratorIdToName}
+      teamIdToName={teamIdToName}
     />
   ))
 

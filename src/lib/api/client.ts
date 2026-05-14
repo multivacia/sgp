@@ -2,6 +2,7 @@ import {
   ApiError,
   friendlyMessageForHttpStatus,
   parseErrorEnvelope,
+  SESSION_EXPIRED_CODE,
   SESSION_REVOKED_CREDENTIALS_CHANGED_CODE,
 } from './apiErrors'
 import { ErrorRefs } from '../errors/errorCatalog'
@@ -9,6 +10,21 @@ import { SGP_NETWORK_ERROR_API_DIAGNOSTIC_MESSAGE } from '../errors/sgpErrorCont
 import { getApiBaseUrl } from './env'
 
 type SuccessEnvelope<T> = { data: T; meta?: unknown }
+
+function dispatchSessionAuthEndedEvent(status: number, code: string | undefined, message: string) {
+  if (status !== 401 || !code) return
+  if (code === SESSION_REVOKED_CREDENTIALS_CHANGED_CODE) {
+    window.dispatchEvent(
+      new CustomEvent('sgp:session-revoked', { detail: { message } }),
+    )
+    return
+  }
+  if (code === SESSION_EXPIRED_CODE) {
+    window.dispatchEvent(
+      new CustomEvent('sgp:session-expired', { detail: { message } }),
+    )
+  }
+}
 
 /**
  * Como `requestJson`, mas preserva `meta` do envelope (`{ data, meta }`).
@@ -76,14 +92,7 @@ export async function requestJsonEnvelope<T>(
   if (!res.ok) {
     const { message, code, errorRef, correlationId, category, severity, details } =
       parseErrorEnvelope(parsed, res.status)
-    if (
-      res.status === 401 &&
-      code === SESSION_REVOKED_CREDENTIALS_CHANGED_CODE
-    ) {
-      window.dispatchEvent(
-        new CustomEvent('sgp:session-revoked', { detail: { message } }),
-      )
-    }
+    dispatchSessionAuthEndedEvent(res.status, code, message)
     throw new ApiError(message, res.status, {
       code,
       errorRef,
@@ -169,14 +178,7 @@ export async function requestJson<T>(
   if (!res.ok) {
     const { message, code, errorRef, correlationId, category, severity, details } =
       parseErrorEnvelope(parsed, res.status)
-    if (
-      res.status === 401 &&
-      code === SESSION_REVOKED_CREDENTIALS_CHANGED_CODE
-    ) {
-      window.dispatchEvent(
-        new CustomEvent('sgp:session-revoked', { detail: { message } }),
-      )
-    }
+    dispatchSessionAuthEndedEvent(res.status, code, message)
     throw new ApiError(message, res.status, {
       code,
       errorRef,
@@ -248,14 +250,7 @@ export async function requestMultipartJson<T>(
   if (!res.ok) {
     const { message, code, errorRef, correlationId, category, severity, details } =
       parseErrorEnvelope(parsed, res.status)
-    if (
-      res.status === 401 &&
-      code === SESSION_REVOKED_CREDENTIALS_CHANGED_CODE
-    ) {
-      window.dispatchEvent(
-        new CustomEvent('sgp:session-revoked', { detail: { message } }),
-      )
-    }
+    dispatchSessionAuthEndedEvent(res.status, code, message)
     throw new ApiError(message, res.status, {
       code,
       errorRef,

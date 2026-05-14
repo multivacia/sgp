@@ -7,8 +7,8 @@ describe('revisaoAlterarMatrizPendencias', () => {
       revisaoAlterarMatrizPendencias({
         matrixStructureDirty: false,
         matrixEditorHasUnsavedChanges: false,
-        activitiesWithoutResponsible: 0,
-        orphanResponsibleAssignments: 0,
+        activitiesWithoutDefaultTeam: 0,
+        activitiesWithOrphanDefaultTeam: 0,
       }),
     ).toEqual([])
   })
@@ -17,8 +17,8 @@ describe('revisaoAlterarMatrizPendencias', () => {
     const p = revisaoAlterarMatrizPendencias({
       matrixStructureDirty: true,
       matrixEditorHasUnsavedChanges: false,
-      activitiesWithoutResponsible: 0,
-      orphanResponsibleAssignments: 0,
+      activitiesWithoutDefaultTeam: 0,
+      activitiesWithOrphanDefaultTeam: 0,
     })
     expect(p.some((x) => x.includes('ordem'))).toBe(true)
   })
@@ -28,19 +28,19 @@ describe('revisaoAlterarMatrizPendencias', () => {
       revisaoAlterarMatrizPendencias({
         matrixStructureDirty: false,
         matrixEditorHasUnsavedChanges: true,
-        activitiesWithoutResponsible: 0,
-        orphanResponsibleAssignments: 0,
+        activitiesWithoutDefaultTeam: 0,
+        activitiesWithOrphanDefaultTeam: 0,
       }).length,
     ).toBe(1)
   })
 
-  it('acumula avisos sobre atividades sem responsável ou com responsável órfão', () => {
+  it('acumula avisos sobre atividades sem equipe padrão ou com equipe órfã', () => {
     expect(
       revisaoAlterarMatrizPendencias({
         matrixStructureDirty: false,
         matrixEditorHasUnsavedChanges: false,
-        activitiesWithoutResponsible: 2,
-        orphanResponsibleAssignments: 1,
+        activitiesWithoutDefaultTeam: 2,
+        activitiesWithOrphanDefaultTeam: 1,
       }).length,
     ).toBe(2)
   })

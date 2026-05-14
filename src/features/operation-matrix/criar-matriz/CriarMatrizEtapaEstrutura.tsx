@@ -117,14 +117,14 @@ export function CriarMatrizEtapaEstrutura({
     [catalogDrafts],
   )
 
-  const collaboratorIdSet = useMemo(
-    () => new Set(collaborators.map((c) => c.id)),
-    [collaborators],
+  const teamIdSet = useMemo(
+    () => new Set(teams.map((t) => t.id)),
+    [teams],
   )
 
   const aggregateMaps = useMemo(
-    () => buildMatrixTreeAggregateMaps(draftTree, collaboratorIdSet),
-    [draftTree, collaboratorIdSet],
+    () => buildMatrixTreeAggregateMaps(draftTree, teamIdSet),
+    [draftTree, teamIdSet],
   )
 
   const flowActions = totemMode ? null : (
@@ -182,10 +182,7 @@ export function CriarMatrizEtapaEstrutura({
           onChangeCatalogDraft={onChangeCatalogDraft}
           onReorderCatalogDraft={onReorderCatalogDraft}
           onDuplicateCatalogInstance={onDuplicateCatalogInstance}
-          collaborators={collaborators}
           teams={teams}
-          collaboratorsLoading={collaboratorsLoading}
-          collaboratorsError={collaboratorsError}
           matrixSuggestionCatalog={matrixSuggestionCatalog}
           expandOnAdd={!totemMode}
           showDraftIntro={!totemMode}

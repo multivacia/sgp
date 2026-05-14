@@ -42,7 +42,7 @@ import {
   draftHasTask,
   findTaskNodeInItemTree,
   matrixItemTreeToManualOptions,
-  matrixTaskSubtreeToManualOption,
+  matrixTaskSubtreeToManualDraft,
 } from './nova-esteira/novaEsteiraDraftFromMatrix'
 import {
   countSectorsInRoots,
@@ -519,18 +519,24 @@ export function ConveyorCreateEditPage({ mode }: { mode: Mode }) {
         if (!tree) return setEstruturaHint('Matriz ainda não carregada.')
         if (!matrixHasRunnableStructure(tree)) return setEstruturaHint('Matriz sem estrutura utilizável.')
         if (draftHasMatrixRoot(prev, payload.matrixId)) return setDupHint('Matriz já adicionada. Soltura ignorada.')
-        const options = matrixItemTreeToManualOptions(tree, payload.matrixId)
+        const { options, initialAllocations } = matrixItemTreeToManualOptions(
+          tree,
+          payload.matrixId,
+        )
         if (options.length === 0) return setEstruturaHint('Matriz sem tarefas materializáveis.')
-        return setManualRoots([...prev, ...options])
+        setManualRoots((prev) => [...prev, ...options])
+        setManualAloc((a) => ({ ...a, ...initialAllocations }))
+        return
       }
       const tree = treeByMatrixId[payload.matrixItemId]
       if (!tree) return setEstruturaHint('Árvore da matriz não disponível.')
       if (draftHasTask(prev, payload.taskId)) return setDupHint('Tarefa já adicionada. Soltura ignorada.')
       const taskNode = findTaskNodeInItemTree(tree, payload.taskId)
       if (!taskNode) return setEstruturaHint('Tarefa não encontrada na árvore.')
-      const option = matrixTaskSubtreeToManualOption(taskNode, `t:${taskNode.id}`)
-      if (!option) return setEstruturaHint('Tarefa sem setores ou atividades utilizáveis.')
-      setManualRoots([...prev, option])
+      const bundle = matrixTaskSubtreeToManualDraft(taskNode, `t:${taskNode.id}`)
+      if (!bundle) return setEstruturaHint('Tarefa sem setores ou atividades utilizáveis.')
+      setManualRoots([...prev, bundle.option])
+      setManualAloc((a) => ({ ...a, ...bundle.initialAllocations }))
     },
     [treeByMatrixId],
   )
@@ -547,8 +553,9 @@ export function ConveyorCreateEditPage({ mode }: { mode: Mode }) {
           setDupHint('Esta matriz já está na esteira.')
           return prev
         }
-        const options = matrixItemTreeToManualOptions(tree, matrixId)
+        const { options, initialAllocations } = matrixItemTreeToManualOptions(tree, matrixId)
         if (options.length === 0) return prev
+        setManualAloc((a) => ({ ...a, ...initialAllocations }))
         return [...prev, ...options]
       })
     },
@@ -562,7 +569,7 @@ export function ConveyorCreateEditPage({ mode }: { mode: Mode }) {
       const tree = treeByMatrixId[matrixId]
       if (!tree) return setEstruturaHint('Matriz ainda não carregada.')
       if (!matrixHasRunnableStructure(tree)) return setEstruturaHint('Matriz sem estrutura utilizável.')
-      const options = matrixItemTreeToManualOptions(tree, matrixId)
+      const { options, initialAllocations } = matrixItemTreeToManualOptions(tree, matrixId)
       if (options.length === 0) return setEstruturaHint('Matriz sem tarefas materializáveis.')
       const prev = manualRootsRef.current
       const removed = prev.filter((r) => r.catalogSourceKey?.startsWith('mroot:'))
@@ -574,7 +581,7 @@ export function ConveyorCreateEditPage({ mode }: { mode: Mode }) {
             for (const st of ar.steps) delete next[st.key]
           }
         }
-        return next
+        return { ...next, ...initialAllocations }
       })
       setManualRoots([...keep, ...options])
     },

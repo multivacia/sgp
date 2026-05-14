@@ -7,6 +7,7 @@
 import {
   PERMISSION_OPERATIONAL_SETTINGS_MANAGE,
   PERMISSION_RBAC_MANAGE_ROLE_PERMISSIONS,
+  PERMISSION_SYSTEM_SETTINGS_VIEW,
 } from '../permissions/permissionCodes'
 
 export type ShellNavSection = 'gestao' | 'colaborador' | 'conta'
@@ -116,6 +117,13 @@ export const GESTAO_NAV_ITEMS: ShellNavItem[] = [
     section: 'gestao',
     navGroup: 'cadastros_operacionais',
     permission: PERMISSION_OPERATIONAL_SETTINGS_MANAGE,
+  },
+  {
+    to: '/app/configuracoes/sistema',
+    label: 'Configurações do sistema',
+    section: 'gestao',
+    navGroup: 'estrutura_administracao',
+    permission: PERMISSION_SYSTEM_SETTINGS_VIEW,
   },
   {
     to: '/app/matrizes-operacao',

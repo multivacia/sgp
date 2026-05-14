@@ -2,9 +2,16 @@
 export const SESSION_REVOKED_CREDENTIALS_CHANGED_CODE =
   'SESSION_REVOKED_CREDENTIALS_CHANGED'
 
+/** Espelha `ErrorCodes.SESSION_EXPIRED` no servidor. */
+export const SESSION_EXPIRED_CODE = 'SESSION_EXPIRED'
+
 /** Texto alinhado à mensagem devolvida pelo backend para 401 por credenciais alteradas. */
 export const SESSION_REVOKED_USER_MESSAGE =
   'Sua sessão foi encerrada porque suas credenciais foram alteradas. Faça login novamente.'
+
+/** Texto alinhado à mensagem devolvida pelo backend para 401 por sessão expirada. */
+export const SESSION_EXPIRED_USER_MESSAGE =
+  'Sua sessão expirou. Faça login novamente.'
 
 export class ApiError extends Error {
   readonly status: number

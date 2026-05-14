@@ -11,9 +11,10 @@ export type ActivityRowCompactProps = {
   onSelect: () => void
   searchQuery: string
   isMatch: boolean
-  responsibleLabel: string | null
-  warnNoResponsible: boolean
-  warnOrphan: boolean
+  /** Equipe padrão (rótulo curto) ou null. */
+  teamLabel: string | null
+  warnNoDefaultTeam: boolean
+  warnOrphanTeam: boolean
   /** Alvo para scroll no painel (Matrizes). */
   panelFocusId?: string
   /** Quando falso, omite a badge “Atividade” (ex.: lista na Composição). Default: true. */
@@ -41,9 +42,9 @@ export const ActivityRowCompact = memo(function ActivityRowCompact({
   onSelect,
   searchQuery,
   isMatch,
-  responsibleLabel,
-  warnNoResponsible,
-  warnOrphan,
+  teamLabel,
+  warnNoDefaultTeam,
+  warnOrphanTeam,
   panelFocusId,
   showTypeBadge = true,
   inlineActions,
@@ -81,18 +82,18 @@ export const ActivityRowCompact = memo(function ActivityRowCompact({
           Atividade
         </span>
       ) : null}
-      {warnNoResponsible ? (
+      {warnNoDefaultTeam ? (
         <span
           className="mt-0.5 shrink-0 rounded border border-amber-500/30 bg-amber-500/10 px-1 py-px text-[8px] font-semibold text-amber-200/85"
-          title="Sem responsável padrão"
+          title="Sem equipe padrão"
         >
           !
         </span>
       ) : null}
-      {warnOrphan ? (
+      {warnOrphanTeam ? (
         <span
           className="mt-0.5 shrink-0 rounded border border-rose-500/30 bg-rose-500/10 px-1 py-px text-[8px] font-semibold text-rose-200/85"
-          title="Responsável sem cadastro"
+          title="Equipe sem cadastro"
         >
           ?
         </span>
@@ -105,9 +106,9 @@ export const ActivityRowCompact = memo(function ActivityRowCompact({
       <span className="shrink-0 tabular-nums text-[10px] text-slate-500">{timeStr}</span>
       <span
         className="max-w-[38%] shrink-0 break-words text-right text-[10px] leading-snug text-slate-500"
-        title={responsibleLabel ?? undefined}
+        title={teamLabel ?? undefined}
       >
-        {responsibleLabel ?? '—'}
+        {teamLabel ?? '—'}
       </span>
     </>
   )

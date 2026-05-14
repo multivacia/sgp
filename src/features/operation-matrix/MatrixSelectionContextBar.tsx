@@ -4,10 +4,9 @@ import type {
   MatrixSuggestionCatalogData,
 } from '../../catalog/matrixSuggestion/types'
 import type { MatrixNodeTreeApi, MatrixNodeType } from '../../domain/operation-matrix/operation-matrix.types'
-import type { Collaborator } from '../../domain/collaborators/collaborator.types'
 import type { Team } from '../../domain/teams/team.types'
 import type { MatrixTreeAggregateMaps } from './matrixTreeAggregates'
-import { getBranchStats } from './matrixTreeAggregates'
+import { activityHasMatrixDefaultTeam, getBranchStats } from './matrixTreeAggregates'
 import type { BreadcrumbSegment } from './matrixTreeBreadcrumb'
 import { breadcrumbLabel } from './matrixTreeBreadcrumb'
 import { LabelSuggestField } from './components/LabelSuggestField'
@@ -48,9 +47,9 @@ function SectorBranchSummaryCompact({
           </dd>
         </div>
         <div>
-          <dt className="text-slate-600">Sem resp.</dt>
+          <dt className="text-slate-600">Sem equipe</dt>
           <dd className="font-medium tabular-nums text-amber-200/90">
-            {stats.activitiesWithoutResponsibleInBranch}
+            {stats.activitiesWithoutDefaultTeamInBranch}
           </dd>
         </div>
       </dl>
@@ -86,15 +85,15 @@ function ItemMetricsPanelCompact({
           <dd className="font-medium tabular-nums text-slate-200">{g.plannedMinutesSum}</dd>
         </div>
         <div>
-          <dt className="text-slate-600">Resp. vinc.</dt>
+          <dt className="text-slate-600">Equipes dist.</dt>
           <dd className="font-medium tabular-nums text-slate-200">
-            {g.linkedDistinctResponsibles}
+            {g.linkedDistinctDefaultTeams}
           </dd>
         </div>
         <div>
           <dt className="text-slate-600">Sem padrão</dt>
           <dd className="font-medium tabular-nums text-amber-200/90">
-            {g.activitiesWithoutResponsible}
+            {g.activitiesWithoutDefaultTeam}
           </dd>
         </div>
       </dl>
@@ -121,17 +120,12 @@ export type MatrixSelectionContextBarProps = {
   setFormActive: (v: boolean) => void
   formPlanned: string
   setFormPlanned: (v: string) => void
-  formResponsible: string
-  setFormResponsible: (v: string) => void
   formTeamIds: string[]
   setFormTeamIds: (v: string[]) => void
   formRequired: boolean
   setFormRequired: (v: boolean) => void
-  collaborators: Collaborator[]
   teams: Team[]
-  collaboratorIdSet: ReadonlySet<string>
   teamIdSet: ReadonlySet<string>
-  responsibleIsOrphan: boolean
   busy: boolean
   canAddChild: boolean
   childType: MatrixNodeType | null
@@ -143,7 +137,7 @@ export type MatrixSelectionContextBarProps = {
   onCancel: () => void
   onDelete: () => void
   onAddChild: (e: FormEvent) => void
-  collaboratorIdToName: ReadonlyMap<string, string>
+  teamIdToName: ReadonlyMap<string, string>
   selectedId: string | null
   activePathIds: ReadonlySet<string>
   onSelectNode: (id: string) => void
@@ -194,17 +188,12 @@ export function MatrixSelectionContextBar({
   setFormActive,
   formPlanned,
   setFormPlanned,
-  formResponsible,
-  setFormResponsible,
   formTeamIds,
   setFormTeamIds,
   formRequired,
   setFormRequired,
-  collaborators,
   teams,
-  collaboratorIdSet,
   teamIdSet,
-  responsibleIsOrphan,
   busy,
   canAddChild,
   childType,
@@ -216,7 +205,7 @@ export function MatrixSelectionContextBar({
   onCancel,
   onDelete,
   onAddChild,
-  collaboratorIdToName,
+  teamIdToName,
   selectedId,
   activePathIds,
   onSelectNode,
@@ -513,7 +502,7 @@ export function MatrixSelectionContextBar({
                   <TaskCompositionPanel
                     task={compositionTask}
                     aggregateMaps={aggregateMaps}
-                    collaboratorIdToName={collaboratorIdToName}
+                    teamIdToName={teamIdToName}
                     selectedId={selectedId}
                     activePathIds={activePathIds}
                     onSelectNode={onSelectNode}
@@ -539,7 +528,7 @@ export function MatrixSelectionContextBar({
             aggregateMaps ? (
               <div className="rounded-lg border border-white/[0.06] bg-white/[0.02] px-3 py-2.5 text-[11px] leading-relaxed text-slate-500">
                 Composição desta tarefa está ao lado das tarefas. Selecione um setor ou
-                atividade abaixo para ajustes de nome ou responsável, ou vá à aba «Revisão»
+                atividade abaixo para ajustes de nome ou equipe padrão, ou vá à aba «Revisão»
                 para gravar alterações estruturais.
               </div>
             ) : null}
@@ -557,7 +546,7 @@ export function MatrixSelectionContextBar({
               <p className="rounded-lg border border-white/[0.06] bg-white/[0.02] px-3 py-2.5 text-[11px] leading-relaxed text-slate-400">
                 Atividade selecionada. Use{' '}
                 <span className="font-medium text-slate-300">Editar</span> na
-                linha da atividade para alterar nome, tempo previsto e responsável.
+                linha da atividade para alterar nome, tempo previsto e equipe padrão.
               </p>
             ) : (
             <div className="flex flex-col gap-4">
@@ -638,73 +627,42 @@ export function MatrixSelectionContextBar({
 
               {selected.node_type === 'ACTIVITY' ? (
                 <div className="space-y-2.5">
-                  {!selected.default_responsible_id?.trim() ? (
+                  {!activityHasMatrixDefaultTeam(selected) ? (
                     <div
                       role="status"
                       className="rounded-lg border border-amber-500/35 bg-amber-500/10 px-2 py-1.5 text-[11px] text-amber-100/90"
                     >
-                      Sem responsável padrão.
+                      Sem equipe padrão.
                     </div>
                   ) : null}
-                  <p className="text-[9px] font-bold uppercase tracking-wider text-slate-500">
-                    Equipe de execução
-                  </p>
-                  <div className="space-y-1 rounded-lg border border-white/[0.08] bg-white/[0.02] p-2">
-                    <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
-                      Times
-                    </p>
-                    <div className="max-h-28 space-y-1 overflow-y-auto pr-1 [scrollbar-width:thin]">
-                      {teams.map((team) => {
-                        const checked = formTeamIds.includes(team.id)
-                        return (
-                          <label
-                            key={team.id}
-                            className="flex items-center gap-2 text-[11px] text-slate-300"
-                          >
-                            <input
-                              type="checkbox"
-                              checked={checked}
-                              onChange={(e) => {
-                                if (e.target.checked) {
-                                  setFormTeamIds([...new Set([...formTeamIds, team.id])])
-                                  return
-                                }
-                                setFormTeamIds(formTeamIds.filter((id) => id !== team.id))
-                              }}
-                              className="rounded border-white/20"
-                            />
-                            <span className="truncate">{team.name}</span>
-                          </label>
-                        )
-                      })}
-                      {teams.length === 0 ? (
-                        <p className="text-[11px] text-slate-500">Nenhum time disponível.</p>
-                      ) : null}
-                      {orphanTeamIds.map((id) => (
-                        <label
-                          key={id}
-                          className="flex items-center gap-2 text-[11px] text-rose-200/90"
-                        >
-                          <input
-                            type="checkbox"
-                            checked
-                            onChange={() =>
-                              setFormTeamIds(formTeamIds.filter((x) => x !== id))
-                            }
-                            className="rounded border-white/20"
-                          />
-                          <span className="truncate">ID importado (sem cadastro)</span>
-                        </label>
+                  <label className="flex flex-col gap-0.5 text-[11px]">
+                    <span className="text-slate-500">Equipe padrão</span>
+                    <select
+                      value={formTeamIds[0] ?? ''}
+                      onChange={(e) => {
+                        const v = e.target.value.trim()
+                        setFormTeamIds(v ? [v] : [])
+                      }}
+                      className="sgp-input-app rounded-lg border border-white/10 bg-sgp-void/80 px-2 py-1.5 text-sm text-slate-200"
+                    >
+                      <option value="">— Sem equipe padrão —</option>
+                      {teams.map((t) => (
+                        <option key={t.id} value={t.id}>
+                          {t.name}
+                        </option>
                       ))}
-                    </div>
-                    {orphanTeamIds.length > 0 ? (
-                      <p className="text-[11px] text-rose-200/90">
-                        Time(s) vinculado(s) sem cadastro ativo.
-                      </p>
-                    ) : null}
-                  </div>
-                  <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
-                    Colaboradores
+                      {formTeamIds[0] && !teamIdSet.has(formTeamIds[0]) ? (
+                        <option value={formTeamIds[0]}>ID importado (sem cadastro)</option>
+                      ) : null}
+                    </select>
+                  </label>
+                  {orphanTeamIds.length > 0 ? (
+                    <p className="text-[11px] text-rose-200/90">
+                      Equipe vinculada sem cadastro ativo.
+                    </p>
+                  ) : null}
+                  <p className="text-[10px] leading-snug text-slate-500">
+                    Use uma equipe para função operacional (ex.: Ajudante, Costura ou Montagem).
                   </p>
                   <label className="flex flex-col gap-0.5 text-[11px]">
                     <span className="text-slate-500">Tempo previsto (min)</span>
@@ -715,31 +673,6 @@ export function MatrixSelectionContextBar({
                       className="sgp-input-app rounded-lg border border-white/10 bg-sgp-void/80 px-2 py-1.5 text-sm text-slate-200"
                     />
                   </label>
-                  <label className="flex flex-col gap-0.5 text-[11px]">
-                    <span className="text-slate-500">Responsável padrão</span>
-                    <select
-                      value={formResponsible}
-                      onChange={(e) => setFormResponsible(e.target.value)}
-                      className="sgp-input-app rounded-lg border border-white/10 bg-sgp-void/80 px-2 py-1.5 text-sm text-slate-200"
-                    >
-                      <option value="">— Nenhum —</option>
-                      {collaborators.map((c) => (
-                        <option key={c.id} value={c.id}>
-                          {c.fullName}
-                        </option>
-                      ))}
-                      {formResponsible && !collaboratorIdSet.has(formResponsible) ? (
-                        <option value={formResponsible}>
-                          ID importado (sem cadastro)
-                        </option>
-                      ) : null}
-                    </select>
-                  </label>
-                  {responsibleIsOrphan ? (
-                    <p className="text-[11px] text-rose-200/90">
-                      ID sem colaborador ativo.
-                    </p>
-                  ) : null}
                   <label className="flex items-center gap-2 text-[11px] text-slate-400">
                     <input
                       type="checkbox"

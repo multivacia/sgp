@@ -7,12 +7,20 @@ import {
 } from '../../components/shell/SgpContextActionsMenu'
 import { PageCanvas } from '../../components/ui/PageCanvas'
 import {
+  SgpToast,
+  type SgpToastVariant,
+} from '../../components/ui/SgpToast'
+import {
   isBlockingSeverity,
   reportClientError,
 } from '../../lib/errors'
 import { useSgpErrorSurface } from '../../lib/errors/SgpErrorPresentation'
 import {
   deleteMatrixNode,
+  duplicateMatrixItem,
+  EXPORT_MATRIX_ITEM_ACTION_LABEL,
+  EXPORT_MATRIX_ITEM_FAIL_MESSAGE,
+  exportMatrixItemToExcel,
   listMatrixItems,
   patchMatrixNode,
   restoreMatrixNode,
@@ -23,6 +31,11 @@ import { useAuth } from '../../lib/use-auth'
 type FiltroAtivo = 'todos' | 'ativos' | 'inativos'
 const MATRIX_DEFAULT_PAGE_SIZE = 25
 const MATRIX_PAGE_SIZE_OPTIONS = [25, 50, 100] as const
+
+const DUPLICATE_MATRIX_FAIL =
+  'Não foi possível duplicar a matriz. Tente novamente.'
+
+type ToastState = { message: string; variant: SgpToastVariant } | null
 
 export function OperationMatrixListPage() {
   const { presentBlocking } = useSgpErrorSurface()
@@ -43,6 +56,7 @@ export function OperationMatrixListPage() {
   const [loadError, setLoadError] = useState<string | null>(null)
   const [restoring, setRestoring] = useState(false)
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null)
+  const [toast, setToast] = useState<ToastState>(null)
   const canManageMatrix = can('operation_matrix.manage')
   const load = useCallback(async () => {
     setLoading(true)
@@ -143,6 +157,52 @@ export function OperationMatrixListPage() {
     }
   }
 
+  async function handleExportMatrix(item: MatrixNodeApi) {
+    setActionLoadingId(item.id)
+    setLoadError(null)
+    try {
+      await exportMatrixItemToExcel(item.id, {
+        matrixName: item.name,
+        matrixCode: item.code,
+      })
+    } catch (e) {
+      setToast({ message: EXPORT_MATRIX_ITEM_FAIL_MESSAGE, variant: 'error' })
+      reportClientError(e, {
+        module: 'operation-matrix',
+        action: 'matrix_item_export_excel',
+        route: location.pathname,
+        entityId: item.id,
+      })
+    } finally {
+      setActionLoadingId(null)
+    }
+  }
+
+  async function handleDuplicateMatrix(item: MatrixNodeApi) {
+    if (
+      !window.confirm(`Deseja duplicar a matriz '${item.name}'?`)
+    ) {
+      return
+    }
+    setActionLoadingId(item.id)
+    setLoadError(null)
+    try {
+      await duplicateMatrixItem(item.id)
+      setToast({ message: 'Matriz duplicada com sucesso.', variant: 'success' })
+      await load()
+    } catch (e) {
+      setToast({ message: DUPLICATE_MATRIX_FAIL, variant: 'error' })
+      reportClientError(e, {
+        module: 'operation-matrix',
+        action: 'matrix_item_duplicate',
+        route: location.pathname,
+        entityId: item.id,
+      })
+    } finally {
+      setActionLoadingId(null)
+    }
+  }
+
   const lista = useMemo(
     () =>
       [...rows].sort((a, b) =>
@@ -166,6 +226,14 @@ export function OperationMatrixListPage() {
   return (
     <SgpContextActionsMenuProvider>
     <PageCanvas>
+      {toast ? (
+        <SgpToast
+          fixed
+          message={toast.message}
+          variant={toast.variant}
+          onDismiss={() => setToast(null)}
+        />
+      ) : null}
       <header className="sgp-header-card max-w-6xl">
         <p className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-sgp-gold">
           <span className="h-px w-8 bg-gradient-to-r from-sgp-gold to-transparent" />
@@ -323,6 +391,16 @@ export function OperationMatrixListPage() {
                           )
                         },
                       },
+                      {
+                        label: EXPORT_MATRIX_ITEM_ACTION_LABEL,
+                        onClick: () => void handleExportMatrix(item),
+                      },
+                      canManageMatrix
+                        ? {
+                            label: 'Duplicar matriz',
+                            onClick: () => void handleDuplicateMatrix(item),
+                          }
+                        : null,
                       canManageMatrix && item.is_active
                         ? {
                             label: 'Inativar matriz',

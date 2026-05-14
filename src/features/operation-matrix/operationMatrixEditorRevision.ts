@@ -4,9 +4,10 @@
 export function revisaoAlterarMatrizPendencias(opts: {
   matrixStructureDirty: boolean
   matrixEditorHasUnsavedChanges: boolean
-  /** Do agregado global da árvore (atividades sem responsável válido/definido) */
-  activitiesWithoutResponsible: number
-  orphanResponsibleAssignments: number
+  /** Do agregado global da árvore (atividades sem equipe padrão). */
+  activitiesWithoutDefaultTeam: number
+  /** Equipe padrão referenciada mas não existe no catálogo carregado. */
+  activitiesWithOrphanDefaultTeam: number
 }): string[] {
   const out: string[] = []
   if (opts.matrixStructureDirty) {
@@ -15,13 +16,15 @@ export function revisaoAlterarMatrizPendencias(opts: {
   if (opts.matrixEditorHasUnsavedChanges) {
     out.push('Há alterações no formulário do nó atual que ainda não foram salvas.')
   }
-  if (opts.activitiesWithoutResponsible > 0) {
+  if (opts.activitiesWithoutDefaultTeam > 0) {
     out.push(
-      `${opts.activitiesWithoutResponsible} atividade(s) sem responsável padrão definido.`,
+      `${opts.activitiesWithoutDefaultTeam} atividade(s) sem equipe padrão.`,
     )
   }
-  if (opts.orphanResponsibleAssignments > 0) {
-    out.push(`${opts.orphanResponsibleAssignments} atividade(s) com responsável padrão inativo ou inválido.`)
+  if (opts.activitiesWithOrphanDefaultTeam > 0) {
+    out.push(
+      `${opts.activitiesWithOrphanDefaultTeam} atividade(s) com equipe padrão inativa ou inválida.`,
+    )
   }
   return out
 }

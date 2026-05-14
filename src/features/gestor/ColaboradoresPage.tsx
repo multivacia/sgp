@@ -329,9 +329,15 @@ export function ColaboradoresPage() {
           <div>
             <h1 className="sgp-page-title">Colaboradores operacionais</h1>
             <p className="sgp-page-lead max-w-2xl">
-              Cadastro real (<span className="font-mono text-slate-400">collaborators</span>) com
-              remoção lógica e vínculo opcional com{' '}
-              <span className="font-mono text-slate-400">app_users</span>. Sem dados fictícios.
+              Cadastre aqui <span className="font-medium text-slate-200">pessoas reais</span> que
+              executam atividades e apontam horas. Colaboradores representam pessoas reais; para
+              funções operacionais como Ajudante ou Costureiro, use{' '}
+              <Link to="/app/equipes" className="font-medium text-sgp-gold/95 underline-offset-2 hover:underline">
+                Equipes
+              </Link>
+              . Cadastro técnico (<span className="font-mono text-slate-400">collaborators</span>)
+              com remoção lógica e vínculo opcional com{' '}
+              <span className="font-mono text-slate-400">app_users</span>.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -540,7 +546,11 @@ export function ColaboradoresPage() {
             ) : rows.length === 0 ? (
               <tr>
                 <td colSpan={6} className="px-4 py-10 text-center text-slate-500">
-                  Nenhum colaborador neste filtro.
+                  <p>Nenhum colaborador neste filtro.</p>
+                  <p className="mt-2 max-w-md text-xs leading-relaxed text-slate-500">
+                    Lembre-se: colaborador é pessoa real. Para funções operacionais (ex.: Ajudante,
+                    Costura), cadastre uma equipe em Equipes.
+                  </p>
                 </td>
               </tr>
             ) : (

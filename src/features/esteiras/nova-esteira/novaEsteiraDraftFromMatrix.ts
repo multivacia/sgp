@@ -1,5 +1,11 @@
 import type { MatrixNodeTreeApi } from '../../../domain/operation-matrix/operation-matrix.types'
-import type { ManualAreaDraft, ManualOptionDraft, ManualStepDraft } from './matrixToConveyorCreateInput'
+import { matrixActivityPrimaryTeamId } from '../../operation-matrix/matrixTreeAggregates'
+import type {
+  ManualAreaDraft,
+  ManualOptionDraft,
+  ManualStepDraft,
+  NovaEsteiraAlocacaoLinha,
+} from './matrixToConveyorCreateInput'
 
 function sortByOrder(children: MatrixNodeTreeApi[]): MatrixNodeTreeApi[] {
   return [...children].sort((a, b) => a.order_index - b.order_index)
@@ -7,6 +13,22 @@ function sortByOrder(children: MatrixNodeTreeApi[]): MatrixNodeTreeApi[] {
 
 function newKey() {
   return crypto.randomUUID()
+}
+
+/** Alocações iniciais na esteira a partir da equipe padrão da Atividade na Matriz. */
+export function matrixActivityToInitialAllocRows(
+  act: MatrixNodeTreeApi,
+): NovaEsteiraAlocacaoLinha[] {
+  if (act.node_type !== 'ACTIVITY') return []
+  const tid = matrixActivityPrimaryTeamId(act)
+  if (!tid) return []
+  return [
+    {
+      type: 'TEAM',
+      teamId: tid,
+      isPrimary: true,
+    },
+  ]
 }
 
 function emptyStepFromActivity(act: MatrixNodeTreeApi): ManualStepDraft {
@@ -17,54 +39,85 @@ function emptyStepFromActivity(act: MatrixNodeTreeApi): ManualStepDraft {
   }
 }
 
+export type MatrixTaskManualDraftBundle = {
+  option: ManualOptionDraft
+  /** Chaves = `step.key` das etapas criadas a partir das atividades da matriz. */
+  initialAllocations: Record<string, NovaEsteiraAlocacaoLinha[]>
+}
+
 /**
- * Converte um nó TASK (com filhos SECTOR → ACTIVITY) em uma opção editável da esteira.
+ * Converte um nó TASK (com filhos SECTOR → ACTIVITY) em opção editável da esteira,
+ * com alocações herdadas da equipe padrão (`team_ids`) de cada atividade.
  */
-export function matrixTaskSubtreeToManualOption(
+export function matrixTaskSubtreeToManualDraft(
   task: MatrixNodeTreeApi,
   catalogSourceKey: string,
-): ManualOptionDraft | null {
+): MatrixTaskManualDraftBundle | null {
   if (task.node_type !== 'TASK') return null
   const sectors = sortByOrder(task.children.filter((c) => c.node_type === 'SECTOR'))
   const areas: ManualAreaDraft[] = []
+  const initialAllocations: Record<string, NovaEsteiraAlocacaoLinha[]> = {}
   for (const sector of sectors) {
     const activities = sortByOrder(
       sector.children.filter((c) => c.node_type === 'ACTIVITY'),
     )
     if (activities.length === 0) continue
+    const steps = activities.map((act) => {
+      const step = emptyStepFromActivity(act)
+      const rows = matrixActivityToInitialAllocRows(act)
+      if (rows.length > 0) {
+        initialAllocations[step.key] = rows
+      }
+      return step
+    })
     areas.push({
       key: newKey(),
       titulo: sector.name.trim(),
-      steps: activities.map((act) => emptyStepFromActivity(act)),
+      steps,
     })
   }
   if (areas.length === 0) return null
   return {
-    key: newKey(),
-    titulo: task.name.trim(),
-    catalogSourceKey,
-    areas,
+    option: {
+      key: newKey(),
+      titulo: task.name.trim(),
+      catalogSourceKey,
+      areas,
+    },
+    initialAllocations,
   }
 }
 
+export type MatrixItemManualDraftBundle = {
+  options: ManualOptionDraft[]
+  initialAllocations: Record<string, NovaEsteiraAlocacaoLinha[]>
+}
+
 /**
- * Materializa uma matriz (raiz ITEM) como lista de opções (uma por TASK com etapas).
+ * Materializa uma matriz (raiz ITEM) como lista de opções (uma por TASK com etapas)
+ * e mapa de alocações iniciais por etapa (herdadas da matriz).
  */
 export function matrixItemTreeToManualOptions(
   tree: MatrixNodeTreeApi,
   matrixItemId: string,
-): ManualOptionDraft[] {
-  if (tree.node_type !== 'ITEM') return []
+): MatrixItemManualDraftBundle {
+  if (tree.node_type !== 'ITEM') {
+    return { options: [], initialAllocations: {} }
+  }
   const tasks = sortByOrder(tree.children.filter((c) => c.node_type === 'TASK'))
-  const out: ManualOptionDraft[] = []
+  const options: ManualOptionDraft[] = []
+  const initialAllocations: Record<string, NovaEsteiraAlocacaoLinha[]> = {}
   for (const task of tasks) {
-    const opt = matrixTaskSubtreeToManualOption(
+    const bundle = matrixTaskSubtreeToManualDraft(
       task,
       `mroot:${matrixItemId}:task:${task.id}`,
     )
-    if (opt) out.push(opt)
+    if (bundle) {
+      options.push(bundle.option)
+      Object.assign(initialAllocations, bundle.initialAllocations)
+    }
   }
-  return out
+  return { options, initialAllocations }
 }
 
 export function collectTaskNodesFromItemTree(

@@ -20,7 +20,7 @@ export type AlterarMatrizEstruturaDraftPanelProps = {
   selected: MatrixNodeTreeApi | null
   activePathIds: ReadonlySet<string>
   aggregateMaps: MatrixTreeAggregateMaps
-  collaboratorIdToName: ReadonlyMap<string, string>
+  teamIdToName: ReadonlyMap<string, string>
   searchQuery: string
   matchIds: ReadonlySet<string>
   busy: boolean
@@ -64,7 +64,7 @@ export function AlterarMatrizEstruturaDraftPanel({
   selected,
   activePathIds,
   aggregateMaps,
-  collaboratorIdToName,
+  teamIdToName,
   searchQuery,
   matchIds,
   busy,
@@ -312,7 +312,7 @@ export function AlterarMatrizEstruturaDraftPanel({
                   <TaskCompositionPanel
                     task={taskNode}
                     aggregateMaps={aggregateMaps}
-                    collaboratorIdToName={collaboratorIdToName}
+                    teamIdToName={teamIdToName}
                     selectedId={selectedId}
                     activePathIds={activePathIds}
                     onSelectNode={onSelectTaskComposition}

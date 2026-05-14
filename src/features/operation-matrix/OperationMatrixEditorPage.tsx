@@ -54,6 +54,7 @@ import { OperationMatrixMetricsStrip } from './OperationMatrixMetricsStrip'
 import {
   buildMatrixTreeAggregateMaps,
   getBranchStats,
+  matrixActivityPrimaryTeamId,
   type MatrixTreeAggregateMaps,
 } from './matrixTreeAggregates'
 import { buildBreadcrumbSegments } from './matrixTreeBreadcrumb'
@@ -197,7 +198,6 @@ export function OperationMatrixEditorPage() {
   const [formDescription, setFormDescription] = useState('')
   const [formActive, setFormActive] = useState(true)
   const [formPlanned, setFormPlanned] = useState('')
-  const [formResponsible, setFormResponsible] = useState('')
   const [formTeamIds, setFormTeamIds] = useState<string[]>([])
   const [formRequired, setFormRequired] = useState(true)
   const debouncedTreeSearch = ''
@@ -235,11 +235,6 @@ export function OperationMatrixEditorPage() {
     }),
   )
 
-  const collaboratorIdSet = useMemo(
-    () => new Set(collaborators.map((c) => c.id)),
-    [collaborators],
-  )
-
   const collaboratorIdToName = useMemo(() => {
     const m = new Map<string, string>()
     for (const c of collaborators) m.set(c.id, c.fullName)
@@ -247,10 +242,16 @@ export function OperationMatrixEditorPage() {
   }, [collaborators])
   const teamIdSet = useMemo(() => new Set(teams.map((t) => t.id)), [teams])
 
+  const teamIdToName = useMemo(() => {
+    const m = new Map<string, string>()
+    for (const t of teams) m.set(t.id, t.name)
+    return m
+  }, [teams])
+
   const aggregateMaps: MatrixTreeAggregateMaps | null = useMemo(() => {
     if (!tree) return null
-    return buildMatrixTreeAggregateMaps(tree, collaboratorIdSet)
-  }, [tree, collaboratorIdSet])
+    return buildMatrixTreeAggregateMaps(tree, teamIdSet)
+  }, [tree, teamIdSet])
 
   const parentMap = useMemo(() => (tree ? buildParentIdMap(tree) : new Map()), [tree])
 
@@ -423,12 +424,9 @@ export function OperationMatrixEditorPage() {
         if (Number.isNaN(n)) return true
         if (n !== selected.planned_minutes) return true
       }
-      const fr = formResponsible.trim() || null
-      const sr = selected.default_responsible_id ?? null
-      if (fr !== sr) return true
-      const selectedTeamIds = [...(selected.team_ids ?? [])].sort()
-      const formTeamIdsSorted = [...formTeamIds].sort()
-      if (selectedTeamIds.join('|') !== formTeamIdsSorted.join('|')) return true
+      const selectedPrimary = matrixActivityPrimaryTeamId(selected) ?? ''
+      const formPrimary = (formTeamIds[0] ?? '').trim()
+      if (selectedPrimary !== formPrimary) return true
       if (formRequired !== selected.required) return true
     }
     return false
@@ -441,7 +439,6 @@ export function OperationMatrixEditorPage() {
     formDescription,
     formActive,
     formPlanned,
-    formResponsible,
     formTeamIds,
     formRequired,
   ])
@@ -457,10 +454,10 @@ export function OperationMatrixEditorPage() {
         ? revisaoAlterarMatrizPendencias({
             matrixStructureDirty,
             matrixEditorHasUnsavedChanges,
-            activitiesWithoutResponsible:
-              aggregateMaps.global.activitiesWithoutResponsible,
-            orphanResponsibleAssignments:
-              aggregateMaps.global.activitiesWithOrphanResponsible,
+            activitiesWithoutDefaultTeam:
+              aggregateMaps.global.activitiesWithoutDefaultTeam,
+            activitiesWithOrphanDefaultTeam:
+              aggregateMaps.global.activitiesWithOrphanDefaultTeam,
           })
         : [],
     [
@@ -549,8 +546,8 @@ export function OperationMatrixEditorPage() {
     setFormPlanned(
       node.planned_minutes != null ? String(node.planned_minutes) : '',
     )
-    setFormResponsible(node.default_responsible_id ?? '')
-    setFormTeamIds([...(node.team_ids ?? [])])
+    const tid = matrixActivityPrimaryTeamId(node)
+    setFormTeamIds(tid ? [tid] : [])
     setFormRequired(node.required)
   }, [])
 
@@ -580,12 +577,6 @@ export function OperationMatrixEditorPage() {
     if (!aggregateMaps || !selectedId) return null
     return getBranchStats(aggregateMaps, selectedId)
   }, [aggregateMaps, selectedId])
-
-  const responsibleIsOrphan = useMemo(() => {
-    const id = formResponsible.trim()
-    if (!id) return false
-    return !collaboratorIdSet.has(id)
-  }, [formResponsible, collaboratorIdSet])
 
   function pushToast(message: string, variant: SgpToastVariant = 'success') {
     setToast({ message, variant })
@@ -648,8 +639,8 @@ export function OperationMatrixEditorPage() {
           setBusy(false)
           return
         }
-        patch.defaultResponsibleId = formResponsible.trim() || null
-        patch.teamIds = [...new Set(formTeamIds)]
+        const primary = (formTeamIds[0] ?? '').trim()
+        patch.teamIds = primary ? [primary] : []
         patch.required = formRequired
       }
       await patchMatrixNode(selected.id, patch)
@@ -1103,7 +1094,7 @@ export function OperationMatrixEditorPage() {
       formDescription,
       formActive,
       formPlanned,
-      formResponsible,
+      formTeamIds,
       formRequired,
     })
     const token = generatePreviewDraftToken()
@@ -1218,17 +1209,12 @@ export function OperationMatrixEditorPage() {
         setFormActive={setFormActive}
         formPlanned={formPlanned}
         setFormPlanned={setFormPlanned}
-        formResponsible={formResponsible}
-        setFormResponsible={setFormResponsible}
         formTeamIds={formTeamIds}
         setFormTeamIds={setFormTeamIds}
         formRequired={formRequired}
         setFormRequired={setFormRequired}
-        collaborators={collaborators}
         teams={teams}
-        collaboratorIdSet={collaboratorIdSet}
         teamIdSet={teamIdSet}
-        responsibleIsOrphan={responsibleIsOrphan}
         busy={busy}
         canAddChild={canAddChild}
         childType={childType}
@@ -1240,7 +1226,7 @@ export function OperationMatrixEditorPage() {
         onCancel={handleCancel}
         onDelete={() => void handleDelete()}
         onAddChild={(e) => void handleAddChild(e)}
-        collaboratorIdToName={collaboratorIdToName}
+        teamIdToName={teamIdToName}
         selectedId={selectedId}
         activePathIds={activePathIds}
         onSelectNode={selectTaskComposition}
@@ -1335,7 +1321,7 @@ export function OperationMatrixEditorPage() {
             selected={selected}
             activePathIds={activePathIds}
             aggregateMaps={aggregateMaps}
-            collaboratorIdToName={collaboratorIdToName}
+            teamIdToName={teamIdToName}
             searchQuery={debouncedTreeSearch}
             matchIds={searchMatchIds}
             busy={busy}
@@ -1415,9 +1401,9 @@ export function OperationMatrixEditorPage() {
             </dd>
           </div>
           <div className="flex justify-between gap-2">
-            <dt className="text-slate-500">Responsáveis vinc.</dt>
+            <dt className="text-slate-500">Equipes dist.</dt>
             <dd className="tabular-nums text-slate-100">
-              {aggregateMaps.global.linkedDistinctResponsibles}
+              {aggregateMaps.global.linkedDistinctDefaultTeams}
             </dd>
           </div>
         </dl>

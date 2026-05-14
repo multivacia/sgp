@@ -23,6 +23,7 @@ import { rbacRouter } from './modules/rbac/rbac.routes.js'
 import { rolesRouter } from './modules/roles/roles.routes.js'
 import { sectorsRouter } from './modules/sectors/sectors.routes.js'
 import { supportRouter } from './modules/support/support.routes.js'
+import { systemSettingsRouter } from './modules/system-settings/system-settings.routes.js'
 import { teamsRouter } from './modules/teams/teams.routes.js'
 import { errorHandler } from './shared/errors/errorHandler.js'
 import { notFoundHandler } from './shared/http/notFound.js'
@@ -56,6 +57,7 @@ export function createApp(pool: pg.Pool, logger: Logger, env: Env): Express {
   app.use('/api/v1', myWorkQueueRouter())
   app.use('/api/v1', dashboardRouter())
   app.use('/api/v1', supportRouter())
+  app.use('/api/v1', systemSettingsRouter())
 
   app.use(notFoundHandler)
   app.use(errorHandler(logger))

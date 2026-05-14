@@ -8,6 +8,8 @@ export const ErrorCodes = {
   UNAUTHORIZED: 'UNAUTHORIZED',
   /** JWT válido na assinatura mas emitido antes da última alteração de senha. */
   SESSION_REVOKED_CREDENTIALS_CHANGED: 'SESSION_REVOKED_CREDENTIALS_CHANGED',
+  /** Sessão expirada por inatividade ou limite absoluto. */
+  SESSION_EXPIRED: 'SESSION_EXPIRED',
   ACCOUNT_INACTIVE: 'ACCOUNT_INACTIVE',
   /** Bloqueio temporário por tentativas falhadas de login (locked_until). */
   ACCOUNT_TEMPORARILY_LOCKED: 'ACCOUNT_TEMPORARILY_LOCKED',

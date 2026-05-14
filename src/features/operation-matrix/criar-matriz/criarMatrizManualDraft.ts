@@ -58,25 +58,31 @@ export function newManualEtapa(id: string): CriarMatrizManualEtapa {
   }
 }
 
-/** Remove duplicados, garante principal ∈ lista ou null; se ficar 1 colaborador, define principal. */
+/** Remove duplicados de colaboradores; garante principal ∈ lista ou null; no máximo 1 equipe padrão. */
 export function reconcileEtapaCollaborators(
   et: CriarMatrizManualEtapa,
 ): CriarMatrizManualEtapa {
+  const teamIds = [...new Set(et.teamIds.filter(Boolean))].slice(0, 1)
   const ids = [...new Set(et.collaboratorIds.filter(Boolean))]
   let primary = et.primaryCollaboratorId
   if (primary && !ids.includes(primary)) {
     primary = null
   }
   if (ids.length === 0) {
-    return { ...et, collaboratorIds: [], primaryCollaboratorId: null }
+    return { ...et, teamIds, collaboratorIds: [], primaryCollaboratorId: null }
   }
   if (ids.length === 1) {
-    return { ...et, collaboratorIds: ids, primaryCollaboratorId: ids[0]! }
+    return {
+      ...et,
+      teamIds,
+      collaboratorIds: ids,
+      primaryCollaboratorId: ids[0]!,
+    }
   }
   if (primary && ids.includes(primary)) {
-    return { ...et, collaboratorIds: ids, primaryCollaboratorId: primary }
+    return { ...et, teamIds, collaboratorIds: ids, primaryCollaboratorId: primary }
   }
-  return { ...et, collaboratorIds: ids, primaryCollaboratorId: null }
+  return { ...et, teamIds, collaboratorIds: ids, primaryCollaboratorId: null }
 }
 
 /**
@@ -97,15 +103,12 @@ export function validateManualOpcoesForSubmit(
         if (!et.name.trim()) {
           return 'Cada atividade precisa de um nome.'
         }
-        const r = reconcileEtapaCollaborators(et)
-        if (
-          r.primaryCollaboratorId &&
-          !r.collaboratorIds.includes(r.primaryCollaboratorId)
-        ) {
-          return 'O colaborador principal tem de estar entre os selecionados na atividade.'
+        if (et.teamIds.filter(Boolean).length > 1) {
+          return 'Cada atividade pode ter no máximo uma equipe padrão.'
         }
-        if (r.collaboratorIds.length > 1 && !r.primaryCollaboratorId) {
-          return 'Quando há mais do que um colaborador na atividade, indique quem é o principal.'
+        const supportIds = [...new Set(et.collaboratorIds.filter(Boolean))]
+        if (supportIds.length > 1 && !et.primaryCollaboratorId?.trim()) {
+          return 'Selecione um colaborador principal quando houver mais de um colaborador associado à atividade.'
         }
       }
     }

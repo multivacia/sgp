@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { requestJson, requestJsonEnvelope } from './client'
+import { SESSION_EXPIRED_CODE, SESSION_REVOKED_CREDENTIALS_CHANGED_CODE } from './apiErrors'
 
 describe('requestJson', () => {
   const originalFetch = globalThis.fetch
@@ -82,5 +83,86 @@ describe('requestJson', () => {
     expect(r.meta.correlationId).toBe('corr-1')
     expect(r.meta.routeUsed).toBe('deterministic')
     expect(r.meta.llmUsed).toBe(false)
+  })
+
+  it('401 SESSION_EXPIRED dispara evento e preserva ApiError', async () => {
+    vi.stubEnv('VITE_API_BASE_URL', '')
+    const dispatch = vi.fn()
+    vi.stubGlobal('window', { dispatchEvent: dispatch })
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 401,
+      text: async () =>
+        JSON.stringify({
+          error: {
+            code: SESSION_EXPIRED_CODE,
+            message: 'Sua sessão expirou. Faça login novamente.',
+          },
+        }),
+    })
+    globalThis.fetch = fetchMock as unknown as typeof fetch
+
+    await expect(requestJson('GET', '/api/v1/auth/me')).rejects.toMatchObject({
+      status: 401,
+      code: SESSION_EXPIRED_CODE,
+    })
+    expect(dispatch).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'sgp:session-expired' }),
+    )
+  })
+
+  it('401 comum não dispara eventos de sessão encerrada', async () => {
+    vi.stubEnv('VITE_API_BASE_URL', '')
+    const dispatch = vi.fn()
+    vi.stubGlobal('window', { dispatchEvent: dispatch })
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 401,
+      text: async () =>
+        JSON.stringify({
+          error: {
+            code: 'UNAUTHORIZED',
+            message: 'Sessão não autenticada. Faça login.',
+          },
+        }),
+    })
+    globalThis.fetch = fetchMock as unknown as typeof fetch
+
+    await expect(requestJson('GET', '/api/v1/auth/me')).rejects.toMatchObject({
+      status: 401,
+      code: 'UNAUTHORIZED',
+    })
+    expect(dispatch).not.toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'sgp:session-expired' }),
+    )
+    expect(dispatch).not.toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'sgp:session-revoked' }),
+    )
+  })
+
+  it('401 SESSION_REVOKED_CREDENTIALS_CHANGED continua disparando evento dedicado', async () => {
+    vi.stubEnv('VITE_API_BASE_URL', '')
+    const dispatch = vi.fn()
+    vi.stubGlobal('window', { dispatchEvent: dispatch })
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 401,
+      text: async () =>
+        JSON.stringify({
+          error: {
+            code: SESSION_REVOKED_CREDENTIALS_CHANGED_CODE,
+            message: 'Sua sessão foi encerrada porque suas credenciais foram alteradas. Faça login novamente.',
+          },
+        }),
+    })
+    globalThis.fetch = fetchMock as unknown as typeof fetch
+
+    await expect(requestJson('GET', '/api/v1/auth/me')).rejects.toMatchObject({
+      status: 401,
+      code: SESSION_REVOKED_CREDENTIALS_CHANGED_CODE,
+    })
+    expect(dispatch).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'sgp:session-revoked' }),
+    )
   })
 })

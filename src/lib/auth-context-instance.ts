@@ -1,4 +1,5 @@
 import { createContext } from 'react'
+import type { SessionIdlePolicy } from '../domain/auth/sessionIdle.types'
 import type { AuthUser } from './auth-store'
 
 export type AuthContextValue = {
@@ -7,6 +8,8 @@ export type AuthContextValue = {
   ready: boolean
   /** Mensagem a mostrar no login quando a sessão foi invalidada por credenciais alteradas. */
   sessionEndedMessage: string | null
+  /** Política de inatividade devolvida pelo servidor (GET /auth/me, login). */
+  sessionIdle: SessionIdlePolicy | null
   clearSessionEndedMessage: () => void
   login: (email: string, password: string) => Promise<AuthUser>
   logout: () => Promise<void>

@@ -14,6 +14,8 @@ import {
   serviceCreateNode,
   serviceDeleteNode,
   serviceDuplicate,
+  serviceDuplicateMatrixItem,
+  serviceExportMatrixXlsx,
   serviceGetTree,
   serviceListSuggestionCatalog,
   serviceListRootItems,
@@ -67,6 +69,40 @@ export async function getMatrixItemTree(
   const pool = req.app.locals.pool as pg.Pool
   const tree = await serviceGetTree(pool, id)
   res.json(ok(tree))
+}
+
+export async function getMatrixItemExportXlsx(
+  req: Request,
+  res: Response,
+): Promise<void> {
+  const id = uuidParamSchema.parse(req.params.id)
+  const pool = req.app.locals.pool as pg.Pool
+  const { buffer, filename } = await serviceExportMatrixXlsx(pool, id)
+  res.setHeader(
+    'Content-Type',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  )
+  res.setHeader(
+    'Content-Disposition',
+    `attachment; filename="${filename}"; filename*=UTF-8''${encodeURIComponent(filename)}`,
+  )
+  res.send(buffer)
+}
+
+export async function postMatrixItemDuplicate(
+  req: Request,
+  res: Response,
+): Promise<void> {
+  const id = uuidParamSchema.parse(req.params.id)
+  const pool = req.app.locals.pool as pg.Pool
+  const tree = await serviceDuplicateMatrixItem(pool, id)
+  res.status(201).json(
+    ok({
+      id: tree.id,
+      name: tree.name,
+      is_active: tree.is_active,
+    }),
+  )
 }
 
 export async function postMatrixNode(

@@ -55,7 +55,7 @@ export const TaskCard = memo(function TaskCard({
   persistedCatalogDragBack,
 }: TaskCardProps) {
   const branch = getBranchStats(aggregateMaps, task.id)
-  const warnBranch = branch.activitiesWithoutResponsibleInBranch > 0
+  const warnBranch = branch.activitiesWithoutDefaultTeamInBranch > 0
 
   const taskSelected = task.id === selectedId
   const searchRing =
