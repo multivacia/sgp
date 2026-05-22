@@ -1,0 +1,122 @@
+/* Impressão térmica 80mm — ajuste --thermal-ticket-width para 76mm/72mm se o driver cortar laterais */
+.thermal-ticket-print-host {
+  --thermal-ticket-width: 80mm;
+}
+
+@media screen {
+  .thermal-ticket-print-host {
+    position: fixed;
+    left: -10000px;
+    top: 0;
+    width: 0;
+    height: 0;
+    overflow: hidden;
+    pointer-events: none;
+    opacity: 0;
+  }
+}
+
+@media print {
+  @page {
+    size: 80mm auto;
+    margin: 0;
+  }
+
+  body {
+    margin: 0;
+    padding: 0;
+  }
+
+  body * {
+    visibility: hidden;
+  }
+
+  .thermal-ticket-print-root,
+  .thermal-ticket-print-root * {
+    visibility: visible;
+  }
+
+  .thermal-ticket-print-host {
+    position: static;
+    left: auto;
+    top: auto;
+    width: auto;
+    height: auto;
+    overflow: visible;
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .thermal-ticket-print-root {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: var(--thermal-ticket-width, 80mm);
+  }
+
+  .thermal-ticket-page {
+    width: var(--thermal-ticket-width, 80mm);
+    box-sizing: border-box;
+    padding: 4mm;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono',
+      'Courier New', monospace;
+    font-size: 11px;
+    line-height: 1.25;
+    color: #000;
+    background: #fff;
+    page-break-after: always;
+    break-after: page;
+  }
+
+  .thermal-ticket-page:last-child {
+    page-break-after: auto;
+    break-after: auto;
+  }
+}
+
+.thermal-ticket-page {
+  width: var(--thermal-ticket-width, 80mm);
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.thermal-ticket-header {
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-align: center;
+}
+
+.thermal-ticket-rule {
+  border: none;
+  border-top: 1px dashed #000;
+  margin: 6px 0;
+}
+
+.thermal-ticket-activity-title {
+  font-weight: 700;
+  font-size: 12px;
+  margin: 4px 0;
+  word-break: break-word;
+}
+
+.thermal-ticket-line {
+  margin: 2px 0;
+  word-break: break-word;
+}
+
+.thermal-ticket-obs-lines {
+  margin-top: 4px;
+  letter-spacing: 0.1em;
+}
+
+.thermal-ticket-footer {
+  margin-top: 6px;
+  text-align: center;
+  font-size: 10px;
+}
+
+.thermal-ticket-code {
+  font-weight: 700;
+  text-align: center;
+  margin-top: 8px;
+}

@@ -16,6 +16,8 @@ import {
   countActiveTimeEntriesByConveyor,
   deleteConveyorAssigneesAndNodes,
   findConveyorById,
+  findConveyorDeleteBlockingDeps,
+  physicalDeleteConveyor,
   insertConveyor,
   insertConveyorNode,
   listConveyorNodesByConveyorId,
@@ -938,4 +940,75 @@ export async function serviceReplaceConveyorStructure(
   const nodes = await listConveyorNodesByConveyorId(pool, conveyorId)
   const structure = await loadConveyorStructureWithAssignees(pool, conveyorId, nodes)
   return mapDetailRowToApi(row, structure)
+}
+
+const CONVEYOR_DELETE_STATUS_MESSAGE =
+  'Somente esteiras no backlog podem ser excluídas.'
+const CONVEYOR_DELETE_DEPENDENCIES_MESSAGE =
+  'Esta esteira já possui movimentações e não pode ser excluída.'
+
+function assertConveyorDeleteAllowedStatus(
+  operationalStatus: ConveyorOperationalStatusDb,
+): void {
+  if (operationalStatus !== 'NO_BACKLOG') {
+    throw new AppError(
+      CONVEYOR_DELETE_STATUS_MESSAGE,
+      409,
+      ErrorCodes.CONVEYOR_DELETE_STATUS_NOT_ALLOWED,
+    )
+  }
+}
+
+function assertConveyorDeleteNoBlockingDeps(
+  deps: Awaited<ReturnType<typeof findConveyorDeleteBlockingDeps>>,
+): void {
+  if (
+    deps.hasTimeEntries ||
+    deps.hasOperationalWorkPlanItems ||
+    deps.hasConveyorOperationalPlans ||
+    deps.hasConveyorOperationalPlanItems
+  ) {
+    throw new AppError(
+      CONVEYOR_DELETE_DEPENDENCIES_MESSAGE,
+      409,
+      ErrorCodes.CONVEYOR_DELETE_HAS_DEPENDENCIES,
+    )
+  }
+}
+
+/**
+ * Exclusão física da esteira (somente NO_BACKLOG, sem deps operacionais bloqueantes).
+ * RBAC: `conveyors.create` na rota. Evolução futura: `conveyors.delete`.
+ */
+export async function serviceDeleteConveyor(
+  pool: pg.Pool,
+  conveyorId: string,
+): Promise<void> {
+  const existing = await findConveyorById(pool, conveyorId)
+  if (!existing) {
+    throw new AppError('Esteira não encontrada.', 404, ErrorCodes.NOT_FOUND)
+  }
+
+  assertConveyorDeleteAllowedStatus(existing.operational_status)
+  const deps = await findConveyorDeleteBlockingDeps(pool, conveyorId)
+  assertConveyorDeleteNoBlockingDeps(deps)
+
+  const client = await pool.connect()
+  try {
+    await client.query('BEGIN')
+    const deleted = await physicalDeleteConveyor(client, conveyorId)
+    if (!deleted) {
+      throw new AppError('Esteira não encontrada.', 404, ErrorCodes.NOT_FOUND)
+    }
+    await client.query('COMMIT')
+  } catch (err) {
+    try {
+      await client.query('ROLLBACK')
+    } catch {
+      /* ignore */
+    }
+    throw err
+  } finally {
+    client.release()
+  }
 }

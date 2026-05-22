@@ -3,10 +3,12 @@ import type pg from 'pg'
 import {
   resolveDailyCapacityMinutes,
   serviceResolveCollaboratorDailyCapacity,
+  serviceResolveDefaultOperationalDailyCapacity,
 } from '../modules/operational-settings/operational-settings.service.js'
 
 const repoMocks = vi.hoisted(() => ({
   resolveCollaboratorDailyCapacityMinutes: vi.fn(),
+  getOperationalCapacitySettings: vi.fn(),
 }))
 
 vi.mock('../modules/operational-settings/operational-settings.repository.js', async () => {
@@ -16,12 +18,14 @@ vi.mock('../modules/operational-settings/operational-settings.repository.js', as
   return {
     ...actual,
     resolveCollaboratorDailyCapacityMinutes: repoMocks.resolveCollaboratorDailyCapacityMinutes,
+    getOperationalCapacitySettings: repoMocks.getOperationalCapacitySettings,
   }
 })
 
 describe('operational capacity service', () => {
   beforeEach(() => {
     repoMocks.resolveCollaboratorDailyCapacityMinutes.mockReset()
+    repoMocks.getOperationalCapacitySettings.mockReset()
   })
 
   it('resolveDailyCapacityMinutes usa fallback 480 sem settings/override', () => {
@@ -97,6 +101,29 @@ describe('operational capacity service', () => {
     )
     expect(out.resolvedDailyMinutes).toBe(300)
     expect(out.source).toBe('override')
+  })
+
+  it('serviceResolveDefaultOperationalDailyCapacity usa settings quando disponível', async () => {
+    repoMocks.getOperationalCapacitySettings.mockResolvedValue({
+      id: 1,
+      default_daily_minutes: 540,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      updated_by: null,
+    })
+    const out = await serviceResolveDefaultOperationalDailyCapacity({} as pg.Pool)
+    expect(out.dailyCapacityMinutes).toBe(540)
+    expect(out.source).toBe('OPERATIONAL_SETTINGS')
+  })
+
+  it('serviceResolveDefaultOperationalDailyCapacity usa fallback 480 sem settings', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    repoMocks.getOperationalCapacitySettings.mockResolvedValue(null)
+    const out = await serviceResolveDefaultOperationalDailyCapacity({} as pg.Pool)
+    expect(out.dailyCapacityMinutes).toBe(480)
+    expect(out.source).toBe('FALLBACK')
+    expect(warnSpy).toHaveBeenCalled()
+    warnSpy.mockRestore()
   })
 
   it('serviceResolveCollaboratorDailyCapacity aplica source=fallback', async () => {

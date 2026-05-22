@@ -7,7 +7,7 @@ import {
   useSyncExternalStore,
 } from 'react'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
-import { SgpToast } from '../components/ui/SgpToast'
+import { SgpToast, type SgpToastVariant } from '../components/ui/SgpToast'
 import { BacklogFilters } from '../components/backlog/BacklogFilters'
 import { BacklogKpiCards } from '../components/backlog/BacklogKpiCards'
 import { BacklogTable } from '../components/backlog/BacklogTable'
@@ -230,6 +230,7 @@ export function BacklogPage() {
   )
 
   const [routeToast, setRouteToast] = useState<string | null>(null)
+  const [routeToastVariant, setRouteToastVariant] = useState<SgpToastVariant>('success')
   const listSectionRef = useRef<HTMLElement | null>(null)
 
   const [apiRows, setApiRows] = useState<BacklogRow[]>([])
@@ -449,8 +450,11 @@ export function BacklogPage() {
         <SgpToast
           fixed
           message={routeToast}
-          variant="success"
-          onDismiss={() => setRouteToast(null)}
+          variant={routeToastVariant}
+          onDismiss={() => {
+            setRouteToast(null)
+            setRouteToastVariant('success')
+          }}
         />
       )}
 
@@ -680,7 +684,18 @@ export function BacklogPage() {
             : `${totalFiltered} registro(s) · página ${page} de ${maxPage}`}
         </p>
         <SgpContextActionsMenuProvider>
-          <BacklogTable rows={pagedRows} />
+          <BacklogTable
+            rows={pagedRows}
+            onConveyorDeleted={() => {
+              setRouteToastVariant('success')
+              setRouteToast('Esteira excluída com sucesso.')
+              void loadConveyors()
+            }}
+            onDeleteError={(message) => {
+              setRouteToastVariant('error')
+              setRouteToast(message)
+            }}
+          />
         </SgpContextActionsMenuProvider>
         {!useLiveApi || !apiLoading ? (
           totalFiltered > 0 ? (

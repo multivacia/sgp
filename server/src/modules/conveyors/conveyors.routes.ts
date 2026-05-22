@@ -16,7 +16,9 @@ import {
   patchConveyorDados,
   patchConveyorStructure,
 } from './conveyors.patch.controller.js'
+import { deleteConveyor } from './conveyors.delete.controller.js'
 import { patchConveyorStatus } from './conveyors.status.controller.js'
+import { registerConveyorOperationalPlanRoutes } from '../conveyor-operational-plan/conveyor-operational-plan.routes.js'
 import { registerConveyorHealthRoutes } from './health/conveyor-health.routes.js'
 import { registerConveyorOperationalEventsRoutes } from './operational-events/conveyor-operational-events.routes.js'
 
@@ -26,6 +28,7 @@ export function conveyorsRouter(env: Env): Router {
   const r = Router()
   registerConveyorHealthRoutes(r)
   registerConveyorOperationalEventsRoutes(r)
+  registerConveyorOperationalPlanRoutes(r)
   const uploadDraft = documentDraftMulter(env)
   r.get('/conveyors', ...auth, asyncRoute(getConveyors))
   r.patch(
@@ -72,6 +75,13 @@ export function conveyorsRouter(env: Env): Router {
     requireAuth(),
     requirePermission('conveyors.create'),
     asyncRoute(postConveyor),
+  )
+  /** Exclusão física (NO_BACKLOG). RBAC: `conveyors.create`; evolução futura: `conveyors.delete`. */
+  r.delete(
+    '/conveyors/:id',
+    requireAuth(),
+    requirePermission('conveyors.create'),
+    asyncRoute(deleteConveyor),
   )
   return r
 }

@@ -1,5 +1,7 @@
 import type {
   OperationalPlanningBacklogPayload,
+  OperationalPlanningFactoryIntakePayload,
+  OperationalPlanningWeekActivityPayload,
   OperationalPlanningWeekPayload,
   SaveOperationalWeekPlanInput,
 } from '../../domain/operational-planning/operational-planning.types'
@@ -62,5 +64,42 @@ export async function listOperationalPlanningBacklog(params: {
   return requestJson<OperationalPlanningBacklogPayload>(
     'GET',
     `${BASE}/operational-planning/backlog${s ? `?${s}` : ''}`,
+  )
+}
+
+/** Itens do plano da esteira aguardando encaixe na fábrica (MVP: lista completa). */
+export async function applyConveyorPlanValuesToWeekItem(
+  workPlanItemId: string,
+  body?: { fields?: Array<'plannedDate' | 'plannedMinutes' | 'assignedCollaboratorId' | 'assignedTeamId'> },
+): Promise<OperationalPlanningWeekPayload> {
+  return requestJson<OperationalPlanningWeekPayload>(
+    'POST',
+    `${BASE}/operational-planning/week-items/${encodeURIComponent(workPlanItemId)}/apply-conveyor-plan-values`,
+    { body: body ?? {} },
+  )
+}
+
+export async function getOperationalPlanningWeekActivity(
+  weekStartDate: string,
+  limit = 100,
+): Promise<OperationalPlanningWeekActivityPayload> {
+  const qs = new URLSearchParams()
+  qs.set('weekStart', weekStartDate)
+  qs.set('limit', String(limit))
+  return requestJson<OperationalPlanningWeekActivityPayload>(
+    'GET',
+    `${BASE}/operational-planning/week-activity?${qs.toString()}`,
+  )
+}
+
+export async function getFactoryIntakeItems(
+  weekStart?: string,
+): Promise<OperationalPlanningFactoryIntakePayload> {
+  const sp = new URLSearchParams()
+  if (weekStart) sp.set('weekStart', weekStart)
+  const s = sp.toString()
+  return requestJson<OperationalPlanningFactoryIntakePayload>(
+    'GET',
+    `${BASE}/operational-planning/factory-intake${s ? `?${s}` : ''}`,
   )
 }

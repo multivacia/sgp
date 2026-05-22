@@ -38,7 +38,8 @@ function genOperationalRoleCode(): string {
   return `OPF_${randomBytes(4).toString('hex').toUpperCase()}`
 }
 
-const SAFE_CAPACITY_FALLBACK_MINUTES = 480
+export const OPERATIONAL_DAILY_CAPACITY_FALLBACK_MINUTES = 480
+const SAFE_CAPACITY_FALLBACK_MINUTES = OPERATIONAL_DAILY_CAPACITY_FALLBACK_MINUTES
 const MIN_DAILY_CAPACITY_MINUTES = 1
 const MAX_DAILY_CAPACITY_MINUTES = 1440
 
@@ -231,6 +232,40 @@ export async function serviceGetOperationalCapacitySettings(
   pool: pg.Pool,
 ): Promise<OperationalCapacitySettingsRow | null> {
   return getOperationalCapacitySettings(pool)
+}
+
+export type DefaultOperationalDailyCapacitySource = 'OPERATIONAL_SETTINGS' | 'FALLBACK'
+
+/** Capacidade diária padrão global (Configurações Operacionais), sem override por colaborador. */
+export async function serviceResolveDefaultOperationalDailyCapacity(
+  pool: pg.Pool,
+): Promise<{
+  dailyCapacityMinutes: number
+  source: DefaultOperationalDailyCapacitySource
+}> {
+  const settings = await getOperationalCapacitySettings(pool)
+  const raw = settings?.default_daily_minutes
+  if (
+    raw != null &&
+    Number.isInteger(raw) &&
+    raw >= MIN_DAILY_CAPACITY_MINUTES &&
+    raw <= MAX_DAILY_CAPACITY_MINUTES
+  ) {
+    return { dailyCapacityMinutes: raw, source: 'OPERATIONAL_SETTINGS' }
+  }
+
+  console.warn(
+    JSON.stringify({
+      event: 'default_operational_daily_capacity_fallback',
+      reason:
+        settings == null ? 'settings_unavailable' : 'invalid_or_missing_default_daily_minutes',
+      fallbackMinutes: SAFE_CAPACITY_FALLBACK_MINUTES,
+    }),
+  )
+  return {
+    dailyCapacityMinutes: SAFE_CAPACITY_FALLBACK_MINUTES,
+    source: 'FALLBACK',
+  }
 }
 
 function throwIfOperationalCapacityStorageUnavailable(e: unknown): void {

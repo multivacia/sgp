@@ -27,4 +27,16 @@ export const ErrorCodes = {
   /** Conclusão explícita com atividades anteriores ainda pendentes. */
   STEP_COMPLETION_OUT_OF_SEQUENCE_REQUIRES_JUSTIFICATION:
     'STEP_COMPLETION_OUT_OF_SEQUENCE_REQUIRES_JUSTIFICATION',
+  /** Já existe plano operacional ativo para a esteira. */
+  CONVEYOR_OPERATIONAL_PLAN_ALREADY_EXISTS: 'CONVEYOR_OPERATIONAL_PLAN_ALREADY_EXISTS',
+  /** Plano já possui itens; geração exige overwrite explícito. */
+  CONVEYOR_OPERATIONAL_PLAN_ITEMS_EXIST: 'CONVEYOR_OPERATIONAL_PLAN_ITEMS_EXIST',
+  /** Plano possui itens que precisam revisão antes de aprovar. */
+  CONVEYOR_OPERATIONAL_PLAN_ITEMS_NEED_REVIEW: 'CONVEYOR_OPERATIONAL_PLAN_ITEMS_NEED_REVIEW',
+  /** Plano ou itens vinculados à fábrica impedem regeneração. */
+  CONVEYOR_OPERATIONAL_PLAN_FACTORY_LINKED: 'CONVEYOR_OPERATIONAL_PLAN_FACTORY_LINKED',
+  /** Exclusão física: esteira fora de NO_BACKLOG. */
+  CONVEYOR_DELETE_STATUS_NOT_ALLOWED: 'CONVEYOR_DELETE_STATUS_NOT_ALLOWED',
+  /** Exclusão física: apontamentos, plano da esteira ou planejamento semanal. */
+  CONVEYOR_DELETE_HAS_DEPENDENCIES: 'CONVEYOR_DELETE_HAS_DEPENDENCIES',
 } as const

@@ -239,3 +239,15 @@ export async function reopenConveyorStep(
     note: body.note,
   })
 }
+
+/**
+ * Exclusão física — DELETE /api/v1/conveyors/:id.
+ * Somente esteiras com `operational_status = NO_BACKLOG` e sem dependências operacionais bloqueantes.
+ * RBAC: `conveyors.create` (evolução futura: `conveyors.delete`).
+ */
+export async function deleteConveyor(conveyorId: string): Promise<void> {
+  await requestJson<void>(
+    'DELETE',
+    `${BASE}/conveyors/${encodeURIComponent(conveyorId)}`,
+  )
+}

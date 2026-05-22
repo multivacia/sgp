@@ -644,6 +644,73 @@ export async function countActiveTimeEntriesByConveyor(
   return Number.parseInt(raw, 10) || 0
 }
 
+/** Dependências que impedem exclusão física (Alternativa B do GATE). */
+export type ConveyorDeleteBlockingDeps = {
+  hasTimeEntries: boolean
+  hasOperationalWorkPlanItems: boolean
+  hasConveyorOperationalPlans: boolean
+  hasConveyorOperationalPlanItems: boolean
+}
+
+export async function findConveyorDeleteBlockingDeps(
+  pool: pg.Pool,
+  conveyorId: string,
+): Promise<ConveyorDeleteBlockingDeps> {
+  const r = await pool.query<{
+    has_time_entries: boolean
+    has_work_plan_items: boolean
+    has_cop_plans: boolean
+    has_cop_items: boolean
+  }>(
+    `
+    SELECT
+      EXISTS (
+        SELECT 1 FROM conveyor_time_entries
+        WHERE conveyor_id = $1::uuid AND deleted_at IS NULL
+      ) AS has_time_entries,
+      EXISTS (
+        SELECT 1 FROM operational_work_plan_items
+        WHERE conveyor_id = $1::uuid AND deleted_at IS NULL
+      ) AS has_work_plan_items,
+      EXISTS (
+        SELECT 1 FROM conveyor_operational_plans
+        WHERE conveyor_id = $1::uuid AND deleted_at IS NULL
+      ) AS has_cop_plans,
+      EXISTS (
+        SELECT 1 FROM conveyor_operational_plan_items
+        WHERE conveyor_id = $1::uuid AND deleted_at IS NULL
+      ) AS has_cop_items
+    `,
+    [conveyorId],
+  )
+  const row = r.rows[0]
+  return {
+    hasTimeEntries: row?.has_time_entries ?? false,
+    hasOperationalWorkPlanItems: row?.has_work_plan_items ?? false,
+    hasConveyorOperationalPlans: row?.has_cop_plans ?? false,
+    hasConveyorOperationalPlanItems: row?.has_cop_items ?? false,
+  }
+}
+
+/**
+ * Exclusão física da esteira: remove alocações e o cabeçalho.
+ * `conveyor_nodes`, eventos e análises ARGOS seguem por ON DELETE CASCADE.
+ */
+export async function physicalDeleteConveyor(
+  client: pg.PoolClient,
+  conveyorId: string,
+): Promise<boolean> {
+  await client.query(
+    `DELETE FROM conveyor_node_assignees WHERE conveyor_id = $1::uuid`,
+    [conveyorId],
+  )
+  const r = await client.query(
+    `DELETE FROM conveyors WHERE id = $1::uuid AND deleted_at IS NULL`,
+    [conveyorId],
+  )
+  return (r.rowCount ?? 0) > 0
+}
+
 /**
  * Remove alocações e nós da esteira (para substituir a estrutura).
  * Exige que não existam apontamentos (`conveyor_time_entries`) ativos.

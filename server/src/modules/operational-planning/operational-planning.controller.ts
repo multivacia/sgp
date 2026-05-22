@@ -5,12 +5,19 @@ import { ErrorCodes } from '../../shared/errors/errorCodes.js'
 import { ok } from '../../shared/http/ok.js'
 import {
   operationalPlanningBacklogQuerySchema,
+  operationalPlanningFactoryIntakeQuerySchema,
+  applyConveyorPlanToWeekItemBodySchema,
   operationalPlanningPlanIdParamSchema,
+  operationalPlanningWeekActivityQuerySchema,
   operationalPlanningWeekQuerySchema,
+  operationalPlanningWorkPlanItemIdParamSchema,
   saveOperationalWeekPlanBodySchema,
 } from './operational-planning.schemas.js'
 import {
+  serviceApplyConveyorPlanValuesToWeekItem,
   serviceGetOperationalPlanningWeek,
+  serviceGetOperationalPlanningWeekActivity,
+  serviceListFactoryIntakeItems,
   serviceListOperationalPlanningBacklog,
   servicePatchOperationalWeekPlan,
   servicePublishOperationalWeekPlan,
@@ -29,6 +36,19 @@ export async function getOperationalPlanningWeek(req: Request, res: Response): P
     weekStart: queryString(req.query.weekStart),
   })
   const data = await serviceGetOperationalPlanningWeek(pool, q.weekStart)
+  res.status(200).json(ok(data))
+}
+
+export async function getOperationalPlanningWeekActivity(
+  req: Request,
+  res: Response,
+): Promise<void> {
+  const pool = req.app.locals.pool as pg.Pool
+  const q = operationalPlanningWeekActivityQuerySchema.parse({
+    weekStart: queryString(req.query.weekStart),
+    limit: queryString(req.query.limit),
+  })
+  const data = await serviceGetOperationalPlanningWeekActivity(pool, q.weekStart, q.limit)
   res.status(200).json(ok(data))
 }
 
@@ -77,8 +97,28 @@ export async function getOperationalPlanningBacklog(req: Request, res: Response)
   const data = await serviceListOperationalPlanningBacklog(pool, {
     q: q.q?.trim() || null,
     limit: q.limit,
-    conveyorId: q.conveyorId ?? null,
     collaboratorId: q.collaboratorId ?? null,
+    conveyorId: q.conveyorId ?? null,
   })
+  res.status(200).json(ok(data))
+}
+
+export async function postApplyConveyorPlanToWeekItem(req: Request, res: Response): Promise<void> {
+  const pool = req.app.locals.pool as pg.Pool
+  const { workPlanItemId } = operationalPlanningWorkPlanItemIdParamSchema.parse(req.params)
+  const body = applyConveyorPlanToWeekItemBodySchema.parse(req.body ?? {})
+  const data = await serviceApplyConveyorPlanValuesToWeekItem(pool, workPlanItemId, body)
+  res.status(200).json(ok(data))
+}
+
+export async function getOperationalPlanningFactoryIntake(
+  req: Request,
+  res: Response,
+): Promise<void> {
+  const pool = req.app.locals.pool as pg.Pool
+  const q = operationalPlanningFactoryIntakeQuerySchema.parse({
+    weekStart: queryString(req.query.weekStart),
+  })
+  const data = await serviceListFactoryIntakeItems(pool, q.weekStart)
   res.status(200).json(ok(data))
 }

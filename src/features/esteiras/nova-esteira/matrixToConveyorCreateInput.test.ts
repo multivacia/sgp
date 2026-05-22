@@ -2,8 +2,11 @@ import { describe, expect, it } from 'vitest'
 import {
   buildCreateConveyorFromMatrixInput,
   listMatrixActivitySlots,
+  manualAssigneeRowsToApi,
   mapMatrixTreeToConveyorOptions,
   matrixHasRunnableStructure,
+  validateManualStepAssignees,
+  type ManualOptionDraft,
 } from './matrixToConveyorCreateInput'
 import type { MatrixNodeTreeApi } from '../../../domain/operation-matrix/operation-matrix.types'
 
@@ -181,5 +184,70 @@ describe('matrixToConveyorCreateInput', () => {
     expect(slots[0]!.pathLabel).toContain('Op')
     expect(slots[0]!.pathLabel).toContain('Ar')
     expect(slots[0]!.compositionOrigin).toBe('base')
+  })
+})
+
+const TEAM_ID = 'cccccccc-cccc-cccc-cccc-cccccccccccc'
+const COLLAB_ID = 'dddddddd-dddd-dddd-dddd-dddddddddddd'
+
+function minimalManualRoots(stepKey = 'step-1'): {
+  roots: ManualOptionDraft[]
+  byId: Record<string, import('./matrixToConveyorCreateInput').NovaEsteiraAlocacaoLinha[]>
+} {
+  const roots: ManualOptionDraft[] = [
+    {
+      key: 'op-1',
+      titulo: 'Tarefa',
+      areas: [
+        {
+          key: 'ar-1',
+          titulo: 'Setor',
+          steps: [{ key: stepKey, titulo: 'Aplicar cola', plannedMinutes: 10 }],
+        },
+      ],
+    },
+  ]
+  return { roots, byId: {} }
+}
+
+describe('validateManualStepAssignees', () => {
+  it('aceita STEP só com TEAM isPrimary false', () => {
+    const { roots, byId } = minimalManualRoots()
+    byId['step-1'] = [{ type: 'TEAM', teamId: TEAM_ID, isPrimary: false }]
+    expect(validateManualStepAssignees(roots, byId)).toBeNull()
+  })
+
+  it('rejeita TEAM como responsável principal', () => {
+    const { roots, byId } = minimalManualRoots()
+    byId['step-1'] = [{ type: 'TEAM', teamId: TEAM_ID, isPrimary: true }]
+    expect(validateManualStepAssignees(roots, byId)).toContain(
+      'time não pode ser responsável principal',
+    )
+  })
+
+  it('aceita COLLABORATOR principal', () => {
+    const { roots, byId } = minimalManualRoots()
+    byId['step-1'] = [
+      { type: 'COLLABORATOR', collaboratorId: COLLAB_ID, isPrimary: true },
+    ]
+    expect(validateManualStepAssignees(roots, byId)).toBeNull()
+  })
+
+  it('aceita STEP sem alocação', () => {
+    const { roots, byId } = minimalManualRoots()
+    expect(validateManualStepAssignees(roots, byId)).toBeNull()
+  })
+})
+
+describe('manualAssigneeRowsToApi', () => {
+  it('força isPrimary false no payload quando type é TEAM', () => {
+    const api = manualAssigneeRowsToApi([
+      { type: 'TEAM', teamId: TEAM_ID, isPrimary: true },
+    ])
+    expect(api[0]).toMatchObject({
+      type: 'TEAM',
+      teamId: TEAM_ID,
+      isPrimary: false,
+    })
   })
 })

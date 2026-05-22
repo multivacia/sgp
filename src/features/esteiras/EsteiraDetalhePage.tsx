@@ -71,6 +71,7 @@ import {
 import { GestorAtividadeMenu } from './GestorAtividadeMenu'
 import { ConveyorNodeWorkloadPanel } from './ConveyorNodeWorkloadPanel'
 import { ConveyorHealthAnalysisCard } from './ConveyorHealthAnalysisCard'
+import { ConveyorOperationalPlanCard } from './ConveyorOperationalPlanCard'
 
 function statusEsteiraLabel(s: EsteiraStatusGeral) {
   const map: Record<EsteiraStatusGeral, string> = {
@@ -1184,6 +1185,13 @@ function EsteiraDetalheBasicoReal({ id }: { id: string | undefined }) {
       />
 
       <ConveyorHealthAnalysisCard conveyorId={detail.id} />
+
+      <ConveyorOperationalPlanCard
+        conveyorId={detail.id}
+        operationalStatus={detail.operationalStatus}
+        structure={detail.structure}
+        canEdit={canAlterConveyor}
+      />
 
       <ConveyorOperationalEventsTimeline
         events={operationalEvents}

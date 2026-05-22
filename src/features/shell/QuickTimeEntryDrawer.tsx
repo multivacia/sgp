@@ -35,6 +35,8 @@ type Props = {
   open: boolean
   onClose: () => void
   initialCandidate?: TimeEntryCandidateItem | null
+  /** Chamado após apontamento de esteira salvo com sucesso (drawer pode permanecer aberto). */
+  onTimeEntrySaved?: () => void
 }
 
 function buildContextLine(c: TimeEntryCandidateItem) {
@@ -50,7 +52,12 @@ function candidateNeedsJustification(c: TimeEntryCandidateItem) {
   return c.requiresJustification === true || c.isAssignedToMe === false
 }
 
-export function QuickTimeEntryDrawer({ open, onClose, initialCandidate = null }: Props) {
+export function QuickTimeEntryDrawer({
+  open,
+  onClose,
+  initialCandidate = null,
+  onTimeEntrySaved,
+}: Props) {
   const { user, ready: authReady } = useAuth()
   const { presentBlocking } = useSgpErrorSurface()
   const [phase, setPhase] = useState<Phase>('list')
@@ -331,6 +338,7 @@ export function QuickTimeEntryDrawer({ open, onClose, initialCandidate = null }:
       setDescription('')
       setExceptionJustification('')
       setOutOfSequenceJustification('')
+      onTimeEntrySaved?.()
       void load()
     } catch (e) {
       const n = reportClientError(e, {

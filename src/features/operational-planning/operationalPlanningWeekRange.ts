@@ -52,3 +52,18 @@ export function shiftWeek(mondayIso: string, deltaWeeks: number): string {
   const next = new Date(d.getTime() + deltaWeeks * 7 * MS_DAY)
   return mondayOfWeekContainingLocal(next)
 }
+
+/** Data de hoje no fuso local, formato ISO `YYYY-MM-DD`. */
+export function localTodayIsoDate(reference: Date = new Date()): string {
+  const yy = reference.getFullYear()
+  const mm = String(reference.getMonth() + 1).padStart(2, '0')
+  const dd = String(reference.getDate()).padStart(2, '0')
+  return `${yy}-${mm}-${dd}`
+}
+
+export function isIsoDateInWeekdays(
+  isoDate: string,
+  weekdayDates: readonly string[],
+): boolean {
+  return weekdayDates.includes(isoDate)
+}

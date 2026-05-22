@@ -276,16 +276,19 @@ export function buildMatrixStepAssigneesPayload(
         : s.compositionOrigin === 'complement'
           ? ('reaproveitada' as const)
           : ('manual' as const)
-    out[s.matrixActivityId] = rows.map((r, i) => ({
-      type: r.type,
-      ...(r.type === 'COLLABORATOR' && r.collaboratorId
-        ? { collaboratorId: r.collaboratorId }
-        : {}),
-      ...(r.type === 'TEAM' && r.teamId ? { teamId: r.teamId } : {}),
-      isPrimary: r.isPrimary,
-      assignmentOrigin,
-      orderIndex: i,
-    }))
+    out[s.matrixActivityId] = rows.map((r, i) => {
+      const type = r.type === 'TEAM' ? 'TEAM' : 'COLLABORATOR'
+      return {
+        type,
+        ...(type === 'COLLABORATOR' && r.collaboratorId
+          ? { collaboratorId: r.collaboratorId }
+          : {}),
+        ...(type === 'TEAM' && r.teamId ? { teamId: r.teamId } : {}),
+        isPrimary: type === 'TEAM' ? false : r.isPrimary,
+        assignmentOrigin,
+        orderIndex: i,
+      }
+    })
   }
   return out
 }
@@ -293,16 +296,19 @@ export function buildMatrixStepAssigneesPayload(
 export function manualAssigneeRowsToApi(
   rows: NovaEsteiraAlocacaoLinha[],
 ): CreateConveyorStepAssigneeInput[] {
-  return rows.map((r, i) => ({
-    type: r.type,
-    ...(r.type === 'COLLABORATOR' && r.collaboratorId
-      ? { collaboratorId: r.collaboratorId }
-      : {}),
-    ...(r.type === 'TEAM' && r.teamId ? { teamId: r.teamId } : {}),
-    isPrimary: r.isPrimary,
-    assignmentOrigin: 'manual' as const,
-    orderIndex: i,
-  }))
+  return rows.map((r, i) => {
+    const type = r.type === 'TEAM' ? 'TEAM' : 'COLLABORATOR'
+    return {
+      type,
+      ...(type === 'COLLABORATOR' && r.collaboratorId
+        ? { collaboratorId: r.collaboratorId }
+        : {}),
+      ...(type === 'TEAM' && r.teamId ? { teamId: r.teamId } : {}),
+      isPrimary: type === 'TEAM' ? false : r.isPrimary,
+      assignmentOrigin: 'manual' as const,
+      orderIndex: i,
+    }
+  })
 }
 
 export function validateManualStructure(roots: ManualOptionDraft[]): string | null {

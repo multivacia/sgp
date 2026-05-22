@@ -26,7 +26,8 @@ export function matrixActivityToInitialAllocRows(
     {
       type: 'TEAM',
       teamId: tid,
-      isPrimary: true,
+      /** Equipe operacional — nunca responsável principal nominal (regra do POST /conveyors). */
+      isPrimary: false,
     },
   ]
 }
