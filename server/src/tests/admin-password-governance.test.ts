@@ -9,7 +9,7 @@ import {
   loadEnv,
 } from '../config/env.js'
 import { hashPassword } from '../shared/password/password.js'
-import { sessionCookieForUser } from './sessionTestCookie.js'
+import { sessionCookieForUser, cookieHeaderFromSetCookie } from './sessionTestCookie.js'
 
 loadDotenvFiles()
 
@@ -86,10 +86,12 @@ describe.skipIf(!hasDb)('governança de senha (admin reset + change-password)', 
     expect(login.body.data?.user?.mustChangePassword).toBe(true)
 
     const newPass = 'VoluntaryChange2!x'
-    const cookie = login.headers['set-cookie'] as string[] | undefined
+    const cookie = cookieHeaderFromSetCookie(
+      login.headers['set-cookie'] as string[] | undefined,
+    )
     const change = await request(app)
       .post('/api/v1/auth/change-password')
-      .set('Cookie', cookie ?? [])
+      .set('Cookie', cookie)
       .send({
         currentPassword: temp,
         newPassword: newPass,
@@ -98,12 +100,12 @@ describe.skipIf(!hasDb)('governança de senha (admin reset + change-password)', 
     expect(change.status).toBe(200)
     expect(change.body.data?.user?.mustChangePassword).toBe(false)
 
-    const cookieAfterChange = change.headers['set-cookie'] as
-      | string[]
-      | undefined
+    const cookieAfterChange = cookieHeaderFromSetCookie(
+      change.headers['set-cookie'] as string[] | undefined,
+    )
     const me = await request(app)
       .get('/api/v1/auth/me')
-      .set('Cookie', cookieAfterChange ?? [])
+      .set('Cookie', cookieAfterChange)
     expect(me.status).toBe(200)
     expect(me.body.data?.user?.mustChangePassword).toBe(false)
 
@@ -153,12 +155,14 @@ describe.skipIf(!hasDb)('governança de senha (admin reset + change-password)', 
       password: pwd,
     })
     expect(login.status).toBe(200)
-    const cookieAfterLogin = login.headers['set-cookie'] as string[] | undefined
+    const cookieAfterLogin = cookieHeaderFromSetCookie(
+      login.headers['set-cookie'] as string[] | undefined,
+    )
 
     const newPass = 'StaleCookieTest2!z'
     const change = await request(app)
       .post('/api/v1/auth/change-password')
-      .set('Cookie', cookieAfterLogin ?? [])
+      .set('Cookie', cookieAfterLogin)
       .send({
         currentPassword: pwd,
         newPassword: newPass,
@@ -168,7 +172,7 @@ describe.skipIf(!hasDb)('governança de senha (admin reset + change-password)', 
 
     const stale = await request(app)
       .get('/api/v1/auth/me')
-      .set('Cookie', cookieAfterLogin ?? [])
+      .set('Cookie', cookieAfterLogin)
     expect(stale.status).toBe(401)
     expect(stale.body.error?.code).toBe('SESSION_REVOKED_CREDENTIALS_CHANGED')
 
@@ -176,7 +180,9 @@ describe.skipIf(!hasDb)('governança de senha (admin reset + change-password)', 
       .get('/api/v1/auth/me')
       .set(
         'Cookie',
-        (change.headers['set-cookie'] as string[] | undefined) ?? [],
+        cookieHeaderFromSetCookie(
+          change.headers['set-cookie'] as string[] | undefined,
+        ),
       )
     expect(fresh.status).toBe(200)
 

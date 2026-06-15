@@ -76,9 +76,10 @@ describe('conveyorOperationalPlanDisplay', () => {
     expect(labelConveyorOperationalPlanStatus('WAITING_FACTORY_PLANNING')).toContain('fábrica')
   })
 
-  it('allows create only for PRONTA_LIBERAR and EM_PRODUCAO', () => {
-    expect(canCreateConveyorOperationalPlan('PRONTA_LIBERAR')).toBe(true)
-    expect(canCreateConveyorOperationalPlan('EM_PRODUCAO')).toBe(true)
+  it('allows create for EM_PLANEJAMENTO, A_INICIAR and EM_ANDAMENTO', () => {
+    expect(canCreateConveyorOperationalPlan('EM_PLANEJAMENTO')).toBe(true)
+    expect(canCreateConveyorOperationalPlan('A_INICIAR')).toBe(true)
+    expect(canCreateConveyorOperationalPlan('EM_ANDAMENTO')).toBe(true)
     expect(canCreateConveyorOperationalPlan('EM_REVISAO')).toBe(false)
   })
 

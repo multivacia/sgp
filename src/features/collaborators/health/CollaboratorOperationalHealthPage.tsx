@@ -151,8 +151,8 @@ export function CollaboratorOperationalHealthPage() {
               do SGP.
             </p>
             <p className="mt-2 text-xs leading-relaxed text-slate-500">
-              Esta visão descreve sinais operacionais objetivos (carga, capacidade, apontamentos). A
-              interpretação ARGOS será adicionada numa etapa futura.
+              Resumo operacional baseado nos dados atuais do colaborador (carga, capacidade e
+              apontamentos).
             </p>
           </div>
           <div className="flex flex-wrap gap-2">

@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { SgpToast, type SgpToastVariant } from '../../components/ui/SgpToast'
 import { formatHumanMinutes } from '../../lib/formatters'
 import { postConveyorStepTimeEntry } from '../../services/conveyors/conveyorStepAssignmentsApiService'
+import { patchConveyorStepCompletion } from '../../services/conveyors/conveyorsApiService'
 import { listTimeEntryCandidates } from '../../services/my-activities/myActivitiesApiService'
 import type { TimeEntryCandidateItem } from '../../domain/my-activities/my-activities.types'
 import type {
@@ -23,6 +24,18 @@ import {
   listExtraTimeEntryDescriptions,
   listMyExtraTimeEntries,
 } from '../../services/my-activities/extraTimeEntriesApiService'
+import {
+  buildTimeEntryPayload,
+  canShowSaveAndCompleteButton,
+  candidateNeedsJustification,
+  candidateNeedsOutOfSequenceJustification,
+  QUICK_TIME_ENTRY_ERRORS,
+  QUICK_TIME_ENTRY_TOAST,
+  resolveTimeEntrySuccessToast,
+  validateCompleteOutOfSequenceJustification,
+  validateTimeEntryForm,
+} from './quickTimeEntryDrawerLogic'
+import { QuickTimeEntryCandidateActions } from './QuickTimeEntryCandidateActions'
 
 const SEARCH_DEBOUNCE_MS = 200
 
@@ -48,10 +61,6 @@ function buildContextLine(c: TimeEntryCandidateItem) {
   return parts.join(' · ')
 }
 
-function candidateNeedsJustification(c: TimeEntryCandidateItem) {
-  return c.requiresJustification === true || c.isAssignedToMe === false
-}
-
 export function QuickTimeEntryDrawer({
   open,
   onClose,
@@ -71,7 +80,8 @@ export function QuickTimeEntryDrawer({
   const [loading, setLoading] = useState(false)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [selected, setSelected] = useState<TimeEntryCandidateItem | null>(null)
-  const [minutesStr, setMinutesStr] = useState('30')
+  const [minutesStr, setMinutesStr] = useState('0')
+  const [executedQuantityStr, setExecutedQuantityStr] = useState('1')
   const [description, setDescription] = useState('')
   const [exceptionJustification, setExceptionJustification] = useState('')
   const [outOfSequenceJustification, setOutOfSequenceJustification] = useState('')
@@ -93,6 +103,11 @@ export function QuickTimeEntryDrawer({
   const [extraNotes, setExtraNotes] = useState('')
   const [extraSubmitting, setExtraSubmitting] = useState(false)
   const [extraSubmitError, setExtraSubmitError] = useState<string | null>(null)
+  const [completeConfirmCandidate, setCompleteConfirmCandidate] =
+    useState<TimeEntryCandidateItem | null>(null)
+  const [completeJustification, setCompleteJustification] = useState('')
+  const [completeError, setCompleteError] = useState<string | null>(null)
+  const [completing, setCompleting] = useState(false)
 
   useEffect(() => {
     const t = window.setTimeout(
@@ -113,7 +128,7 @@ export function QuickTimeEntryDrawer({
       setLoadError(null)
       setSubmitError(null)
       setToast(null)
-      setMinutesStr('30')
+      setMinutesStr('0')
       setDescription('')
       setExceptionJustification('')
       setOutOfSequenceJustification('')
@@ -130,6 +145,10 @@ export function QuickTimeEntryDrawer({
       setExtraNotes('')
       setExtraSubmitting(false)
       setExtraSubmitError(null)
+      setCompleteConfirmCandidate(null)
+      setCompleteJustification('')
+      setCompleteError(null)
+      setCompleting(false)
     }
   }, [open])
 
@@ -250,6 +269,9 @@ export function QuickTimeEntryDrawer({
 
   const minutes = Number.parseInt(minutesStr, 10)
   const minutesValid = Number.isInteger(minutes) && minutes >= 1
+  const executedQuantity = Number.parseInt(executedQuantityStr, 10)
+  const executedQuantityValid =
+    Number.isInteger(executedQuantity) && executedQuantity >= 0
   const assignedCandidates = useMemo(
     () => items.filter((c) => !candidateNeedsJustification(c)),
     [items],
@@ -262,12 +284,15 @@ export function QuickTimeEntryDrawer({
     ? candidateNeedsJustification(selected)
     : false
   const formNeedsOutOfSequence = selected
-    ? selected.requiresOutOfSequenceJustification === true || selected.isOutOfSequence === true
+    ? candidateNeedsOutOfSequenceJustification(selected)
     : false
   const canSubmitForm =
     minutesValid &&
+    executedQuantityValid &&
     (!formNeedsJustification || exceptionJustification.trim().length > 0) &&
     (!formNeedsOutOfSequence || outOfSequenceJustification.trim().length > 0)
+  const showSaveAndComplete =
+    selected != null && canShowSaveAndCompleteButton(selected)
   const extraMinutes = Number.parseInt(extraMinutesStr, 10)
   const extraMinutesValid = Number.isInteger(extraMinutes) && extraMinutes >= 1
 
@@ -275,7 +300,7 @@ export function QuickTimeEntryDrawer({
     setSelected(c)
     setPhase('form')
     setSubmitError(null)
-    setMinutesStr('30')
+    setMinutesStr('0')
     setDescription('')
     setExceptionJustification('')
     setOutOfSequenceJustification('')
@@ -293,8 +318,8 @@ export function QuickTimeEntryDrawer({
     setSubmitError(null)
   }
 
-  async function save() {
-    if (!selected || !user || submitting || !minutesValid) return
+  async function save(markAsDone = false) {
+    if (!selected || !user || submitting || !minutesValid || !executedQuantityValid) return
     if (!user.collaboratorId) {
       pushToast(transversalUxCopy.collaboratorLinkMissingToast, 'error')
       return
@@ -303,36 +328,33 @@ export function QuickTimeEntryDrawer({
       pushToast(transversalUxCopy.collaboratorLinkMissingToast, 'error')
       return
     }
-    const needsJ = candidateNeedsJustification(selected)
-    const ej = exceptionJustification.trim()
-    if (needsJ && !ej.length) {
-      setSubmitError(
-        'Para apontar horas nesta atividade, informe a justificativa da exceção.',
-      )
-      return
-    }
-    const needsOos =
-      selected.requiresOutOfSequenceJustification === true ||
-      selected.isOutOfSequence === true
-    const oos = outOfSequenceJustification.trim()
-    if (needsOos && !oos.length) {
-      setSubmitError(
-        'Informe uma justificativa para executar esta atividade fora da sequência recomendada.',
-      )
+    const validationError = validateTimeEntryForm({
+      candidate: selected,
+      exceptionJustification,
+      outOfSequenceJustification,
+    })
+    if (validationError) {
+      setSubmitError(validationError)
       return
     }
     setSubmitting(true)
     setSubmitError(null)
     setToast(null)
     try {
-      await postConveyorStepTimeEntry(selected.conveyorId, selected.stepNodeId, {
-        minutes,
-        description: description.trim() || null,
-        entryMode: 'manual',
-        ...(needsJ ? { exceptionJustification: ej } : {}),
-        ...(needsOos ? { outOfSequenceJustification: oos } : {}),
-      })
-      pushToast('Apontamento registado com sucesso.', 'success')
+      await postConveyorStepTimeEntry(
+        selected.conveyorId,
+        selected.stepNodeId,
+        buildTimeEntryPayload({
+          candidate: selected,
+          minutes,
+          executedQuantity,
+          description,
+          exceptionJustification,
+          outOfSequenceJustification,
+          markAsDone,
+        }),
+      )
+      pushToast(resolveTimeEntrySuccessToast(markAsDone), 'success')
       setPhase('list')
       setSelected(null)
       setDescription('')
@@ -343,7 +365,7 @@ export function QuickTimeEntryDrawer({
     } catch (e) {
       const n = reportClientError(e, {
         module: 'shell',
-        action: 'quick_time_entry_save',
+        action: markAsDone ? 'quick_time_entry_save_and_complete' : 'quick_time_entry_save',
         entityId: selected.conveyorId,
       })
       const plan = presentationPlan(n)
@@ -355,6 +377,71 @@ export function QuickTimeEntryDrawer({
     } finally {
       setSubmitting(false)
     }
+  }
+
+  function openCompleteConfirm(c: TimeEntryCandidateItem) {
+    setCompleteConfirmCandidate(c)
+    setCompleteJustification('')
+    setCompleteError(null)
+  }
+
+  function closeCompleteConfirm() {
+    if (completing) return
+    setCompleteConfirmCandidate(null)
+    setCompleteJustification('')
+    setCompleteError(null)
+  }
+
+  async function confirmCompleteActivity() {
+    const c = completeConfirmCandidate
+    if (!c || completing) return
+    const oosErr = validateCompleteOutOfSequenceJustification(c, completeJustification)
+    if (oosErr) {
+      setCompleteError(oosErr)
+      return
+    }
+    setCompleting(true)
+    setCompleteError(null)
+    try {
+      await patchConveyorStepCompletion(c.conveyorId, c.stepNodeId, {
+        action: 'COMPLETE',
+        ...(candidateNeedsOutOfSequenceJustification(c)
+          ? { outOfSequenceJustification: completeJustification.trim() }
+          : {}),
+      })
+      pushToast(QUICK_TIME_ENTRY_TOAST.activityCompleted, 'success')
+      setCompleteConfirmCandidate(null)
+      setCompleteJustification('')
+      onTimeEntrySaved?.()
+      void load()
+    } catch (e) {
+      const n = reportClientError(e, {
+        module: 'shell',
+        action: 'quick_time_entry_complete',
+        entityId: c.conveyorId,
+      })
+      const plan = presentationPlan(n)
+      if (plan.surface === 'modal') {
+        presentBlocking(n)
+        closeCompleteConfirm()
+      } else {
+        setCompleteError(n.userMessage || QUICK_TIME_ENTRY_ERRORS.completeFailed)
+      }
+    } finally {
+      setCompleting(false)
+    }
+  }
+
+  function renderCandidateActions(c: TimeEntryCandidateItem) {
+    return (
+      <QuickTimeEntryCandidateActions
+        candidate={c}
+        onApontar={() => startForm(c)}
+        onComplete={() => openCompleteConfirm(c)}
+        disabled={Boolean(unavailableReason)}
+        completing={completing}
+      />
+    )
   }
 
   async function saveExtra() {
@@ -614,14 +701,7 @@ export function QuickTimeEntryDrawer({
                                         </p>
                                       </div>
                                     </div>
-                                    <button
-                                      type="button"
-                                      className="sgp-cta-primary mt-4 w-full justify-center py-2 text-center text-xs"
-                                      onClick={() => startForm(c)}
-                                      disabled={Boolean(unavailableReason)}
-                                    >
-                                      Apontar
-                                    </button>
+                                    {renderCandidateActions(c)}
                                   </li>
                                 ))}
                               </ul>
@@ -691,14 +771,7 @@ export function QuickTimeEntryDrawer({
                                         </p>
                                       </div>
                                     </div>
-                                    <button
-                                      type="button"
-                                      className="sgp-cta-primary mt-4 w-full justify-center py-2 text-center text-xs"
-                                      onClick={() => startForm(c)}
-                                      disabled={Boolean(unavailableReason)}
-                                    >
-                                      Apontar
-                                    </button>
+                                    {renderCandidateActions(c)}
                                   </li>
                                 ))}
                               </ul>
@@ -732,13 +805,29 @@ export function QuickTimeEntryDrawer({
                       Tempo (minutos)
                       <input
                         type="number"
-                        min={1}
+                        min={0}
                         step={1}
                         inputMode="numeric"
                         value={minutesStr}
                         onChange={(e) => setMinutesStr(e.target.value)}
                         className="mt-1.5 w-full rounded-xl border border-[color:var(--semantic-border-glass-strong)] bg-sgp-app-panel-deep/90 px-3 py-2 text-sm text-slate-200 outline-none focus:ring-2 focus:ring-sgp-blue-bright/25"
                       />
+                    </label>
+
+                    <label className="mt-4 block text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">
+                      Quantidade executada
+                      <input
+                        type="number"
+                        min={0}
+                        step={1}
+                        inputMode="numeric"
+                        value={executedQuantityStr}
+                        onChange={(e) => setExecutedQuantityStr(e.target.value)}
+                        className="mt-1.5 w-full rounded-xl border border-[color:var(--semantic-border-glass-strong)] bg-sgp-app-panel-deep/90 px-3 py-2 text-sm text-slate-200 outline-none focus:ring-2 focus:ring-sgp-blue-bright/25"
+                      />
+                      <span className="mt-1 block text-[11px] font-normal normal-case tracking-normal text-slate-500">
+                        Unidades concluídas neste apontamento (0 se não concluiu unidade).
+                      </span>
                     </label>
 
                     <label className="mt-4 block text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">
@@ -826,23 +915,35 @@ export function QuickTimeEntryDrawer({
                       <p className="mt-3 text-sm text-rose-200">{submitError}</p>
                     ) : null}
 
-                    <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:justify-end">
-                      <button
-                        type="button"
-                        className="rounded-xl border border-white/12 px-4 py-2.5 text-sm font-semibold text-slate-300 transition hover:bg-white/[0.05]"
-                        onClick={backToList}
-                        disabled={submitting}
-                      >
-                        Cancelar
-                      </button>
-                      <button
-                        type="button"
-                        className="sgp-cta-primary px-4 py-2.5 text-sm disabled:pointer-events-none disabled:opacity-50"
-                        onClick={() => void save()}
-                        disabled={submitting || !canSubmitForm}
-                      >
-                        {submitting ? 'A guardar…' : 'Salvar apontamento'}
-                      </button>
+                    <div className="mt-6 flex flex-col gap-2">
+                      <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+                        <button
+                          type="button"
+                          className="rounded-xl border border-white/12 px-4 py-2.5 text-sm font-semibold text-slate-300 transition hover:bg-white/[0.05]"
+                          onClick={backToList}
+                          disabled={submitting}
+                        >
+                          Cancelar
+                        </button>
+                        <button
+                          type="button"
+                          className="sgp-cta-primary px-4 py-2.5 text-sm disabled:pointer-events-none disabled:opacity-50"
+                          onClick={() => void save(false)}
+                          disabled={submitting || !canSubmitForm}
+                        >
+                          {submitting ? 'A guardar…' : 'Salvar apontamento'}
+                        </button>
+                      </div>
+                      {showSaveAndComplete ? (
+                        <button
+                          type="button"
+                          className="w-full rounded-xl border border-emerald-400/35 bg-emerald-500/10 px-4 py-2.5 text-sm font-bold text-emerald-100 transition hover:bg-emerald-500/20 disabled:pointer-events-none disabled:opacity-50 sm:self-end sm:px-6"
+                          onClick={() => void save(true)}
+                          disabled={submitting || !canSubmitForm}
+                        >
+                          {submitting ? 'A guardar…' : 'Salvar apontamento e concluir atividade'}
+                        </button>
+                      ) : null}
                     </div>
                   </div>
                 ) : null
@@ -985,6 +1086,70 @@ export function QuickTimeEntryDrawer({
                 variant={toast.variant}
                 onDismiss={() => setToast(null)}
               />
+            </div>
+          </div>
+        ) : null}
+
+        {completeConfirmCandidate ? (
+          <div className="absolute inset-0 z-[2] flex items-end justify-center bg-slate-950/60 p-4 sm:items-center">
+            <div
+              className="w-full max-w-md rounded-2xl border border-white/10 bg-sgp-navy-deep p-5 shadow-2xl"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="qte-complete-title"
+            >
+              <h3
+                id="qte-complete-title"
+                className="font-heading text-base font-bold text-white"
+              >
+                Concluir esta atividade?
+              </h3>
+              <p className="mt-2 text-sm leading-relaxed text-slate-300">
+                Esta ação marca a atividade como concluída e pode liberar a próxima atividade da
+                sequência.
+              </p>
+              {candidateNeedsOutOfSequenceJustification(completeConfirmCandidate) ? (
+                <>
+                  <p className="mt-3 text-xs text-sky-100/90">
+                    Esta atividade está fora da sequência planejada. Informe uma justificativa para
+                    concluir mesmo assim.
+                  </p>
+                  <label className="mt-3 block text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">
+                    Justificativa
+                    <textarea
+                      value={completeJustification}
+                      onChange={(e) => setCompleteJustification(e.target.value)}
+                      rows={3}
+                      className="mt-1.5 w-full resize-none rounded-xl border border-[color:var(--semantic-border-glass-strong)] bg-sgp-app-panel-deep/90 px-3 py-2 text-sm text-slate-200 outline-none focus:ring-2 focus:ring-sgp-blue-bright/25"
+                    />
+                  </label>
+                </>
+              ) : null}
+              {completeError ? (
+                <p className="mt-3 text-sm text-rose-200">{completeError}</p>
+              ) : null}
+              <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                <button
+                  type="button"
+                  className="rounded-xl border border-white/12 px-4 py-2.5 text-sm font-semibold text-slate-300 transition hover:bg-white/[0.05]"
+                  onClick={closeCompleteConfirm}
+                  disabled={completing}
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  className="rounded-xl border border-emerald-400/35 bg-emerald-500/15 px-4 py-2.5 text-sm font-bold text-emerald-100 transition hover:bg-emerald-500/25 disabled:pointer-events-none disabled:opacity-50"
+                  onClick={() => void confirmCompleteActivity()}
+                  disabled={
+                    completing ||
+                    (candidateNeedsOutOfSequenceJustification(completeConfirmCandidate) &&
+                      !completeJustification.trim().length)
+                  }
+                >
+                  {completing ? 'A concluir…' : 'Concluir atividade'}
+                </button>
+              </div>
             </div>
           </div>
         ) : null}

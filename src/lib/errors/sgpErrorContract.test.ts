@@ -28,6 +28,18 @@ describe('normalizeClientError', () => {
     expect(isBlockingSeverity(n.severity)).toBe(false)
   })
 
+  it('preserva mensagem do backend em 409 de estrutura da esteira', () => {
+    const msg =
+      'Não é possível alterar a estrutura: existem itens de planejamento vinculados às atividades desta esteira.'
+    const err = new ApiError(msg, 409, {
+      code: 'CONVEYOR_STRUCTURE_REPLACE_HAS_DEPENDENCIES',
+    })
+    const n = normalizeClientError(err)
+    expect(n.userMessage).toBe(msg)
+    expect(n.cause).toBe('conflito')
+    expect(isBlockingSeverity(n.severity)).toBe(false)
+  })
+
   it('classifica 403 como permissão impeditiva (modal)', () => {
     const err = new ApiError('Proibido.', 403)
     const n = normalizeClientError(err)

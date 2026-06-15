@@ -8,6 +8,7 @@ import {
 } from 'react'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { SgpToast, type SgpToastVariant } from '../components/ui/SgpToast'
+import { BacklogArgosPanel } from '../components/backlog/BacklogArgosPanel'
 import { BacklogFilters } from '../components/backlog/BacklogFilters'
 import { BacklogKpiCards } from '../components/backlog/BacklogKpiCards'
 import { BacklogTable } from '../components/backlog/BacklogTable'
@@ -47,6 +48,7 @@ import {
   backlogSituationChipLabel,
   backlogTotalsVsTableFiltered,
 } from '../lib/backlog/backlogCopy'
+import { SHOW_ARGOS_PANEL_FILTERS } from '../lib/backlog/backlogUiFlags'
 import {
   getOperationalBucket,
   type OperationalBucket,
@@ -88,12 +90,13 @@ function applySituationAndWindow(
   daysWindow: number,
 ): boolean {
   if (statusFilter === 'ativas') {
-    return getOperationalBucket(row) !== 'concluidas'
+    const b = getOperationalBucket(row)
+    return b !== 'finalizadas' && b !== 'canceladas'
   }
   if (!statusFilter) return true
   const b = getOperationalBucket(row)
-  if (statusFilter === 'concluidas' && daysWindow > 0) {
-    if (b !== 'concluidas') return false
+  if (statusFilter === 'finalizadas' && daysWindow > 0) {
+    if (b !== 'finalizadas') return false
     const ca = row.completedAt
     if (!ca) return false
     const ms = new Date(ca).getTime()
@@ -180,8 +183,8 @@ export function BacklogPage() {
       }
       if (v === 'ativas') {
         next.set('scope', 'ativas')
-      } else if (v === 'concluidas') {
-        next.set('situacao', 'concluidas')
+      } else if (v === 'finalizadas') {
+        next.set('situacao', 'finalizadas')
       } else {
         next.set('situacao', v)
       }
@@ -394,7 +397,10 @@ export function BacklogPage() {
   )
 
   const filtered = useMemo(
-    () => filterRowsByArgosHealth(baseFiltered, argosFilter),
+    () =>
+      SHOW_ARGOS_PANEL_FILTERS
+        ? filterRowsByArgosHealth(baseFiltered, argosFilter)
+        : baseFiltered,
     [argosFilter, baseFiltered],
   )
 
@@ -436,7 +442,7 @@ export function BacklogPage() {
   }, [allRows])
 
   const hasTemporalWindow =
-    statusFilter === 'concluidas' && daysWindow > 0
+    statusFilter === 'finalizadas' && daysWindow > 0
   const hasTableFilters =
     Boolean(qFromUrl.trim()) ||
     Boolean(statusFilter) ||
@@ -556,114 +562,11 @@ export function BacklogPage() {
       ) : null}
 
       <section ref={listSectionRef} className="space-y-4">
-        <div className="flex flex-wrap items-center gap-2 text-xs">
-          <button
-            type="button"
-            onClick={() => setArgosFilter('all')}
-            className={`rounded-full border px-3 py-1.5 ${
-              argosFilter === 'all'
-                ? 'border-sgp-blue-bright/45 bg-sgp-blue-bright/15 text-slate-100'
-                : 'border-white/12 bg-white/[0.03] text-slate-300'
-            }`}
-          >
-            ARGOS: Todas
-          </button>
-          <button
-            type="button"
-            onClick={() => setArgosFilter('with_analysis')}
-            className={`rounded-full border px-3 py-1.5 ${
-              argosFilter === 'with_analysis'
-                ? 'border-sgp-blue-bright/45 bg-sgp-blue-bright/15 text-slate-100'
-                : 'border-white/12 bg-white/[0.03] text-slate-300'
-            }`}
-          >
-            ARGOS: Com análise
-          </button>
-          <button
-            type="button"
-            onClick={() => setArgosFilter('without_analysis')}
-            className={`rounded-full border px-3 py-1.5 ${
-              argosFilter === 'without_analysis'
-                ? 'border-sgp-blue-bright/45 bg-sgp-blue-bright/15 text-slate-100'
-                : 'border-white/12 bg-white/[0.03] text-slate-300'
-            }`}
-          >
-            ARGOS: Sem análise
-          </button>
-          <button
-            type="button"
-            onClick={() => setArgosFilter('risk_low')}
-            className={`rounded-full border px-3 py-1.5 ${
-              argosFilter === 'risk_low'
-                ? 'border-sgp-blue-bright/45 bg-sgp-blue-bright/15 text-slate-100'
-                : 'border-white/12 bg-white/[0.03] text-slate-300'
-            }`}
-          >
-            ARGOS: Risco baixo
-          </button>
-          <button
-            type="button"
-            onClick={() => setArgosFilter('risk_medium')}
-            className={`rounded-full border px-3 py-1.5 ${
-              argosFilter === 'risk_medium'
-                ? 'border-sgp-blue-bright/45 bg-sgp-blue-bright/15 text-slate-100'
-                : 'border-white/12 bg-white/[0.03] text-slate-300'
-            }`}
-          >
-            ARGOS: Risco médio
-          </button>
-          <button
-            type="button"
-            onClick={() => setArgosFilter('risk_high_or_critical')}
-            className={`rounded-full border px-3 py-1.5 ${
-              argosFilter === 'risk_high_or_critical'
-                ? 'border-sgp-blue-bright/45 bg-sgp-blue-bright/15 text-slate-100'
-                : 'border-white/12 bg-white/[0.03] text-slate-300'
-            }`}
-          >
-            ARGOS: Alto/crítico
-          </button>
-          <button
-            type="button"
-            onClick={() => setArgosFilter('health_attention')}
-            className={`rounded-full border px-3 py-1.5 ${
-              argosFilter === 'health_attention'
-                ? 'border-sgp-blue-bright/45 bg-sgp-blue-bright/15 text-slate-100'
-                : 'border-white/12 bg-white/[0.03] text-slate-300'
-            }`}
-          >
-            ARGOS: Saúde atenção
-          </button>
-          <button
-            type="button"
-            onClick={() => setArgosFilter('health_critical')}
-            className={`rounded-full border px-3 py-1.5 ${
-              argosFilter === 'health_critical'
-                ? 'border-sgp-blue-bright/45 bg-sgp-blue-bright/15 text-slate-100'
-                : 'border-white/12 bg-white/[0.03] text-slate-300'
-            }`}
-          >
-            ARGOS: Saúde crítica
-          </button>
-        </div>
-
-        <div className="flex flex-wrap gap-2 text-xs text-slate-300">
-          <span className="rounded-lg border border-white/12 bg-white/[0.03] px-3 py-1.5">
-            Com análise ARGOS: {argosOverview.withAnalysis}
-          </span>
-          <span className="rounded-lg border border-white/12 bg-white/[0.03] px-3 py-1.5">
-            Sem análise ARGOS: {argosOverview.withoutAnalysis}
-          </span>
-          <span className="rounded-lg border border-amber-400/20 bg-amber-500/10 px-3 py-1.5">
-            Em atenção: {argosOverview.healthAttention}
-          </span>
-          <span className="rounded-lg border border-rose-400/20 bg-rose-500/10 px-3 py-1.5">
-            Alto/crítico risco: {argosOverview.riskHighOrCritical}
-          </span>
-          <span className="rounded-lg border border-emerald-400/20 bg-emerald-500/10 px-3 py-1.5">
-            Saudáveis/baixo risco: {argosOverview.riskLow}
-          </span>
-        </div>
+        <BacklogArgosPanel
+          argosFilter={argosFilter}
+          onArgosFilterChange={setArgosFilter}
+          overview={argosOverview}
+        />
 
         <BacklogFilters
           search={qDraft}

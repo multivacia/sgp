@@ -145,7 +145,7 @@ describe.skipIf(!hasDb)('conveyors POST (integração)', () => {
     expect(d.name).toBe(body.dados.nome)
     expect(d.priority).toBe('media')
     expect(d.originRegister).toBe('MANUAL')
-    expect(d.operationalStatus).toBe('NO_BACKLOG')
+    expect(d.operationalStatus).toBe('EM_ELABORACAO')
     expect(typeof d.createdAt).toBe('string')
     expect(d.totalSteps).toBe(1)
     expect('clientName' in d).toBe(true)
@@ -184,7 +184,7 @@ describe.skipIf(!hasDb)('conveyors POST (integração)', () => {
     const w = res.body.data
     expect(w.semanticsVersion).toBe('1.5')
     expect(w.conveyorId).toBe(cid)
-    expect(w.conveyor.operationalBucket).toBe('no_backlog')
+    expect(w.conveyor.operationalBucket).toBe('em_elaboracao')
     expect(w.conveyor.isOverdueContext).toBe(false)
     expect(w.steps.length).toBe(1)
     expect(w.steps[0].plannedMinutes).toBe(30)
@@ -419,7 +419,7 @@ describe.skipIf(!hasDb)('conveyors POST (integração)', () => {
     expect(res.status).toBe(404)
   })
 
-  it('PATCH /api/v1/conveyors/:id/status avanço e completed_at em CONCLUIDA', async () => {
+  it('PATCH /api/v1/conveyors/:id/status avanço e completed_at em FINALIZADA', async () => {
     const body = minimalValidBody()
     const post = await request(app)
       .post('/api/v1/conveyors')
@@ -437,25 +437,26 @@ describe.skipIf(!hasDb)('conveyors POST (integração)', () => {
         'Cookie',
         await sessionCookieForUser(pool, GOV_ADMIN_USER_ID, GOV_ADMIN_EMAIL),
       )
-      .send({ operationalStatus: 'EM_REVISAO' })
+      .send({ operationalStatus: 'AGUARDANDO_PLANEJAMENTO' })
     expect(s1.status).toBe(200)
-    expect(s1.body.data.operationalStatus).toBe('EM_REVISAO')
+    expect(s1.body.data.operationalStatus).toBe('AGUARDANDO_PLANEJAMENTO')
     expect(s1.body.data.completedAt).toBeNull()
 
-    await request(app)
-      .patch(`/api/v1/conveyors/${cid}/status`)
-      .set(
-        'Cookie',
-        await sessionCookieForUser(pool, GOV_ADMIN_USER_ID, GOV_ADMIN_EMAIL),
-      )
-      .send({ operationalStatus: 'PRONTA_LIBERAR' })
-    await request(app)
-      .patch(`/api/v1/conveyors/${cid}/status`)
-      .set(
-        'Cookie',
-        await sessionCookieForUser(pool, GOV_ADMIN_USER_ID, GOV_ADMIN_EMAIL),
-      )
-      .send({ operationalStatus: 'EM_PRODUCAO' })
+    for (const st of ['EM_PLANEJAMENTO', 'A_INICIAR'] as const) {
+      const r = await request(app)
+        .patch(`/api/v1/conveyors/${cid}/status`)
+        .set(
+          'Cookie',
+          await sessionCookieForUser(pool, GOV_ADMIN_USER_ID, GOV_ADMIN_EMAIL),
+        )
+        .send({ operationalStatus: st })
+      expect(r.status).toBe(200)
+    }
+
+    await pool.query(
+      `UPDATE conveyors SET operational_status = 'EM_ANDAMENTO' WHERE id = $1::uuid`,
+      [cid],
+    )
 
     const done = await request(app)
       .patch(`/api/v1/conveyors/${cid}/status`)
@@ -463,20 +464,10 @@ describe.skipIf(!hasDb)('conveyors POST (integração)', () => {
         'Cookie',
         await sessionCookieForUser(pool, GOV_ADMIN_USER_ID, GOV_ADMIN_EMAIL),
       )
-      .send({ operationalStatus: 'CONCLUIDA' })
+      .send({ operationalStatus: 'FINALIZADA' })
     expect(done.status).toBe(200)
-    expect(done.body.data.operationalStatus).toBe('CONCLUIDA')
+    expect(done.body.data.operationalStatus).toBe('FINALIZADA')
     expect(done.body.data.completedAt).toBeTruthy()
-
-    const reopen = await request(app)
-      .patch(`/api/v1/conveyors/${cid}/status`)
-      .set(
-        'Cookie',
-        await sessionCookieForUser(pool, GOV_ADMIN_USER_ID, GOV_ADMIN_EMAIL),
-      )
-      .send({ operationalStatus: 'EM_REVISAO' })
-    expect(reopen.status).toBe(200)
-    expect(reopen.body.data.completedAt).toBeNull()
   })
 
   it('PATCH /api/v1/conveyors/:id/status 422 transição inválida', async () => {
@@ -496,21 +487,21 @@ describe.skipIf(!hasDb)('conveyors POST (integração)', () => {
         'Cookie',
         await sessionCookieForUser(pool, GOV_ADMIN_USER_ID, GOV_ADMIN_EMAIL),
       )
-      .send({ operationalStatus: 'EM_REVISAO' })
+      .send({ operationalStatus: 'AGUARDANDO_PLANEJAMENTO' })
     await request(app)
       .patch(`/api/v1/conveyors/${cid}/status`)
       .set(
         'Cookie',
         await sessionCookieForUser(pool, GOV_ADMIN_USER_ID, GOV_ADMIN_EMAIL),
       )
-      .send({ operationalStatus: 'PRONTA_LIBERAR' })
+      .send({ operationalStatus: 'EM_PLANEJAMENTO' })
     await request(app)
       .patch(`/api/v1/conveyors/${cid}/status`)
       .set(
         'Cookie',
         await sessionCookieForUser(pool, GOV_ADMIN_USER_ID, GOV_ADMIN_EMAIL),
       )
-      .send({ operationalStatus: 'EM_PRODUCAO' })
+      .send({ operationalStatus: 'A_INICIAR' })
 
     const bad = await request(app)
       .patch(`/api/v1/conveyors/${cid}/status`)
@@ -518,7 +509,7 @@ describe.skipIf(!hasDb)('conveyors POST (integração)', () => {
         'Cookie',
         await sessionCookieForUser(pool, GOV_ADMIN_USER_ID, GOV_ADMIN_EMAIL),
       )
-      .send({ operationalStatus: 'PRONTA_LIBERAR' })
+      .send({ operationalStatus: 'EM_PLANEJAMENTO' })
     expect(bad.status).toBe(422)
     expect(bad.body.error?.code).toBe('INVALID_STATUS_TRANSITION')
   })

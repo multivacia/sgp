@@ -93,9 +93,9 @@ describe('dashboard-operacional', () => {
   it('aplicarFiltrosDashboard atua sobre o agregado e alinha entrada com escopo', () => {
     const base = buildDashboardOperacional({ backlogRows: BACKLOG_MOCK_ROWS })
     const filtrado = aplicarFiltrosDashboard(base, {
-      escopoEntrada: 'somente_no_backlog',
+      escopoEntrada: 'somente_em_elaboracao',
     })
-    expect(filtrado.blocoEntrada.linhas.every((r) => r.status === 'no_backlog')).toBe(
+    expect(filtrado.blocoEntrada.linhas.every((r) => r.status === 'em_elaboracao')).toBe(
       true,
     )
     expect(filtrado.kpis.entrada.totalLinhas).toBe(filtrado.blocoEntrada.linhas.length)

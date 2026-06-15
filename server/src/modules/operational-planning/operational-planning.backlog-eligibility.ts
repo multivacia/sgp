@@ -5,10 +5,10 @@
 
 /** Status de esteira que não entram no backlog operacional comum. */
 export const OPERATIONAL_PLANNING_BACKLOG_EXCLUDED_CONVEYOR_STATUSES = [
-  'CONCLUIDA',
-  'NO_BACKLOG',
-  'EM_REVISAO',
-  'PRONTA_LIBERAR',
+  'FINALIZADA',
+  'CANCELADA',
+  'EM_ELABORACAO',
+  'AGUARDANDO_PLANEJAMENTO',
 ] as const
 
 /** Plano da esteira terminal — não bloqueia backlog. */
@@ -42,7 +42,7 @@ export function operationalPlanningBacklogExcludeConveyorPlanItemsSql(
 }
 
 /**
- * Esteira EM_PRODUCAO com plano operacional ativo segue fluxo novo
+ * Esteira EM_ANDAMENTO com plano operacional ativo segue fluxo novo
  * (Aguardando encaixe / semana), não o backlog legado.
  */
 export function operationalPlanningBacklogExcludeEmProducaoWithActivePlanSql(
@@ -51,7 +51,7 @@ export function operationalPlanningBacklogExcludeEmProducaoWithActivePlanSql(
   const inactive = OPERATIONAL_PLANNING_BACKLOG_INACTIVE_PLAN_STATUSES.map((s) => `'${s}'`).join(', ')
   return `
       AND NOT (
-        ${conveyorAlias}.operational_status = 'EM_PRODUCAO'
+        ${conveyorAlias}.operational_status = 'EM_ANDAMENTO'
         AND EXISTS (
           SELECT 1
           FROM conveyor_operational_plans cop

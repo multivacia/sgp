@@ -106,8 +106,28 @@ export function StepAnaliticoPanel({
             Planejado
           </p>
           <p className="mt-0.5 tabular-nums text-slate-100">
-            {formatMinutosHumanos(sa.apontamentos.planejadoMin)}
+            {sa.apontamentos.plannedSummaryLabel ??
+              formatMinutosHumanos(sa.apontamentos.planejadoMin)}
           </p>
+          {(sa.apontamentos.plannedQuantity ?? 1) > 1 ||
+          (sa.apontamentos.executedQuantityTotal ?? 0) > 0 ? (
+            <p className="mt-1 text-[10px] text-slate-500">
+              Executado: {sa.apontamentos.executedQuantityTotal ?? 0} un.
+              {(sa.apontamentos.remainingQuantity ?? 0) > 0
+                ? ` · Restante: ${sa.apontamentos.remainingQuantity} un.`
+                : null}
+              {sa.apontamentos.actualMinutesPerUnit != null ? (
+                <>
+                  {' '}
+                  · Média real:{' '}
+                  {formatMinutosHumanos(
+                    Math.round(sa.apontamentos.actualMinutesPerUnit),
+                  )}
+                  /un.
+                </>
+              ) : null}
+            </p>
+          ) : null}
         </div>
         <div className="rounded-lg bg-black/25 px-2.5 py-2 ring-1 ring-white/[0.05]">
           <p className="text-[9px] font-bold uppercase tracking-wider text-slate-500">

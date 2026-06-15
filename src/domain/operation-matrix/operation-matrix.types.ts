@@ -12,6 +12,7 @@ export type MatrixNodeApi = {
   level_depth: number
   is_active: boolean
   planned_minutes: number | null
+  planned_quantity?: number
   default_responsible_id: string | null
   team_ids: string[]
   required: boolean

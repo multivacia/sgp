@@ -29,6 +29,10 @@ export function getOperationalEventDisplayLabel(eventType: string): string {
       return 'Atividade pausada'
     case 'CONVEYOR_STEP_RESUMED':
       return 'Atividade retomada'
+    case 'CONVEYOR_RETURNED_TO_BACKLOG':
+      return 'Esteira retornada para backlog'
+    case 'CONVEYOR_RETURNED_TO_PLANNING':
+      return 'Esteira retornada para planejamento'
     case 'MANUAL_NOTE':
       return 'Observação operacional'
     default:

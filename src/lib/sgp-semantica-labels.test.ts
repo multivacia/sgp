@@ -10,10 +10,10 @@ import {
 
 describe('sgp-semantica-labels', () => {
   it('expõe rótulos para todos os enums usados na espinha dorsal', () => {
-    expect(labelBacklogStatus('em_producao')).toBe('Em produção')
+    expect(labelBacklogStatus('em_andamento')).toBe('Em andamento')
     expect(labelEsteiraStatusGeral('em_execucao')).toBe('Em execução')
     expect(labelAtividadeStatusDetalhe('em_execucao')).toBe('Em execução')
-    expect(BACKLOG_STATUS_LABELS.no_backlog.length).toBeGreaterThan(0)
+    expect(BACKLOG_STATUS_LABELS.em_elaboracao.length).toBeGreaterThan(0)
     expect(Object.keys(ESTEIRA_STATUS_GERAL_LABELS).length).toBe(4)
     expect(Object.keys(ATIVIDADE_STATUS_DETALHE_LABELS).length).toBe(6)
   })

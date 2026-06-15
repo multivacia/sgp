@@ -1,10 +1,7 @@
+import type { OperationalBucket } from '../../lib/backlog/operationalBuckets'
+
 /** Bucket operacional (mesma regra do painel de esteiras). */
-export type MyActivityOperationalBucket =
-  | 'no_backlog'
-  | 'em_revisao'
-  | 'em_andamento'
-  | 'em_atraso'
-  | 'concluidas'
+export type MyActivityOperationalBucket = OperationalBucket
 
 /** GET /api/v1/my-activities — item alinhado ao backend (`MyActivityItemApi`). */
 export type MyActivityRoleInStep = 'primary' | 'support'
@@ -23,6 +20,8 @@ export type MyActivityItem = {
   areaName: string
   roleInStep: MyActivityRoleInStep
   plannedMinutes: number | null
+  plannedQuantity: number
+  plannedTotalMinutes: number
   realizedMinutes: number | null
 }
 
@@ -50,6 +49,8 @@ export type TimeEntryCandidateItem = {
   roleInStep: MyActivityRoleInStep
   assignmentType: 'COLLABORATOR' | 'TEAM'
   plannedMinutes: number | null
+  plannedQuantity?: number
+  plannedTotalMinutes?: number
   realizedMinutes: number
   pendingMinutes: number
   isAssignedToMe: boolean
@@ -58,4 +59,6 @@ export type TimeEntryCandidateItem = {
   requiresOutOfSequenceJustification: boolean
   previousOpenCount: number
   previousOpenActivities: TimeEntryCandidatePreviousOpen[]
+  /** true quando o STEP pode ser concluído explicitamente. */
+  canCompleteStep?: boolean
 }

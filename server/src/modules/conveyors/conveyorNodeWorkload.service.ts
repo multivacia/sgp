@@ -1,5 +1,6 @@
 import type pg from 'pg'
 import { getOperationalBucketForConveyor } from '../../shared/operationalBucket.js'
+import { resolveActivityPlannedTotalMinutes } from '../../shared/activityOperationalQuantity.js'
 import { findConveyorById } from './conveyors.repository.js'
 import type { ConveyorNodeWorkloadApi } from './conveyorNodeWorkload.dto.js'
 import {
@@ -10,26 +11,27 @@ import {
 const NOTES =
   'Pendência de tempo compara o previsto estrutural do STEP com minutos apontados acumulados na base. Não identifica causa raiz. O indicador de pressão de atraso refere-se à esteira (bucket operacional), não ao STEP.'
 
-function plannedNum(p: number | null | undefined): number {
-  if (p == null || Number.isNaN(p)) return 0
-  return Math.max(0, p)
-}
-
-function pendingMinutes(
-  planned: number | null | undefined,
-  realized: number,
+function plannedTotalNum(
+  unitMinutes: number | null | undefined,
+  plannedQuantity: number,
 ): number {
-  return Math.max(0, plannedNum(planned) - Math.max(0, realized))
+  return resolveActivityPlannedTotalMinutes(unitMinutes, plannedQuantity)
 }
 
-function sortSteps<T extends { pendingMinutes: number; plannedMinutes: number | null }>(
+function pendingMinutes(plannedTotal: number, realized: number): number {
+  return Math.max(0, plannedTotal - Math.max(0, realized))
+}
+
+function sortSteps<
+  T extends { pendingMinutes: number; plannedTotalMinutes?: number; plannedMinutes: number | null },
+>(
   rows: T[],
 ): T[] {
   return [...rows].sort((a, b) => {
     if (b.pendingMinutes !== a.pendingMinutes) {
       return b.pendingMinutes - a.pendingMinutes
     }
-    return plannedNum(b.plannedMinutes) - plannedNum(a.plannedMinutes)
+    return (b.plannedTotalMinutes ?? 0) - (a.plannedTotalMinutes ?? 0)
   })
 }
 
@@ -47,7 +49,8 @@ export async function serviceGetConveyorNodeWorkload(
 
   const stepRowsRaw = hierarchy.map((h) => {
     const realized = realizedByStep.get(h.step_id) ?? 0
-    const planned = h.planned_minutes
+    const plannedUnit = h.planned_minutes
+    const plannedTotal = plannedTotalNum(plannedUnit, h.planned_quantity)
     const op = (h.operational_status ?? 'PENDING').trim() || 'PENDING'
     const isDone = op === 'COMPLETED'
     return {
@@ -59,9 +62,11 @@ export async function serviceGetConveyorNodeWorkload(
       stepName: h.step_name,
       operationalStatus: op,
       isOperationallyCompleted: isDone,
-      plannedMinutes: planned,
+      plannedMinutes: plannedUnit,
+      plannedQuantity: h.planned_quantity,
+      plannedTotalMinutes: plannedTotal,
       realizedMinutes: realized,
-      pendingMinutes: isDone ? 0 : pendingMinutes(planned, realized),
+      pendingMinutes: isDone ? 0 : pendingMinutes(plannedTotal, realized),
     }
   })
 
@@ -84,7 +89,7 @@ export async function serviceGetConveyorNodeWorkload(
   for (const s of stepRowsRaw) {
     const key = `${s.optionId}\0${s.areaId}`
     const cur = areaMap.get(key)
-    const p = plannedNum(s.plannedMinutes)
+    const p = plannedTotalNum(s.plannedMinutes, s.plannedQuantity)
     const r = s.realizedMinutes
     const pend = s.pendingMinutes
     if (!cur) {

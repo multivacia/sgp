@@ -39,6 +39,7 @@ import {
   fetchOperationalDashboard,
 } from '../../services/dashboard/dashboardApiService'
 import { getCollaboratorCapacityResolved } from '../../services/operationalCapacity.service'
+import { SHOW_ARGOS_HEALTH_UI } from '../../lib/argos/argosUiFlags'
 import { getConveyorHealthSummary } from '../../services/conveyors/conveyorsApiService'
 import { buildArgosDashboardSummary } from '../../domain/conveyors/conveyorHealthDashboard'
 import type { ConveyorHealthSummaryItem } from '../../domain/conveyors/conveyorHealth.types'
@@ -68,10 +69,12 @@ const ExecutiveDashboardCharts = lazy(() =>
 
 const BUCKET_ORDER: OperationalBucketKey[] = [
   'em_atraso',
-  'em_revisao',
-  'em_andamento',
-  'no_backlog',
-  'concluidas',
+  'aguardando_planejamento',
+  'em_planejamento',
+  'em_execucao',
+  'em_elaboracao',
+  'finalizadas',
+  'canceladas',
 ]
 
 type TabKey = 'operational' | 'executive'
@@ -282,6 +285,7 @@ export function DashboardPage() {
   }, [operational, canManageOperationalCapacity])
 
   useEffect(() => {
+    if (!SHOW_ARGOS_HEALTH_UI) return
     let cancelled = false
     setArgosSummaryLoading(true)
     setArgosSummaryError(null)
@@ -535,86 +539,88 @@ export function DashboardPage() {
               )}
           </section>
 
-          <section className="sgp-panel sgp-panel-hover">
-            <h2 className="font-heading text-sm font-bold uppercase tracking-[0.12em] text-slate-200">
-              ARGOS — Saúde das Esteiras
-            </h2>
-            {argosSummaryLoading ? (
-              <p className="mt-3 text-sm text-slate-500">Carregando resumo ARGOS…</p>
-            ) : argosSummaryError ? (
-              <p className="mt-3 text-sm text-slate-500">{argosSummaryError}</p>
-            ) : argosDashboardSummary.withAnalysis === 0 ? (
-              <p className="mt-3 text-sm text-slate-500">
-                Ainda não há análises ARGOS salvas.
-              </p>
-            ) : (
-              <>
-                <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-                  <KpiCard
-                    label="Esteiras analisadas"
-                    value={argosDashboardSummary.withAnalysis}
-                  />
-                  <KpiCard
-                    label="Alto/crítico risco"
-                    value={argosDashboardSummary.riskHighOrCritical}
-                  />
-                  <KpiCard
-                    label="Em atenção"
-                    value={argosDashboardSummary.healthAttention}
-                  />
-                  <KpiCard
-                    label="Score médio"
-                    value={
-                      argosDashboardSummary.averageScore == null
-                        ? '—'
-                        : argosDashboardSummary.averageScore
-                    }
-                  />
-                  <KpiCard
-                    label="Última análise"
-                    value={
-                      argosDashboardSummary.latestAnalysisAt
-                        ? new Date(argosDashboardSummary.latestAnalysisAt).toLocaleString('pt-BR')
-                        : '—'
-                    }
-                  />
-                </div>
+          {SHOW_ARGOS_HEALTH_UI ? (
+            <section className="sgp-panel sgp-panel-hover">
+              <h2 className="font-heading text-sm font-bold uppercase tracking-[0.12em] text-slate-200">
+                ARGOS — Saúde das Esteiras
+              </h2>
+              {argosSummaryLoading ? (
+                <p className="mt-3 text-sm text-slate-500">Carregando resumo ARGOS…</p>
+              ) : argosSummaryError ? (
+                <p className="mt-3 text-sm text-slate-500">{argosSummaryError}</p>
+              ) : argosDashboardSummary.withAnalysis === 0 ? (
+                <p className="mt-3 text-sm text-slate-500">
+                  Ainda não há análises ARGOS salvas.
+                </p>
+              ) : (
+                <>
+                  <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+                    <KpiCard
+                      label="Esteiras analisadas"
+                      value={argosDashboardSummary.withAnalysis}
+                    />
+                    <KpiCard
+                      label="Alto/crítico risco"
+                      value={argosDashboardSummary.riskHighOrCritical}
+                    />
+                    <KpiCard
+                      label="Em atenção"
+                      value={argosDashboardSummary.healthAttention}
+                    />
+                    <KpiCard
+                      label="Score médio"
+                      value={
+                        argosDashboardSummary.averageScore == null
+                          ? '—'
+                          : argosDashboardSummary.averageScore
+                      }
+                    />
+                    <KpiCard
+                      label="Última análise"
+                      value={
+                        argosDashboardSummary.latestAnalysisAt
+                          ? new Date(argosDashboardSummary.latestAnalysisAt).toLocaleString('pt-BR')
+                          : '—'
+                      }
+                    />
+                  </div>
 
-                <div className="mt-5">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">
-                    Esteiras que pedem atenção
-                  </p>
-                  <ul className="mt-2 space-y-2 text-sm">
-                    {argosDashboardSummary.topRiskItems.length === 0 ? (
-                      <li className="text-slate-500">Sem itens de atenção no momento.</li>
-                    ) : (
-                      argosDashboardSummary.topRiskItems.map((item) => (
-                        <li
-                          key={item.analysisId}
-                          className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-white/[0.06] bg-sgp-app-panel-deep/80 px-3 py-2"
-                        >
-                          <div className="text-xs text-slate-300">
-                            <span className="font-semibold text-slate-200">
-                              {item.conveyorId}
-                            </span>{' '}
-                            · saúde {item.healthStatus ?? '—'} · risco {item.riskLevel ?? '—'} ·
-                            score {item.score ?? '—'} ·{' '}
-                            {new Date(item.createdAt).toLocaleString('pt-BR')}
-                          </div>
-                          <a
-                            href={`/app/esteiras/${encodeURIComponent(item.conveyorId)}`}
-                            className="text-xs font-medium text-sgp-blue-bright hover:underline"
+                  <div className="mt-5">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">
+                      Esteiras que pedem atenção
+                    </p>
+                    <ul className="mt-2 space-y-2 text-sm">
+                      {argosDashboardSummary.topRiskItems.length === 0 ? (
+                        <li className="text-slate-500">Sem itens de atenção no momento.</li>
+                      ) : (
+                        argosDashboardSummary.topRiskItems.map((item) => (
+                          <li
+                            key={item.analysisId}
+                            className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-white/[0.06] bg-sgp-app-panel-deep/80 px-3 py-2"
                           >
-                            Consultar
-                          </a>
-                        </li>
-                      ))
-                    )}
-                  </ul>
-                </div>
-              </>
-            )}
-          </section>
+                            <div className="text-xs text-slate-300">
+                              <span className="font-semibold text-slate-200">
+                                {item.conveyorId}
+                              </span>{' '}
+                              · saúde {item.healthStatus ?? '—'} · risco {item.riskLevel ?? '—'} ·
+                              score {item.score ?? '—'} ·{' '}
+                              {new Date(item.createdAt).toLocaleString('pt-BR')}
+                            </div>
+                            <a
+                              href={`/app/esteiras/${encodeURIComponent(item.conveyorId)}`}
+                              className="text-xs font-medium text-sgp-blue-bright hover:underline"
+                            >
+                              Consultar
+                            </a>
+                          </li>
+                        ))
+                      )}
+                    </ul>
+                  </div>
+                </>
+              )}
+            </section>
+          ) : null}
 
           <section className="sgp-panel sgp-panel-hover">
             <h2 className="font-heading text-sm font-bold uppercase tracking-[0.12em] text-slate-200">
@@ -930,7 +936,7 @@ export function DashboardPage() {
               value={executive.totals.completedInWindow}
               hint={`Concluídas com data de conclusão nos últimos ${execDays} dias. Abre o backlog com o mesmo recorte numa nova aba.`}
               onDrillDown={() =>
-                openBacklogInNewTab('concluidas', { days: execDays })
+                openBacklogInNewTab('finalizadas', { days: execDays })
               }
               drillTitle={`Abre o backlog com concluídas dos últimos ${execDays} dias. Nova aba.`}
             />

@@ -13,6 +13,7 @@ import {
   type SgpToastVariant,
 } from '../../components/ui/SgpToast'
 import { formatHumanMinutes } from '../../lib/formatters'
+import { formatUnitAndTotalMinutes } from '../../domain/operational/activityOperationalQuantity'
 import {
   isBlockingSeverity,
   presentationPlan,
@@ -36,7 +37,7 @@ function bucketBadgeClass(bucket: MyActivityItem['operationalBucket']): string {
   if (bucket === 'em_atraso') {
     return 'border-rose-400/35 bg-rose-500/12 text-rose-100 ring-1 ring-rose-500/20'
   }
-  if (bucket === 'concluidas') {
+  if (bucket === 'finalizadas' || bucket === 'canceladas') {
     return 'border-emerald-400/25 bg-emerald-500/10 text-emerald-100/95 ring-1 ring-emerald-500/15'
   }
   return 'border-white/12 bg-white/[0.05] text-slate-300 ring-1 ring-white/[0.06]'
@@ -60,6 +61,7 @@ export function ApontamentoPage() {
   const [activity, setActivity] = useState<MyActivityItem | null>(null)
 
   const [minutosStr, setMinutosStr] = useState('30')
+  const [quantidadeStr, setQuantidadeStr] = useState('1')
   const [observacao, setObservacao] = useState('')
   const [toast, setToast] = useState<ToastState>(null)
   const [submitBanner, setSubmitBanner] = useState<string | null>(null)
@@ -112,6 +114,8 @@ export function ApontamentoPage() {
 
   const minutos = Number.parseInt(minutosStr, 10)
   const minutosValidos = Number.isInteger(minutos) && minutos >= 1
+  const quantidade = Number.parseInt(quantidadeStr, 10)
+  const quantidadeValida = Number.isInteger(quantidade) && quantidade >= 0
 
   const deadlineLine = useMemo(() => {
     if (!activity?.estimatedDeadline?.trim()) return null
@@ -137,7 +141,8 @@ export function ApontamentoPage() {
       !conveyorId ||
       !user ||
       submitting ||
-      !minutosValidos
+      !minutosValidos ||
+      !quantidadeValida
     ) {
       return
     }
@@ -151,6 +156,7 @@ export function ApontamentoPage() {
     try {
       await postConveyorStepTimeEntry(conveyorId, stepNodeId, {
         minutes: minutos,
+        executedQuantity: quantidade,
         notes: observacao.trim() || null,
         entryMode: 'manual',
       })
@@ -373,8 +379,8 @@ export function ApontamentoPage() {
           Planejado · realizado (seus apontamentos):{' '}
           <span className="font-semibold text-slate-300">
             {activity.plannedMinutes != null
-              ? `${formatHumanMinutes(activity.plannedMinutes)} planej. · `
-              : '— planej. · '}
+              ? `${formatUnitAndTotalMinutes(activity.plannedMinutes, activity.plannedQuantity, formatHumanMinutes)} · `
+              : '— · '}
             {activity.realizedMinutes != null
               ? `${formatHumanMinutes(activity.realizedMinutes)} realizado`
               : '— realizado'}
@@ -407,6 +413,29 @@ export function ApontamentoPage() {
 
         <div>
           <label
+            htmlFor="apont-qtd"
+            className="text-[10px] font-bold uppercase tracking-wider text-slate-500"
+          >
+            Quantidade executada
+          </label>
+          <input
+            id="apont-qtd"
+            type="number"
+            inputMode="numeric"
+            min={0}
+            value={quantidadeStr}
+            onChange={(e) => setQuantidadeStr(e.target.value)}
+            disabled={submitting}
+            className="sgp-input-app mt-2 max-w-[8rem] px-3 py-2.5 font-heading text-lg font-bold tabular-nums text-white"
+          />
+          <p className="mt-2 text-xs text-slate-600">
+            Informe quantas unidades foram concluídas neste apontamento (0 se trabalhou sem
+            concluir unidade).
+          </p>
+        </div>
+
+        <div>
+          <label
             htmlFor="apont-obs"
             className="text-[10px] font-bold uppercase tracking-wider text-slate-500"
           >
@@ -426,7 +455,7 @@ export function ApontamentoPage() {
         <div className="flex flex-wrap gap-3">
           <button
             type="button"
-            disabled={submitting || !minutosValidos}
+            disabled={submitting || !minutosValidos || !quantidadeValida}
             onClick={() => void handleRegistrar()}
             className="sgp-cta-primary !px-8 !py-3 text-sm disabled:opacity-45"
           >

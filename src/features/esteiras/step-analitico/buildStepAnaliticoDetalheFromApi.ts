@@ -3,6 +3,11 @@ import type {
   ConveyorStepTimeEntryListItem,
 } from '../../../domain/conveyors/conveyor-step-assignments.types'
 import {
+  buildActivityOperationalProgress,
+  formatPlannedQuantity,
+} from '../../../domain/operational/activityOperationalQuantity'
+import { formatHumanMinutes } from '../../../lib/formatters'
+import {
   computeStatusLeituraApontamento,
   type ApontamentoAnaliticoItem,
   type PapelResponsavelStep,
@@ -87,10 +92,20 @@ function buildHistoricoFromTimeEntries(
 }
 
 function buildResumo(
-  planejadoMin: number,
+  planejadoUnitMin: number,
+  plannedQuantity: number,
   timeEntries: ConveyorStepTimeEntryListItem[],
 ): ResumoApontamentosStep {
-  const totalMinutosApontados = timeEntries.reduce((s, x) => s + x.minutes, 0)
+  const progress = buildActivityOperationalProgress({
+    plannedUnitMinutes: planejadoUnitMin,
+    plannedQuantity,
+    timeEntries: timeEntries.map((x) => ({
+      minutes: x.minutes,
+      executedQuantity: x.executedQuantity,
+    })),
+  })
+  const planejadoMin = progress.plannedTotalMinutes
+  const totalMinutosApontados = progress.executedMinutesTotal
   const quantidadeLancamentos = timeEntries.length
   const ultimo = timeEntries.length
     ? [...timeEntries].sort(
@@ -105,6 +120,13 @@ function buildResumo(
   )
   return {
     planejadoMin,
+    planejadoUnitMin: progress.plannedUnitMinutes,
+    plannedQuantity: progress.plannedQuantity,
+    executedQuantityTotal: progress.executedQuantityTotal,
+    actualMinutesPerUnit: progress.actualMinutesPerUnit,
+    remainingQuantity: progress.remainingQuantity,
+    plannedQuantityLabel: formatPlannedQuantity(progress.plannedQuantity),
+    plannedSummaryLabel: `${formatPlannedQuantity(progress.plannedQuantity)} × ${formatHumanMinutes(progress.plannedUnitMinutes)}/un. = ${formatHumanMinutes(planejadoMin)}`,
     totalMinutosApontados,
     quantidadeLancamentos,
     ultimoApontamentoAt: ultimo?.entryAt,
@@ -119,6 +141,7 @@ export type BuildStepAnaliticoFromApiInput = {
   stepNodeId: string
   matrixActivityNodeId?: string
   planejadoMin: number
+  plannedQuantity?: number
   assignees: ConveyorStepAssigneeListItem[]
   timeEntries: ConveyorStepTimeEntryListItem[]
   cargaParcial?: boolean
@@ -135,6 +158,7 @@ export function buildStepAnaliticoDetalheFromApi(
     stepNodeId,
     matrixActivityNodeId,
     planejadoMin,
+    plannedQuantity = 1,
     assignees,
     timeEntries,
     cargaParcial,
@@ -145,7 +169,7 @@ export function buildStepAnaliticoDetalheFromApi(
     stepNodeId,
     matrixActivityNodeId,
     equipe: buildEquipeFromAssignees(assignees),
-    apontamentos: buildResumo(planejadoMin, timeEntries),
+    apontamentos: buildResumo(planejadoMin, plannedQuantity, timeEntries),
     historicoPreview: buildHistoricoFromTimeEntries(
       conveyorId,
       stepNodeId,

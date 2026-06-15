@@ -9,6 +9,7 @@ import type { MyWorkQueueItemApi, MyWorkQueueResponseApi } from './my-work-queue
 import {
   findPublishedWorkPlanForWeek,
   listMyWorkQueueRows,
+  type MyWorkQueueListOptions,
   type MyWorkQueueRawRow,
 } from './my-work-queue.repository.js'
 
@@ -62,38 +63,28 @@ export function groupWorkQueueItem(
   return 'today'
 }
 
-export async function serviceGetMyWorkQueue(
+/**
+ * Retorna a fila de trabalho para um collaboratorId já resolvido.
+ * Pode ser chamada diretamente pelo endpoint production (sem resolução via userId).
+ */
+export async function serviceGetWorkQueueForCollaborator(
   pool: pg.Pool,
   input: {
-    userId: string
+    collaboratorId: string
     date?: string | null
     includePastDue?: boolean
+    /** Filtros adicionais (ex.: Modo Produção — somente itens PLANNED da semana vigente). */
+    listOptions?: MyWorkQueueListOptions
   },
-): Promise<{
-  data: MyWorkQueueResponseApi
-  meta: { collaboratorId: string | null; unavailableReason: string | null }
-}> {
+): Promise<MyWorkQueueResponseApi> {
   const date = input.date?.trim() || todayIsoLocal()
   const includePastDue = input.includePastDue ?? true
-  const collaboratorId = await findCollaboratorIdByAppUserId(pool, input.userId)
-  if (!collaboratorId) {
-    return {
-      data: emptyResponse(date),
-      meta: {
-        collaboratorId: null,
-        unavailableReason:
-          'Operação indisponível: o seu utilizador não tem colaborador operacional vinculado (app_users.collaborator_id). Peça ao administrador de governança para associar o seu acesso a um colaborador.',
-      },
-    }
-  }
+  const { collaboratorId } = input
 
   const weekStartDate = mondayOfWeekContaining(date)
   const plan = await findPublishedWorkPlanForWeek(pool, weekStartDate)
   if (!plan) {
-    return {
-      data: emptyResponse(date),
-      meta: { collaboratorId, unavailableReason: null },
-    }
+    return emptyResponse(date)
   }
 
   const raw = await listMyWorkQueueRows(pool, {
@@ -101,6 +92,11 @@ export async function serviceGetMyWorkQueue(
     collaboratorId,
     date,
     includePastDue,
+    listOptions: {
+      weekStartDate: plan.weekStartDate,
+      weekEndDate: plan.weekEndDate,
+      ...input.listOptions,
+    },
   })
 
   const capacity = await serviceResolveCollaboratorDailyCapacity(pool, collaboratorId, date)
@@ -116,9 +112,9 @@ export async function serviceGetMyWorkQueue(
   const conveyorIds = [...new Set(raw.map((row) => row.conveyor_id))]
   const nodesByConveyor = new Map<string, SequenceAnalysisNode[]>()
   await Promise.all(
-    conveyorIds.map(async (conveyorId) => {
-      const nodes = await listConveyorNodesForSequenceAnalysis(pool, conveyorId)
-      nodesByConveyor.set(conveyorId, mapNodesForSequence(nodes))
+    conveyorIds.map(async (cid) => {
+      const nodes = await listConveyorNodesForSequenceAnalysis(pool, cid)
+      nodesByConveyor.set(cid, mapNodesForSequence(nodes))
     }),
   )
 
@@ -138,6 +134,7 @@ export async function serviceGetMyWorkQueue(
       status: row.status,
       group: groupWorkQueueItem(row, date),
       conveyorId: row.conveyor_id,
+      conveyorOperationalStatus: row.conveyor_operational_status,
       conveyorTitle: row.conveyor_title,
       clientName: row.client_name,
       vehicleDescription: row.vehicle_description,
@@ -171,12 +168,42 @@ export async function serviceGetMyWorkQueue(
   }
 
   return {
-    data: {
-      date,
-      planStatus: 'PUBLISHED',
-      summary,
-      items,
-    },
-    meta: { collaboratorId, unavailableReason: null },
+    date,
+    planStatus: 'PUBLISHED',
+    summary,
+    items,
   }
+}
+
+export async function serviceGetMyWorkQueue(
+  pool: pg.Pool,
+  input: {
+    userId: string
+    date?: string | null
+    includePastDue?: boolean
+  },
+): Promise<{
+  data: MyWorkQueueResponseApi
+  meta: { collaboratorId: string | null; unavailableReason: string | null }
+}> {
+  const date = input.date?.trim() || todayIsoLocal()
+  const collaboratorId = await findCollaboratorIdByAppUserId(pool, input.userId)
+  if (!collaboratorId) {
+    return {
+      data: emptyResponse(date),
+      meta: {
+        collaboratorId: null,
+        unavailableReason:
+          'Operação indisponível: o seu utilizador não tem colaborador operacional vinculado (app_users.collaborator_id). Peça ao administrador de governança para associar o seu acesso a um colaborador.',
+      },
+    }
+  }
+
+  const data = await serviceGetWorkQueueForCollaborator(pool, {
+    collaboratorId,
+    date: input.date,
+    includePastDue: input.includePastDue,
+  })
+
+  return { data, meta: { collaboratorId, unavailableReason: null } }
 }

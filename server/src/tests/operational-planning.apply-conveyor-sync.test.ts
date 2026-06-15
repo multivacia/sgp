@@ -6,7 +6,10 @@ import * as refreshSync from '../modules/conveyor-operational-plan/refreshConvey
 import * as repo from '../modules/operational-planning/operational-planning.repository.js'
 import * as planningService from '../modules/operational-planning/operational-planning.service.js'
 
-const pool = { connect: vi.fn() } as unknown as pg.Pool
+const pool = {
+  connect: vi.fn(),
+  query: vi.fn(async () => ({ rows: [] })),
+} as unknown as pg.Pool
 const copId = 'cop-item-1'
 const workItemId = 'wp-item-1'
 const planId = 'plan-1'

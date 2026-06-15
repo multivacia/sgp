@@ -209,6 +209,26 @@ export async function findCollaboratorIdByAppUserId(
   return r.rows[0]?.c ?? null
 }
 
+/** Primeiro app_user ativo vinculado ao colaborador (auditoria opcional no modo produção). */
+export async function findAppUserIdByCollaboratorId(
+  pool: pg.Pool,
+  collaboratorId: string,
+): Promise<string | null> {
+  const r = await pool.query<{ id: string }>(
+    `
+    SELECT id::text
+    FROM app_users
+    WHERE collaborator_id = $1::uuid
+      AND deleted_at IS NULL
+      AND is_active = true
+    ORDER BY created_at ASC
+    LIMIT 1
+    `,
+    [collaboratorId],
+  )
+  return r.rows[0]?.id ?? null
+}
+
 export async function findAppUserEmailById(
   pool: pg.Pool,
   userId: string,

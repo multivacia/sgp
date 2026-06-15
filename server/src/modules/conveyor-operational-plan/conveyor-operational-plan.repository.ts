@@ -57,7 +57,9 @@ export type StepForPlanItemRow = {
   conveyor_id: string
   node_type: string
   is_active: boolean
+  /** Tempo unitário (min/un.) no STEP. */
   planned_minutes: number | null
+  planned_quantity: number | null
   default_responsible_id: string | null
 }
 
@@ -535,6 +537,7 @@ export async function loadStepForPlanItem(
     node_type: string
     is_active: boolean
     planned_minutes: number | null
+    planned_quantity: number | null
     default_responsible_id: string | null
   }>(
     `
@@ -543,6 +546,7 @@ export async function loadStepForPlanItem(
       cn.node_type::text,
       cn.is_active,
       cn.planned_minutes,
+      cn.planned_quantity,
       cn.default_responsible_id::text
     FROM conveyor_nodes cn
     WHERE cn.id = $2::uuid
@@ -558,6 +562,7 @@ export async function loadStepForPlanItem(
     node_type: row.node_type,
     is_active: row.is_active,
     planned_minutes: row.planned_minutes,
+    planned_quantity: row.planned_quantity,
     default_responsible_id: row.default_responsible_id,
   }
 }
@@ -591,7 +596,9 @@ export type ConveyorPlanGenerationStepRow = {
   option_order_index: number
   area_order_index: number
   step_order_index: number
+  /** Tempo unitário (min/un.) no STEP. */
   planned_minutes: number | null
+  planned_quantity: number | null
   default_responsible_id: string | null
   collaborator_assignee_ids: string[]
   team_assignee_ids: string[]
@@ -610,6 +617,7 @@ export async function listConveyorStepsForPlanGeneration(
     area_order_index: number
     step_order_index: number
     planned_minutes: number | null
+    planned_quantity: number | null
     default_responsible_id: string | null
     collaborator_assignee_ids: string[] | null
     team_assignee_ids: string[] | null
@@ -648,6 +656,7 @@ export async function listConveyorStepsForPlanGeneration(
       area.order_index AS area_order_index,
       step.order_index AS step_order_index,
       step.planned_minutes,
+      step.planned_quantity,
       step.default_responsible_id::text,
       COALESCE(sc.collaborator_ids, ARRAY[]::text[]) AS collaborator_assignee_ids,
       COALESCE(st.team_ids, ARRAY[]::text[]) AS team_assignee_ids
@@ -688,6 +697,7 @@ export async function listConveyorStepsForPlanGeneration(
     area_order_index: row.area_order_index,
     step_order_index: row.step_order_index,
     planned_minutes: row.planned_minutes,
+    planned_quantity: row.planned_quantity,
     default_responsible_id: row.default_responsible_id,
     collaborator_assignee_ids: row.collaborator_assignee_ids ?? [],
     team_assignee_ids: row.team_assignee_ids ?? [],

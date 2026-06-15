@@ -7,6 +7,7 @@ import {
 import { insertAdminAuditEvent } from '../admin-audit/admin-audit.repository.js'
 import { AppError } from '../../shared/errors/AppError.js'
 import { ErrorCodes } from '../../shared/errors/errorCodes.js'
+import { normalizeExecutedQuantityInput } from '../../shared/activityOperationalQuantity.js'
 import {
   assigneeRowToCreated,
   assigneeListRowToDto,
@@ -34,7 +35,15 @@ import {
   type InsertConveyorTimeEntryRow,
 } from './conveyorAssignments.repository.js'
 import { findTeamById } from '../teams/teams.repository.js'
+import { findConveyorById, updateConveyorOperationalStatus } from './conveyors.repository.js'
+import {
+  canConveyorAcceptTimeEntry,
+  timeEntryBlockedMessage,
+} from './conveyorOperationalStatus.js'
 import { serviceAnalyzeConveyorActivitySequence } from './conveyorActivitySequence.service.js'
+import type { ConveyorActivitySequenceAnalysis } from './conveyorActivitySequence.service.js'
+import { completeConveyorStepOnClient } from './conveyor-step-operational.service.js'
+import type { ConveyorNodeStepOperationalStatusDb } from './stepOperationalStatus.js'
 import { serviceCreateConveyorOperationalEvent } from './operational-events/conveyor-operational-events.service.js'
 
 function isPgUniqueViolation(err: unknown): boolean {
@@ -230,6 +239,7 @@ export type CreateTimeEntryInput = {
   conveyorNodeAssigneeId?: string | null
   entryAt?: Date
   minutes: number
+  executedQuantity?: number | null
   notes?: string | null
   entryMode?: 'manual' | 'guided' | 'imported'
   metadataJson?: unknown | null
@@ -240,6 +250,12 @@ export type CreateTimeEntryInput = {
   outOfSequenceJustification?: string | null
   /** Para evento operacional opcional após insert. */
   actorAppUserId?: string | null
+  /** Avaliação subjetiva do colaborador sobre o estado atual da atividade (0-100). Kiosk only. */
+  sessionCompletionPct?: number | null
+  /** Colaborador indicou que a atividade está concluída. Kiosk only. */
+  markAsDone?: boolean
+  /** Análise de sequência prévia (evita releitura na transação). */
+  sequence?: ConveyorActivitySequenceAnalysis
 }
 
 export type CreateTimeEntryForAppUserInput = {
@@ -247,11 +263,13 @@ export type CreateTimeEntryForAppUserInput = {
   conveyorId: string
   conveyorNodeId: string
   minutes: number
+  executedQuantity?: number | null
   notes?: string | null
   exceptionJustification?: string
   outOfSequenceJustification?: string
   entryAt?: Date
   entryMode?: 'manual' | 'guided' | 'imported'
+  markAsDone?: boolean
 }
 
 export type CreateTimeEntryOnBehalfInput = {
@@ -261,6 +279,7 @@ export type CreateTimeEntryOnBehalfInput = {
   targetCollaboratorId: string
   entryAt?: Date
   minutes: number
+  executedQuantity?: number | null
   notes?: string | null
   reason: string
   outOfSequenceJustification?: string
@@ -339,10 +358,13 @@ export async function serviceCreateConveyorTimeEntryForAppUser(
       conveyorNodeAssigneeId: assigneeId,
       entryAt: input.entryAt,
       minutes: input.minutes,
+      executedQuantity: input.executedQuantity,
       notes: input.notes ?? null,
       entryMode: input.entryMode,
       entryOrigin: 'ASSIGNED',
       exceptionJustification: null,
+      markAsDone: input.markAsDone,
+      sequence: seq,
       ...commonSeq,
     })
   }
@@ -363,10 +385,13 @@ export async function serviceCreateConveyorTimeEntryForAppUser(
     conveyorNodeAssigneeId: null,
     entryAt: input.entryAt,
     minutes: input.minutes,
+    executedQuantity: input.executedQuantity,
     notes: input.notes ?? null,
     entryMode: input.entryMode,
     entryOrigin: 'UNASSIGNED_EXCEPTION',
     exceptionJustification: justification,
+    markAsDone: input.markAsDone,
+    sequence: seq,
     ...commonSeq,
   })
 }
@@ -378,6 +403,17 @@ export async function serviceCreateConveyorTimeEntry(
   if (input.minutes <= 0) {
     throw new AppError(
       'minutes deve ser maior que zero.',
+      422,
+      ErrorCodes.VALIDATION_ERROR,
+    )
+  }
+
+  let executedQuantityDb: number | null = null
+  try {
+    executedQuantityDb = normalizeExecutedQuantityInput(input.executedQuantity)
+  } catch {
+    throw new AppError(
+      'executedQuantity deve ser número inteiro >= 0.',
       422,
       ErrorCodes.VALIDATION_ERROR,
     )
@@ -397,6 +433,18 @@ export async function serviceCreateConveyorTimeEntry(
     input.conveyorId,
     input.conveyorNodeId,
   )
+
+  const conveyor = await findConveyorById(pool, input.conveyorId)
+  if (!conveyor) {
+    throw new AppError('Esteira não encontrada.', 404, ErrorCodes.NOT_FOUND)
+  }
+  if (!canConveyorAcceptTimeEntry(conveyor.operational_status)) {
+    throw new AppError(
+      timeEntryBlockedMessage(conveyor.operational_status),
+      422,
+      ErrorCodes.CONVEYOR_TIME_ENTRY_STATUS_NOT_ALLOWED,
+    )
+  }
 
   const stepOp = await findStepOperationalStatusByNodeId(pool, input.conveyorNodeId)
   const op = (stepOp ?? 'PENDING').trim() || 'PENDING'
@@ -451,6 +499,7 @@ export async function serviceCreateConveyorTimeEntry(
     conveyor_node_assignee_id: input.conveyorNodeAssigneeId ?? null,
     entry_at: input.entryAt ?? new Date(),
     minutes: input.minutes,
+    executed_quantity: executedQuantityDb,
     notes: input.notes ?? null,
     entry_mode: input.entryMode ?? 'manual',
     metadata_json: input.metadataJson ?? null,
@@ -458,11 +507,77 @@ export async function serviceCreateConveyorTimeEntry(
     exception_justification: exceptionJustification,
     is_out_of_sequence: isOos,
     out_of_sequence_justification: isOos ? oosJustDb : null,
+    session_completion_pct: typeof input.sessionCompletionPct === 'number' ? input.sessionCompletionPct : null,
+    mark_as_done: input.markAsDone ?? false,
   }
 
+  const shouldAutoStart =
+    conveyor.operational_status === 'A_INICIAR'
+
+  const markAsDone = input.markAsDone === true
+  const currentStatus = op as ConveyorNodeStepOperationalStatusDb
+  const seq =
+    input.sequence ??
+    (await serviceAnalyzeConveyorActivitySequence(
+      pool,
+      input.conveyorId,
+      input.conveyorNodeId,
+    ))
+
+  const client = await pool.connect()
   try {
-    await insertConveyorTimeEntry(pool, row)
+    await client.query('BEGIN')
+    await insertConveyorTimeEntry(client, row)
+    if (shouldAutoStart) {
+      await updateConveyorOperationalStatus(
+        client,
+        input.conveyorId,
+        'EM_ANDAMENTO',
+        'keep',
+      )
+    }
+
+    if (isOos && input.actorAppUserId) {
+      await serviceCreateConveyorOperationalEvent(client, {
+        conveyorId: input.conveyorId,
+        nodeId: input.conveyorNodeId,
+        eventType: 'CONVEYOR_STEP_OUT_OF_SEQUENCE_TIME_ENTRY',
+        previousValue: null,
+        newValue: 'OUT_OF_SEQUENCE_TIME_ENTRY',
+        reason: 'TIME_ENTRY_OUT_OF_SEQUENCE',
+        source: 'USER_ACTION',
+        occurredAt: new Date().toISOString(),
+        createdBy: input.actorAppUserId,
+        metadataJson: {
+          activityNodeId: input.conveyorNodeId,
+          timeEntryId: row.id,
+          justification: oosJustDb,
+          trigger: 'TIME_ENTRY',
+          markAsDone,
+        },
+        idempotencyKey: `oos_te:${row.id}`,
+      })
+    }
+
+    if (markAsDone) {
+      await completeConveyorStepOnClient(client, {
+        conveyorId: input.conveyorId,
+        stepNodeId: input.conveyorNodeId,
+        actorAppUserId: input.actorAppUserId ?? null,
+        outOfSequenceJustification: oosJustDb,
+        trigger: 'COMPLETE',
+        sequence: seq,
+        currentStatus,
+      })
+    }
+
+    await client.query('COMMIT')
   } catch (err) {
+    try {
+      await client.query('ROLLBACK')
+    } catch {
+      /* ignore */
+    }
     if (isPgCheckOrRaise(err)) {
       throw new AppError(
         err instanceof Error ? err.message : 'Regra de integridade violada.',
@@ -471,27 +586,8 @@ export async function serviceCreateConveyorTimeEntry(
       )
     }
     throw err
-  }
-
-  if (isOos && input.actorAppUserId) {
-    await serviceCreateConveyorOperationalEvent(pool, {
-      conveyorId: input.conveyorId,
-      nodeId: input.conveyorNodeId,
-      eventType: 'CONVEYOR_STEP_OUT_OF_SEQUENCE_TIME_ENTRY',
-      previousValue: null,
-      newValue: 'OUT_OF_SEQUENCE_TIME_ENTRY',
-      reason: 'TIME_ENTRY_OUT_OF_SEQUENCE',
-      source: 'USER_ACTION',
-      occurredAt: new Date().toISOString(),
-      createdBy: input.actorAppUserId,
-      metadataJson: {
-        activityNodeId: input.conveyorNodeId,
-        timeEntryId: row.id,
-        justification: oosJustDb,
-        trigger: 'TIME_ENTRY',
-      },
-      idempotencyKey: `oos_te:${row.id}`,
-    })
+  } finally {
+    client.release()
   }
 
   const created = await findConveyorTimeEntryById(pool, row.id)
@@ -596,6 +692,17 @@ export async function serviceCreateConveyorTimeEntryOnBehalf(
     isDelegated: true,
   }
 
+  let executedQuantityDb: number | null = null
+  try {
+    executedQuantityDb = normalizeExecutedQuantityInput(input.executedQuantity)
+  } catch {
+    throw new AppError(
+      'executedQuantity deve ser número inteiro >= 0.',
+      422,
+      ErrorCodes.VALIDATION_ERROR,
+    )
+  }
+
   const row: InsertConveyorTimeEntryRow = {
     id: newAssignmentId(),
     conveyor_id: input.conveyorId,
@@ -604,6 +711,7 @@ export async function serviceCreateConveyorTimeEntryOnBehalf(
     conveyor_node_assignee_id: assigneeId,
     entry_at: input.entryAt ?? new Date(),
     minutes: input.minutes,
+    executed_quantity: executedQuantityDb,
     notes: input.notes ?? null,
     entry_mode: 'manual',
     metadata_json: metadataJson,
@@ -611,6 +719,8 @@ export async function serviceCreateConveyorTimeEntryOnBehalf(
     exception_justification: null,
     is_out_of_sequence: seq.isOutOfSequence,
     out_of_sequence_justification: seq.isOutOfSequence ? outSeqJust : null,
+    session_completion_pct: null,
+    mark_as_done: false,
   }
 
   const client = await pool.connect()

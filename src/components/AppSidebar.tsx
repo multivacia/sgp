@@ -16,6 +16,8 @@ import {
   pathsWouldChangeForNavigation,
   useShellFunction,
 } from '../lib/shell/shell-function-context'
+import { SHOW_ARGOS_SIDEBAR_FAMILY } from '../lib/argos/argosUiFlags'
+import { BravoSidebarBrand } from './shell/BravoSidebarBrand'
 import { SgpMark } from './login/SgpMark'
 
 type Props = {
@@ -344,6 +346,7 @@ export function AppSidebar({ open, onClose, collapsed, onToggleCollapsed }: Prop
 
         {/* Marca — mobile: sempre expandido; desktop: expandido ou compacto */}
         <div className="relative shrink-0 px-4 pb-2 pt-2 md:px-5 md:pb-2 md:pt-0">
+          <BravoSidebarBrand rail={rail} />
           <div
             className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-sgp-gold/40 to-transparent"
             aria-hidden
@@ -366,17 +369,19 @@ export function AppSidebar({ open, onClose, collapsed, onToggleCollapsed }: Prop
                   <p className="mt-1.5 text-[11px] font-medium leading-relaxed text-slate-400">
                     Sistema de Gestão da Produção
                   </p>
-                  <div className="mt-3 border-t border-white/[0.07] pt-3">
-                    <div className="flex items-center gap-2.5">
-                      <span
-                        className="size-1.5 shrink-0 rounded-full bg-sgp-gold shadow-[0_0_8px_rgba(201,162,39,0.35)]"
-                        aria-hidden
-                      />
-                      <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-sgp-gold-warm/90">
-                        Família ARGOS
-                      </span>
+                  {SHOW_ARGOS_SIDEBAR_FAMILY ? (
+                    <div className="mt-3 border-t border-white/[0.07] pt-3">
+                      <div className="flex items-center gap-2.5">
+                        <span
+                          className="size-1.5 shrink-0 rounded-full bg-sgp-gold shadow-[0_0_8px_rgba(201,162,39,0.35)]"
+                          aria-hidden
+                        />
+                        <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-sgp-gold-warm/90">
+                          Família ARGOS
+                        </span>
+                      </div>
                     </div>
-                  </div>
+                  ) : null}
                 </div>
               </div>
             </div>
@@ -396,17 +401,19 @@ export function AppSidebar({ open, onClose, collapsed, onToggleCollapsed }: Prop
                   <p className="mt-1.5 text-[11px] font-medium leading-relaxed text-slate-400">
                     Sistema de Gestão da Produção
                   </p>
-                  <div className="mt-3 border-t border-white/[0.07] pt-3">
-                    <div className="flex items-center gap-2.5">
-                      <span
-                        className="size-1.5 shrink-0 rounded-full bg-sgp-gold shadow-[0_0_8px_rgba(201,162,39,0.35)]"
-                        aria-hidden
-                      />
-                      <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-sgp-gold-warm/90">
-                        Família ARGOS
-                      </span>
+                  {SHOW_ARGOS_SIDEBAR_FAMILY ? (
+                    <div className="mt-3 border-t border-white/[0.07] pt-3">
+                      <div className="flex items-center gap-2.5">
+                        <span
+                          className="size-1.5 shrink-0 rounded-full bg-sgp-gold shadow-[0_0_8px_rgba(201,162,39,0.35)]"
+                          aria-hidden
+                        />
+                        <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-sgp-gold-warm/90">
+                          Família ARGOS
+                        </span>
+                      </div>
                     </div>
-                  </div>
+                  ) : null}
                 </div>
               </div>
             </div>

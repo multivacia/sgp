@@ -25,15 +25,27 @@ describe('postTimeEntryBodySchema', () => {
     expect(() => postTimeEntryBodySchema.parse({ minutes: 0 })).toThrow()
   })
 
-  it('aceita exceptionJustification opcional', () => {
+  it('aceita executedQuantity >= 0', () => {
     expect(
-      postTimeEntryBodySchema.parse({
-        minutes: 20,
-        exceptionJustification: ' apoio ',
-      }),
-    ).toMatchObject({
-      minutes: 20,
-      exceptionJustification: 'apoio',
-    })
+      postTimeEntryBodySchema.parse({ minutes: 5, executedQuantity: 2 }),
+    ).toMatchObject({ executedQuantity: 2 })
+    expect(
+      postTimeEntryBodySchema.parse({ minutes: 5, executedQuantity: 0 }),
+    ).toMatchObject({ executedQuantity: 0 })
+  })
+
+  it('rejeita executedQuantity negativa', () => {
+    expect(() =>
+      postTimeEntryBodySchema.parse({ minutes: 5, executedQuantity: -1 }),
+    ).toThrow()
+  })
+
+  it('aceita markAsDone opcional', () => {
+    expect(
+      postTimeEntryBodySchema.parse({ minutes: 20, markAsDone: true }),
+    ).toMatchObject({ minutes: 20, markAsDone: true })
+    expect(
+      postTimeEntryBodySchema.parse({ minutes: 20 }),
+    ).toMatchObject({ minutes: 20, markAsDone: false })
   })
 })

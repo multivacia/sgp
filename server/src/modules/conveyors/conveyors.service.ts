@@ -1,8 +1,13 @@
 import { randomUUID } from 'node:crypto'
+import { DatabaseError } from 'pg'
 import type pg from 'pg'
 import { AppError } from '../../shared/errors/AppError.js'
 import { ErrorCodes } from '../../shared/errors/errorCodes.js'
 import { ErrorRefs } from '../../shared/errors/errorRefs.js'
+import {
+  resolveActivityPlannedTotalMinutes,
+  resolveInitialConveyorStepPlannedQuantity,
+} from '../../shared/activityOperationalQuantity.js'
 import { collaboratorExists } from '../operation-matrix/operation-matrix.repository.js'
 import { findTeamById } from '../teams/teams.repository.js'
 import type {
@@ -46,6 +51,17 @@ import {
   type ConveyorNodeAssigneeDetailRow,
 } from './conveyorAssignments.repository.js'
 import { collaboratorActiveForOperations } from './conveyorAssignments.service.js'
+import {
+  canTransitionConveyorStatus,
+  CONVEYOR_DELETE_HAS_TIME_ENTRIES_MESSAGE,
+  CONVEYOR_OPERATIONAL_STATUS_DEFAULT,
+  CONVEYOR_FINISH_REQUIRES_MANAGER_MESSAGE,
+  CONVEYOR_STRUCTURE_REPLACE_HAS_DEPENDENCIES_MESSAGE,
+  CONVEYOR_STRUCTURE_REPLACE_STATUS_MESSAGE,
+  isConveyorOperationalStatusDb,
+  mapLegacyConveyorOperationalStatus,
+  resolveCompletedAtMode,
+} from './conveyorOperationalStatus.js'
 import { serviceGetConveyorPendingMinutes } from './conveyorNodeWorkload.service.js'
 import {
   detectSyntheticSubtreeRollupInCreatePayload,
@@ -69,6 +85,20 @@ function normalizePriority(
 ): 'alta' | 'media' | 'baixa' {
   if (p === 'alta' || p === 'media' || p === 'baixa') return p
   return 'media'
+}
+
+function resolveOperationalStatusForPolicy(
+  status: string,
+): ConveyorOperationalStatusDb | null {
+  if (isConveyorOperationalStatusDb(status)) return status
+  return mapLegacyConveyorOperationalStatus(status)
+}
+
+function canReplaceConveyorStructure(status: string): boolean {
+  const normalized = resolveOperationalStatusForPolicy(status)
+  return (
+    normalized === 'EM_ELABORACAO' || normalized === 'AGUARDANDO_PLANEJAMENTO'
+  )
 }
 
 function assertUniqueOrderIndices(
@@ -107,7 +137,10 @@ function computeTotalsForOptions(options: PostConveyorBody['options']): {
       const steps = [...ar.steps].sort((a, b) => a.orderIndex - b.orderIndex)
       for (const st of steps) {
         totalSteps++
-        totalPlannedMinutes += st.plannedMinutes
+        totalPlannedMinutes += resolveActivityPlannedTotalMinutes(
+          st.plannedMinutes,
+          resolveInitialConveyorStepPlannedQuantity(),
+        )
       }
     }
   }
@@ -201,32 +234,11 @@ export function mapDetailRowToApi(
   }
 }
 
-/** Matriz v1 — transições permitidas (par origem|destino). */
-const ALLOWED_STATUS_TRANSITIONS = new Set<string>([
-  'NO_BACKLOG|EM_REVISAO',
-  'EM_REVISAO|PRONTA_LIBERAR',
-  'PRONTA_LIBERAR|EM_PRODUCAO',
-  'EM_PRODUCAO|CONCLUIDA',
-  'EM_REVISAO|NO_BACKLOG',
-  'PRONTA_LIBERAR|EM_REVISAO',
-  'CONCLUIDA|EM_PRODUCAO',
-  'CONCLUIDA|EM_REVISAO',
-])
-
 function isTransitionAllowed(
   from: ConveyorOperationalStatusDb,
   to: ConveyorOperationalStatusDb,
 ): boolean {
-  return ALLOWED_STATUS_TRANSITIONS.has(`${from}|${to}`)
-}
-
-function resolveCompletedAtMode(
-  current: ConveyorOperationalStatusDb,
-  next: ConveyorOperationalStatusDb,
-): CompletedAtUpdateMode {
-  if (next === 'CONCLUIDA') return 'now'
-  if (current === 'CONCLUIDA') return 'clear'
-  return 'keep'
+  return canTransitionConveyorStatus(from, to)
 }
 
 export function buildConveyorStructureFromNodes(
@@ -258,6 +270,7 @@ export function buildConveyorStructureFromNodes(
                 name: st.name,
                 orderIndex: st.order_index,
                 plannedMinutes: st.planned_minutes,
+                plannedQuantity: st.planned_quantity ?? 1,
                 assignees: [],
                 operationalStatus: op,
                 isCompleted: completed,
@@ -340,6 +353,7 @@ export async function servicePatchConveyorStatus(
   pool: pg.Pool,
   conveyorId: string,
   nextStatus: ConveyorOperationalStatusDb,
+  options?: { canEditStatus?: boolean },
 ): Promise<ConveyorDetailApi | null> {
   const row = await findConveyorById(pool, conveyorId)
   if (!row) return null
@@ -353,6 +367,17 @@ export async function servicePatchConveyorStatus(
     )
   }
 
+  if (
+    nextStatus === 'FINALIZADA' &&
+    options?.canEditStatus === false
+  ) {
+    throw new AppError(
+      CONVEYOR_FINISH_REQUIRES_MANAGER_MESSAGE,
+      403,
+      ErrorCodes.CONVEYOR_FINISH_REQUIRES_MANAGER,
+    )
+  }
+
   if (!isTransitionAllowed(row.operational_status, nextStatus)) {
     throw new AppError(
       `Não é permitido mudar de ${row.operational_status} para ${nextStatus}.`,
@@ -361,7 +386,7 @@ export async function servicePatchConveyorStatus(
     )
   }
 
-  const mode = resolveCompletedAtMode(row.operational_status, nextStatus)
+  const mode = resolveCompletedAtMode(row.operational_status, nextStatus) as CompletedAtUpdateMode
   const updated = await updateConveyorOperationalStatus(
     pool,
     conveyorId,
@@ -474,6 +499,7 @@ async function materializeConveyorOptions(
       level_depth: 0,
       is_active: true,
       planned_minutes: null,
+      planned_quantity: 1,
       default_responsible_id: null,
       required: true,
       source_key: null,
@@ -500,6 +526,7 @@ async function materializeConveyorOptions(
         level_depth: 1,
         is_active: true,
         planned_minutes: null,
+        planned_quantity: 1,
         default_responsible_id: null,
         required: true,
         source_key: null,
@@ -526,6 +553,7 @@ async function materializeConveyorOptions(
           level_depth: 2,
           is_active: true,
           planned_minutes: st.plannedMinutes,
+          planned_quantity: resolveInitialConveyorStepPlannedQuantity(),
           default_responsible_id: null,
           required: st.required ?? true,
           source_key: null,
@@ -676,7 +704,7 @@ export async function serviceCreateConveyor(
       total_steps: totals.totalSteps,
       total_planned_minutes: totals.totalPlannedMinutes,
       metadata_json,
-      operational_status: 'NO_BACKLOG',
+      operational_status: CONVEYOR_OPERATIONAL_STATUS_DEFAULT,
       completed_at: null,
     })
 
@@ -701,7 +729,7 @@ export async function serviceCreateConveyor(
       name: dados.nome.trim(),
       priority,
       originRegister: body.originType,
-      operationalStatus: 'NO_BACKLOG',
+      operationalStatus: CONVEYOR_OPERATIONAL_STATUS_DEFAULT,
       totals: {
         totalOptions: totals.totalOptions,
         totalAreas: totals.totalAreas,
@@ -838,12 +866,9 @@ export async function serviceReplaceConveyorStructure(
   const existing = await findConveyorById(pool, conveyorId)
   if (!existing) return null
 
-  if (
-    existing.operational_status !== 'NO_BACKLOG' &&
-    existing.operational_status !== 'EM_REVISAO'
-  ) {
+  if (!canReplaceConveyorStructure(existing.operational_status)) {
     throw new AppError(
-      'Substituição de estrutura só é permitida quando a esteira está no backlog ou em revisão.',
+      CONVEYOR_STRUCTURE_REPLACE_STATUS_MESSAGE,
       422,
       ErrorCodes.VALIDATION_ERROR,
     )
@@ -857,6 +882,9 @@ export async function serviceReplaceConveyorStructure(
       ErrorCodes.VALIDATION_ERROR,
     )
   }
+
+  const structureDeps = await findConveyorDeleteBlockingDeps(pool, conveyorId)
+  assertConveyorStructureReplaceNoBlockingDeps(structureDeps)
 
   revalidateStructureOptions(body.options)
   const assigneeTargets = collectAssigneeTargetsFromOptions(body.options)
@@ -930,7 +958,7 @@ export async function serviceReplaceConveyorStructure(
     } catch {
       /* ignore */
     }
-    throw err
+    rethrowStructureReplacePgError(err)
   } finally {
     client.release()
   }
@@ -942,19 +970,43 @@ export async function serviceReplaceConveyorStructure(
   return mapDetailRowToApi(row, structure)
 }
 
-const CONVEYOR_DELETE_STATUS_MESSAGE =
-  'Somente esteiras no backlog podem ser excluídas.'
+function rethrowStructureReplacePgError(err: unknown): never {
+  if (err instanceof DatabaseError && err.code === '23503') {
+    throw new AppError(
+      CONVEYOR_STRUCTURE_REPLACE_HAS_DEPENDENCIES_MESSAGE,
+      409,
+      ErrorCodes.CONVEYOR_STRUCTURE_REPLACE_HAS_DEPENDENCIES,
+    )
+  }
+  throw err
+}
+
+function assertConveyorStructureReplaceNoBlockingDeps(
+  deps: Awaited<ReturnType<typeof findConveyorDeleteBlockingDeps>>,
+): void {
+  if (
+    deps.hasOperationalWorkPlanItems ||
+    deps.hasConveyorOperationalPlanItems
+  ) {
+    throw new AppError(
+      CONVEYOR_STRUCTURE_REPLACE_HAS_DEPENDENCIES_MESSAGE,
+      409,
+      ErrorCodes.CONVEYOR_STRUCTURE_REPLACE_HAS_DEPENDENCIES,
+    )
+  }
+}
+
 const CONVEYOR_DELETE_DEPENDENCIES_MESSAGE =
   'Esta esteira já possui movimentações e não pode ser excluída.'
 
-function assertConveyorDeleteAllowedStatus(
-  operationalStatus: ConveyorOperationalStatusDb,
+function assertConveyorDeleteNoTimeEntries(
+  deps: Awaited<ReturnType<typeof findConveyorDeleteBlockingDeps>>,
 ): void {
-  if (operationalStatus !== 'NO_BACKLOG') {
+  if (deps.hasTimeEntries) {
     throw new AppError(
-      CONVEYOR_DELETE_STATUS_MESSAGE,
+      CONVEYOR_DELETE_HAS_TIME_ENTRIES_MESSAGE,
       409,
-      ErrorCodes.CONVEYOR_DELETE_STATUS_NOT_ALLOWED,
+      ErrorCodes.CONVEYOR_DELETE_HAS_TIME_ENTRIES,
     )
   }
 }
@@ -962,8 +1014,8 @@ function assertConveyorDeleteAllowedStatus(
 function assertConveyorDeleteNoBlockingDeps(
   deps: Awaited<ReturnType<typeof findConveyorDeleteBlockingDeps>>,
 ): void {
+  assertConveyorDeleteNoTimeEntries(deps)
   if (
-    deps.hasTimeEntries ||
     deps.hasOperationalWorkPlanItems ||
     deps.hasConveyorOperationalPlans ||
     deps.hasConveyorOperationalPlanItems
@@ -977,8 +1029,8 @@ function assertConveyorDeleteNoBlockingDeps(
 }
 
 /**
- * Exclusão física da esteira (somente NO_BACKLOG, sem deps operacionais bloqueantes).
- * RBAC: `conveyors.create` na rota. Evolução futura: `conveyors.delete`.
+ * Exclusão física da esteira (sem apontamentos nem deps operacionais bloqueantes).
+ * RBAC: `conveyors.create` na rota.
  */
 export async function serviceDeleteConveyor(
   pool: pg.Pool,
@@ -989,7 +1041,6 @@ export async function serviceDeleteConveyor(
     throw new AppError('Esteira não encontrada.', 404, ErrorCodes.NOT_FOUND)
   }
 
-  assertConveyorDeleteAllowedStatus(existing.operational_status)
   const deps = await findConveyorDeleteBlockingDeps(pool, conveyorId)
   assertConveyorDeleteNoBlockingDeps(deps)
 

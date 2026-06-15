@@ -23,6 +23,7 @@ export type NovaEsteiraRegisterStep = {
   titulo: string
   orderIndex: number
   plannedMinutes: number
+  plannedQuantity?: number
   sourceOrigin: string
   required: boolean
   defaultResponsibleId: string | null

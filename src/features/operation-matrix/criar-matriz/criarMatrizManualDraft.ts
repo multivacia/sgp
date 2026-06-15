@@ -2,8 +2,9 @@
 export type CriarMatrizManualEtapa = {
   id: string
   name: string
-  /** Minutos previstos; opcional no assistente. */
+  /** Minutos previstos por unidade; opcional no assistente. */
   plannedMinutes: number | null
+  plannedQuantity?: number
   /** Times operacionais associados (não substituem pessoas). */
   teamIds: string[]
   /**
@@ -52,6 +53,7 @@ export function newManualEtapa(id: string): CriarMatrizManualEtapa {
     id,
     name: 'Nova atividade',
     plannedMinutes: null,
+    plannedQuantity: 1,
     teamIds: [],
     collaboratorIds: [],
     primaryCollaboratorId: null,

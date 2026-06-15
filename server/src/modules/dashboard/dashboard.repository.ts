@@ -197,7 +197,7 @@ export async function countActiveConveyors(pool: pg.Pool): Promise<number> {
     SELECT COUNT(*)::text AS c
     FROM conveyors
     WHERE deleted_at IS NULL
-      AND operational_status IS DISTINCT FROM 'CONCLUIDA'
+      AND operational_status NOT IN ('FINALIZADA', 'CANCELADA')
     `,
   )
   return Number.parseInt(r.rows[0]?.c ?? '0', 10) || 0
@@ -212,7 +212,7 @@ export async function countCompletedInWindow(
     SELECT COUNT(*)::text AS c
     FROM conveyors
     WHERE deleted_at IS NULL
-      AND operational_status = 'CONCLUIDA'
+      AND operational_status = 'FINALIZADA'
       AND completed_at IS NOT NULL
       AND completed_at >= NOW() - ($1::int * INTERVAL '1 day')
     `,

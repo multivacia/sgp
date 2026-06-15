@@ -21,7 +21,6 @@ export function conveyorAssignmentsRouter(): Router {
   r.patch(
     '/conveyors/:conveyorId/steps/:stepNodeId/completion',
     requireAuth(),
-    requirePermission('conveyors.create'),
     asyncRoute(patchConveyorStepCompletion),
   )
   r.get(

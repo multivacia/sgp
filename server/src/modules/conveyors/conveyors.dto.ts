@@ -1,9 +1,11 @@
 export type ConveyorOperationalStatusApi =
-  | 'NO_BACKLOG'
-  | 'EM_REVISAO'
-  | 'PRONTA_LIBERAR'
-  | 'EM_PRODUCAO'
-  | 'CONCLUIDA'
+  | 'EM_ELABORACAO'
+  | 'AGUARDANDO_PLANEJAMENTO'
+  | 'EM_PLANEJAMENTO'
+  | 'A_INICIAR'
+  | 'EM_ANDAMENTO'
+  | 'FINALIZADA'
+  | 'CANCELADA'
 
 export type ConveyorCreatedApi = {
   id: string
@@ -59,6 +61,7 @@ export type ConveyorStructureStepApi = {
   name: string
   orderIndex: number
   plannedMinutes: number | null
+  plannedQuantity?: number
   assignees: ConveyorStructureStepAssigneeApi[]
   operationalStatus: ConveyorNodeStepOperationalStatusApi
   isCompleted: boolean

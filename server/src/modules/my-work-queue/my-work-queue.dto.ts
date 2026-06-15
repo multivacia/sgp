@@ -16,6 +16,7 @@ export type MyWorkQueueItemApi = {
   group: 'overdue' | 'today' | 'completed'
 
   conveyorId: string
+  conveyorOperationalStatus: string
   conveyorTitle: string
   clientName: string | null
   vehicleDescription: string | null

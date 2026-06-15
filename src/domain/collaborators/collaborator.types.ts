@@ -21,12 +21,20 @@ export type Collaborator = {
   updatedAt?: string
 }
 
+export type AdminCollaboratorProductionPin = {
+  hasCredential: boolean
+  enabled: boolean
+  mustChange: boolean
+  locked: boolean
+}
+
 /** Colaborador na governança (GET /admin/collaborators) — inclui soft delete e vínculo com utilizador. */
 export type AdminCollaborator = Collaborator & {
   deletedAt: string | null
   linkedUserId: string | null
   linkedUserEmail: string | null
   linkedUserDisplayName: string | null
+  productionPin?: AdminCollaboratorProductionPin | null
 }
 
 export type Sector = {

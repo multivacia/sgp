@@ -1,41 +1,34 @@
 /**
  * Categorias do Painel Operacional de Esteiras — uma por esteira (sem duplicar linhas).
- *
- * Regra de prioridade (primeira que aplicar):
- * 1. **concluidas** — `operational_status` da esteira = CONCLUIDA.
- * 2. **em_atraso** — não concluída, `estimatedDeadline` informado e interpretável,
- *    e data do prazo (dia civil local) **anterior** ao dia civil atual (local).
- *    Sem prazo válido → não entra em atraso por data (permanece no bucket de status).
- * 3. **no_backlog** — NO_BACKLOG.
- * 4. **em_revisao** — EM_REVISAO.
- * 5. **em_andamento** — PRONTA_LIBERAR ou EM_PRODUCAO (execução / fila de liberação sem atraso de prazo).
- *
- * Os cards e a coluna "Situação" da tabela usam este mesmo enquadramento.
- * Fonte: mesma coleção de linhas que alimenta a listagem (`BacklogRow` + prazo da esteira).
  */
 
 export type OperationalBucket =
-  | 'no_backlog'
-  | 'em_revisao'
-  | 'em_andamento'
+  | 'em_elaboracao'
+  | 'aguardando_planejamento'
+  | 'em_planejamento'
+  | 'em_execucao'
   | 'em_atraso'
-  | 'concluidas'
+  | 'finalizadas'
+  | 'canceladas'
 
 export type OperationalPanelKpis = {
-  noBacklog: number
-  emRevisao: number
-  emAndamento: number
+  emElaboracao: number
+  aguardandoPlanejamento: number
+  emPlanejamento: number
+  emExecucao: number
   emAtraso: number
-  concluidas: number
+  finalizadas: number
+  canceladas: number
 }
 
-/** Status operacional mapeado na UI (alinhado a `BacklogStatus` / API). */
 export type OperationalStatusUi =
-  | 'no_backlog'
-  | 'em_revisao'
-  | 'pronta_liberar'
-  | 'em_producao'
-  | 'concluida'
+  | 'em_elaboracao'
+  | 'aguardando_planejamento'
+  | 'em_planejamento'
+  | 'a_iniciar'
+  | 'em_andamento'
+  | 'finalizada'
+  | 'cancelada'
 
 export type RowForOperationalBucket = {
   status: OperationalStatusUi
@@ -48,7 +41,6 @@ function startOfLocalDay(d: Date): Date {
   return x
 }
 
-/** Interpreta prazo livre (ISO ou dd/mm/aaaa) para comparação de calendário. */
 export function parseFlexibleDeadlineToDate(
   value: string | null | undefined,
 ): Date | null {
@@ -71,7 +63,7 @@ export function isEsteiraOverdueVersusToday(
   row: Pick<RowForOperationalBucket, 'status' | 'estimatedDeadline'>,
   now: Date = new Date(),
 ): boolean {
-  if (row.status === 'concluida') return false
+  if (row.status === 'finalizada' || row.status === 'cancelada') return false
   const dl = parseFlexibleDeadlineToDate(row.estimatedDeadline ?? undefined)
   if (dl === null) return false
   const today = startOfLocalDay(now)
@@ -83,64 +75,68 @@ export function getOperationalBucket(
   row: RowForOperationalBucket,
   now: Date = new Date(),
 ): OperationalBucket {
-  if (row.status === 'concluida') return 'concluidas'
+  if (row.status === 'finalizada') return 'finalizadas'
+  if (row.status === 'cancelada') return 'canceladas'
   if (isEsteiraOverdueVersusToday(row, now)) return 'em_atraso'
-  if (row.status === 'no_backlog') return 'no_backlog'
-  if (row.status === 'em_revisao') return 'em_revisao'
-  if (row.status === 'pronta_liberar' || row.status === 'em_producao') {
-    return 'em_andamento'
+  if (row.status === 'em_elaboracao') return 'em_elaboracao'
+  if (row.status === 'aguardando_planejamento') return 'aguardando_planejamento'
+  if (row.status === 'em_planejamento') return 'em_planejamento'
+  if (row.status === 'a_iniciar' || row.status === 'em_andamento') {
+    return 'em_execucao'
   }
-  return 'em_andamento'
+  return 'em_execucao'
 }
 
-/** KPIs = mesma regra de `getOperationalBucket`, sobre o conjunto de linhas passado (ex.: todas as esteiras carregadas). */
 export function computeOperationalPanelKpis(
   rows: RowForOperationalBucket[],
   now: Date = new Date(),
 ): OperationalPanelKpis {
   const z = {
-    noBacklog: 0,
-    emRevisao: 0,
-    emAndamento: 0,
+    emElaboracao: 0,
+    aguardandoPlanejamento: 0,
+    emPlanejamento: 0,
+    emExecucao: 0,
     emAtraso: 0,
-    concluidas: 0,
+    finalizadas: 0,
+    canceladas: 0,
   }
   for (const r of rows) {
     const b = getOperationalBucket(r, now)
-    if (b === 'no_backlog') z.noBacklog += 1
-    else if (b === 'em_revisao') z.emRevisao += 1
-    else if (b === 'em_andamento') z.emAndamento += 1
+    if (b === 'em_elaboracao') z.emElaboracao += 1
+    else if (b === 'aguardando_planejamento') z.aguardandoPlanejamento += 1
+    else if (b === 'em_planejamento') z.emPlanejamento += 1
+    else if (b === 'em_execucao') z.emExecucao += 1
     else if (b === 'em_atraso') z.emAtraso += 1
-    else z.concluidas += 1
+    else if (b === 'finalizadas') z.finalizadas += 1
+    else z.canceladas += 1
   }
   return z
 }
 
 export const OPERATIONAL_BUCKET_LABELS: Record<OperationalBucket, string> = {
-  no_backlog: 'No backlog',
-  em_revisao: 'Em revisão',
-  em_andamento: 'Em andamento',
+  em_elaboracao: 'Rascunho / Em elaboração',
+  aguardando_planejamento: 'Aguardando planejamento',
+  em_planejamento: 'Em planejamento',
+  em_execucao: 'Em execução',
   em_atraso: 'Em atraso',
-  concluidas: 'Concluídas',
+  finalizadas: 'Finalizadas',
+  canceladas: 'Canceladas',
 }
 
-/**
- * Valores aceites em `?situacao=` no painel (`/app/backlog`).
- * Para “ativas” (não concluídas), o produto prefere `?scope=ativas`; `situacao=ativas` permanece legado.
- */
 export const OPERATIONAL_SITUACAO_QUERY_VALUES: readonly OperationalBucket[] = [
-  'no_backlog',
-  'em_revisao',
-  'em_andamento',
+  'em_elaboracao',
+  'aguardando_planejamento',
+  'em_planejamento',
+  'em_execucao',
   'em_atraso',
-  'concluidas',
+  'finalizadas',
+  'canceladas',
 ]
 
 export function isOperationalBucketKey(s: string): s is OperationalBucket {
   return (OPERATIONAL_SITUACAO_QUERY_VALUES as readonly string[]).includes(s)
 }
 
-/** Inclui buckets oficiais + `ativas` (não concluídas), usado em `?situacao=` do backlog. */
 export type BacklogSituacaoQuery = OperationalBucket | 'ativas'
 
 export function isBacklogSituacaoParam(s: string): s is BacklogSituacaoQuery {

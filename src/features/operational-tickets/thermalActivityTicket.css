@@ -1,4 +1,4 @@
-/* Impressão térmica 80mm — ajuste --thermal-ticket-width para 76mm/72mm se o driver cortar laterais */
+/* Impressao termica 80mm -- ajuste --thermal-ticket-width no host */
 .thermal-ticket-print-host {
   --thermal-ticket-width: 80mm;
 }
@@ -17,45 +17,65 @@
 }
 
 @media print {
+  /*
+   * Uma pagina por ticket: altura auto evita folhas em branco de min-height fixo.
+   * O host fica direto no body (portal) com display:none no restante da UI.
+   */
   @page {
     size: 80mm auto;
     margin: 0;
   }
 
+  html,
   body {
-    margin: 0;
-    padding: 0;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: var(--thermal-ticket-width, 80mm) !important;
+    height: auto !important;
+    overflow: visible !important;
+    background: #fff !important;
   }
 
-  body * {
-    visibility: hidden;
+  body.thermal-ticket-print-active > *:not(.thermal-ticket-print-host) {
+    display: none !important;
   }
 
-  .thermal-ticket-print-root,
-  .thermal-ticket-print-root * {
-    visibility: visible;
+  body.thermal-ticket-print-active .thermal-ticket-print-host {
+    display: block !important;
+    position: static !important;
+    left: auto !important;
+    top: auto !important;
+    width: var(--thermal-ticket-width, 80mm) !important;
+    height: auto !important;
+    overflow: visible !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+    visibility: visible !important;
   }
 
-  .thermal-ticket-print-host {
-    position: static;
-    left: auto;
-    top: auto;
-    width: auto;
-    height: auto;
-    overflow: visible;
-    opacity: 1;
-    pointer-events: auto;
+  body.thermal-ticket-print-active .thermal-ticket-print-host * {
+    visibility: visible !important;
   }
 
   .thermal-ticket-print-root {
-    position: absolute;
-    left: 0;
-    top: 0;
+    position: static !important;
+    display: block !important;
     width: var(--thermal-ticket-width, 80mm);
   }
 
-  .thermal-ticket-page {
+  .thermal-ticket-sheet {
+    display: block;
     width: var(--thermal-ticket-width, 80mm);
+    box-sizing: border-box;
+    overflow: visible;
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  .thermal-ticket-page,
+  .thermal-ticket {
+    display: block;
+    width: 100%;
     box-sizing: border-box;
     padding: 4mm;
     font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono',
@@ -64,17 +84,28 @@
     line-height: 1.25;
     color: #000;
     background: #fff;
-    page-break-after: always;
-    break-after: page;
+    page-break-inside: avoid;
+    break-inside: avoid;
   }
 
-  .thermal-ticket-page:last-child {
-    page-break-after: auto;
-    break-after: auto;
+  .thermal-ticket-group-header {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+    padding: 3mm 4mm 0;
+    page-break-inside: avoid;
+    break-inside: avoid;
+    page-break-after: avoid;
+    break-after: avoid;
+  }
+
+  .thermal-ticket-group-header-label {
+    color: #000;
   }
 }
 
-.thermal-ticket-page {
+.thermal-ticket-page,
+.thermal-ticket {
   width: var(--thermal-ticket-width, 80mm);
   max-width: 100%;
   box-sizing: border-box;
@@ -119,4 +150,19 @@
   font-weight: 700;
   text-align: center;
   margin-top: 8px;
+}
+
+.thermal-ticket-group-header {
+  width: var(--thermal-ticket-width, 80mm);
+  box-sizing: border-box;
+  padding: 3mm 4mm 0;
+}
+
+.thermal-ticket-group-header-label {
+  margin: 4px 0;
+  font-weight: 700;
+  font-size: 11px;
+  text-align: center;
+  letter-spacing: 0.04em;
+  word-break: break-word;
 }

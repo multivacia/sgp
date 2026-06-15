@@ -1,6 +1,7 @@
 import type pg from 'pg'
 import { AppError } from '../../shared/errors/AppError.js'
 import { ErrorCodes } from '../../shared/errors/errorCodes.js'
+import { resolveActivityPlannedTotalMinutes } from '../../shared/activityOperationalQuantity.js'
 import { findConveyorById } from '../conveyors/conveyors.repository.js'
 import type {
   ConveyorOperationalPlanGetApi,
@@ -35,6 +36,7 @@ import {
   insertPlan,
   insertPlanItem,
   listConveyorStepsForPlanGeneration,
+  type ConveyorPlanGenerationStepRow,
   listEnrichedItemsForPlan,
   loadStepForPlanItem,
   loadStepTeamIdsByActivityIds,
@@ -48,7 +50,11 @@ import {
   type PlanItemPatchRow,
 } from './conveyor-operational-plan.repository.js'
 
-const ALLOWED_CONVEYOR_STATUSES_FOR_PLAN = new Set(['PRONTA_LIBERAR', 'EM_PRODUCAO'])
+const ALLOWED_CONVEYOR_STATUSES_FOR_PLAN = new Set([
+  'EM_PLANEJAMENTO',
+  'A_INICIAR',
+  'EM_ANDAMENTO',
+])
 
 function mapPlanRowToApi(row: ConveyorOperationalPlanRow): ConveyorOperationalPlanApi {
   return {
@@ -216,6 +222,33 @@ function assertPlanDraft(plan: ConveyorOperationalPlanRow): void {
   }
 }
 
+/**
+ * Carga planejada do item do plano da esteira (`conveyor_operational_plan_items.planned_minutes`)
+ * = tempo total (min/un. × qtd do STEP). O STEP mantém `planned_minutes` unitário.
+ */
+function stepPlannedTotalMinutesForPlanItem(step: {
+  planned_minutes: number | null
+  planned_quantity: number | null
+}): number {
+  return resolveActivityPlannedTotalMinutes(step.planned_minutes, step.planned_quantity)
+}
+
+function mapConveyorPlanGenerationStepInput(row: ConveyorPlanGenerationStepRow) {
+  return {
+    activityNodeId: row.activity_node_id,
+    taskName: row.task_name,
+    areaName: row.area_name,
+    activityName: row.activity_name,
+    optionOrderIndex: row.option_order_index,
+    areaOrderIndex: row.area_order_index,
+    stepOrderIndex: row.step_order_index,
+    plannedMinutes: stepPlannedTotalMinutesForPlanItem(row),
+    defaultResponsibleId: row.default_responsible_id,
+    collaboratorAssigneeIds: row.collaborator_assignee_ids,
+    teamAssigneeIds: row.team_assignee_ids,
+  }
+}
+
 async function validateStepForItem(
   pool: pg.Pool,
   conveyorId: string,
@@ -236,7 +269,7 @@ async function validateStepForItem(
     throw new AppError('Atividade inativa não pode compor o plano.', 400, ErrorCodes.VALIDATION_ERROR)
   }
   return {
-    plannedMinutes: step.planned_minutes,
+    plannedMinutes: stepPlannedTotalMinutesForPlanItem(step),
     defaultResponsibleId: step.default_responsible_id,
   }
 }
@@ -546,19 +579,7 @@ async function buildGenerationPreviewForPlan(
 
   const stepRows = await listConveyorStepsForPlanGeneration(pool, conveyorId)
   const generated = buildConveyorOperationalPlanGeneratedItems({
-    steps: stepRows.map((row) => ({
-      activityNodeId: row.activity_node_id,
-      taskName: row.task_name,
-      areaName: row.area_name,
-      activityName: row.activity_name,
-      optionOrderIndex: row.option_order_index,
-      areaOrderIndex: row.area_order_index,
-      stepOrderIndex: row.step_order_index,
-      plannedMinutes: row.planned_minutes,
-      defaultResponsibleId: row.default_responsible_id,
-      collaboratorAssigneeIds: row.collaborator_assignee_ids,
-      teamAssigneeIds: row.team_assignee_ids,
-    })),
+    steps: stepRows.map(mapConveyorPlanGenerationStepInput),
     plannedStartDate,
     dailyCapacityMinutes,
   })
@@ -624,19 +645,7 @@ export async function serviceGenerateConveyorOperationalPlanItems(
 
   const stepRows = await listConveyorStepsForPlanGeneration(pool, conveyorId)
   const generated = buildConveyorOperationalPlanGeneratedItems({
-    steps: stepRows.map((row) => ({
-      activityNodeId: row.activity_node_id,
-      taskName: row.task_name,
-      areaName: row.area_name,
-      activityName: row.activity_name,
-      optionOrderIndex: row.option_order_index,
-      areaOrderIndex: row.area_order_index,
-      stepOrderIndex: row.step_order_index,
-      plannedMinutes: row.planned_minutes,
-      defaultResponsibleId: row.default_responsible_id,
-      collaboratorAssigneeIds: row.collaborator_assignee_ids,
-      teamAssigneeIds: row.team_assignee_ids,
-    })),
+    steps: stepRows.map(mapConveyorPlanGenerationStepInput),
     plannedStartDate: body.plannedStartDate,
     dailyCapacityMinutes,
   })

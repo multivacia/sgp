@@ -23,6 +23,7 @@ import { OperationMatrixEditorPage } from '../features/operation-matrix/Operatio
 import { OperationMatrixPreviewPage } from '../features/operation-matrix/OperationMatrixPreviewPage'
 import { DashboardPage } from '../features/gestor/DashboardPage'
 import { OperationalPlanningPage } from '../features/operational-planning/OperationalPlanningPage'
+import { ConveyorProgressPage } from '../features/conveyor-progress/ConveyorProgressPage'
 import { ApontamentoGestorPage } from '../features/gestor/ApontamentoGestorPage'
 import { MinhasAtividadesPage } from '../features/colaborador/MinhasAtividadesPage'
 import { ApontamentoPage } from '../features/colaborador/ApontamentoPage'
@@ -40,12 +41,16 @@ import {
 } from '../lib/permissions/permissionCodes'
 import { RequireAnyPermission, RequirePermission } from './RequirePermission'
 import { RootRedirect } from './RootRedirect'
+import { ProductionRoutes } from './ProductionRoutes'
+import { KioskRoutes } from './KioskRoutes'
 
 export function AppRoutes() {
   return (
     <Routes>
       <Route path="/" element={<RootRedirect />} />
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/app/producao/*" element={<ProductionRoutes />} />
+      <Route path="/app/kiosk/*" element={<KioskRoutes />} />
 
       <Route element={<RequireAuth />}>
         <Route path="/app/alterar-senha" element={<ChangePasswordPage />} />
@@ -93,6 +98,14 @@ export function AppRoutes() {
               element={
                 <RequirePermission permission="conveyors.create">
                   <OperationalPlanningPage />
+                </RequirePermission>
+              }
+            />
+            <Route
+              path="gestao/evolucao-esteiras"
+              element={
+                <RequirePermission permission="conveyors.create">
+                  <ConveyorProgressPage />
                 </RequirePermission>
               }
             />

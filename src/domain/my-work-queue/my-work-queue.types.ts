@@ -17,6 +17,7 @@ export type MyWorkQueueItem = {
   status: string
   group: MyWorkQueueItemGroup
   conveyorId: string
+  conveyorOperationalStatus: string
   conveyorTitle: string
   clientName: string | null
   vehicleDescription: string | null

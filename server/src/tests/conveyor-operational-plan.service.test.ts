@@ -96,7 +96,7 @@ describe('serviceGetConveyorOperationalPlan', () => {
 
   it('returns null when no active plan', async () => {
     mockDefaultDailyCapacity(480)
-    mockConveyor('EM_PRODUCAO')
+    mockConveyor('EM_ANDAMENTO')
     vi.spyOn(planRepo, 'findActivePlanByConveyorId').mockResolvedValue(null)
     const out = await serviceGetConveyorOperationalPlan(pool, CONVEYOR_ID)
     expect(out).toBeNull()
@@ -104,7 +104,7 @@ describe('serviceGetConveyorOperationalPlan', () => {
 
   it('returns dailyCapacityMinutes from operational settings on GET', async () => {
     mockDefaultDailyCapacity(540)
-    mockConveyor('EM_PRODUCAO')
+    mockConveyor('EM_ANDAMENTO')
     vi.spyOn(planRepo, 'findActivePlanByConveyorId').mockResolvedValue(draftPlan())
     vi.spyOn(planRepo, 'listEnrichedItemsForPlan').mockResolvedValue([
       sampleItemRow({ planned_minutes: 500 }),
@@ -122,7 +122,7 @@ describe('serviceCreateConveyorOperationalPlan', () => {
 
   it('creates DRAFT plan', async () => {
     mockDefaultDailyCapacity(480)
-    mockConveyor('PRONTA_LIBERAR')
+    mockConveyor('A_INICIAR')
     vi.spyOn(planRepo, 'findActivePlanByConveyorId').mockResolvedValue(null)
     const connect = vi.fn().mockReturnValue({
       query: vi.fn().mockResolvedValue({ rows: [] }),
@@ -139,7 +139,7 @@ describe('serviceCreateConveyorOperationalPlan', () => {
   })
 
   it('returns 409 when active plan exists', async () => {
-    mockConveyor('EM_PRODUCAO')
+    mockConveyor('EM_ANDAMENTO')
     vi.spyOn(planRepo, 'findActivePlanByConveyorId').mockResolvedValue(draftPlan())
     await expect(
       serviceCreateConveyorOperationalPlan(pool, CONVEYOR_ID, {}),
@@ -791,7 +791,7 @@ describe('servicePreviewConveyorOperationalPlanGeneration', () => {
   })
 
   it('returns preview without persisting', async () => {
-    mockConveyor('EM_PRODUCAO')
+    mockConveyor('EM_ANDAMENTO')
     vi.spyOn(planRepo, 'findPlanById').mockResolvedValue(draftPlan())
     vi.spyOn(planRepo, 'listConveyorStepsForPlanGeneration').mockResolvedValue([stepRow()])
     vi.spyOn(planRepo, 'listEnrichedItemsForPlan').mockResolvedValue([])
@@ -811,7 +811,7 @@ describe('servicePreviewConveyorOperationalPlanGeneration', () => {
   })
 
   it('blocks preview when plan is not DRAFT', async () => {
-    mockConveyor('EM_PRODUCAO')
+    mockConveyor('EM_ANDAMENTO')
     vi.spyOn(planRepo, 'findPlanById').mockResolvedValue({ ...draftPlan(), status: 'APPROVED' })
     await expect(
       servicePreviewConveyorOperationalPlanGeneration(pool, CONVEYOR_ID, PLAN_ID, {

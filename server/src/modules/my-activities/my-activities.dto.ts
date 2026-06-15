@@ -26,6 +26,8 @@ export type TimeEntryCandidateItemApi = {
   roleInStep: 'primary' | 'support'
   assignmentType: 'COLLABORATOR' | 'TEAM'
   plannedMinutes: number | null
+  plannedQuantity?: number
+  plannedTotalMinutes?: number
   realizedMinutes: number
   pendingMinutes: number
   isAssignedToMe: boolean
@@ -36,6 +38,8 @@ export type TimeEntryCandidateItemApi = {
   requiresOutOfSequenceJustification: boolean
   previousOpenCount: number
   previousOpenActivities: TimeEntryCandidatePreviousOpenApi[]
+  /** true quando o STEP pode ser concluído explicitamente (não está COMPLETED). */
+  canCompleteStep: boolean
 }
 
 /** Item de GET /api/v1/my-activities — alocação real em STEP + contexto da esteira. */
@@ -58,6 +62,8 @@ export type MyActivityItemApi = {
   areaName: string
   roleInStep: 'primary' | 'support'
   plannedMinutes: number | null
+  plannedQuantity?: number
+  plannedTotalMinutes?: number
   /** Soma real em `conveyor_time_entries` para este STEP + colaborador; `null` se ainda não houver apontamentos. */
   realizedMinutes: number | null
 }

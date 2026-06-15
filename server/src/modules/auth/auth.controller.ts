@@ -11,6 +11,7 @@ import { signSessionToken } from './auth.jwt.js'
 import { defaultSessionActivityAtLogin } from './session-timeout.service.js'
 import { buildSessionIdlePolicy } from './session-idle-policy.service.js'
 import { serviceChangePassword, serviceGetMe, serviceLogin } from './auth.service.js'
+import { findPasswordStampForSessionAuth } from './auth.repository.js'
 
 function getEnv(req: Request): Env {
   return req.app.locals.env as Env
@@ -86,9 +87,10 @@ export async function postChangePassword(
     body.currentPassword,
     body.newPassword,
   )
+  const stamp = await findPasswordStampForSessionAuth(pool, user.userId)
   const pwdStampMs =
-    user.passwordChangedAt != null
-      ? Date.parse(user.passwordChangedAt)
+    stamp.found && stamp.passwordChangedAt != null
+      ? stamp.passwordChangedAt.getTime()
       : 0
   const token = signSessionToken(
     user.userId,

@@ -19,3 +19,14 @@ export function isSupportTicketsEnabled(): boolean {
   const raw = import.meta.env.VITE_SUPPORT_TICKETS_ENABLED?.trim().toLowerCase()
   return raw === '1' || raw === 'true' || raw === 'yes' || raw === 'on'
 }
+
+/**
+ * Token de kiosk para o Modo Fábrica.
+ * Quando definido via `VITE_PRODUCTION_KIOSK_TOKEN`, é enviado no header
+ * `X-SGP-Kiosk-Token` nas chamadas públicas de produção.
+ * Não é segurança absoluta — o PIN continua sendo o segundo fator.
+ */
+export function getProductionKioskToken(): string | undefined {
+  const raw = import.meta.env.VITE_PRODUCTION_KIOSK_TOKEN?.trim()
+  return raw || undefined
+}

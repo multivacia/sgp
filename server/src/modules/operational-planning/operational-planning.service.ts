@@ -474,7 +474,7 @@ async function validatePlanItems(
     if (!row.is_active) {
       throw new AppError('Atividade inativa não pode ser planejada.', 400, ErrorCodes.VALIDATION_ERROR)
     }
-    if (row.conveyor_operational_status === 'CONCLUIDA') {
+    if (row.conveyor_operational_status === 'FINALIZADA') {
       throw new AppError('Esteira concluída não aceita planejamento.', 400, ErrorCodes.VALIDATION_ERROR)
     }
     if (row.operational_status === 'COMPLETED') {

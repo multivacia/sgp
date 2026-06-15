@@ -108,6 +108,14 @@ export async function postAdminCollaboratorRestore(id: string): Promise<AdminCol
   return adminCollaboratorFromApiJson(raw)
 }
 
+export async function postAdminCollaboratorResetPin(id: string): Promise<AdminCollaborator> {
+  const raw = await requestJson<unknown>(
+    'POST',
+    `${BASE}/admin/collaborators/${encodeURIComponent(id)}/production-pin/reset`,
+  )
+  return adminCollaboratorFromApiJson(raw)
+}
+
 export async function listSectorsPublic(): Promise<Sector[]> {
   const raw = await requestJson<unknown>('GET', `${BASE}/sectors`)
   const arr = Array.isArray(raw) ? raw : []

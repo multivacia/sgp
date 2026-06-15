@@ -18,6 +18,7 @@ import {
 import { hashPassword } from '../shared/password/password.js'
 import { sessionCookieForUser } from './sessionTestCookie.js'
 import { ensureMariaCollaboratorSeedForIntegration } from './integrationSeedFixtures.js'
+import { setConveyorProductionStatusForIntegration } from './integrationConveyorFixtures.js'
 
 loadDotenvFiles()
 
@@ -134,8 +135,8 @@ describe.skipIf(!hasDb)('conveyor assignees + time entries HTTP (integração)',
     const colabB = randomUUID()
     await pool.query(
       `INSERT INTO collaborators (id, full_name, status, is_active)
-       VALUES ($1::uuid, 'Colab B HTTP', 'ACTIVE', true)`,
-      [colabB],
+       VALUES ($1::uuid, $2, 'ACTIVE', true)`,
+      [colabB, `Colab B HTTP ${colabB.slice(0, 8)}`],
     )
 
     const created = await serviceCreateConveyor(
@@ -213,9 +214,9 @@ describe.skipIf(!hasDb)('conveyor assignees + time entries HTTP (integração)',
     const colabC = randomUUID()
     await pool.query(
       `INSERT INTO collaborators (id, full_name, status, is_active) VALUES
-        ($1::uuid, 'Pri B HTTP', 'ACTIVE', true),
-        ($2::uuid, 'Pri C HTTP', 'ACTIVE', true)`,
-      [colabB, colabC],
+        ($1::uuid, $2, 'ACTIVE', true),
+        ($3::uuid, $4, 'ACTIVE', true)`,
+      [colabB, `Pri B HTTP ${colabB.slice(0, 8)}`, colabC, `Pri C HTTP ${colabC.slice(0, 8)}`],
     )
 
     const created = await serviceCreateConveyor(
@@ -339,6 +340,7 @@ describe.skipIf(!hasDb)('conveyor assignees + time entries HTTP (integração)',
       pool,
       minimalConveyorBody(`HTTP te ${randomUUID().slice(0, 8)}`),
     )
+    await setConveyorProductionStatusForIntegration(pool, created.id)
     const stepId = await firstNodeId(created.id, 'STEP')
     const tp = timeEntriesPath(created.id, stepId)
 
@@ -469,6 +471,7 @@ describe.skipIf(!hasDb)('conveyor assignees + time entries HTTP (integração)',
       pool,
       minimalConveyorBody(`HTTP ex ${randomUUID().slice(0, 8)}`),
     )
+    await setConveyorProductionStatusForIntegration(pool, created.id)
     const stepId = await firstNodeId(created.id, 'STEP')
     const res = await request(app)
       .post(timeEntriesPath(created.id, stepId))
@@ -514,6 +517,7 @@ describe.skipIf(!hasDb)('conveyor assignees + time entries HTTP (integração)',
       pool,
       minimalConveyorBody(`SVC te ${randomUUID().slice(0, 8)}`),
     )
+    await setConveyorProductionStatusForIntegration(pool, created.id)
     const stepId = await firstNodeId(created.id, 'STEP')
     const t = await serviceCreateConveyorTimeEntry(pool, {
       conveyorId: created.id,

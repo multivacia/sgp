@@ -1,4 +1,4 @@
--- RBAC fino V1: permissões explícitas por papel (ADMIN / GESTOR / COLABORADOR).
+-- RBAC fino V1: permissÃƒÆ’Ã‚Âµes explÃƒÆ’Ã‚Â­citas por papel (ADMIN / GESTOR / COLABORADOR).
 
 CREATE TABLE IF NOT EXISTS app_permissions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -15,19 +15,25 @@ CREATE TABLE IF NOT EXISTS app_role_permissions (
 
 CREATE INDEX IF NOT EXISTS idx_app_role_permissions_role ON app_role_permissions (role_id);
 
+-- Roles base necessÃƒÂ¡rios para RBAC em base limpa.
+INSERT INTO app_roles (id, code, name) VALUES
+  ('11111111-1111-1111-1111-111111111111', 'ADMIN', 'Administrador'),
+  ('22222222-2222-2222-2222-222222222222', 'COLABORADOR', 'Colaborador'),
+  ('33333333-3333-3333-3333-333333333333', 'GESTOR', 'Gestor')
+ON CONFLICT (code) DO NOTHING;
 INSERT INTO app_permissions (code, name) VALUES
   ('users.view', 'Utilizadores: consultar'),
   ('users.create', 'Utilizadores: criar'),
   ('users.edit', 'Utilizadores: editar'),
   ('users.activate', 'Utilizadores: ativar'),
   ('users.deactivate', 'Utilizadores: inativar'),
-  ('users.soft_delete', 'Utilizadores: eliminação lógica'),
+  ('users.soft_delete', 'Utilizadores: eliminaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o lÃƒÆ’Ã‚Â³gica'),
   ('users.restore', 'Utilizadores: restaurar'),
   ('users.reset_password', 'Utilizadores: repor senha'),
-  ('users.force_password_change', 'Utilizadores: forçar troca de senha'),
+  ('users.force_password_change', 'Utilizadores: forÃƒÆ’Ã‚Â§ar troca de senha'),
   ('audit.view', 'Trilha administrativa: consultar'),
   ('dashboard.view_executive', 'Dashboard gerencial'),
-  ('collaborators_admin.soft_delete', 'Colaboradores admin: eliminação lógica'),
+  ('collaborators_admin.soft_delete', 'Colaboradores admin: eliminaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o lÃƒÆ’Ã‚Â³gica'),
   ('collaborators_admin.restore', 'Colaboradores admin: restaurar'),
   ('collaborators_admin.view', 'Colaboradores admin: consultar'),
   ('collaborators_admin.create', 'Colaboradores admin: criar'),
@@ -36,20 +42,20 @@ INSERT INTO app_permissions (code, name) VALUES
   ('collaborators_admin.deactivate', 'Colaboradores admin: inativar'),
   ('conveyors.create', 'Esteiras: criar'),
   ('conveyors.edit_status', 'Esteiras: alterar estado operacional'),
-  ('conveyors.manage_assignments', 'Esteiras: gerir alocações por etapa'),
-  ('operation_matrix.view', 'Matriz de operação: consultar'),
-  ('operation_matrix.manage', 'Matriz de operação: alterar'),
+  ('conveyors.manage_assignments', 'Esteiras: gerir alocaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Âµes por etapa'),
+  ('operation_matrix.view', 'Matriz de operaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o: consultar'),
+  ('operation_matrix.manage', 'Matriz de operaÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o: alterar'),
   ('dashboard.view_operational', 'Dashboard operacional'),
-  ('system.health_db', 'Health DB (produção)')
+  ('system.health_db', 'Health DB (produÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o)')
 ON CONFLICT (code) DO UPDATE SET name = EXCLUDED.name;
 
--- ADMIN: todas as permissões V1
+-- ADMIN: todas as permissÃƒÆ’Ã‚Âµes V1
 INSERT INTO app_role_permissions (role_id, permission_id)
 SELECT '11111111-1111-1111-1111-111111111111'::uuid, p.id
 FROM app_permissions p
 ON CONFLICT DO NOTHING;
 
--- GESTOR: operacional + health (sem permissões só ADMIN)
+-- GESTOR: operacional + health (sem permissÃƒÆ’Ã‚Âµes sÃƒÆ’Ã‚Â³ ADMIN)
 INSERT INTO app_role_permissions (role_id, permission_id)
 SELECT '33333333-3333-3333-3333-333333333333'::uuid, p.id
 FROM app_permissions p

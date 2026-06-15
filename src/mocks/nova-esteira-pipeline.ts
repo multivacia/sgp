@@ -232,7 +232,7 @@ export function materializarNovaEsteira(
     activities: resumo.totalAtividades,
     responsible: dados.responsavel.trim() || '—',
     priority: normalizeBacklogPriority(dados.prioridade),
-    status: destino === 'backlog' ? 'no_backlog' : 'em_producao',
+    status: destino === 'backlog' ? 'em_elaboracao' : 'em_andamento',
     enteredAt,
     esteiraId,
     estruturaOrigem: input.estruturaOrigem,

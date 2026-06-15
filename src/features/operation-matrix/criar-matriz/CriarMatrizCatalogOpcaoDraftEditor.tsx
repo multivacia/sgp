@@ -55,6 +55,7 @@ function activityToEtapa(node: MatrixNodeTreeApi): CriarMatrizManualEtapa {
     id: node.id,
     name: node.name,
     plannedMinutes: node.planned_minutes,
+    plannedQuantity: node.planned_quantity ?? 1,
     teamIds: tid ? [tid] : [],
     collaboratorIds: support,
     primaryCollaboratorId: null,
@@ -73,6 +74,7 @@ function applyEtapaToActivity(
     ...node,
     name: r.name.trim(),
     planned_minutes: r.plannedMinutes,
+    planned_quantity: Math.max(1, Math.floor(r.plannedQuantity ?? 1)),
     team_ids: teamIds,
     default_responsible_id: null,
     metadata_json: buildMatrixActivityMetadataJson(supportIds) ?? null,
@@ -352,8 +354,30 @@ export function CriarMatrizCatalogOpcaoDraftEditor({
                       />
                     </div>
                   </label>
+                  <label className="block w-16 shrink-0 text-sm">
+                    <span className="text-slate-500">Qtd</span>
+                    <input
+                      type="number"
+                      min={1}
+                      className={
+                        rail
+                          ? 'sgp-input-app mt-1 w-full rounded-lg border border-white/10 bg-sgp-void/80 px-2 py-1.5 tabular-nums text-sm text-slate-200'
+                          : 'mt-1 w-full rounded border border-white/10 bg-black/40 px-2 py-1.5 tabular-nums text-slate-100'
+                      }
+                      value={act.planned_quantity ?? 1}
+                      onChange={(ev) => {
+                        const q = Math.max(1, Number.parseInt(ev.target.value, 10) || 1)
+                        patchTask(
+                          updateNodeDeep(task, act.id, (n) => ({
+                            ...n,
+                            planned_quantity: q,
+                          })),
+                        )
+                      }}
+                    />
+                  </label>
                   <label className="block w-24 shrink-0 text-sm sm:w-28">
-                    <span className="text-slate-500">Min</span>
+                    <span className="text-slate-500">Min/un.</span>
                     <input
                       type="number"
                       min={0}

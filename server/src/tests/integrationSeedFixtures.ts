@@ -1,6 +1,44 @@
 import type pg from 'pg'
 import { hashPassword } from '../shared/password/password.js'
 
+export const MARIA_COLLABORATOR_ID = '3a5f3c72-2e75-4e0a-8f6e-6d4d086e5f1c'
+export const MARIA_APP_USER_ID = '44444444-4444-4444-4444-444444444444'
+export const MARIA_APP_USER_EMAIL = 'maria@exemplo.com'
+
+/** Libera `collaborator_id` em todas as linhas de `app_users` (inclui arquivadas). */
+export async function clearAppUserLinksForCollaborator(
+  pool: pg.Pool,
+  collaboratorId: string,
+): Promise<void> {
+  await pool.query(
+    `UPDATE app_users SET collaborator_id = NULL WHERE collaborator_id = $1::uuid`,
+    [collaboratorId],
+  )
+}
+
+/** Vincula utilizador a colaborador respeitando `idx_app_users_collaborator_id_unique`. */
+export async function linkAppUserToCollaborator(
+  pool: pg.Pool,
+  appUserId: string,
+  collaboratorId: string,
+): Promise<void> {
+  await clearAppUserLinksForCollaborator(pool, collaboratorId)
+  await pool.query(
+    `UPDATE app_users SET collaborator_id = $1::uuid WHERE id = $2::uuid`,
+    [collaboratorId, appUserId],
+  )
+}
+
+export async function unlinkAppUserCollaborator(
+  pool: pg.Pool,
+  appUserId: string,
+): Promise<void> {
+  await pool.query(
+    `UPDATE app_users SET collaborator_id = NULL WHERE id = $1::uuid`,
+    [appUserId],
+  )
+}
+
 /**
  * Garante dados mínimos alinhados a `seeds/0001_seed_base.sql` para testes de integração.
  * Evita dependência frágil de “seed já aplicado manualmente” em CI ou bases locais.
@@ -73,18 +111,7 @@ export async function ensureMariaCollaboratorSeedForIntegration(
     `,
   )
 
-  /**
-   * Índice único parcial `idx_app_users_collaborator_id_unique`: só pode haver um `app_users`
-   * com cada `collaborator_id` não nulo — inclui linhas arquivadas (`deleted_at`), que continuam
-   * a contar para o índice. Liberta o vínculo em todas as linhas antes de atribuir à Maria.
-   */
-  await pool.query(
-    `
-    UPDATE app_users
-    SET collaborator_id = NULL
-    WHERE collaborator_id = '3a5f3c72-2e75-4e0a-8f6e-6d4d086e5f1c'::uuid
-    `,
-  )
+  await clearAppUserLinksForCollaborator(pool, MARIA_COLLABORATOR_ID)
 
   const hash = await hashPassword('IntegrationSeedMaria1!')
   await pool.query(
@@ -102,12 +129,12 @@ export async function ensureMariaCollaboratorSeedForIntegration(
       deleted_at
     )
     VALUES (
-      '44444444-4444-4444-4444-444444444444'::uuid,
-      $1,
+      $1::uuid,
       $2,
+      $3,
       true,
       '22222222-2222-2222-2222-222222222222'::uuid,
-      '3a5f3c72-2e75-4e0a-8f6e-6d4d086e5f1c'::uuid,
+      $4::uuid,
       'https://api.dicebear.com/7.x/avataaars/svg?seed=maria',
       now(),
       false,
@@ -124,6 +151,6 @@ export async function ensureMariaCollaboratorSeedForIntegration(
       must_change_password = EXCLUDED.must_change_password,
       deleted_at = EXCLUDED.deleted_at
     `,
-    ['maria@exemplo.com', hash],
+    [MARIA_APP_USER_ID, MARIA_APP_USER_EMAIL, hash, MARIA_COLLABORATOR_ID],
   )
 }

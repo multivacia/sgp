@@ -7,11 +7,13 @@ import type { BacklogOrigin, BacklogPriority, BacklogRow, BacklogStatus } from '
 
 export function mapOperationalStatusToUi(s: ConveyorOperationalStatus): BacklogStatus {
   const m: Record<ConveyorOperationalStatus, BacklogStatus> = {
-    NO_BACKLOG: 'no_backlog',
-    EM_REVISAO: 'em_revisao',
-    PRONTA_LIBERAR: 'pronta_liberar',
-    EM_PRODUCAO: 'em_producao',
-    CONCLUIDA: 'concluida',
+    EM_ELABORACAO: 'em_elaboracao',
+    AGUARDANDO_PLANEJAMENTO: 'aguardando_planejamento',
+    EM_PLANEJAMENTO: 'em_planejamento',
+    A_INICIAR: 'a_iniciar',
+    EM_ANDAMENTO: 'em_andamento',
+    FINALIZADA: 'finalizada',
+    CANCELADA: 'cancelada',
   }
   return m[s]
 }

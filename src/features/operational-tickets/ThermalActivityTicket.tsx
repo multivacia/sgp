@@ -19,7 +19,10 @@ export function ThermalActivityTicket(props: ThermalActivityTicketProps) {
   const orderLabel = formatPlannedOrder(model.plannedOrder)
 
   return (
-    <article className="thermal-ticket-page" data-testid="thermal-activity-ticket">
+    <article
+      className="thermal-ticket thermal-ticket-page"
+      data-testid="thermal-activity-ticket"
+    >
       <p className="thermal-ticket-header">SGP+ ATIVIDADE</p>
       <hr className="thermal-ticket-rule" aria-hidden />
 

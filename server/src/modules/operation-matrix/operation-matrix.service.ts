@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import type pg from 'pg'
 import { AppError } from '../../shared/errors/AppError.js'
+import { resolveActivityPlannedQuantity } from '../../shared/activityOperationalQuantity.js'
 import { ErrorCodes } from '../../shared/errors/errorCodes.js'
 import type {
   MatrixNodeApi,
@@ -160,6 +161,13 @@ export async function serviceCreateNode(
 ): Promise<MatrixNodeApi> {
   const isActivity = body.nodeType === 'ACTIVITY'
   if (!isActivity) {
+    if (body.plannedQuantity !== undefined) {
+      throw new AppError(
+        'plannedQuantity só é aceito para ACTIVITY.',
+        422,
+        ErrorCodes.VALIDATION_ERROR,
+      )
+    }
     if (body.plannedMinutes !== undefined) {
       throw new AppError(
         'planned_minutes só é aceito para ACTIVITY.',
@@ -227,6 +235,7 @@ export async function serviceCreateNode(
       level_depth: 0,
       is_active: body.isActive ?? true,
       planned_minutes: null,
+      planned_quantity: 1,
       default_responsible_id: null,
       required: body.required ?? true,
       source_key: empty(body.sourceKey),
@@ -268,6 +277,9 @@ export async function serviceCreateNode(
     level_depth,
     is_active: body.isActive ?? true,
     planned_minutes: isActivity ? (body.plannedMinutes ?? null) : null,
+    planned_quantity: isActivity
+      ? resolveActivityPlannedQuantity(body.plannedQuantity)
+      : 1,
     default_responsible_id: null,
     required: body.required ?? true,
     source_key: empty(body.sourceKey),
@@ -303,6 +315,13 @@ function patchBodyToDb(
     if (body.plannedMinutes !== undefined) {
       throw new AppError(
         'planned_minutes só pode ser alterado em ACTIVITY.',
+        422,
+        ErrorCodes.VALIDATION_ERROR,
+      )
+    }
+    if (body.plannedQuantity !== undefined) {
+      throw new AppError(
+        'plannedQuantity só pode ser alterado em ACTIVITY.',
         422,
         ErrorCodes.VALIDATION_ERROR,
       )
@@ -346,6 +365,9 @@ function patchBodyToDb(
   if (body.isActive !== undefined) p.is_active = body.isActive
   if (body.plannedMinutes !== undefined && isActivity) {
     p.planned_minutes = body.plannedMinutes
+  }
+  if (body.plannedQuantity !== undefined && isActivity) {
+    p.planned_quantity = resolveActivityPlannedQuantity(body.plannedQuantity)
   }
   if (body.required !== undefined && isActivity) p.required = body.required
   if (body.sourceKey !== undefined) p.source_key = empty(body.sourceKey)
@@ -485,6 +507,7 @@ export async function serviceDuplicateItemAsNewRoot(
         level_depth: r.level_depth,
         is_active: r.is_active,
         planned_minutes: r.planned_minutes,
+        planned_quantity: r.planned_quantity ?? 1,
         default_responsible_id:
           r.node_type === 'ACTIVITY' ? null : r.default_responsible_id,
         required: r.required,
@@ -590,6 +613,7 @@ export async function serviceDuplicateSubtreeUnderSameParent(
         level_depth: r.level_depth,
         is_active: r.is_active,
         planned_minutes: r.planned_minutes,
+        planned_quantity: r.planned_quantity ?? 1,
         default_responsible_id:
           r.node_type === 'ACTIVITY' ? null : r.default_responsible_id,
         required: r.required,

@@ -14,6 +14,7 @@ import type {
   ConveyorOperationalStatus,
   ConveyorStructureStep,
 } from '../../domain/conveyors/conveyor.types'
+import { CONVEYOR_STATUS_TRANSITION_ACTIONS } from '../../domain/conveyors/conveyorOperationalStatus'
 import {
   canCompleteStep,
   canReopenStep,
@@ -72,6 +73,17 @@ import { GestorAtividadeMenu } from './GestorAtividadeMenu'
 import { ConveyorNodeWorkloadPanel } from './ConveyorNodeWorkloadPanel'
 import { ConveyorHealthAnalysisCard } from './ConveyorHealthAnalysisCard'
 import { ConveyorOperationalPlanCard } from './ConveyorOperationalPlanCard'
+import { ConveyorLifecycleReturnPanel } from './ConveyorLifecycleReturnPanel'
+import {
+  collectConveyorActivityTicketSources,
+  filterConveyorActivityTicketSources,
+} from '../operational-tickets/activityTicketConveyorSource'
+import { buildConveyorGroupedTicketPrintItems } from '../operational-tickets/buildConveyorActivityTicketPrintModels'
+import { ConveyorActivityTicketsPrintDialog } from '../operational-tickets/ConveyorActivityTicketsPrintDialog'
+import { ThermalActivityTicketsPrintArea } from '../operational-tickets/ThermalActivityTicketsPrintArea'
+import { ThermalTicketPrintProgressOverlay } from '../operational-tickets/ThermalTicketPrintProgressOverlay'
+import { isBatchThermalTicketPrint } from '../operational-tickets/thermalTicketPrintQueue'
+import { useActivityTicketPrint } from '../operational-tickets/useActivityTicketPrint'
 
 function statusEsteiraLabel(s: EsteiraStatusGeral) {
   const map: Record<EsteiraStatusGeral, string> = {
@@ -182,25 +194,7 @@ function originRegisterLabel(o: 'MANUAL' | 'BASE' | 'HYBRID'): string {
 }
 
 /** Alinhado à matriz v1 do backend. */
-const STATUS_TRANSITION_ACTIONS: Record<
-  ConveyorOperationalStatus,
-  { target: ConveyorOperationalStatus; label: string }[]
-> = {
-  NO_BACKLOG: [{ target: 'EM_REVISAO', label: 'Enviar para revisão' }],
-  EM_REVISAO: [
-    { target: 'PRONTA_LIBERAR', label: 'Pronta para liberar' },
-    { target: 'NO_BACKLOG', label: 'Voltar ao backlog' },
-  ],
-  PRONTA_LIBERAR: [
-    { target: 'EM_PRODUCAO', label: 'Iniciar produção' },
-    { target: 'EM_REVISAO', label: 'Voltar para revisão' },
-  ],
-  EM_PRODUCAO: [{ target: 'CONCLUIDA', label: 'Concluir esteira' }],
-  CONCLUIDA: [
-    { target: 'EM_PRODUCAO', label: 'Reabrir (produção)' },
-    { target: 'EM_REVISAO', label: 'Reabrir (revisão)' },
-  ],
-}
+const STATUS_TRANSITION_ACTIONS = CONVEYOR_STATUS_TRANSITION_ACTIONS
 
 function flattenConveyorStructureSteps(
   structure: ConveyorDetail['structure'],
@@ -264,6 +258,18 @@ function EsteiraDetalheBasicoReal({ id }: { id: string | undefined }) {
   )
   const [operationalEventsLimit, setOperationalEventsLimit] = useState(50)
   const [stepCompletingId, setStepCompletingId] = useState<string | null>(null)
+  const [conveyorTicketsPrintOpen, setConveyorTicketsPrintOpen] = useState(false)
+  const {
+    currentSheet: conveyorPrintSheet,
+    printProgress: conveyorPrintProgress,
+    agentStatus: conveyorAgentStatus,
+    agentFallbackNotice: conveyorAgentFallbackNotice,
+    testPrintLoading: conveyorTestPrintLoading,
+    requestPrint: requestConveyorTicketPrint,
+    cancelPrint: cancelConveyorTicketPrint,
+    clearAgentFallbackNotice: clearConveyorAgentFallbackNotice,
+    testThermalPrinter: testConveyorThermalPrinter,
+  } = useActivityTicketPrint()
   const [stepReopeningId, setStepReopeningId] = useState<string | null>(null)
   const [reopenDialog, setReopenDialog] = useState<{
     stepId: string
@@ -554,6 +560,7 @@ function EsteiraDetalheBasicoReal({ id }: { id: string | undefined }) {
             conveyorId: detail.id,
             stepNodeId: st.id,
             planejadoMin: st.plannedMinutes ?? 0,
+            plannedQuantity: st.plannedQuantity ?? 1,
             assignees,
             timeEntries,
             cargaParcial,
@@ -641,6 +648,30 @@ function EsteiraDetalheBasicoReal({ id }: { id: string | undefined }) {
     })
     return () => cancelAnimationFrame(raf)
   }, [detail, stepAnaliticoLoading, stepParam])
+
+  const conveyorTicketSources = useMemo(
+    () => (detail ? collectConveyorActivityTicketSources(detail, nodeWorkload) : []),
+    [detail, nodeWorkload],
+  )
+
+  const conveyorPrintableTicketCount = useMemo(
+    () => filterConveyorActivityTicketSources(conveyorTicketSources, false).length,
+    [conveyorTicketSources],
+  )
+
+  const handleConveyorTicketsPrint = useCallback(
+    (options: { grouping: 'structure' | 'task' | 'responsible'; includeCompleted: boolean }) => {
+      if (!detail) return
+      const items = buildConveyorGroupedTicketPrintItems(detail, nodeWorkload, {
+        grouping: options.grouping,
+        includeCompleted: options.includeCompleted,
+      })
+      if (!items.some((item) => item.kind === 'ticket')) return
+      requestConveyorTicketPrint(items)
+      setConveyorTicketsPrintOpen(false)
+    },
+    [detail, nodeWorkload, requestConveyorTicketPrint],
+  )
 
   const handlePatchStatus = async (target: ConveyorOperationalStatus) => {
     if (!id?.trim()) return
@@ -990,14 +1021,25 @@ function EsteiraDetalheBasicoReal({ id }: { id: string | undefined }) {
           <h1 className="sgp-page-title">
             {detail.name}
           </h1>
-          {canAlterConveyor ? (
-            <Link
-              to={`/app/esteiras/${encodeURIComponent(detail.id)}/alterar`}
-              className="shrink-0 rounded-lg border border-amber-400/35 bg-amber-500/12 px-3 py-2 text-xs font-bold text-amber-100 ring-1 ring-amber-500/20 transition hover:bg-amber-500/20"
+          <div className="flex shrink-0 flex-wrap gap-2">
+            <button
+              type="button"
+              className="rounded-lg border border-white/[0.12] bg-white/[0.05] px-3 py-2 text-xs font-bold text-slate-100 ring-1 ring-white/[0.06] transition hover:bg-white/[0.08] disabled:opacity-50"
+              title="Imprimir tickets térmicos das atividades desta esteira"
+              disabled={conveyorTicketSources.length === 0}
+              onClick={() => setConveyorTicketsPrintOpen(true)}
             >
-              Alterar esta esteira
-            </Link>
-          ) : null}
+              Imprimir tickets
+            </button>
+            {canAlterConveyor ? (
+              <Link
+                to={`/app/esteiras/${encodeURIComponent(detail.id)}/alterar`}
+                className="rounded-lg border border-amber-400/35 bg-amber-500/12 px-3 py-2 text-xs font-bold text-amber-100 ring-1 ring-amber-500/20 transition hover:bg-amber-500/20"
+              >
+                Alterar esta esteira
+              </Link>
+            ) : null}
+          </div>
         </div>
         <p className="mt-2 text-sm text-slate-500">
           {refLine} · {originRegisterLabel(detail.originRegister)}
@@ -1026,6 +1068,17 @@ function EsteiraDetalheBasicoReal({ id }: { id: string | undefined }) {
                 {a.label}
               </button>
             ))}
+            <ConveyorLifecycleReturnPanel
+              conveyorId={detail.id}
+              operationalStatus={detail.operationalStatus}
+              operationalEventsLimit={operationalEventsLimit}
+              routePath={location.pathname}
+              onDetailUpdated={setDetail}
+              onOperationalEventsUpdated={setOperationalEvents}
+              onOperationalEventsLoading={setOperationalEventsLoading}
+              onSuccessToast={setRouteToast}
+              presentBlocking={presentBlocking}
+            />
           </div>
         ) : (
           <p className="relative mt-4 text-xs text-slate-500">
@@ -1312,6 +1365,33 @@ function EsteiraDetalheBasicoReal({ id }: { id: string | undefined }) {
           )}
         </div>
       </section>
+
+      <ConveyorActivityTicketsPrintDialog
+        open={conveyorTicketsPrintOpen}
+        totalCount={conveyorTicketSources.length}
+        printableCount={conveyorPrintableTicketCount}
+        agentStatus={conveyorAgentStatus}
+        agentFallbackNotice={conveyorAgentFallbackNotice}
+        testPrintLoading={conveyorTestPrintLoading}
+        onClose={() => setConveyorTicketsPrintOpen(false)}
+        onPrint={handleConveyorTicketsPrint}
+        onDismissAgentNotice={clearConveyorAgentFallbackNotice}
+        onTestThermalPrinter={() => {
+          void testConveyorThermalPrinter()
+        }}
+      />
+
+      {conveyorPrintSheet ? (
+        <ThermalActivityTicketsPrintArea sheet={conveyorPrintSheet} />
+      ) : null}
+      <ThermalTicketPrintProgressOverlay
+        open={
+          conveyorPrintProgress !== null && isBatchThermalTicketPrint(conveyorPrintProgress)
+        }
+        current={conveyorPrintProgress?.current ?? 0}
+        total={conveyorPrintProgress?.total ?? 0}
+        onCancel={cancelConveyorTicketPrint}
+      />
     </PageCanvas>
   )
 }

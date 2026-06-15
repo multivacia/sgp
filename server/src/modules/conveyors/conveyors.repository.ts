@@ -1,6 +1,9 @@
 import type pg from 'pg'
 import { randomUUID } from 'node:crypto'
 import type { ConveyorNodeStepOperationalStatusDb } from './stepOperationalStatus.js'
+import type { ConveyorOperationalStatusDb } from './conveyorOperationalStatus.js'
+
+export type { ConveyorOperationalStatusDb } from './conveyorOperationalStatus.js'
 
 export type InsertConveyorRow = {
   id: string
@@ -27,14 +30,6 @@ export type InsertConveyorRow = {
   operational_status: ConveyorOperationalStatusDb
   completed_at: string | null
 }
-
-/** Valores persistidos em `conveyors.operational_status` (CHECK na migração). */
-export type ConveyorOperationalStatusDb =
-  | 'NO_BACKLOG'
-  | 'EM_REVISAO'
-  | 'PRONTA_LIBERAR'
-  | 'EM_PRODUCAO'
-  | 'CONCLUIDA'
 
 export type ConveyorListRow = {
   id: string
@@ -85,6 +80,7 @@ export type ConveyorNodeFlatRow = {
   order_index: number
   name: string
   planned_minutes: number | null
+  planned_quantity: number
   source_origin: 'manual' | 'reaproveitada' | 'base'
   /** Apenas STEPs; OPTION/AREA = null. */
   operational_status: ConveyorNodeStepOperationalStatusDb | null
@@ -198,6 +194,7 @@ export async function listConveyorNodesByConveyorId(
     order_index: number
     name: string
     planned_minutes: number | null
+    planned_quantity: number
     source_origin: 'manual' | 'reaproveitada' | 'base'
     operational_status: ConveyorNodeStepOperationalStatusDb | null
     operational_completed_at: Date | null
@@ -212,6 +209,7 @@ export async function listConveyorNodesByConveyorId(
       cn.order_index,
       cn.name,
       cn.planned_minutes,
+      cn.planned_quantity,
       cn.source_origin,
       cn.operational_status,
       cn.operational_completed_at,
@@ -230,6 +228,7 @@ export async function listConveyorNodesByConveyorId(
     order_index: row.order_index,
     name: row.name,
     planned_minutes: row.planned_minutes,
+    planned_quantity: row.planned_quantity,
     source_origin: row.source_origin,
     operational_status: row.operational_status,
     operational_completed_at: row.operational_completed_at
@@ -314,7 +313,7 @@ export async function updateConveyorNodeStepOperationalFields(
 }
 
 export async function updateConveyorOperationalStatus(
-  pool: pg.Pool,
+  pool: pg.Pool | pg.PoolClient,
   conveyorId: string,
   nextStatus: ConveyorOperationalStatusDb,
   completedAtMode: CompletedAtUpdateMode,
@@ -427,6 +426,7 @@ export type InsertConveyorNodeRow = {
   level_depth: number
   is_active: boolean
   planned_minutes: number | null
+  planned_quantity: number
   default_responsible_id: string | null
   required: boolean
   source_key: string | null
@@ -496,13 +496,13 @@ export async function insertConveyorNode(
     `INSERT INTO conveyor_nodes (
       id, conveyor_id, parent_id, root_id, node_type, source_origin,
       code, name, description, order_index, level_depth, is_active,
-      planned_minutes, default_responsible_id, required, source_key, metadata_json,
+      planned_minutes, planned_quantity, default_responsible_id, required, source_key, metadata_json,
       operational_status, operational_completed_at, operational_completed_by
     ) VALUES (
       $1, $2, $3, $4, $5, $6,
       $7, $8, $9, $10, $11, $12,
-      $13, $14, $15, $16, $17::jsonb,
-      $18::varchar, $19::timestamptz, $20::uuid
+      $13, $14, $15, $16, $17, $18::jsonb,
+      $19::varchar, $20::timestamptz, $21::uuid
     )`,
     [
       row.id,
@@ -518,6 +518,7 @@ export async function insertConveyorNode(
       row.level_depth,
       row.is_active,
       row.planned_minutes,
+      row.planned_quantity,
       row.default_responsible_id,
       row.required,
       row.source_key,

@@ -84,6 +84,7 @@ export function planningApontamentoCandidate(
     requiresOutOfSequenceJustification: Boolean(item.isOutOfSequence),
     previousOpenCount: 0,
     previousOpenActivities: [],
+    canCompleteStep: true,
   }
 }
 

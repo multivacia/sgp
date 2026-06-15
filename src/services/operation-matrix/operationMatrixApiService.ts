@@ -161,6 +161,7 @@ export type CreateMatrixNodeInput = {
   orderIndex?: number
   isActive?: boolean
   plannedMinutes?: number | null
+  plannedQuantity?: number
   defaultResponsibleId?: string | null
   teamIds?: string[]
   required?: boolean
@@ -183,6 +184,7 @@ export type PatchMatrixNodeInput = {
   orderIndex?: number
   isActive?: boolean
   plannedMinutes?: number | null
+  plannedQuantity?: number
   defaultResponsibleId?: string | null
   teamIds?: string[]
   required?: boolean

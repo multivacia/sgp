@@ -37,7 +37,7 @@ export function openBacklogInNewTab(
     sp.set('situacao', situacao)
   }
   const effDays = opts?.days ?? opts?.completedWithinDays
-  if (situacao === 'concluidas' && effDays != null && Number.isFinite(effDays)) {
+  if (situacao === 'finalizadas' && effDays != null && Number.isFinite(effDays)) {
     const d = Math.max(1, Math.min(365, Math.round(effDays)))
     sp.set('days', String(d))
   }

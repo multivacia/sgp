@@ -122,7 +122,7 @@ describe.skipIf(!hasDb)('DELETE /api/v1/conveyors/:id (integração)', () => {
       pool,
       minimalConveyorBody(`${label} ${randomUUID().slice(0, 8)}`),
     )
-    expect(created.operationalStatus).toBe('NO_BACKLOG')
+    expect(created.operationalStatus).toBe('EM_ELABORACAO')
     return created.id
   }
 
@@ -201,47 +201,41 @@ describe.skipIf(!hasDb)('DELETE /api/v1/conveyors/:id (integração)', () => {
     expect(assignees.rowCount).toBe(0)
   })
 
-  it('DELETE EM_REVISAO → 409', async () => {
-    const id = await createBacklogConveyor('del-revisao')
-    const patch = await patchConveyorStatusHttp(id, 'EM_REVISAO')
+  it('DELETE AGUARDANDO_PLANEJAMENTO sem apontamento → 204', async () => {
+    const id = await createBacklogConveyor('del-aguard')
+    const patch = await patchConveyorStatusHttp(id, 'AGUARDANDO_PLANEJAMENTO')
     expect(patch.status).toBe(200)
     const res = await deleteConveyorHttp(id, await managerCookie())
-    expect(res.status).toBe(409)
-    expect(res.body.error?.message).toBe(
-      'Somente esteiras no backlog podem ser excluídas.',
-    )
-    expect(res.body.error?.code).toBe('CONVEYOR_DELETE_STATUS_NOT_ALLOWED')
+    expect(res.status).toBe(204)
   })
 
-  it('DELETE EM_PRODUCAO → 409', async () => {
-    const id = await createBacklogConveyor('del-prod')
-    for (const st of ['EM_REVISAO', 'PRONTA_LIBERAR', 'EM_PRODUCAO'] as const) {
-      const p = await patchConveyorStatusHttp(id, st)
-      expect(p.status).toBe(200)
-    }
-    const res = await deleteConveyorHttp(id, await managerCookie())
-    expect(res.status).toBe(409)
-    expect(res.body.error?.code).toBe('CONVEYOR_DELETE_STATUS_NOT_ALLOWED')
-  })
-
-  it('DELETE CONCLUIDA → 409', async () => {
-    const id = await createBacklogConveyor('del-conc')
+  it('DELETE EM_ANDAMENTO sem apontamento → 204', async () => {
+    const id = await createBacklogConveyor('del-and')
     for (const st of [
-      'EM_REVISAO',
-      'PRONTA_LIBERAR',
-      'EM_PRODUCAO',
-      'CONCLUIDA',
+      'AGUARDANDO_PLANEJAMENTO',
+      'EM_PLANEJAMENTO',
+      'A_INICIAR',
     ] as const) {
       const p = await patchConveyorStatusHttp(id, st)
       expect(p.status).toBe(200)
     }
+    await pool.query(
+      `UPDATE conveyors SET operational_status = 'EM_ANDAMENTO' WHERE id = $1::uuid`,
+      [id],
+    )
     const res = await deleteConveyorHttp(id, await managerCookie())
-    expect(res.status).toBe(409)
-    expect(res.body.error?.code).toBe('CONVEYOR_DELETE_STATUS_NOT_ALLOWED')
+    expect(res.status).toBe(204)
   })
 
   it('DELETE com apontamento de horas → 409', async () => {
     const id = await createBacklogConveyor('del-te')
+    for (const st of [
+      'AGUARDANDO_PLANEJAMENTO',
+      'EM_PLANEJAMENTO',
+      'A_INICIAR',
+    ] as const) {
+      await patchConveyorStatusHttp(id, st)
+    }
     const stepId = await firstStepId(id)
     await pool.query(
       `INSERT INTO conveyor_node_assignees (
@@ -259,9 +253,9 @@ describe.skipIf(!hasDb)('DELETE /api/v1/conveyors/:id (integração)', () => {
     const res = await deleteConveyorHttp(id, await managerCookie())
     expect(res.status).toBe(409)
     expect(res.body.error?.message).toBe(
-      'Esta esteira já possui movimentações e não pode ser excluída.',
+      'Esta esteira já possui apontamentos e não pode ser excluída. Cancele ou finalize para preservar o histórico.',
     )
-    expect(res.body.error?.code).toBe('CONVEYOR_DELETE_HAS_DEPENDENCIES')
+    expect(res.body.error?.code).toBe('CONVEYOR_DELETE_HAS_TIME_ENTRIES')
   })
 
   it('DELETE com plano operacional da esteira → 409', async () => {
@@ -353,21 +347,18 @@ describe.skipIf(!hasDb)('serviceDeleteConveyor (integração)', () => {
     return created.id
   }
 
-  it('rejeita status diferente de NO_BACKLOG', async () => {
-    const id = await createBacklogConveyor('svc-status')
-    await pool.query(
-      `UPDATE conveyors SET operational_status = 'EM_REVISAO' WHERE id = $1::uuid`,
-      [id],
-    )
-    await expect(serviceDeleteConveyor(pool, id)).rejects.toMatchObject({
-      statusCode: 409,
-      code: ErrorCodes.CONVEYOR_DELETE_STATUS_NOT_ALLOWED,
-      message: 'Somente esteiras no backlog podem ser excluídas.',
-    } satisfies Partial<AppError>)
-  })
-
   it('rejeita quando há apontamento ativo', async () => {
     const id = await createBacklogConveyor('svc-te')
+    for (const st of [
+      'AGUARDANDO_PLANEJAMENTO',
+      'EM_PLANEJAMENTO',
+      'A_INICIAR',
+    ] as const) {
+      await pool.query(
+        `UPDATE conveyors SET operational_status = $2 WHERE id = $1::uuid`,
+        [id, st],
+      )
+    }
     const step = await pool.query<{ id: string }>(
       `SELECT id::text FROM conveyor_nodes WHERE conveyor_id = $1::uuid AND node_type = 'STEP' LIMIT 1`,
       [id],
@@ -388,7 +379,7 @@ describe.skipIf(!hasDb)('serviceDeleteConveyor (integração)', () => {
       entryMode: 'manual',
     })
     await expect(serviceDeleteConveyor(pool, id)).rejects.toMatchObject({
-      code: ErrorCodes.CONVEYOR_DELETE_HAS_DEPENDENCIES,
+      code: ErrorCodes.CONVEYOR_DELETE_HAS_TIME_ENTRIES,
     })
   })
 })

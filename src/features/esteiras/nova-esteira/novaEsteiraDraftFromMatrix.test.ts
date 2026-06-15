@@ -6,6 +6,7 @@ import {
 } from './novaEsteiraDraftFromMatrix'
 import {
   buildManualConveyorInput,
+  mapMatrixTreeToConveyorOptions,
   manualAssigneeRowsToApi,
   validateManualStepAssignees,
 } from './matrixToConveyorCreateInput'
@@ -114,6 +115,102 @@ function matrixTreeWithTeamActivity(): MatrixNodeTreeApi {
     ],
   } as MatrixNodeTreeApi
 }
+
+describe('emptyStepFromActivity via matrixItemTreeToManualOptions', () => {
+  it('materializa plannedQuantity 1 quando matriz tem planned_quantity 10', () => {
+    const tree = {
+      ...matrixTreeWithTeamActivity(),
+      children: [
+        {
+          ...matrixTreeWithTeamActivity().children[0],
+          children: [
+            {
+              ...matrixTreeWithTeamActivity().children[0].children[0],
+              children: [
+                activityNode({
+                  id: 'act-qty',
+                  name: 'Com quantidade na matriz',
+                  planned_quantity: 10,
+                }),
+              ],
+            },
+          ],
+        },
+      ],
+    } as MatrixNodeTreeApi
+    const { options } = matrixItemTreeToManualOptions(tree, 'item-1')
+    expect(options[0].areas[0].steps[0].plannedQuantity).toBe(1)
+  })
+})
+
+describe('mapMatrixTreeToConveyorOptions', () => {
+  it('não herda plannedQuantity da matriz no POST direto', () => {
+    const tree = {
+      ...matrixTreeWithTeamActivity(),
+      children: [
+        {
+          ...matrixTreeWithTeamActivity().children[0],
+          children: [
+            {
+              ...matrixTreeWithTeamActivity().children[0].children[0],
+              children: [
+                activityNode({
+                  id: 'act-qty',
+                  name: 'Qtd matriz',
+                  planned_quantity: 10,
+                }),
+              ],
+            },
+          ],
+        },
+      ],
+    } as MatrixNodeTreeApi
+    const options = mapMatrixTreeToConveyorOptions(tree, {})
+    expect(options[0].areas[0].steps[0].plannedQuantity).toBe(1)
+  })
+})
+
+describe('buildManualConveyorInput', () => {
+  it('envia plannedQuantity 1 mesmo se o draft tiver outro valor', () => {
+    const roots = [
+      {
+        key: 'op-1',
+        titulo: 'Op',
+        areas: [
+          {
+            key: 'ar-1',
+            titulo: 'Área',
+            steps: [
+              {
+                key: 'st-1',
+                titulo: 'Etapa',
+                plannedMinutes: 20,
+                plannedQuantity: 10,
+              },
+            ],
+          },
+        ],
+      },
+    ]
+    const input = buildManualConveyorInput(
+      {
+        nome: 'Teste',
+        cliente: 'C',
+        veiculo: 'V',
+        modeloVersao: '',
+        placa: '',
+        observacoes: '',
+        responsavel: '',
+        prazoEstimado: '',
+        prioridade: 'media',
+        colaboradorId: null,
+      },
+      roots,
+      {},
+    )
+    expect(input.options[0].areas[0].steps[0].plannedQuantity).toBe(1)
+  })
+})
 
 describe('matrixActivityToInitialAllocRows', () => {
   it('herda equipe da matriz com isPrimary false', () => {

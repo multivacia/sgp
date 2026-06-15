@@ -1,3 +1,10 @@
+export type AdminCollaboratorProductionPin = {
+  hasCredential: boolean
+  enabled: boolean
+  mustChange: boolean
+  locked: boolean
+}
+
 /** Item de listagem GET /admin/collaborators (JSON camelCase). */
 export type AdminCollaboratorListItem = {
   id: string
@@ -20,6 +27,7 @@ export type AdminCollaboratorListItem = {
   roleName: string | null
   status: string
   notes: string | null
+  productionPin: AdminCollaboratorProductionPin
 }
 
 export type AdminCollaboratorListRow = {
@@ -44,6 +52,10 @@ export type AdminCollaboratorListRow = {
   role_name: string | null
   linked_user_id: string | null
   linked_user_email: string | null
+  pin_has_credential: boolean
+  pin_enabled: boolean | null
+  pin_must_change: boolean | null
+  pin_locked_until: Date | null
 }
 
 export function rowToAdminCollaboratorListItem(
@@ -71,5 +83,13 @@ export function rowToAdminCollaboratorListItem(
     roleName: row.role_name,
     status: row.status,
     notes: row.notes,
+    productionPin: {
+      hasCredential: row.pin_has_credential === true,
+      enabled: row.pin_enabled === true,
+      mustChange: row.pin_must_change === true,
+      locked:
+        row.pin_locked_until != null &&
+        row.pin_locked_until.getTime() > Date.now(),
+    },
   }
 }

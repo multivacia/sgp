@@ -27,11 +27,13 @@ const MAX_TOP_EXTRA_DESCRIPTIONS = 3
 
 function emptyBucketCounts(): Record<OperationalBucket, number> {
   return {
+    em_elaboracao: 0,
+    aguardando_planejamento: 0,
+    em_planejamento: 0,
+    em_execucao: 0,
     em_atraso: 0,
-    em_revisao: 0,
-    em_andamento: 0,
-    no_backlog: 0,
-    concluidas: 0,
+    finalizadas: 0,
+    canceladas: 0,
   }
 }
 
@@ -139,7 +141,9 @@ export async function serviceGetOperationalJourney(
     }),
   ])
 
-  const assignmentsOpen = assignments.filter((a) => a.operationalBucket !== 'concluidas')
+  const assignmentsOpen = assignments.filter(
+    (a) => a.operationalBucket !== 'finalizadas' && a.operationalBucket !== 'canceladas',
+  )
   const assignmentsAtRisk = assignments.filter((a) => a.operationalBucket === 'em_atraso')
 
   const pendenciaItems: OperationalJourneyApi['signals']['pendenciaTempo']['items'] = []

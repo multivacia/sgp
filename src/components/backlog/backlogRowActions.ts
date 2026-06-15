@@ -1,9 +1,20 @@
 import type { BacklogRow } from '../../mocks/backlog'
 
-/** Exibe “Excluir” somente pelo status técnico mapeado (`no_backlog`), não pelo bucket visual. */
+const DELETE_ELIGIBLE_STATUSES = new Set([
+  'em_elaboracao',
+  'aguardando_planejamento',
+  'em_planejamento',
+  'a_iniciar',
+])
+
+/** Exibe “Excluir” quando status permite tentativa; backend valida apontamentos. */
 export function shouldShowBacklogDeleteAction(
   row: Pick<BacklogRow, 'status' | 'esteiraId'>,
   canManageConveyors: boolean,
 ): boolean {
-  return canManageConveyors && row.status === 'no_backlog' && Boolean(row.esteiraId)
+  return (
+    canManageConveyors &&
+    DELETE_ELIGIBLE_STATUSES.has(row.status) &&
+    Boolean(row.esteiraId)
+  )
 }

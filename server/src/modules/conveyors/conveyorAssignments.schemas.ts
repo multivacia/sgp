@@ -74,6 +74,7 @@ const isoDateTime = z
 export const postTimeEntryBodySchema = z
   .object({
     minutes: z.number().int().positive(),
+    executedQuantity: z.number().int().min(0).nullable().optional(),
     entryAt: isoDateTime.optional(),
     notes: z.union([z.string(), z.null()]).optional(),
     /** Alias opcional de `notes` (compatível com clientes que enviam `description`). */
@@ -83,6 +84,8 @@ export const postTimeEntryBodySchema = z
     exceptionJustification: z.union([z.string().max(4000), z.null()]).optional(),
     /** Obrigatória quando existem atividades anteriores ainda não concluídas nesta esteira. */
     outOfSequenceJustification: z.union([z.string().max(4000), z.null()]).optional(),
+    /** Quando true, conclui operacionalmente o STEP na mesma transação do apontamento. */
+    markAsDone: z.boolean().optional(),
   })
   .transform((b) => {
     const ejRaw =
@@ -93,8 +96,13 @@ export const postTimeEntryBodySchema = z
       b.outOfSequenceJustification === null || b.outOfSequenceJustification === undefined
         ? undefined
         : b.outOfSequenceJustification.trim()
+    const executedQuantity =
+      b.executedQuantity === null || b.executedQuantity === undefined
+        ? undefined
+        : b.executedQuantity
     return {
       minutes: b.minutes,
+      executedQuantity,
       entryAt: b.entryAt,
       notes:
         b.notes !== undefined && b.notes !== null
@@ -105,6 +113,7 @@ export const postTimeEntryBodySchema = z
       entryMode: b.entryMode,
       exceptionJustification: ejRaw && ejRaw.length > 0 ? ejRaw : undefined,
       outOfSequenceJustification: oosRaw && oosRaw.length > 0 ? oosRaw : undefined,
+      markAsDone: b.markAsDone === true,
     }
   })
 
@@ -113,6 +122,7 @@ export type PostTimeEntryBody = z.infer<typeof postTimeEntryBodySchema>
 export const postTimeEntryOnBehalfBodySchema = z.object({
   targetCollaboratorId: z.string().uuid(),
   minutes: z.number().int().positive(),
+  executedQuantity: z.number().int().min(0).nullable().optional(),
   entryAt: isoDateTime.optional(),
   notes: z.union([z.string(), z.null()]).optional(),
   reason: z

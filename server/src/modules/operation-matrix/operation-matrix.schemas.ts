@@ -29,6 +29,7 @@ export const createMatrixNodeBodySchema = z
     orderIndex: z.number().int().optional(),
     isActive: z.boolean().optional(),
     plannedMinutes: z.number().int().nullable().optional(),
+    plannedQuantity: z.number().int().min(1).optional(),
     defaultResponsibleId: z.string().uuid().nullable().optional(),
     teamIds: z.array(z.string().uuid()).optional(),
     required: z.boolean().optional(),
@@ -38,6 +39,13 @@ export const createMatrixNodeBodySchema = z
   .superRefine((data, ctx) => {
     const isActivity = data.nodeType === 'ACTIVITY'
     if (!isActivity) {
+      if (data.plannedQuantity !== undefined) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['plannedQuantity'],
+          message: 'plannedQuantity só é aceito para nós do tipo ACTIVITY.',
+        })
+      }
       if (data.plannedMinutes !== undefined) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
@@ -86,6 +94,7 @@ export const patchMatrixNodeBodySchema = z
     orderIndex: z.number().int().optional(),
     isActive: z.boolean().optional(),
     plannedMinutes: z.number().int().nullable().optional(),
+    plannedQuantity: z.number().int().min(1).optional(),
     defaultResponsibleId: z.string().uuid().nullable().optional(),
     teamIds: z.array(z.string().uuid()).optional(),
     required: z.boolean().optional(),

@@ -1,3 +1,4 @@
+import { SHOW_ARGOS_LOGIN_BRANDING } from '../../lib/argos/argosUiFlags'
 import { FineGridOverlay } from '../shell/FineGridOverlay'
 import { HexPatternBackground } from './HexPatternBackground'
 import { SgpMark } from './SgpMark'
@@ -62,8 +63,9 @@ export function LoginBrandPanel() {
         </div>
 
         <p className="mt-6 max-w-lg text-sm leading-relaxed text-[color:var(--semantic-login-brand-muted)]">
-          Uma experiência corporativa da mesma família visual do ecossistema
-          ARGOS — profundidade, contraste e foco no que move a produção.
+          {SHOW_ARGOS_LOGIN_BRANDING
+            ? 'Uma experiência corporativa da mesma família visual do ecossistema ARGOS — profundidade, contraste e foco no que move a produção.'
+            : 'Uma experiência corporativa focada em profundidade, contraste e no que move a produção.'}
         </p>
 
         <ul className="mt-10 space-y-3">
@@ -91,8 +93,9 @@ export function LoginBrandPanel() {
           </span>
         </div>
         <p className="mt-5 max-w-md text-[11px] leading-relaxed text-[color:var(--semantic-login-brand-muted)]">
-          Plataforma industrial integrada ao ecossistema Multivacia · identidade
-          visual alinhada ao manual ARGOS para consistência de marca.
+          {SHOW_ARGOS_LOGIN_BRANDING
+            ? 'Plataforma industrial integrada ao ecossistema Multivacia · identidade visual alinhada ao manual ARGOS para consistência de marca.'
+            : 'Plataforma industrial integrada ao ecossistema Multivacia · identidade visual consistente com a marca.'}
         </p>
       </div>
     </div>

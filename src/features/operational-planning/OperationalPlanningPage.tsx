@@ -57,6 +57,16 @@ import {
 } from '../../services/operational-planning/operationalPlanningApiService'
 import { buildVisiblePlanningBacklogItems } from './buildVisiblePlanningBacklogItems'
 import {
+  PLAN_PUBLISHED_HELPER_TEXT,
+  PLAN_STATUS_DRAFT_LABEL,
+  PLAN_STATUS_PUBLISHED_LABEL,
+  PUBLISH_BUTTON_LABEL,
+  SAVE_PUBLISHED_AUTO_SUCCESS_MESSAGE,
+  resolvePlanningPublishButtonTitle,
+  resolvePlanningSaveButtonLabel,
+  resolvePlanningSaveSuccessMessage,
+} from './operationalPlanningPlanStatusCopy'
+import {
   DEFAULT_FACTORY_INTAKE_FILTERS,
   type FactoryIntakeFilters,
 } from './factoryIntakeGrouping'
@@ -119,11 +129,14 @@ import {
   buildActivityTicketPrintModelsFromPlanningInputs,
 } from '../operational-tickets/activityTicketPrintModel'
 import { resolvePlanningItemsForTicketBatchPrint } from '../operational-tickets/resolvePlanningItemsForTicketBatch'
+import { ACTIVITY_TICKET_PRINT_SUPPORT_MESSAGE, ACTIVITY_TICKET_SILENT_PRINT_HINT } from '../operational-tickets/activityTicketPrintCopy'
 import { ThermalActivityTicketsPrintArea } from '../operational-tickets/ThermalActivityTicketsPrintArea'
+import { ThermalPrintAgentControls } from '../operational-tickets/ThermalPrintAgentControls'
+import { ThermalTicketPrintProgressOverlay } from '../operational-tickets/ThermalTicketPrintProgressOverlay'
+import { isBatchThermalTicketPrint } from '../operational-tickets/thermalTicketPrintQueue'
 import { useActivityTicketPrint } from '../operational-tickets/useActivityTicketPrint'
 
-export const ACTIVITY_TICKET_PRINT_SUPPORT_MESSAGE =
-  'Use os tickets como apoio físico na operação. O status oficial da atividade continua sendo controlado no SGP+.'
+export { ACTIVITY_TICKET_PRINT_SUPPORT_MESSAGE } from '../operational-tickets/activityTicketPrintCopy'
 
 const collaboratorsApi = createCollaboratorsApiService()
 
@@ -608,7 +621,17 @@ export function OperationalPlanningPage() {
   const [cardActionBusyKey, setCardActionBusyKey] = useState<string | null>(null)
   const [planningViewMode, setPlanningViewMode] = useState<PlanningViewMode>('week')
   const [dailySelectedDay, setDailySelectedDay] = useState<PlanningDailySelectedDay>('week')
-  const { tickets: printTickets, requestPrint: requestTicketPrint } = useActivityTicketPrint()
+  const {
+    currentSheet,
+    printProgress,
+    agentStatus,
+    agentFallbackNotice,
+    testPrintLoading,
+    requestPrint: requestTicketPrint,
+    cancelPrint,
+    clearAgentFallbackNotice,
+    testThermalPrinter,
+  } = useActivityTicketPrint()
 
   const weekdayDates = useMemo(
     () => weekPayload?.week.weekdayDates ?? [],
@@ -854,8 +877,12 @@ export function OperationalPlanningPage() {
   function openAddModal(item: OperationalPlanningBacklogItem) {
     setModalFactoryIntakeItem(null)
     setModalBacklogItem(item)
-    const firstCollab = collaborators[0]?.id ?? ''
-    setModalCollaboratorId(firstCollab)
+    const suggestedCollabId =
+      item.assignedCollaborators?.[0]?.id &&
+      collaborators.some((c) => c.id === item.assignedCollaborators[0].id)
+        ? item.assignedCollaborators[0].id
+        : (collaborators[0]?.id ?? '')
+    setModalCollaboratorId(suggestedCollabId)
     setModalDay(weekdayDates[0] ?? weekMonday)
     setModalMinutes(Math.max(1, item.pendingMinutes || item.plannedMinutes || 60))
     setModalOpen(true)
@@ -954,8 +981,45 @@ export function OperationalPlanningPage() {
     setModalBacklogItem(null)
   }
 
+  const persistPublishedPlanItems = useCallback(
+    async (items: DraftPlanItem[]) => {
+      if (!weekPayload?.plan || weekPayload.plan.status !== 'PUBLISHED') return
+      const body = buildSavePayload(
+        weekPayload.week.weekStartDate,
+        weekPayload.week.weekEndDate,
+        items,
+      )
+      setBusy(true)
+      setErrorMsg(null)
+      try {
+        const out = await patchOperationalPlanningWeek(weekPayload.plan.id, body)
+        setWeekPayload(out)
+        const d = out.plan?.items?.length ? out.plan.items.map(planItemToDraft) : []
+        setDraftItems(d)
+        savedDraftJsonRef.current = JSON.stringify(d)
+        setSuccessMsg(SAVE_PUBLISHED_AUTO_SUCCESS_MESSAGE)
+        void loadBacklog()
+        void loadFactoryIntake()
+      } catch (e) {
+        reportClientError(e, { module: 'operational-planning', action: 'save_published_remove' })
+        const detail = e instanceof ApiError ? e.message : null
+        setErrorMsg(detail ?? 'Não foi possível salvar as alterações no plano ativo.')
+        void loadWeek()
+      } finally {
+        setBusy(false)
+      }
+    },
+    [weekPayload, loadBacklog, loadFactoryIntake, loadWeek],
+  )
+
   function removeDraft(localKey: string) {
-    setDraftItems((prev) => prev.filter((p) => p.localKey !== localKey))
+    setDraftItems((prev) => {
+      const next = prev.filter((p) => p.localKey !== localKey)
+      if (weekPayload?.plan?.status === 'PUBLISHED') {
+        void persistPublishedPlanItems(next)
+      }
+      return next
+    })
   }
 
   function moveOrder(localKey: string, dir: -1 | 1) {
@@ -1003,13 +1067,19 @@ export function OperationalPlanningPage() {
         setDraftItems([])
         savedDraftJsonRef.current = JSON.stringify([])
       }
-      setSuccessMsg('Rascunho salvo.')
+      setSuccessMsg(resolvePlanningSaveSuccessMessage(weekPayload.plan?.status))
       void loadBacklog()
       void loadFactoryIntake()
     } catch (e) {
       reportClientError(e, { module: 'operational-planning', action: 'save_week' })
       const detail = e instanceof ApiError ? e.message : null
-      setErrorMsg(detail ?? 'Não foi possível salvar o rascunho.')
+      const isPublished = weekPayload.plan?.status === 'PUBLISHED'
+      setErrorMsg(
+        detail ??
+          (isPublished
+            ? 'Não foi possível salvar as alterações no plano ativo.'
+            : 'Não foi possível salvar o rascunho.'),
+      )
     } finally {
       setBusy(false)
     }
@@ -1323,7 +1393,9 @@ export function OperationalPlanningPage() {
                   : 'border-white/[0.08] bg-white/[0.04] text-slate-300',
               ].join(' ')}
             >
-              {weekPayload?.plan?.status === 'PUBLISHED' ? 'Publicado' : 'Rascunho'}
+              {weekPayload?.plan?.status === 'PUBLISHED'
+                ? PLAN_STATUS_PUBLISHED_LABEL
+                : PLAN_STATUS_DRAFT_LABEL}
             </span>
 
             <button
@@ -1332,16 +1404,15 @@ export function OperationalPlanningPage() {
               onClick={() => void handleSaveDraft()}
               disabled={busy || !dirty || !weekPayload}
             >
-              Salvar rascunho
+              {resolvePlanningSaveButtonLabel(weekPayload?.plan?.status)}
             </button>
             <button
               type="button"
               className="rounded-xl border border-sgp-gold/35 bg-sgp-gold/15 px-4 py-2 text-[13px] font-medium text-slate-50 hover:bg-sgp-gold/25 disabled:opacity-50"
-              title={
-                draftItems.length === 0
-                  ? 'Adicione ao menos uma atividade antes de publicar o plano.'
-                  : undefined
-              }
+              title={resolvePlanningPublishButtonTitle({
+                planStatus: weekPayload?.plan?.status,
+                draftItemsCount: draftItems.length,
+              })}
               onClick={() => void handlePublish()}
               disabled={
                 busy ||
@@ -1351,12 +1422,22 @@ export function OperationalPlanningPage() {
                 weekPayload.plan.status === 'PUBLISHED'
               }
             >
-              Publicar plano
+              {PUBLISH_BUTTON_LABEL}
             </button>
           </div>
 
+          {weekPayload?.plan?.status === 'PUBLISHED' ? (
+            <p className="mt-3 max-w-3xl text-[13px] leading-relaxed text-slate-400">
+              {PLAN_PUBLISHED_HELPER_TEXT}
+            </p>
+          ) : null}
+
           {successMsg ? (
-            <p className="mt-4 rounded-lg border border-emerald-400/25 bg-emerald-500/10 px-3 py-2 text-[13px] text-emerald-100">
+            <p
+              role="status"
+              aria-live="polite"
+              className="mt-4 rounded-lg border border-emerald-400/25 bg-emerald-500/10 px-3 py-2 text-[13px] text-emerald-100"
+            >
               {successMsg}
             </p>
           ) : null}
@@ -1708,6 +1789,18 @@ export function OperationalPlanningPage() {
                   <p className="mt-2 text-[11px] leading-relaxed text-slate-500">
                     {ACTIVITY_TICKET_PRINT_SUPPORT_MESSAGE}
                   </p>
+                  <p className="mt-1 text-[11px] leading-relaxed text-slate-500">
+                    {ACTIVITY_TICKET_SILENT_PRINT_HINT}
+                  </p>
+                  <ThermalPrintAgentControls
+                    agentStatus={agentStatus}
+                    fallbackNotice={agentFallbackNotice}
+                    onDismissFallback={clearAgentFallbackNotice}
+                    onTestPrint={() => {
+                      void testThermalPrinter()
+                    }}
+                    testLoading={testPrintLoading}
+                  />
                 </div>
               ) : null}
 
@@ -1929,6 +2022,26 @@ export function OperationalPlanningPage() {
                 ))}
               </select>
             </label>
+            {modalBacklogItem && modalBacklogItem.assignedCollaborators.length > 0 ? (
+              <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                <span className="text-[11px] text-slate-500">Cadastrados na atividade:</span>
+                {modalBacklogItem.assignedCollaborators.map((c) => (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => setModalCollaboratorId(c.id)}
+                    className={[
+                      'rounded-lg px-2 py-0.5 text-[11px] transition-colors',
+                      modalCollaboratorId === c.id
+                        ? 'bg-[var(--gold,#c9a227)]/20 text-[var(--gold,#c9a227)] ring-1 ring-[var(--gold,#c9a227)]/40'
+                        : 'bg-white/[0.06] text-slate-300 hover:bg-white/[0.10]',
+                    ].join(' ')}
+                  >
+                    {c.fullName}
+                  </button>
+                ))}
+              </div>
+            ) : null}
             <label className="mt-3 block text-[12px] text-slate-500">
               Dia
               <select
@@ -1990,7 +2103,13 @@ export function OperationalPlanningPage() {
         }}
       />
 
-      {printTickets ? <ThermalActivityTicketsPrintArea tickets={printTickets} /> : null}
+      {currentSheet ? <ThermalActivityTicketsPrintArea sheet={currentSheet} /> : null}
+      <ThermalTicketPrintProgressOverlay
+        open={printProgress !== null && isBatchThermalTicketPrint(printProgress)}
+        current={printProgress?.current ?? 0}
+        total={printProgress?.total ?? 0}
+        onCancel={cancelPrint}
+      />
     </PageCanvas>
   )
 }

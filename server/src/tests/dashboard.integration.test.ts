@@ -139,7 +139,15 @@ describe.skipIf(!hasDb)('GET /api/v1/dashboard (integração)', () => {
       expect(d.meta?.bucketRule).toBe('shared_operationalBucket_ts')
 
       expect(d.conveyorsByBucket).toBeDefined()
-      for (const k of ['no_backlog', 'em_revisao', 'em_andamento', 'em_atraso', 'concluidas']) {
+      for (const k of [
+        'em_elaboracao',
+        'aguardando_planejamento',
+        'em_planejamento',
+        'em_execucao',
+        'em_atraso',
+        'finalizadas',
+        'canceladas',
+      ]) {
         expect(typeof d.conveyorsByBucket[k]).toBe('number')
       }
 

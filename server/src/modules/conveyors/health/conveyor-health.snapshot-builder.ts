@@ -56,13 +56,28 @@ type OperationalStatusMapping = {
 
 function mapOperationalStatus(raw: string): OperationalStatusMapping {
   const normalized = raw.trim().toLowerCase()
-  if (normalized === 'no_backlog') return { status: 'no_backlog', usedFallback: false }
-  if (normalized === 'em_revisao' || normalized === 'pronta_liberar')
+  if (normalized === 'em_elaboracao' || normalized === 'no_backlog')
+    return { status: 'no_backlog', usedFallback: false }
+  if (
+    normalized === 'aguardando_planejamento' ||
+    normalized === 'em_revisao' ||
+    normalized === 'pronta_liberar'
+  )
     return { status: 'em_revisao', usedFallback: false }
-  if (normalized === 'em_andamento' || normalized === 'em_producao')
+  if (
+    normalized === 'em_planejamento' ||
+    normalized === 'a_iniciar' ||
+    normalized === 'em_andamento' ||
+    normalized === 'em_producao'
+  )
     return { status: 'em_andamento', usedFallback: false }
   if (normalized === 'em_atraso') return { status: 'em_atraso', usedFallback: false }
-  if (normalized === 'concluidas' || normalized === 'concluida')
+  if (
+    normalized === 'finalizada' ||
+    normalized === 'finalizadas' ||
+    normalized === 'concluidas' ||
+    normalized === 'concluida'
+  )
     return { status: 'concluidas', usedFallback: false }
   return { status: 'no_backlog', usedFallback: true }
 }

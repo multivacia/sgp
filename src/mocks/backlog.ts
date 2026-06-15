@@ -10,11 +10,13 @@ import { normalizeBacklogPriority } from './backlog-priority'
 export type BacklogOrigin = 'manual' | 'documento' | 'base' | 'hybrid'
 
 export type BacklogStatus =
-  | 'no_backlog'
-  | 'em_revisao'
-  | 'pronta_liberar'
-  | 'em_producao'
-  | 'concluida'
+  | 'em_elaboracao'
+  | 'aguardando_planejamento'
+  | 'em_planejamento'
+  | 'a_iniciar'
+  | 'em_andamento'
+  | 'finalizada'
+  | 'cancelada'
 
 export type { BacklogPriority }
 export { normalizeBacklogPriority }
@@ -87,7 +89,7 @@ export const BACKLOG_MOCK_ROWS: BacklogRow[] = [
     activities: countActivities('et-001'),
     responsible: 'Carlos',
     priority: 'alta',
-    status: 'em_producao',
+    status: 'em_andamento',
     enteredAt: '2026-03-25T08:00:00',
     esteiraId: 'et-001',
     estimatedDeadline: '2026-04-10T12:00:00.000Z',
@@ -100,7 +102,7 @@ export const BACKLOG_MOCK_ROWS: BacklogRow[] = [
     activities: countActivities('et-002'),
     responsible: 'Marcos',
     priority: 'media',
-    status: 'em_revisao',
+    status: 'aguardando_planejamento',
     enteredAt: '2026-03-28T14:20:00',
     esteiraId: 'et-002',
     estimatedDeadline: '2026-04-20T00:00:00.000Z',
@@ -113,7 +115,7 @@ export const BACKLOG_MOCK_ROWS: BacklogRow[] = [
     activities: countActivities('et-003'),
     responsible: 'João',
     priority: 'baixa',
-    status: 'no_backlog',
+    status: 'em_elaboracao',
     enteredAt: '2026-03-30T09:15:00',
     esteiraId: 'et-003',
     estimatedDeadline: '2026-01-15T00:00:00.000Z',
@@ -126,7 +128,7 @@ export const BACKLOG_MOCK_ROWS: BacklogRow[] = [
     activities: countActivities('et-004'),
     responsible: 'Juliana',
     priority: 'media',
-    status: 'em_producao',
+    status: 'em_andamento',
     enteredAt: '2026-04-02T10:00:00',
     esteiraId: 'et-004',
     estimatedDeadline: '2026-04-30T18:00:00.000Z',
@@ -139,7 +141,7 @@ export const BACKLOG_MOCK_ROWS: BacklogRow[] = [
     activities: countActivities('et-005'),
     responsible: 'Ana',
     priority: 'baixa',
-    status: 'no_backlog',
+    status: 'em_elaboracao',
     enteredAt: '2026-04-04T15:30:00',
     esteiraId: 'et-005',
   },

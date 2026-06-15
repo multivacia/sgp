@@ -32,6 +32,7 @@ function mapStep(s: NovaEsteiraRegisterStep): CreateConveyorStepInput {
     titulo: s.titulo.trim(),
     orderIndex: s.orderIndex,
     plannedMinutes: s.plannedMinutes,
+    plannedQuantity: 1,
     sourceOrigin: toSourceOrigin(s.sourceOrigin),
     required: s.required,
   }

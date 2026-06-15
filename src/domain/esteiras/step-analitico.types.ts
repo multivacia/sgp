@@ -32,6 +32,7 @@ export type ApontamentoAnaliticoItem = {
   colaboradorId?: string
   colaboradorNome: string
   minutos: number
+  quantidadeExecutada?: number | null
   observacao?: string
   /** Apontamento por exceção (sem alocação na atividade). */
   apontamentoPorExcecao?: boolean
@@ -49,7 +50,15 @@ export type FonteTotalMinutosStep = 'apontamentos_registrados' | 'linha_realizad
 export type StatusLeituraApontamentoStep = 'no_prazo' | 'atencao' | 'excedido'
 
 export type ResumoApontamentosStep = {
+  /** Tempo planejado total (unitário × quantidade). */
   planejadoMin: number
+  planejadoUnitMin?: number
+  plannedQuantity?: number
+  executedQuantityTotal?: number
+  actualMinutesPerUnit?: number | null
+  remainingQuantity?: number
+  plannedQuantityLabel?: string
+  plannedSummaryLabel?: string
   totalMinutosApontados: number
   quantidadeLancamentos: number
   ultimoApontamentoAt?: string

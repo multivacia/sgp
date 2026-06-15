@@ -13,6 +13,7 @@ export type MyActivityRawRow = {
   area_name: string
   is_primary: boolean
   planned_minutes: string | null
+  planned_quantity: string
   realized_minutes: string | null
   opt_order_index: string
   area_order_index: string
@@ -94,6 +95,7 @@ export type TimeEntryCandidateRawRow = {
   is_primary: boolean
   assignment_type: 'COLLABORATOR' | 'TEAM'
   planned_minutes: string | null
+  planned_quantity: string
   realized_minutes: string | null
   opt_order_index: string
   area_order_index: string
@@ -129,6 +131,7 @@ export async function listTimeEntryCandidatesForCollaborator(
         cna.is_primary,
         cna.assignment_type::text AS assignment_type,
         step.planned_minutes::text AS planned_minutes,
+        step.planned_quantity::text AS planned_quantity,
         (
           SELECT COALESCE(SUM(cte.minutes), 0)::text
           FROM conveyor_time_entries cte
@@ -155,7 +158,7 @@ export async function listTimeEntryCandidatesForCollaborator(
       INNER JOIN conveyors cv
         ON cv.id = cna.conveyor_id
         AND cv.deleted_at IS NULL
-        AND cv.operational_status <> 'CONCLUIDA'
+        AND cv.operational_status IN ('A_INICIAR', 'EM_ANDAMENTO')
       INNER JOIN conveyor_nodes area
         ON area.id = step.parent_id
         AND area.deleted_at IS NULL
@@ -269,7 +272,7 @@ export async function listTimeEntryUnassignedOpenStepsForCollaborator(
     INNER JOIN conveyors cv
       ON cv.id = step.conveyor_id
       AND cv.deleted_at IS NULL
-      AND cv.operational_status <> 'CONCLUIDA'
+        AND cv.operational_status IN ('A_INICIAR', 'EM_ANDAMENTO')
     INNER JOIN conveyor_nodes area
       ON area.id = step.parent_id
       AND area.deleted_at IS NULL

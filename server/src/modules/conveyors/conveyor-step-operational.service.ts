@@ -10,8 +10,16 @@ import {
 import { canTransitionStepStatus, type ConveyorNodeStepOperationalStatusDb } from './stepOperationalStatus.js'
 import type { ConveyorDetailApi } from './conveyors.dto.js'
 import { loadConveyorStructureWithAssignees, mapDetailRowToApi } from './conveyors.service.js'
-import { serviceAnalyzeConveyorActivitySequence } from './conveyorActivitySequence.service.js'
+import {
+  serviceAnalyzeConveyorActivitySequence,
+  type ConveyorActivitySequenceAnalysis,
+} from './conveyorActivitySequence.service.js'
 import { ErrorCodes } from '../../shared/errors/errorCodes.js'
+import type { PoolOrClient } from './conveyorAssignments.repository.js'
+import { findAssigneeIdForStepAndCollaborator } from './conveyorAssignments.repository.js'
+import { findCollaboratorIdByAppUserId } from '../auth/auth.repository.js'
+import { appUserHasPermission } from '../permissions/permissions.repository.js'
+import { canConveyorAcceptTimeEntry } from './conveyorOperationalStatus.js'
 
 const NOTE_MAX = 2000
 
@@ -28,6 +36,171 @@ function pendingAfterReopen(planned: number | null | undefined, realized: number
 }
 
 export type ConveyorStepCompletionAction = 'COMPLETE' | 'REOPEN'
+
+export type CompleteConveyorStepOnClientInput = {
+  conveyorId: string
+  stepNodeId: string
+  /** app_users.id quando disponível; null no modo produção sem vínculo. */
+  actorAppUserId: string | null
+  productionCollaboratorId?: string | null
+  note?: string | null
+  outOfSequenceJustification?: string | null
+  trigger?: 'COMPLETE' | 'PRODUCTION_MARK_AS_DONE'
+  /** Análise prévia (evita releitura dentro da transação). */
+  sequence?: ConveyorActivitySequenceAnalysis
+  currentStatus?: ConveyorNodeStepOperationalStatusDb
+}
+
+/**
+ * Conclusão explícita de STEP dentro de transação já aberta.
+ * Reutilizado pelo PATCH admin e pelo fluxo production (markAsDone).
+ */
+export async function completeConveyorStepOnClient(
+  client: PoolOrClient,
+  input: CompleteConveyorStepOnClientInput,
+): Promise<{ idempotent: boolean; occurredIso: string | null }> {
+  const current: ConveyorNodeStepOperationalStatusDb =
+    input.currentStatus ?? 'PENDING'
+
+  if (current === 'COMPLETED') {
+    return { idempotent: true, occurredIso: null }
+  }
+
+  if (!canTransitionStepStatus(current, 'COMPLETED')) {
+    throw new AppError(
+      `Transição de estado da etapa não permitida (${current} → COMPLETED).`,
+      422,
+      ErrorCodes.INVALID_STATUS_TRANSITION,
+    )
+  }
+
+  const seq = input.sequence
+  if (!seq?.targetFound) {
+    throw new AppError(
+      'Esta atividade não está incluída na sequência operacional recomendada.',
+      422,
+      ErrorCodes.VALIDATION_ERROR,
+    )
+  }
+
+  let outOfSeqJustificationStored: string | null = null
+  if (seq.isOutOfSequence) {
+    const j = (input.outOfSequenceJustification ?? '').trim()
+    if (!j.length) {
+      throw new AppError(
+        'Informe uma justificativa para executar esta atividade fora da sequência recomendada.',
+        422,
+        ErrorCodes.STEP_COMPLETION_OUT_OF_SEQUENCE_REQUIRES_JUSTIFICATION,
+      )
+    }
+    outOfSeqJustificationStored = j
+  }
+
+  const occurredAt = new Date()
+  const occurredIso = occurredAt.toISOString()
+  const facts = await getStepCompletionFacts(client, input.conveyorId, input.stepNodeId)
+  const noteSafe = trimNote(input.note)
+  const idempotencyKey = `conveyor_step_completed:${input.conveyorId}:${input.stepNodeId}:${occurredIso}`
+
+  const updated = await updateConveyorNodeStepOperationalFields(
+    client,
+    input.conveyorId,
+    input.stepNodeId,
+    {
+      operational_status: 'COMPLETED',
+      operational_completed_at: occurredIso,
+      operational_completed_by: input.actorAppUserId,
+    },
+  )
+  if (!updated) {
+    throw new AppError('Não foi possível atualizar a etapa.', 500, ErrorCodes.INTERNAL)
+  }
+
+  await serviceCreateConveyorOperationalEvent(client, {
+    conveyorId: input.conveyorId,
+    nodeId: input.stepNodeId,
+    eventType: 'CONVEYOR_STEP_COMPLETED',
+    previousValue: current,
+    newValue: 'COMPLETED',
+    reason: 'EXPLICITLY_COMPLETED',
+    source: 'USER_ACTION',
+    occurredAt: occurredIso,
+    createdBy: input.actorAppUserId,
+    idempotencyKey,
+    metadataJson: {
+      stepNodeId: input.stepNodeId,
+      plannedMinutes: facts?.plannedMinutes ?? null,
+      realizedMinutes: facts?.realizedMinutes ?? null,
+      reason: 'EXPLICITLY_COMPLETED',
+      note: noteSafe,
+      idempotencyKey,
+      activityNodeId: input.stepNodeId,
+      outOfSequence: seq.isOutOfSequence,
+      outOfSequenceJustification: outOfSeqJustificationStored,
+      previousOpenCount: seq.previousOpenCount,
+      previousOpenActivityIds: seq.previousOpenActivities.map((a) => a.activityNodeId),
+      trigger: input.trigger ?? 'COMPLETE',
+      productionCollaboratorId: input.productionCollaboratorId ?? null,
+      accessChannel:
+        input.trigger === 'PRODUCTION_MARK_AS_DONE' ? 'PRODUCTION_AVATAR_PIN' : undefined,
+    },
+  })
+
+  return { idempotent: false, occurredIso }
+}
+
+async function assertCanPatchStepCompletion(
+  pool: pg.Pool,
+  input: {
+    actorAppUserId: string
+    action: ConveyorStepCompletionAction
+    conveyorId: string
+    stepNodeId: string
+  },
+  conveyor: NonNullable<Awaited<ReturnType<typeof findConveyorById>>>,
+): Promise<void> {
+  if (input.action === 'REOPEN') {
+    const allowed = await appUserHasPermission(pool, input.actorAppUserId, 'conveyors.create')
+    if (!allowed) {
+      throw new AppError('Sem permissão para reabrir esta atividade.', 403, ErrorCodes.FORBIDDEN)
+    }
+    return
+  }
+
+  const isGestor = await appUserHasPermission(pool, input.actorAppUserId, 'conveyors.create')
+  if (isGestor) return
+
+  const collaboratorId = await findCollaboratorIdByAppUserId(pool, input.actorAppUserId)
+  if (!collaboratorId) {
+    throw new AppError(
+      'Conta sem colaborador operacional vinculado. Contacte o administrador.',
+      403,
+      ErrorCodes.FORBIDDEN,
+    )
+  }
+
+  if (!canConveyorAcceptTimeEntry(conveyor.operational_status)) {
+    throw new AppError(
+      'Esta esteira não está liberada para conclusão operacional de atividades.',
+      422,
+      ErrorCodes.CONVEYOR_TIME_ENTRY_STATUS_NOT_ALLOWED,
+    )
+  }
+
+  const assigneeId = await findAssigneeIdForStepAndCollaborator(
+    pool,
+    input.conveyorId,
+    input.stepNodeId,
+    collaboratorId,
+  )
+  if (!assigneeId) {
+    throw new AppError(
+      'Para concluir esta atividade, informe uma justificativa ao registrar o apontamento.',
+      403,
+      ErrorCodes.FORBIDDEN,
+    )
+  }
+}
 
 /** Exportado para testes e PATCH de conclusão / reabertura explícita de STEP. */
 export async function servicePatchConveyorStepCompletion(
@@ -55,6 +228,8 @@ export async function servicePatchConveyorStepCompletion(
   if (stepRow.node_type !== 'STEP') {
     throw new AppError('Apenas etapas (STEP) podem ser concluídas explicitamente.', 422, ErrorCodes.VALIDATION_ERROR)
   }
+
+  await assertCanPatchStepCompletion(pool, input, conveyor)
 
   const current: ConveyorNodeStepOperationalStatusDb =
     stepRow.operational_status ?? 'PENDING'
@@ -117,50 +292,18 @@ async function serviceCompleteStep(
     outOfSeqJustificationStored = j
   }
 
-  const occurredAt = new Date()
-  const occurredIso = occurredAt.toISOString()
-
-  const facts = await getStepCompletionFacts(pool, input.conveyorId, input.stepNodeId)
-  const noteSafe = trimNote(input.note)
-  /** Inclui instante da conclusão para permitir múltiplos ciclos concluir → reabrir → concluir sem colidir com chaves antigas. */
-  const idempotencyKey = `conveyor_step_completed:${input.conveyorId}:${input.stepNodeId}:${occurredIso}`
-
   const client = await pool.connect()
   try {
     await client.query('BEGIN')
-    const updated = await updateConveyorNodeStepOperationalFields(client, input.conveyorId, input.stepNodeId, {
-      operational_status: 'COMPLETED',
-      operational_completed_at: occurredIso,
-      operational_completed_by: input.actorAppUserId,
-    })
-    if (!updated) {
-      throw new AppError('Não foi possível atualizar a etapa.', 500, ErrorCodes.INTERNAL)
-    }
-    await serviceCreateConveyorOperationalEvent(client, {
+    await completeConveyorStepOnClient(client, {
       conveyorId: input.conveyorId,
-      nodeId: input.stepNodeId,
-      eventType: 'CONVEYOR_STEP_COMPLETED',
-      previousValue: current,
-      newValue: 'COMPLETED',
-      reason: 'EXPLICITLY_COMPLETED',
-      source: 'USER_ACTION',
-      occurredAt: occurredIso,
-      createdBy: input.actorAppUserId,
-      idempotencyKey,
-      metadataJson: {
-        stepNodeId: input.stepNodeId,
-        plannedMinutes: facts?.plannedMinutes ?? null,
-        realizedMinutes: facts?.realizedMinutes ?? null,
-        reason: 'EXPLICITLY_COMPLETED',
-        note: noteSafe,
-        idempotencyKey,
-        activityNodeId: input.stepNodeId,
-        outOfSequence: seq.isOutOfSequence,
-        outOfSequenceJustification: outOfSeqJustificationStored,
-        previousOpenCount: seq.previousOpenCount,
-        previousOpenActivityIds: seq.previousOpenActivities.map((a) => a.activityNodeId),
-        trigger: 'COMPLETE',
-      },
+      stepNodeId: input.stepNodeId,
+      actorAppUserId: input.actorAppUserId,
+      note: input.note,
+      outOfSequenceJustification: outOfSeqJustificationStored,
+      trigger: 'COMPLETE',
+      sequence: seq,
+      currentStatus: current,
     })
     await client.query('COMMIT')
   } catch (e) {

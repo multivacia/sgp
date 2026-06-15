@@ -16,7 +16,9 @@ export async function patchConveyorStatus(
   const id = conveyorIdParamSchema.parse(req.params.id)
   const body = patchConveyorStatusBodySchema.parse(req.body)
   const pool = req.app.locals.pool as pg.Pool
-  const data = await servicePatchConveyorStatus(pool, id, body.operationalStatus)
+  const data = await servicePatchConveyorStatus(pool, id, body.operationalStatus, {
+    canEditStatus: true,
+  })
   if (!data) {
     throw new AppError('Esteira não encontrada.', 404, ErrorCodes.NOT_FOUND)
   }

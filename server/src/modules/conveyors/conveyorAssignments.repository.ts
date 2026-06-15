@@ -91,6 +91,7 @@ export type InsertConveyorTimeEntryRow = {
   conveyor_node_assignee_id: string | null
   entry_at: Date | string
   minutes: number
+  executed_quantity: number | null
   notes: string | null
   entry_mode: 'manual' | 'guided' | 'imported'
   metadata_json: unknown | null
@@ -98,6 +99,8 @@ export type InsertConveyorTimeEntryRow = {
   exception_justification: string | null
   is_out_of_sequence: boolean
   out_of_sequence_justification: string | null
+  session_completion_pct: number | null
+  mark_as_done: boolean
 }
 
 export async function insertConveyorTimeEntry(
@@ -107,14 +110,16 @@ export async function insertConveyorTimeEntry(
   const r = await pool.query<{ id: string }>(
     `INSERT INTO conveyor_time_entries (
       id, conveyor_id, conveyor_node_id, collaborator_id,
-      conveyor_node_assignee_id, entry_at, minutes, notes, entry_mode, metadata_json,
+      conveyor_node_assignee_id, entry_at, minutes, executed_quantity, notes, entry_mode, metadata_json,
       entry_origin, exception_justification,
-      is_out_of_sequence, out_of_sequence_justification
+      is_out_of_sequence, out_of_sequence_justification,
+      session_completion_pct, mark_as_done
     ) VALUES (
       $1, $2, $3, $4,
-      $5, $6, $7, $8, $9, $10::jsonb,
-      $11, $12,
-      $13, $14
+      $5, $6, $7, $8, $9, $10, $11::jsonb,
+      $12, $13,
+      $14, $15,
+      $16, $17
     )
     RETURNING id`,
     [
@@ -125,6 +130,7 @@ export async function insertConveyorTimeEntry(
       row.conveyor_node_assignee_id,
       typeof row.entry_at === 'string' ? row.entry_at : row.entry_at.toISOString(),
       row.minutes,
+      row.executed_quantity,
       row.notes,
       row.entry_mode,
       row.metadata_json === null || row.metadata_json === undefined
@@ -134,6 +140,8 @@ export async function insertConveyorTimeEntry(
       row.exception_justification,
       row.is_out_of_sequence,
       row.out_of_sequence_justification,
+      row.session_completion_pct,
+      row.mark_as_done,
     ],
   )
   const out = r.rows[0]
@@ -224,6 +232,71 @@ export async function findAssigneeIdForStepAndCollaborator(
      ORDER BY x.sort_pri, x.id
      LIMIT 1`,
     [conveyorId, conveyorNodeId, collaboratorId],
+  )
+  return r.rows[0]?.id ?? null
+}
+
+/** Indica se o STEP já tem responsável principal ativo. */
+export async function stepHasActivePrimaryAssignee(
+  pool: pg.Pool,
+  conveyorNodeId: string,
+): Promise<boolean> {
+  const r = await pool.query<{ exists: boolean }>(
+    `SELECT EXISTS (
+       SELECT 1
+       FROM conveyor_node_assignees cna
+       WHERE cna.conveyor_node_id = $1::uuid
+         AND cna.deleted_at IS NULL
+         AND cna.is_primary = TRUE
+     ) AS exists`,
+    [conveyorNodeId],
+  )
+  return Boolean(r.rows[0]?.exists)
+}
+
+/** Maior `order_index` ativo no STEP (ou -1 se vazio). */
+export async function maxAssigneeOrderIndexForStep(
+  pool: pg.Pool,
+  conveyorNodeId: string,
+): Promise<number> {
+  const r = await pool.query<{ max: number }>(
+    `SELECT COALESCE(MAX(order_index), -1)::int AS max
+     FROM conveyor_node_assignees
+     WHERE conveyor_node_id = $1::uuid
+       AND deleted_at IS NULL`,
+    [conveyorNodeId],
+  )
+  return r.rows[0]?.max ?? -1
+}
+
+/** Item ativo no plano publicado vigente da semana para colaborador + STEP. */
+export async function findPublishedPlanItemIdForCollaboratorOnStep(
+  pool: pg.Pool,
+  input: {
+    conveyorId: string
+    stepNodeId: string
+    collaboratorId: string
+    weekStartDate: string
+  },
+): Promise<string | null> {
+  const r = await pool.query<{ id: string }>(
+    `
+    SELECT i.id::text
+    FROM operational_work_plan_items i
+    INNER JOIN operational_work_plans p
+      ON p.id = i.work_plan_id
+      AND p.deleted_at IS NULL
+      AND p.status = 'PUBLISHED'
+      AND p.week_start_date = $4::date
+    WHERE i.deleted_at IS NULL
+      AND i.status = 'PLANNED'
+      AND i.conveyor_id = $1::uuid
+      AND i.activity_node_id = $2::uuid
+      AND i.assigned_collaborator_id = $3::uuid
+    ORDER BY p.published_at DESC NULLS LAST, p.updated_at DESC
+    LIMIT 1
+    `,
+    [input.conveyorId, input.stepNodeId, input.collaboratorId, input.weekStartDate],
   )
   return r.rows[0]?.id ?? null
 }
@@ -324,6 +397,7 @@ export type ConveyorTimeEntryRow = {
   conveyor_node_assignee_id: string | null
   entry_at: Date
   minutes: number
+  executed_quantity: number | null
   notes: string | null
   entry_mode: 'manual' | 'guided' | 'imported'
   metadata_json: unknown | null
@@ -341,6 +415,7 @@ export type ConveyorTimeEntryListRow = {
   collaborator_name: string | null
   conveyor_node_assignee_id: string | null
   minutes: number
+  executed_quantity: number | null
   notes: string | null
   entry_mode: 'manual' | 'guided' | 'imported'
   metadata_json: unknown | null
@@ -360,7 +435,7 @@ export async function findConveyorTimeEntryById(
 ): Promise<ConveyorTimeEntryRow | null> {
   const r = await pool.query<ConveyorTimeEntryRow>(
     `SELECT id, conveyor_id, conveyor_node_id, collaborator_id,
-            conveyor_node_assignee_id, entry_at, minutes, notes, entry_mode,
+            conveyor_node_assignee_id, entry_at, minutes, executed_quantity, notes, entry_mode,
             metadata_json, entry_origin, exception_justification,
             is_out_of_sequence, out_of_sequence_justification,
             created_at, updated_at
@@ -378,7 +453,7 @@ export async function listConveyorTimeEntriesByStep(
 ): Promise<ConveyorTimeEntryListRow[]> {
   const r = await pool.query<ConveyorTimeEntryListRow>(
     `SELECT cte.id, cte.collaborator_id, c.full_name AS collaborator_name,
-            cte.conveyor_node_assignee_id, cte.minutes, cte.notes, cte.entry_mode,
+            cte.conveyor_node_assignee_id, cte.minutes, cte.executed_quantity, cte.notes, cte.entry_mode,
             cte.metadata_json, cte.entry_origin, cte.exception_justification,
             cte.is_out_of_sequence, cte.out_of_sequence_justification,
             au.email AS recorded_by_user_email,

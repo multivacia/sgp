@@ -17,6 +17,7 @@ import {
 } from '../modules/conveyors/conveyorAssignments.service.js'
 import { insertConveyorNodeAssignee } from '../modules/conveyors/conveyorAssignments.repository.js'
 import { ensureMariaCollaboratorSeedForIntegration } from './integrationSeedFixtures.js'
+import { setConveyorProductionStatusForIntegration } from './integrationConveyorFixtures.js'
 loadDotenvFiles()
 
 const hasDb = hasDatabaseConnectionInEnv(process.env)
@@ -103,8 +104,8 @@ describe.skipIf(!hasDb)('conveyor_node_assignees + conveyor_time_entries (integr
     const colabB = randomUUID()
     await pool.query(
       `INSERT INTO collaborators (id, full_name, status, is_active)
-       VALUES ($1::uuid, 'Colab B Assign Test', 'ACTIVE', true)`,
-      [colabB],
+       VALUES ($1::uuid, $2, 'ACTIVE', true)`,
+      [colabB, `Colab B Assign Test ${colabB.slice(0, 8)}`],
     )
 
     const created = await serviceCreateConveyor(
@@ -160,9 +161,9 @@ describe.skipIf(!hasDb)('conveyor_node_assignees + conveyor_time_entries (integr
     const colabC = randomUUID()
     await pool.query(
       `INSERT INTO collaborators (id, full_name, status, is_active) VALUES
-        ($1::uuid, 'Pri B', 'ACTIVE', true),
-        ($2::uuid, 'Pri C', 'ACTIVE', true)`,
-      [colabB, colabC],
+        ($1::uuid, $2, 'ACTIVE', true),
+        ($3::uuid, $4, 'ACTIVE', true)`,
+      [colabB, `Pri B ${colabB.slice(0, 8)}`, colabC, `Pri C ${colabC.slice(0, 8)}`],
     )
 
     const created = await serviceCreateConveyor(
@@ -200,6 +201,7 @@ describe.skipIf(!hasDb)('conveyor_node_assignees + conveyor_time_entries (integr
       pool,
       minimalConveyorBody(`Time ${randomUUID().slice(0, 8)}`),
     )
+    await setConveyorProductionStatusForIntegration(pool, created.id)
     const stepId = await firstNodeId(created.id, 'STEP')
 
     const assignee = await serviceCreateConveyorNodeAssignee(pool, {
@@ -321,8 +323,8 @@ describe.skipIf(!hasDb)('conveyor_node_assignees + conveyor_time_entries (integr
     const inactiveId = randomUUID()
     await pool.query(
       `INSERT INTO collaborators (id, full_name, status, is_active)
-       VALUES ($1::uuid, 'Inativo', 'INACTIVE', false)`,
-      [inactiveId],
+       VALUES ($1::uuid, $2, 'INACTIVE', false)`,
+      [inactiveId, `Inativo ${inactiveId.slice(0, 8)}`],
     )
 
     const created = await serviceCreateConveyor(
@@ -349,11 +351,12 @@ describe.skipIf(!hasDb)('conveyor_node_assignees + conveyor_time_entries (integr
       pool,
       minimalConveyorBody(`Aref ${randomUUID().slice(0, 8)}`),
     )
+    await setConveyorProductionStatusForIntegration(pool, created.id)
     const stepId = await firstNodeId(created.id, 'STEP')
     const other = randomUUID()
     await pool.query(
-      `INSERT INTO collaborators (id, full_name, status, is_active) VALUES ($1::uuid, 'Outro', 'ACTIVE', true)`,
-      [other],
+      `INSERT INTO collaborators (id, full_name, status, is_active) VALUES ($1::uuid, $2, 'ACTIVE', true)`,
+      [other, `Outro ${other.slice(0, 8)}`],
     )
     const assignee = await serviceCreateConveyorNodeAssignee(pool, {
       conveyorId: created.id,

@@ -12,6 +12,7 @@ import {
 } from '../../components/ui/SgpToast'
 import type {
   AdminCollaborator,
+  AdminCollaboratorProductionPin,
   CollaboratorCreateInput,
   CollaboratorUpdateInput,
   Role,
@@ -40,6 +41,7 @@ import {
   patchAdminCollaborator,
   postAdminCollaboratorActivate,
   postAdminCollaboratorInactivate,
+  postAdminCollaboratorResetPin,
   postAdminCollaboratorRestore,
   postAdminCollaboratorSoftDelete,
 } from '../../services/admin/adminCollaboratorsApiService'
@@ -829,6 +831,120 @@ export function ColaboradoresPage() {
   )
 }
 
+function pinStatusLabel(pin: AdminCollaboratorProductionPin | null): {
+  text: string
+  className: string
+} {
+  if (!pin || !pin.hasCredential) {
+    return {
+      text: 'Sem credencial',
+      className:
+        'border-white/14 bg-white/[0.06] text-slate-400',
+    }
+  }
+  if (!pin.enabled) {
+    return {
+      text: 'Desabilitado',
+      className: 'border-white/14 bg-white/[0.06] text-slate-400',
+    }
+  }
+  if (pin.locked) {
+    return {
+      text: 'Bloqueado',
+      className: 'border-rose-500/35 bg-rose-500/10 text-rose-200/90',
+    }
+  }
+  if (pin.mustChange) {
+    return {
+      text: 'Aguardando troca',
+      className: 'border-amber-500/35 bg-amber-500/10 text-amber-200/90',
+    }
+  }
+  return {
+    text: 'Ativo',
+    className: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-200/90',
+  }
+}
+
+function CollaboratorProductionPinCard({
+  collaboratorId,
+  pin,
+  onResetSuccess,
+}: {
+  collaboratorId: string
+  pin: AdminCollaboratorProductionPin | null
+  onResetSuccess: (updated: AdminCollaborator) => void
+}) {
+  const [loading, setLoading] = useState(false)
+  const [feedback, setFeedback] = useState<{ text: string; ok: boolean } | null>(null)
+
+  const status = pinStatusLabel(pin)
+
+  async function handleReset() {
+    if (
+      !window.confirm(
+        'Redefinir o PIN do Modo Fábrica?\n\nO colaborador receberá PIN 1234 e deverá criar um novo PIN no próximo acesso ao Modo Fábrica.',
+      )
+    ) {
+      return
+    }
+    setLoading(true)
+    setFeedback(null)
+    try {
+      const updated = await postAdminCollaboratorResetPin(collaboratorId)
+      setFeedback({ text: 'PIN redefinido. Próximo acesso exigirá nova senha.', ok: true })
+      onResetSuccess(updated)
+    } catch {
+      setFeedback({ text: 'Erro ao redefinir o PIN. Tente novamente.', ok: false })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="rounded-xl border border-white/[0.08] bg-sgp-app-panel-deep/80 px-4 py-3 sm:col-span-2">
+      <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">
+        PIN do Modo Fábrica
+      </p>
+      <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <span
+            className={`inline-block rounded-md border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${status.className}`}
+          >
+            {status.text}
+          </span>
+          <span className="text-xs text-slate-500">
+            {!pin?.hasCredential
+              ? 'Nenhuma credencial provisionada para este colaborador'
+              : pin.mustChange
+                ? 'Será solicitado um novo PIN no próximo acesso'
+                : pin.locked
+                  ? 'Conta bloqueada por excesso de tentativas'
+                  : pin.enabled
+                    ? 'Acesso ao Modo Fábrica habilitado'
+                    : 'Acesso ao Modo Fábrica desabilitado'}
+          </span>
+        </div>
+        <button
+          type="button"
+          disabled={loading}
+          onClick={() => void handleReset()}
+          className="rounded-lg border border-white/12 bg-white/[0.06] px-3 py-1.5 text-xs font-bold text-slate-200 disabled:opacity-50 hover:bg-white/[0.1]"
+        >
+          {loading ? 'Redefinindo…' : 'Redefinir PIN'}
+        </button>
+      </div>
+      {feedback ? (
+        <p
+          className={`mt-2 text-xs ${feedback.ok ? 'text-emerald-300/90' : 'text-rose-300/90'}`}
+        >
+          {feedback.text}
+        </p>
+      ) : null}
+    </div>
+  )
+}
+
 type FormPropsCreate = {
   titulo: string
   modo: 'create'
@@ -965,6 +1081,9 @@ function FormColaboradorModal(props: FormProps) {
   )
   const [roleId, setRoleId] = useState(inicial?.roleId ?? '')
   const [formError, setFormError] = useState<string | null>(null)
+  const [localPin, setLocalPin] = useState(
+    props.modo === 'edit' ? (props.inicial.productionPin ?? null) : null,
+  )
 
   useEffect(() => {
     setFormError(null)
@@ -1098,6 +1217,14 @@ function FormColaboradorModal(props: FormProps) {
 
           {props.modo === 'edit' && props.operationalCapacityEnabled ? (
             <CollaboratorOperationalCapacityCard collaboratorId={props.inicial.id} />
+          ) : null}
+
+          {props.modo === 'edit' ? (
+            <CollaboratorProductionPinCard
+              collaboratorId={props.inicial.id}
+              pin={localPin}
+              onResetSuccess={(updated) => setLocalPin(updated.productionPin ?? null)}
+            />
           ) : null}
         </div>
 

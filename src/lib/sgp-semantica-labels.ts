@@ -8,11 +8,13 @@ import type {
 } from '../mocks/esteira-detalhe'
 
 export const BACKLOG_STATUS_LABELS: Record<BacklogStatus, string> = {
-  no_backlog: 'No backlog',
-  em_revisao: 'Em revisão',
-  pronta_liberar: 'Pronta p/ liberar',
-  em_producao: 'Em produção',
-  concluida: 'Concluída',
+  em_elaboracao: 'Rascunho / Em elaboração',
+  aguardando_planejamento: 'Aguardando planejamento',
+  em_planejamento: 'Em planejamento',
+  a_iniciar: 'A iniciar',
+  em_andamento: 'Em andamento',
+  finalizada: 'Finalizada',
+  cancelada: 'Cancelada',
 }
 
 export const ESTEIRA_STATUS_GERAL_LABELS: Record<EsteiraStatusGeral, string> = {

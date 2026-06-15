@@ -9,6 +9,7 @@ import {
   postAdminCollaborator,
   postAdminCollaboratorActivate,
   postAdminCollaboratorInactivate,
+  postAdminCollaboratorResetPin,
   postAdminCollaboratorRestore,
   postAdminCollaboratorSoftDelete,
 } from '../admin-collaborators/admin-collaborators.controller.js'
@@ -114,6 +115,11 @@ export function adminUsersRouter(): Router {
     '/admin/collaborators/:id/restore',
     ...ap('collaborators_admin.restore'),
     asyncRoute(postAdminCollaboratorRestore),
+  )
+  r.post(
+    '/admin/collaborators/:id/production-pin/reset',
+    ...ap('collaborators_admin.edit'),
+    asyncRoute(postAdminCollaboratorResetPin),
   )
   return r
 }

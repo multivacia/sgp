@@ -48,6 +48,7 @@ export type TimeEntryCreatedDto = TimeEntryDelegationPublic & {
   collaboratorId: string
   conveyorNodeAssigneeId: string | null
   minutes: number
+  executedQuantity: number | null
   notes: string | null
   entryMode: 'manual' | 'guided' | 'imported'
   entryOrigin: 'ASSIGNED' | 'UNASSIGNED_EXCEPTION'
@@ -64,6 +65,7 @@ export type TimeEntryListItemDto = TimeEntryDelegationPublic & {
   collaboratorName: string | null
   conveyorNodeAssigneeId: string | null
   minutes: number
+  executedQuantity: number | null
   notes: string | null
   entryMode: 'manual' | 'guided' | 'imported'
   entryOrigin: 'ASSIGNED' | 'UNASSIGNED_EXCEPTION'
@@ -150,6 +152,7 @@ export function timeEntryRowToCreated(
     collaboratorId: row.collaborator_id,
     conveyorNodeAssigneeId: row.conveyor_node_assignee_id,
     minutes: row.minutes,
+    executedQuantity: row.executed_quantity,
     notes: row.notes,
     entryMode: row.entry_mode,
     entryOrigin: row.entry_origin,
@@ -173,6 +176,7 @@ export function timeEntryListRowToDto(row: ConveyorTimeEntryListRow): TimeEntryL
     collaboratorName: row.collaborator_name,
     conveyorNodeAssigneeId: row.conveyor_node_assignee_id,
     minutes: row.minutes,
+    executedQuantity: row.executed_quantity,
     notes: row.notes,
     entryMode: row.entry_mode,
     entryOrigin: row.entry_origin,

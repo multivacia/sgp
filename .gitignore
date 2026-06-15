@@ -8,6 +8,11 @@ server/.env
 server/.env.*
 !server/.env.example
 
+# SGP Print Agent â€” config local da estaÃ§Ã£o (nÃ£o versionar)
+sgp-print-agent/sgp-print-agent.config.json
+sgp-print-agent/sgp-print-agent.config.local.json
+*.local.json
+
 # Local editor
 .vscode
 
@@ -29,3 +34,9 @@ yarn-error.log*
 # Packages
 *.zip
 *.tar.gz
+
+# Local/sensitive files - SGP
+.env.local
+server/.env.local
+scripts/db/*.local.sql
+sgp-print-agent/*.local.json

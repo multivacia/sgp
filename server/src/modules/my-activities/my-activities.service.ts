@@ -18,6 +18,7 @@ import {
   type TimeEntryCandidateRawRow,
 } from './my-activities.repository.js'
 import { analyzeConveyorActivitySequence } from '../conveyors/conveyorActivitySequence.logic.js'
+import { resolveActivityPlannedTotalMinutes } from '../../shared/activityOperationalQuantity.js'
 import type { SequenceAnalysisNode } from '../conveyors/conveyorActivitySequence.logic.js'
 import { listConveyorNodesForSequenceAnalysis } from '../conveyors/conveyors.repository.js'
 
@@ -60,6 +61,13 @@ function mapAndSortActivities(rows: Awaited<
         row.planned_minutes === null || row.planned_minutes === ''
           ? null
           : Number(row.planned_minutes),
+      plannedQuantity: Number(row.planned_quantity) || 1,
+      plannedTotalMinutes: resolveActivityPlannedTotalMinutes(
+        row.planned_minutes === null || row.planned_minutes === ''
+          ? 0
+          : Number(row.planned_minutes),
+        row.planned_quantity,
+      ),
       realizedMinutes:
         row.realized_minutes === null || row.realized_minutes === ''
           ? null
@@ -138,9 +146,10 @@ function mapCandidateRow(
     row.planned_minutes === null || row.planned_minutes === ''
       ? null
       : Number(row.planned_minutes)
+  const plannedQty = Number(row.planned_quantity) || 1
+  const plannedTotal = resolveActivityPlannedTotalMinutes(planned ?? 0, plannedQty)
   const realized = Number(row.realized_minutes ?? 0)
-  const plannedNum = planned == null || Number.isNaN(planned) ? 0 : Math.max(0, planned)
-  const pendingMinutes = Math.max(0, plannedNum - Math.max(0, realized))
+  const pendingMinutes = Math.max(0, plannedTotal - Math.max(0, realized))
   const at =
     row.assignment_type === 'TEAM' ? ('TEAM' as const) : ('COLLABORATOR' as const)
   const nodes = nodesByConveyor.get(row.conveyor_id) ?? []
@@ -166,6 +175,8 @@ function mapCandidateRow(
     roleInStep: row.is_primary ? 'primary' : 'support',
     assignmentType: at,
     plannedMinutes: planned,
+    plannedQuantity: plannedQty,
+    plannedTotalMinutes: plannedTotal,
     realizedMinutes: realized,
     pendingMinutes,
     isAssignedToMe: opts.isAssignedToMe,
@@ -174,6 +185,7 @@ function mapCandidateRow(
     requiresOutOfSequenceJustification: seq.isOutOfSequence,
     previousOpenCount: seq.previousOpenCount,
     previousOpenActivities: prevSlice,
+    canCompleteStep: true,
   }
 }
 

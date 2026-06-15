@@ -1,0 +1,14 @@
+{
+  "port": 8765,
+  "printerName": "POS-80(copy of 1)",
+  "paperWidthMm": 80,
+  "charsPerLine": 42,
+  "cutMode": "partial",
+  "authToken": "troque-este-token-local",
+  "allowedOrigins": [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "https://app.suaempresa.com.br"
+  ],
+  "mockPrinter": false
+}

@@ -62,6 +62,7 @@ export function mapMatrixTreeToConveyorOptionsWithOrigin(
               0,
               Math.floor(Number(act.planned_minutes ?? 0)),
             ),
+            plannedQuantity: 1,
             sourceOrigin: nodeOrigin,
             required: act.required,
             assignees: assignmentsByMatrixActivityId[act.id] ?? [],
@@ -197,6 +198,7 @@ export type ManualStepDraft = {
   key: string
   titulo: string
   plannedMinutes: number
+  plannedQuantity?: number
 }
 
 export function buildManualConveyorInput(
@@ -216,6 +218,7 @@ export function buildManualConveyorInput(
         titulo: st.titulo.trim(),
         orderIndex: si + 1,
         plannedMinutes: Math.max(0, Math.floor(st.plannedMinutes)),
+        plannedQuantity: 1,
         sourceOrigin: 'manual',
         required: true,
         assignees: assigneesByStepKey[st.key] ?? [],

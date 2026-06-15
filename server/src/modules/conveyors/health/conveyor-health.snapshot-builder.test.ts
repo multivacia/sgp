@@ -46,7 +46,7 @@ function baseDetail(overrides: Partial<ConveyorDetailApi> = {}): ConveyorDetailA
     baseNameSnapshot: null,
     baseVersionSnapshot: null,
     matrixRootItemId: null,
-    operationalStatus: 'NO_BACKLOG',
+    operationalStatus: 'EM_ELABORACAO',
     createdAt: '2026-01-01T10:00:00.000Z',
     completedAt: null,
     estimatedDeadline: '2026-12-31',
@@ -99,7 +99,7 @@ function baseWorkload(overrides: Partial<ConveyorNodeWorkloadApi> = {}): Conveyo
     semanticsVersion: '1.5',
     conveyorId: CONV_ID,
     conveyor: {
-      operationalBucket: 'em_andamento',
+      operationalBucket: 'em_execucao',
       isOverdueContext: false,
     },
     notes: '',
@@ -541,10 +541,10 @@ describe('buildConveyorOperationalSnapshotV1', () => {
 
 describe('toArgosOperationalStatus', () => {
   it('normaliza status para enum lowercase do ARGOS', () => {
-    expect(toArgosOperationalStatus('NO_BACKLOG')).toBe('no_backlog')
-    expect(toArgosOperationalStatus('EM_REVISAO')).toBe('em_revisao')
-    expect(toArgosOperationalStatus('EM_PRODUCAO')).toBe('em_andamento')
+    expect(toArgosOperationalStatus('EM_ELABORACAO')).toBe('no_backlog')
+    expect(toArgosOperationalStatus('AGUARDANDO_PLANEJAMENTO')).toBe('em_revisao')
+    expect(toArgosOperationalStatus('EM_ANDAMENTO')).toBe('em_andamento')
     expect(toArgosOperationalStatus('EM_ATRASO')).toBe('em_atraso')
-    expect(toArgosOperationalStatus('CONCLUIDA')).toBe('concluidas')
+    expect(toArgosOperationalStatus('FINALIZADA')).toBe('concluidas')
   })
 })

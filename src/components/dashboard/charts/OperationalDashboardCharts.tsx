@@ -29,11 +29,13 @@ import {
 import { BarMetricTooltip } from './BarMetricTooltip'
 
 const BUCKET_CHART_ORDER: OperationalBucketKey[] = [
-  'no_backlog',
-  'em_revisao',
-  'em_andamento',
+  'em_elaboracao',
+  'aguardando_planejamento',
+  'em_planejamento',
+  'em_execucao',
   'em_atraso',
-  'concluidas',
+  'finalizadas',
+  'canceladas',
 ]
 
 function minutesTick(v: number) {
@@ -55,7 +57,7 @@ export function OperationalDashboardCharts({ data }: Props) {
         key: k,
         name: OPERATIONAL_BUCKET_LABELS[k],
         value: data.conveyorsByBucket[k],
-        fill: chart.bucketFill[k] ?? chart.bucketFill.no_backlog,
+        fill: chart.bucketFill[k] ?? chart.bucketFill.em_elaboracao,
       })),
     [chart.bucketFill, data.conveyorsByBucket],
   )

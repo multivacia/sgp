@@ -5,6 +5,7 @@ import {
   operationalPlanningBacklogExcludeConveyorPlanItemsSql,
   operationalPlanningBacklogExcludeEmProducaoWithActivePlanSql,
 } from './operational-planning.backlog-eligibility.js'
+import { sqlConveyorStepPlannedTotalMinutes } from '../../shared/activityOperationalQuantity.js'
 import {
   EXECUTION_OUTSIDE_PLAN_TIMEZONE,
   type ExecutionOutsidePlanEntryRow,
@@ -13,6 +14,9 @@ import type {
   WeekActivityStepEventRow,
   WeekActivityTimeEntryRow,
 } from './operational-planning.week-activity.js'
+
+/** Carga no backlog/plano semanal: total planejado (min/un. × qtd), não só unitário. */
+const STEP_PLANNED_TOTAL_MINUTES_SQL = sqlConveyorStepPlannedTotalMinutes('step')
 
 export type OperationalWorkPlanRow = {
   id: string
@@ -213,6 +217,7 @@ export async function listWorkPlanItemLinks(
   }))
 }
 
+/** `operational_work_plan_items.planned_minutes` = carga planejada total no plano (não min/un.). */
 export async function insertWorkPlanItems(
   client: pg.PoolClient,
   workPlanId: string,
@@ -377,7 +382,7 @@ export async function listFactoryIntakeItems(
     INNER JOIN conveyors cv
       ON cv.id = i.conveyor_id
       AND cv.deleted_at IS NULL
-      AND cv.operational_status <> 'CONCLUIDA'
+      AND cv.operational_status NOT IN ('FINALIZADA', 'CANCELADA')
     INNER JOIN conveyor_nodes step
       ON step.id = i.activity_node_id
       AND step.deleted_at IS NULL
@@ -818,11 +823,11 @@ export async function listOperationalPlanningBacklog(
       step.name AS activity_title,
       opt.name AS task_title,
       area.name AS sector_title,
-      step.planned_minutes::text AS planned_minutes,
+      ${STEP_PLANNED_TOTAL_MINUTES_SQL}::text AS planned_minutes,
       COALESCE(realized.realized, 0)::text AS realized_minutes,
       GREATEST(
         0,
-        COALESCE(step.planned_minutes, 0) - COALESCE(realized.realized, 0)
+        ${STEP_PLANNED_TOTAL_MINUTES_SQL} - COALESCE(realized.realized, 0)
       )::text AS pending_minutes,
       COALESCE(
         (
@@ -903,7 +908,7 @@ export async function listOperationalPlanningBacklog(
         )
       )
       AND (
-        GREATEST(0, COALESCE(step.planned_minutes, 0) - COALESCE(realized.realized, 0)) > 0
+        GREATEST(0, ${STEP_PLANNED_TOTAL_MINUTES_SQL} - COALESCE(realized.realized, 0)) > 0
       )
       AND (
         $3::text IS NULL

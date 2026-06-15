@@ -36,11 +36,13 @@ const ORDER_ATIVIDADE: AtividadeStatusDetalhe[] = [
 ]
 
 export const ORDER_BACKLOG_STATUS: BacklogStatus[] = [
-  'no_backlog',
-  'em_revisao',
-  'pronta_liberar',
-  'em_producao',
-  'concluida',
+  'em_elaboracao',
+  'aguardando_planejamento',
+  'em_planejamento',
+  'a_iniciar',
+  'em_andamento',
+  'finalizada',
+  'cancelada',
 ]
 
 export function somaSerie(items: DashboardOperacionalSerieItem[]): number {

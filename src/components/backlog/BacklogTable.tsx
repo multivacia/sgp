@@ -1,7 +1,6 @@
 import { useCallback, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ApiError } from '../../lib/api/apiErrors'
-import { getOperationalBucket } from '../../lib/backlog/operationalBuckets'
 import { useAuth } from '../../lib/use-auth'
 import type { BacklogRow } from '../../mocks/backlog'
 import { deleteConveyor } from '../../services/conveyors/conveyorsApiService'
@@ -9,9 +8,14 @@ import {
   SgpContextActionsMenu,
   type SgpContextActionsMenuItemDef,
 } from '../shell/SgpContextActionsMenu'
+import {
+  SHOW_BACKLOG_ACTIVITIES_COLUMN,
+  SHOW_BACKLOG_ARGOS_COLUMN,
+  SHOW_BACKLOG_ORIGIN_COLUMN,
+} from '../../lib/backlog/backlogUiFlags'
 import { BacklogDeleteConveyorDialog } from './BacklogDeleteConveyorDialog'
 import { shouldShowBacklogDeleteAction } from './backlogRowActions'
-import { OperationalBucketBadge } from './OperationalBucketBadge'
+import { StatusBadge } from './StatusBadge'
 
 function PriorityPill({ p }: { p: BacklogRow['priority'] }) {
   const map = {
@@ -129,7 +133,15 @@ export function BacklogTable({ rows, onConveyorDeleted, onDeleteError }: Props) 
     <>
       <div className="sgp-table-shell">
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[980px] border-collapse text-left text-sm">
+          <table
+            className={`w-full border-collapse text-left text-sm ${
+              SHOW_BACKLOG_ORIGIN_COLUMN ||
+              SHOW_BACKLOG_ACTIVITIES_COLUMN ||
+              SHOW_BACKLOG_ARGOS_COLUMN
+                ? 'min-w-[980px]'
+                : 'min-w-[720px]'
+            }`}
+          >
             <thead>
               <tr
                 className="border-b border-white/[0.08] text-white shadow-inner"
@@ -140,12 +152,16 @@ export function BacklogTable({ rows, onConveyorDeleted, onDeleteError }: Props) 
                 <th className="whitespace-nowrap px-4 py-4 font-heading text-[11px] font-bold uppercase tracking-[0.12em]">
                   Esteira / OS
                 </th>
-                <th className="whitespace-nowrap px-4 py-4 font-heading text-[11px] font-bold uppercase tracking-[0.12em]">
-                  Origem
-                </th>
-                <th className="whitespace-nowrap px-4 py-4 font-heading text-[11px] font-bold uppercase tracking-[0.12em]">
-                  Atividades
-                </th>
+                {SHOW_BACKLOG_ORIGIN_COLUMN ? (
+                  <th className="whitespace-nowrap px-4 py-4 font-heading text-[11px] font-bold uppercase tracking-[0.12em]">
+                    Origem
+                  </th>
+                ) : null}
+                {SHOW_BACKLOG_ACTIVITIES_COLUMN ? (
+                  <th className="whitespace-nowrap px-4 py-4 font-heading text-[11px] font-bold uppercase tracking-[0.12em]">
+                    Atividades
+                  </th>
+                ) : null}
                 <th className="whitespace-nowrap px-4 py-4 font-heading text-[11px] font-bold uppercase tracking-[0.12em]">
                   Responsável
                 </th>
@@ -155,9 +171,11 @@ export function BacklogTable({ rows, onConveyorDeleted, onDeleteError }: Props) 
                 <th className="whitespace-nowrap px-4 py-4 font-heading text-[11px] font-bold uppercase tracking-[0.12em]">
                   Situação
                 </th>
-                <th className="whitespace-nowrap px-4 py-4 font-heading text-[11px] font-bold uppercase tracking-[0.12em]">
-                  ARGOS
-                </th>
+                {SHOW_BACKLOG_ARGOS_COLUMN ? (
+                  <th className="whitespace-nowrap px-4 py-4 font-heading text-[11px] font-bold uppercase tracking-[0.12em]">
+                    ARGOS
+                  </th>
+                ) : null}
                 <th className="whitespace-nowrap px-4 py-4 font-heading text-[11px] font-bold uppercase tracking-[0.12em]">
                   Entrada
                 </th>
@@ -208,12 +226,16 @@ export function BacklogTable({ rows, onConveyorDeleted, onDeleteError }: Props) 
                         {row.name}
                       </span>
                     </td>
-                    <td className="px-4 py-3.5 align-middle">
-                      <OriginTag o={row.origin} />
-                    </td>
-                    <td className="px-4 py-3.5 align-middle tabular-nums font-medium text-slate-300">
-                      {row.activities}
-                    </td>
+                    {SHOW_BACKLOG_ORIGIN_COLUMN ? (
+                      <td className="px-4 py-3.5 align-middle">
+                        <OriginTag o={row.origin} />
+                      </td>
+                    ) : null}
+                    {SHOW_BACKLOG_ACTIVITIES_COLUMN ? (
+                      <td className="px-4 py-3.5 align-middle tabular-nums font-medium text-slate-300">
+                        {row.activities}
+                      </td>
+                    ) : null}
                     <td className="px-4 py-3.5 align-middle font-medium text-slate-300">
                       {row.responsible}
                     </td>
@@ -221,11 +243,13 @@ export function BacklogTable({ rows, onConveyorDeleted, onDeleteError }: Props) 
                       <PriorityPill p={row.priority} />
                     </td>
                     <td className="px-4 py-3.5 align-middle">
-                      <OperationalBucketBadge bucket={getOperationalBucket(row)} />
+                      <StatusBadge status={row.status} />
                     </td>
-                    <td className="px-4 py-3.5 align-middle">
-                      <ArgosCell row={row} />
-                    </td>
+                    {SHOW_BACKLOG_ARGOS_COLUMN ? (
+                      <td className="px-4 py-3.5 align-middle">
+                        <ArgosCell row={row} />
+                      </td>
+                    ) : null}
                     <td className="whitespace-nowrap px-4 py-3.5 align-middle text-xs font-medium text-slate-500">
                       {formatWhen(row.enteredAt)}
                     </td>

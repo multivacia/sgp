@@ -23,9 +23,9 @@ describe('backlogCopy', () => {
   })
 
   it('linha de situação cobre recortes principais', () => {
-    expect(backlogFiltersSituationLine('ativas')).toContain('não concluídas')
+    expect(backlogFiltersSituationLine('ativas')).toContain('finalizadas')
     expect(backlogFiltersSituationLine('em_atraso')).toContain('hoje')
-    expect(backlogFiltersSituationLine('concluidas')).toContain('completed_at')
+    expect(backlogFiltersSituationLine('finalizadas')).toContain('completed_at')
     expect(backlogFiltersSituationLine('')).toContain('Situação')
   })
 

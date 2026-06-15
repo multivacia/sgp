@@ -55,6 +55,24 @@ export type Env = {
   loginLockoutMinutes: number
   /** Limite absoluto da sessão autenticada (horas), independente da atividade. */
   sessionAbsoluteTimeoutHours: number
+  /** Cookie httpOnly do Modo Fábrica (separado do administrativo). */
+  productionAuthCookieName: string
+  /**
+   * Segredo JWT do Modo Fábrica. Em produção deve ser definido explicitamente
+   * (`PRODUCTION_JWT_SECRET`); em dev/test pode coincidir com `JWT_SECRET`.
+   */
+  productionJwtSecret: string
+  productionSessionIdleTimeoutMinutes: number
+  productionSessionAbsoluteTimeoutHours: number
+  productionPinMaxFailedAttempts: number
+  productionPinLockoutMinutes: number
+  /**
+   * Quando definido, `GET /production/collaborators` exige o header
+   * `X-SGP-Kiosk-Token` com este valor exato (proteção leve de kiosk).
+   * Em NODE_ENV=production é fortemente recomendado definir este token.
+   * TODO R3-S3: adicionar rate limit por IP independente do kiosk token.
+   */
+  productionKioskToken?: string
   /**
    * Quando definido (≥32 caracteres), `GET /health/db` em produção aceita também
    * o header `X-SGP-Infra-Token` com este valor (comparação segura no servidor).
@@ -352,6 +370,23 @@ export function loadEnv(): Env {
     )
   }
 
+  const productionKioskToken =
+    process.env.PRODUCTION_KIOSK_TOKEN?.trim() || undefined
+
+  if (
+    parsed.data.NODE_ENV === 'production' &&
+    !productionKioskToken
+  ) {
+    // Em produção real sem kiosk token a rota fica aberta — logamos aviso mas
+    // não falhamos o startup para manter compatibilidade com deploys já existentes.
+    // TODO R3-S3: tornar obrigatório quando rate limit estiver em produção.
+    console.warn(
+      '[SGP] AVISO: PRODUCTION_KIOSK_TOKEN não está definido em NODE_ENV=production. ' +
+        'A rota GET /production/collaborators ficará sem proteção kiosk. ' +
+        'Defina PRODUCTION_KIOSK_TOKEN no servidor de produção.',
+    )
+  }
+
   let healthInfraToken: string | undefined
   try {
     healthInfraToken = parseHealthInfraToken(process.env.HEALTH_INFRA_TOKEN)
@@ -518,6 +553,76 @@ export function loadEnv(): Env {
     sessionAbsoluteTimeoutHours = n
   }
 
+  const productionAuthCookieName =
+    process.env.PRODUCTION_AUTH_COOKIE_NAME?.trim() || 'sgp_production_auth'
+
+  const productionJwtSecretRaw = process.env.PRODUCTION_JWT_SECRET?.trim()
+  const productionJwtSecret =
+    productionJwtSecretRaw && productionJwtSecretRaw.length >= 16
+      ? productionJwtSecretRaw
+      : parsed.data.JWT_SECRET
+
+  if (
+    parsed.data.NODE_ENV === 'production' &&
+    (!productionJwtSecretRaw || productionJwtSecretRaw.length < 16)
+  ) {
+    throw new Error(
+      'Em NODE_ENV=production, PRODUCTION_JWT_SECRET é obrigatório (mínimo 16 caracteres).',
+    )
+  }
+
+  let productionSessionIdleTimeoutMinutes = 30
+  const rawProdIdle = process.env.PRODUCTION_SESSION_IDLE_TIMEOUT_MINUTES?.trim()
+  if (rawProdIdle !== undefined && rawProdIdle !== '') {
+    const n = Number.parseInt(rawProdIdle, 10)
+    if (Number.isNaN(n) || n < 1 || n > 1440) {
+      throw new Error(
+        'PRODUCTION_SESSION_IDLE_TIMEOUT_MINUTES deve ser um inteiro entre 1 e 1440.',
+      )
+    }
+    productionSessionIdleTimeoutMinutes = n
+  }
+
+  let productionSessionAbsoluteTimeoutHours = 12
+  const rawProdAbs = process.env.PRODUCTION_SESSION_ABSOLUTE_TIMEOUT_HOURS?.trim()
+  if (rawProdAbs !== undefined && rawProdAbs !== '') {
+    const n = Number.parseInt(rawProdAbs, 10)
+    if (Number.isNaN(n) || n < 1 || n > 168) {
+      throw new Error(
+        'PRODUCTION_SESSION_ABSOLUTE_TIMEOUT_HOURS deve ser um inteiro entre 1 e 168.',
+      )
+    }
+    productionSessionAbsoluteTimeoutHours = n
+  }
+
+  const productionPinMaxFailedAttempts = Number.parseInt(
+    process.env.PRODUCTION_PIN_MAX_FAILED_ATTEMPTS?.trim() || '5',
+    10,
+  )
+  if (
+    Number.isNaN(productionPinMaxFailedAttempts) ||
+    productionPinMaxFailedAttempts < 1 ||
+    productionPinMaxFailedAttempts > 100
+  ) {
+    throw new Error(
+      'PRODUCTION_PIN_MAX_FAILED_ATTEMPTS deve ser um inteiro entre 1 e 100.',
+    )
+  }
+
+  const productionPinLockoutMinutes = Number.parseInt(
+    process.env.PRODUCTION_PIN_LOCKOUT_MINUTES?.trim() || '15',
+    10,
+  )
+  if (
+    Number.isNaN(productionPinLockoutMinutes) ||
+    productionPinLockoutMinutes < 1 ||
+    productionPinLockoutMinutes > 10080
+  ) {
+    throw new Error(
+      'PRODUCTION_PIN_LOCKOUT_MINUTES deve ser um inteiro entre 1 e 10080.',
+    )
+  }
+
   const v = parsed.data
   const databaseUrl =
     'connectionString' in pgPoolConfig ? pgPoolConfig.connectionString : undefined
@@ -537,6 +642,13 @@ export function loadEnv(): Env {
     loginMaxFailedAttempts: v.LOGIN_MAX_FAILED_ATTEMPTS,
     loginLockoutMinutes: v.LOGIN_LOCKOUT_MINUTES,
     sessionAbsoluteTimeoutHours,
+    productionAuthCookieName,
+    productionJwtSecret,
+    productionSessionIdleTimeoutMinutes,
+    productionSessionAbsoluteTimeoutHours,
+    productionPinMaxFailedAttempts,
+    productionPinLockoutMinutes,
+    productionKioskToken,
     healthInfraToken,
     argosIngestUrl,
     documentDraftAdapter,

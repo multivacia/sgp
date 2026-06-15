@@ -63,7 +63,7 @@ const mockDetail = (): ConveyorDetailApi => ({
   baseNameSnapshot: null,
   baseVersionSnapshot: null,
   matrixRootItemId: null,
-  operationalStatus: 'EM_PRODUCAO',
+  operationalStatus: 'EM_ANDAMENTO',
   createdAt: '2026-01-01T10:00:00.000Z',
   completedAt: null,
   estimatedDeadline: null,
@@ -106,7 +106,7 @@ const mockDetail = (): ConveyorDetailApi => ({
 const mockWorkload = (): ConveyorNodeWorkloadApi => ({
   semanticsVersion: '1.5',
   conveyorId: 'dddddddd-dddd-dddd-dddd-dddddddddddd',
-  conveyor: { operationalBucket: 'em_andamento', isOverdueContext: false },
+  conveyor: { operationalBucket: 'em_execucao', isOverdueContext: false },
   notes: '',
   steps: [
     {

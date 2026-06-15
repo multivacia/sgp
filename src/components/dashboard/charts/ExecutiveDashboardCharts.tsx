@@ -62,7 +62,7 @@ export function ExecutiveDashboardCharts({ data, windowDays }: Props) {
         value: totals.completedInWindow,
         fill: chart.execPie.conclJanela,
         nav: 'bucket',
-        situacao: 'concluidas',
+        situacao: 'finalizadas',
       },
       {
         key: 'atraso',
@@ -84,8 +84,8 @@ export function ExecutiveDashboardCharts({ data, windowDays }: Props) {
       openBacklogInNewTab('ativas')
       return
     }
-    if (s.key === 'concl_janela' && s.situacao === 'concluidas') {
-      openBacklogInNewTab('concluidas', { days: windowDays })
+    if (s.key === 'concl_janela' && s.situacao === 'finalizadas') {
+      openBacklogInNewTab('finalizadas', { days: windowDays })
       return
     }
     if (s.situacao) openBacklogInNewTab(s.situacao)

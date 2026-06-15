@@ -53,6 +53,8 @@ describe('serviceGetMyWorkQueue', () => {
     vi.spyOn(queueRepo, 'findPublishedWorkPlanForWeek').mockResolvedValue({
       id: PLAN_ID,
       status: 'PUBLISHED',
+      weekStartDate: '2026-05-04',
+      weekEndDate: '2026-05-08',
     })
     vi.spyOn(queueRepo, 'listMyWorkQueueRows').mockResolvedValue([
       {
@@ -63,6 +65,7 @@ describe('serviceGetMyWorkQueue', () => {
         planned_minutes: 45,
         status: 'PLANNED',
         conveyor_id: CONVEYOR_ID,
+        conveyor_operational_status: 'A_INICIAR',
         conveyor_title: '7452',
         client_name: 'Cliente A',
         vehicle_description: 'Veículo A',
@@ -82,6 +85,7 @@ describe('serviceGetMyWorkQueue', () => {
         planned_minutes: 90,
         status: 'PLANNED',
         conveyor_id: CONVEYOR_ID,
+        conveyor_operational_status: 'EM_ANDAMENTO',
         conveyor_title: '7452',
         client_name: null,
         vehicle_description: null,

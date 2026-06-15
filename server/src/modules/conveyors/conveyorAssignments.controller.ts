@@ -90,10 +90,12 @@ export async function postConveyorStepTimeEntry(
     conveyorNodeId: params.stepNodeId,
     entryAt,
     minutes: body.minutes,
+    executedQuantity: body.executedQuantity,
     notes: body.notes,
     entryMode: body.entryMode,
     exceptionJustification: body.exceptionJustification,
     outOfSequenceJustification: body.outOfSequenceJustification,
+    markAsDone: body.markAsDone,
   })
   res.status(201).json(ok(created))
 }
@@ -118,6 +120,7 @@ export async function postConveyorStepTimeEntryOnBehalf(
     targetCollaboratorId: body.targetCollaboratorId,
     entryAt,
     minutes: body.minutes,
+    executedQuantity: body.executedQuantity,
     notes: body.notes,
     reason: body.reason,
     outOfSequenceJustification: body.outOfSequenceJustification?.trim(),

@@ -10,6 +10,7 @@ import { adminUsersRouter } from './modules/admin-users/admin-users.routes.js'
 import { authRouter } from './modules/auth/auth.routes.js'
 import { collaboratorsRouter } from './modules/collaborators/collaborators.routes.js'
 import { dashboardRouter } from './modules/dashboard/dashboard.routes.js'
+import { conveyorProgressRouter } from './modules/conveyor-progress/conveyor-progress.routes.js'
 import { conveyorAssignmentsRouter } from './modules/conveyors/conveyorAssignments.routes.js'
 import { createArgosDocumentDraftAdapter } from './modules/argos-integration/createArgosDocumentDraftAdapter.js'
 import { conveyorsRouter } from './modules/conveyors/conveyors.routes.js'
@@ -24,6 +25,7 @@ import { rolesRouter } from './modules/roles/roles.routes.js'
 import { sectorsRouter } from './modules/sectors/sectors.routes.js'
 import { supportRouter } from './modules/support/support.routes.js'
 import { systemSettingsRouter } from './modules/system-settings/system-settings.routes.js'
+import { productionRouter } from './modules/production/production.routes.js'
 import { teamsRouter } from './modules/teams/teams.routes.js'
 import { errorHandler } from './shared/errors/errorHandler.js'
 import { notFoundHandler } from './shared/http/notFound.js'
@@ -40,6 +42,7 @@ export function createApp(pool: pg.Pool, logger: Logger, env: Env): Express {
 
   app.use('/api/v1', healthRouter())
   app.use('/api/v1', authRouter())
+  app.use('/api/v1', productionRouter())
   app.use('/api/v1', adminAuditRouter())
   app.use('/api/v1', adminUsersRouter())
   app.use('/api/v1', operationalSettingsRouter())
@@ -56,6 +59,7 @@ export function createApp(pool: pg.Pool, logger: Logger, env: Env): Express {
   app.use('/api/v1', myActivitiesRouter())
   app.use('/api/v1', myWorkQueueRouter())
   app.use('/api/v1', dashboardRouter())
+  app.use('/api/v1', conveyorProgressRouter())
   app.use('/api/v1', supportRouter())
   app.use('/api/v1', systemSettingsRouter())
 

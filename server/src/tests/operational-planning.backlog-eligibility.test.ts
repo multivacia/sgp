@@ -15,7 +15,7 @@ import * as conveyorRepo from '../modules/conveyors/conveyors.repository.js'
 const pool = {} as pg.Pool
 
 describe('operational planning backlog eligibility SQL', () => {
-  it('excludes conveyor statuses NO_BACKLOG, EM_REVISAO, PRONTA_LIBERAR and CONCLUIDA', () => {
+  it('excludes conveyor statuses EM_ELABORACAO, AGUARDANDO_PLANEJAMENTO, FINALIZADA e CANCELADA', () => {
     const sql = operationalPlanningBacklogConveyorStatusSql()
     for (const status of OPERATIONAL_PLANNING_BACKLOG_EXCLUDED_CONVEYOR_STATUSES) {
       expect(sql).toContain(`'${status}'`)
@@ -33,9 +33,9 @@ describe('operational planning backlog eligibility SQL', () => {
     expect(sql).toContain("copi.status <> 'CANCELLED'")
   })
 
-  it('excludes EM_PRODUCAO conveyors with an active operational plan', () => {
+  it('excludes EM_ANDAMENTO conveyors with an active operational plan', () => {
     const sql = operationalPlanningBacklogExcludeEmProducaoWithActivePlanSql()
-    expect(sql).toContain("operational_status = 'EM_PRODUCAO'")
+    expect(sql).toContain("operational_status = 'EM_ANDAMENTO'")
     expect(sql).toContain('conveyor_operational_plans')
   })
 
@@ -49,11 +49,11 @@ describe('operational planning backlog eligibility SQL', () => {
       collaboratorId: null,
     })
     const sql = String(query.mock.calls[0]?.[0])
-    expect(sql).toContain('NO_BACKLOG')
-    expect(sql).toContain('EM_REVISAO')
-    expect(sql).toContain('PRONTA_LIBERAR')
+    expect(sql).toContain('EM_ELABORACAO')
+    expect(sql).toContain('AGUARDANDO_PLANEJAMENTO')
+    expect(sql).toContain('FINALIZADA')
     expect(sql).toContain('conveyor_operational_plan_items')
-    expect(sql).toContain("operational_status = 'EM_PRODUCAO'")
+    expect(sql).toContain("operational_status = 'EM_ANDAMENTO'")
     expect(sql).toContain("step.operational_status IS DISTINCT FROM 'COMPLETED'")
   })
 })

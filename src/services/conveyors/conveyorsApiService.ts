@@ -5,6 +5,7 @@ import type {
   CreateConveyorInput,
   ListConveyorsQuery,
   PatchConveyorDadosBody,
+  ConveyorReturnBody,
   PatchConveyorStatusBody,
   PatchConveyorStepCompletionBody,
   PatchConveyorStructureBody,
@@ -152,6 +153,34 @@ export async function patchConveyorStatus(
   return requestJson<ConveyorDetail>(
     'PATCH',
     `${BASE}/conveyors/${encodeURIComponent(id)}/status`,
+    { body },
+  )
+}
+
+/**
+ * Retrocesso operacional para backlog — POST /api/v1/conveyors/:id/return-to-backlog.
+ */
+export async function postConveyorReturnToBacklog(
+  id: string,
+  body: ConveyorReturnBody,
+): Promise<ConveyorDetail> {
+  return requestJson<ConveyorDetail>(
+    'POST',
+    `${BASE}/conveyors/${encodeURIComponent(id)}/return-to-backlog`,
+    { body },
+  )
+}
+
+/**
+ * Retrocesso operacional para planejamento — POST /api/v1/conveyors/:id/return-to-planning.
+ */
+export async function postConveyorReturnToPlanning(
+  id: string,
+  body: ConveyorReturnBody,
+): Promise<ConveyorDetail> {
+  return requestJson<ConveyorDetail>(
+    'POST',
+    `${BASE}/conveyors/${encodeURIComponent(id)}/return-to-planning`,
     { body },
   )
 }

@@ -37,6 +37,7 @@ function emptyStepFromActivity(act: MatrixNodeTreeApi): ManualStepDraft {
     key: newKey(),
     titulo: act.name.trim(),
     plannedMinutes: Math.max(0, Math.floor(Number(act.planned_minutes ?? 0))),
+    plannedQuantity: 1,
   }
 }
 

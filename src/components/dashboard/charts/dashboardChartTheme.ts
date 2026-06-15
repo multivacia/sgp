@@ -17,11 +17,13 @@ export const chartAxisProps = {
 }
 
 export const CHART_BUCKET_FILL: Record<string, string> = {
-  no_backlog: '#64748b',
-  em_revisao: '#8b5cf6',
-  em_andamento: '#38bdf8',
+  em_elaboracao: '#64748b',
+  aguardando_planejamento: '#8b5cf6',
+  em_planejamento: '#a78bfa',
+  em_execucao: '#38bdf8',
   em_atraso: '#fb7185',
-  concluidas: '#34d399',
+  finalizadas: '#34d399',
+  canceladas: '#f87171',
 }
 
 function pickVar(
@@ -85,11 +87,13 @@ export function resolveDashboardChartTheme(): {
   }
 
   const bucketFill: Record<string, string> = {
-    no_backlog: pickVar(cs, '--semantic-chart-bucket-no-backlog', '#64748b'),
-    em_revisao: pickVar(cs, '--semantic-chart-bucket-em-revisao', '#8b5cf6'),
-    em_andamento: pickVar(cs, '--semantic-chart-bucket-em-andamento', '#38bdf8'),
+    em_elaboracao: pickVar(cs, '--semantic-chart-bucket-no-backlog', '#64748b'),
+    aguardando_planejamento: pickVar(cs, '--semantic-chart-bucket-em-revisao', '#8b5cf6'),
+    em_planejamento: pickVar(cs, '--semantic-chart-bucket-em-planejamento', '#a78bfa'),
+    em_execucao: pickVar(cs, '--semantic-chart-bucket-em-andamento', '#38bdf8'),
     em_atraso: pickVar(cs, '--semantic-chart-bucket-em-atraso', '#fb7185'),
-    concluidas: pickVar(cs, '--semantic-chart-bucket-concluidas', '#34d399'),
+    finalizadas: pickVar(cs, '--semantic-chart-bucket-concluidas', '#34d399'),
+    canceladas: pickVar(cs, '--semantic-chart-bucket-canceladas', '#f87171'),
   }
 
   const execPie = {

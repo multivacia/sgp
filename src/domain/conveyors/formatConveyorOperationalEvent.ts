@@ -98,6 +98,18 @@ export function formatConveyorOperationalEvent(
         event,
         formatOperationalEventReasonLine(event) ?? 'A atividade foi retomada.',
       )
+    case 'CONVEYOR_RETURNED_TO_BACKLOG':
+      return baseDisplay(
+        event,
+        event.reason?.trim() ||
+          'A esteira saiu da produção ou do planejamento ativo e voltou para a fila de planejamento.',
+      )
+    case 'CONVEYOR_RETURNED_TO_PLANNING':
+      return baseDisplay(
+        event,
+        event.reason?.trim() ||
+          'A esteira saiu da fila de produção para ajuste de planejamento.',
+      )
     case 'MANUAL_NOTE':
       return baseDisplay(event, event.reason?.trim() || 'Observação operacional registrada.')
     default:

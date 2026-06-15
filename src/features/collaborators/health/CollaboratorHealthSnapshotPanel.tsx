@@ -163,7 +163,7 @@ export function CollaboratorHealthSnapshotPanel({ open, loading, error, snapshot
 
               <section className="rounded-lg border border-dashed border-white/10 bg-white/[0.02] px-3 py-3">
                 <p className="text-xs text-slate-500">
-                  Interpretação ARGOS ainda não habilitada para saúde do colaborador.
+                  Interpretação automática ainda não habilitada para saúde do colaborador.
                 </p>
               </section>
             </div>

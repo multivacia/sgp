@@ -258,7 +258,7 @@ describe.skipIf(!hasDb)('collaborators (integração)', () => {
         await sessionCookieForUser(pool, GOV_ADMIN_USER_ID, GOV_ADMIN_EMAIL),
       )
       .send({
-        fullName: 'Snapshot OH vazio',
+        fullName: `Snapshot OH vazio ${code}`,
         code,
         sectorId: SEED_SECTOR_ID,
         roleId: SEED_ROLE_ID,
@@ -287,7 +287,7 @@ describe.skipIf(!hasDb)('collaborators (integração)', () => {
         await sessionCookieForUser(pool, GOV_ADMIN_USER_ID, GOV_ADMIN_EMAIL),
       )
       .send({
-        fullName: 'Snapshot OH inativo',
+        fullName: `Snapshot OH inativo ${code}`,
         code,
         sectorId: SEED_SECTOR_ID,
         roleId: SEED_ROLE_ID,
@@ -384,7 +384,7 @@ describe.skipIf(!hasDb)('collaborators (integração)', () => {
         await sessionCookieForUser(pool, GOV_ADMIN_USER_ID, GOV_ADMIN_EMAIL),
       )
       .send({
-        fullName: 'Integração Vitest',
+        fullName: `Integração Vitest ${code}`,
         code,
         sectorId: SEED_SECTOR_ID,
         roleId: SEED_ROLE_ID,
@@ -399,9 +399,9 @@ describe.skipIf(!hasDb)('collaborators (integração)', () => {
         'Cookie',
         await sessionCookieForUser(pool, GOV_ADMIN_USER_ID, GOV_ADMIN_EMAIL),
       )
-      .send({ fullName: 'Integração Vitest Atualizado' })
+      .send({ fullName: `Integração Vitest Atualizado ${code}` })
     expect(patch.status).toBe(200)
-    expect(patch.body.data?.full_name).toBe('Integração Vitest Atualizado')
+    expect(patch.body.data?.full_name).toBe(`Integração Vitest Atualizado ${code}`)
   })
 
   it('POST /api/v1/collaborators conflito de código → 409', async () => {
@@ -431,7 +431,7 @@ describe.skipIf(!hasDb)('collaborators (integração)', () => {
         await sessionCookieForUser(pool, GOV_ADMIN_USER_ID, GOV_ADMIN_EMAIL),
       )
       .send({
-        fullName: 'Ciclo status',
+        fullName: `Ciclo status ${code}`,
         code,
         sectorId: SEED_SECTOR_ID,
         roleId: SEED_ROLE_ID,

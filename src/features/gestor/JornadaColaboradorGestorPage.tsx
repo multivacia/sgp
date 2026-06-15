@@ -59,7 +59,7 @@ function bucketBadgeClass(bucket: MyActivityItem['operationalBucket']): string {
   if (bucket === 'em_atraso') {
     return 'border-rose-400/35 bg-rose-500/12 text-rose-100 ring-1 ring-rose-500/20'
   }
-  if (bucket === 'concluidas') {
+  if (bucket === 'finalizadas' || bucket === 'canceladas') {
     return 'border-emerald-400/25 bg-emerald-500/10 text-emerald-100/95 ring-1 ring-emerald-500/15'
   }
   return 'border-white/12 bg-white/[0.05] text-slate-300 ring-1 ring-white/[0.06]'
@@ -498,9 +498,9 @@ export function JornadaColaboradorGestorPage() {
               {journey.signals.pressaoAtrasoAlocacoes}
             </p>
             <p className="mt-2 text-xs text-rose-100/75">
-              Contagem por situação: no backlog {journey.risk.byBucket.no_backlog}, em revisão{' '}
-              {journey.risk.byBucket.em_revisao}, em andamento {journey.risk.byBucket.em_andamento},
-              em atraso {journey.risk.byBucket.em_atraso}, concluídas {journey.risk.byBucket.concluidas}
+              Contagem por situação: rascunho {journey.risk.byBucket.em_elaboracao}, aguardando planejamento{' '}
+              {journey.risk.byBucket.aguardando_planejamento}, em execução {journey.risk.byBucket.em_execucao},
+              em atraso {journey.risk.byBucket.em_atraso}, finalizadas {journey.risk.byBucket.finalizadas}
             </p>
           </section>
 

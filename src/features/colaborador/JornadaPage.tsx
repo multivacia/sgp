@@ -65,7 +65,7 @@ function bucketBadgeClass(bucket: MyActivityItem['operationalBucket']): string {
   if (bucket === 'em_atraso') {
     return 'border-rose-400/35 bg-rose-500/12 text-rose-100 ring-1 ring-rose-500/20'
   }
-  if (bucket === 'concluidas') {
+  if (bucket === 'finalizadas' || bucket === 'canceladas') {
     return 'border-emerald-400/25 bg-emerald-500/10 text-emerald-100/95 ring-1 ring-emerald-500/15'
   }
   return 'border-white/12 bg-white/[0.05] text-slate-300 ring-1 ring-white/[0.06]'
@@ -116,7 +116,8 @@ function JourneyActivityCard({ item }: { item: MyActivityItem }) {
   const prev = item.plannedMinutes != null ? formatHumanMinutes(item.plannedMinutes) : '—'
   const real =
     item.realizedMinutes == null ? '—' : formatHumanMinutes(item.realizedMinutes)
-  const canApontar = item.operationalBucket !== 'concluidas'
+  const canApontar =
+    item.operationalBucket === 'em_execucao' || item.operationalBucket === 'em_atraso'
 
   return (
     <li className="rounded-xl border border-white/[0.08] bg-white/[0.03] shadow-inner ring-1 ring-white/[0.04]">
@@ -315,9 +316,14 @@ export function JornadaPage() {
     const c: MyActivityItem[] = []
     for (const item of allAssignments) {
       const b = item.operationalBucket
-      if (b === 'no_backlog' || b === 'em_revisao') p.push(item)
-      else if (b === 'em_andamento' || b === 'em_atraso') e.push(item)
-      else if (b === 'concluidas') c.push(item)
+      if (
+        b === 'em_elaboracao' ||
+        b === 'aguardando_planejamento' ||
+        b === 'em_planejamento'
+      )
+        p.push(item)
+      else if (b === 'em_execucao' || b === 'em_atraso') e.push(item)
+      else if (b === 'finalizadas' || b === 'canceladas') c.push(item)
     }
     return { pendentes: p, emAndamento: e, concluidas: c }
   }, [allAssignments])

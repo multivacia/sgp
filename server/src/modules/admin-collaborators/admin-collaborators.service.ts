@@ -4,12 +4,15 @@ import { ErrorCodes } from '../../shared/errors/errorCodes.js'
 import type { AdminCollaboratorListItem } from './admin-collaborators.dto.js'
 import type { ListAdminCollaboratorsQuery } from './admin-collaborators.schemas.js'
 import {
+  adminResetProductionPin,
   countAdminCollaborators,
   findAdminCollaboratorById,
   listAdminCollaborators,
   restoreCollaborator,
   softDeleteCollaborator,
 } from './admin-collaborators.repository.js'
+import { hashProductionPin } from '../production/production-pin.crypto.js'
+import { PRODUCTION_DEFAULT_INITIAL_PIN } from '../production/production.schemas.js'
 import type {
   CreateCollaboratorBody,
   PatchCollaboratorBody,
@@ -137,4 +140,19 @@ export async function serviceRestoreAdmin(
     throw new AppError('Colaborador não encontrado.', 404, ErrorCodes.NOT_FOUND)
   }
   return row
+}
+
+export async function serviceAdminResetProductionPin(
+  pool: pg.Pool,
+  id: string,
+): Promise<AdminCollaboratorListItem> {
+  const current = await findAdminCollaboratorById(pool, id)
+  assertNotDeleted(current)
+  const pinHash = await hashProductionPin(PRODUCTION_DEFAULT_INITIAL_PIN)
+  await adminResetProductionPin(pool, id, pinHash)
+  const updated = await findAdminCollaboratorById(pool, id)
+  if (!updated) {
+    throw new AppError('Colaborador não encontrado.', 404, ErrorCodes.NOT_FOUND)
+  }
+  return updated
 }

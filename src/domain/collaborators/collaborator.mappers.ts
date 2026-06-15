@@ -5,6 +5,7 @@ import type {
 } from '../../mocks/colaboradores-operacionais-repository'
 import type {
   AdminCollaborator,
+  AdminCollaboratorProductionPin,
   Collaborator,
   CollaboratorCreateInput,
   CollaboratorListFilter,
@@ -204,6 +205,17 @@ function pickNullableStrKey(
 export function adminCollaboratorFromApiJson(raw: unknown): AdminCollaborator {
   const base = collaboratorFromApiJson(raw)
   const o = raw as Record<string, unknown>
+  const pinRaw = o.productionPin
+  let productionPin: AdminCollaboratorProductionPin | null = null
+  if (pinRaw && typeof pinRaw === 'object') {
+    const p = pinRaw as Record<string, unknown>
+    productionPin = {
+      hasCredential: p.hasCredential === true,
+      enabled: p.enabled === true,
+      mustChange: p.mustChange === true,
+      locked: p.locked === true,
+    }
+  }
   return {
     ...base,
     deletedAt:
@@ -216,6 +228,7 @@ export function adminCollaboratorFromApiJson(raw: unknown): AdminCollaborator {
       'linkedUserDisplayName',
       'linked_user_display_name',
     ),
+    productionPin,
   }
 }
 

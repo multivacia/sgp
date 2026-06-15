@@ -25,3 +25,20 @@ export async function sessionCookieForUser(
   const token = signSessionToken(userId, email, ms, activity, env)
   return `${env.authCookieName}=${token}`
 }
+
+/** Converte `Set-Cookie` do supertest em header `Cookie` para requests subsequentes. */
+export function cookieHeaderFromSetCookie(
+  setCookie: string[] | string | undefined,
+): string {
+  if (!setCookie) return ''
+  const rows = Array.isArray(setCookie) ? setCookie : [setCookie]
+  const byName = new Map<string, string>()
+  for (const row of rows) {
+    const part = row.split(';')[0]?.trim()
+    if (!part) continue
+    const eq = part.indexOf('=')
+    if (eq <= 0) continue
+    byName.set(part.slice(0, eq), part)
+  }
+  return [...byName.values()].join('; ')
+}

@@ -1,11 +1,13 @@
 /** Resposta `data` de GET /api/v1/dashboard/operational */
 
 export type OperationalBucketKey =
-  | 'no_backlog'
-  | 'em_revisao'
-  | 'em_andamento'
+  | 'em_elaboracao'
+  | 'aguardando_planejamento'
+  | 'em_planejamento'
+  | 'em_execucao'
   | 'em_atraso'
-  | 'concluidas'
+  | 'finalizadas'
+  | 'canceladas'
 
 export type OperationalDashboardData = {
   meta: {

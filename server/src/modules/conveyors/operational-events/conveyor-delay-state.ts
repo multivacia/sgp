@@ -29,7 +29,7 @@ function parseDeadline(deadline: string | Date | null): Date | null | 'invalid' 
 function isCompletedStatus(status: string | null): boolean {
   if (!status) return false
   const s = status.trim().toLowerCase()
-  return s === 'concluida' || s === 'concluidas' || s === 'completed'
+  return s === 'finalizada' || s === 'finalizadas' || s === 'concluida' || s === 'concluidas' || s === 'completed' || s === 'cancelada' || s === 'canceladas'
 }
 
 export function calculateConveyorDelayState(

@@ -10,6 +10,7 @@ import {
   summarizeConveyorHealthAnalysis,
   summarizeConveyorHealthMeta,
 } from '../../domain/conveyors/conveyorHealthDisplay'
+import { SHOW_ARGOS_HEALTH_UI } from '../../lib/argos/argosUiFlags'
 import { reportClientError } from '../../lib/errors'
 import {
   getConveyorHealthAnalysisHistory,
@@ -35,7 +36,7 @@ type Props = {
   conveyorId: string
 }
 
-export function ConveyorHealthAnalysisCard({ conveyorId }: Props) {
+function ConveyorHealthAnalysisCardContent({ conveyorId }: Props) {
   const location = useLocation()
   const [loadingLatest, setLoadingLatest] = useState(true)
   const [loadingHistory, setLoadingHistory] = useState(true)
@@ -470,4 +471,9 @@ export function ConveyorHealthAnalysisCard({ conveyorId }: Props) {
       ) : null}
     </section>
   )
+}
+
+export function ConveyorHealthAnalysisCard(props: Props) {
+  if (!SHOW_ARGOS_HEALTH_UI) return null
+  return <ConveyorHealthAnalysisCardContent {...props} />
 }

@@ -249,6 +249,16 @@
       0 0 0 3px var(--semantic-focus-ring);
   }
 
+  /** Filtros da tela Evolução das Esteiras — painel claro sobre shell escuro */
+  .conveyor-progress-filter-input {
+    @apply rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-sm text-slate-800 outline-none placeholder:text-slate-400 focus:border-amber-400 focus:ring-2 focus:ring-amber-200;
+  }
+
+  html[data-theme="light-executive"] .conveyor-progress-table-shell {
+    border-color: #d8e0ea;
+    background-color: #ffffff;
+  }
+
   /* Títulos de página — presença tipo hero Multivacia */
   .sgp-page-title {
     @apply font-heading text-2xl font-bold tracking-tight text-slate-50 md:text-3xl;

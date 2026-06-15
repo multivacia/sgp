@@ -11,6 +11,7 @@ const baseFrom = `
   LEFT JOIN sectors s ON s.id = c.sector_id
   LEFT JOIN app_roles r ON r.id = c.role_id
   LEFT JOIN app_users au ON au.collaborator_id = c.id AND au.deleted_at IS NULL
+  LEFT JOIN collaborator_production_credentials cpc ON cpc.collaborator_id = c.id
 `
 
 const baseSelect = `
@@ -35,7 +36,11 @@ const baseSelect = `
     s.name AS sector_name,
     r.name AS role_name,
     au.id::text AS linked_user_id,
-    au.email AS linked_user_email
+    au.email AS linked_user_email,
+    CASE WHEN cpc.collaborator_id IS NOT NULL THEN true ELSE false END AS pin_has_credential,
+    cpc.enabled AS pin_enabled,
+    cpc.must_change_pin AS pin_must_change,
+    cpc.locked_until AS pin_locked_until
 `
 
 export function buildAdminListWhere(
@@ -147,6 +152,28 @@ export async function findAdminCollaboratorById(
   )
   const row = r.rows[0]
   return row ? rowToAdminCollaboratorListItem(row) : null
+}
+
+export async function adminResetProductionPin(
+  pool: pg.Pool,
+  collaboratorId: string,
+  pinHash: string,
+): Promise<void> {
+  await pool.query(
+    `
+    INSERT INTO collaborator_production_credentials (
+      collaborator_id, pin_hash, enabled, must_change_pin, failed_attempts, locked_until
+    ) VALUES ($1::uuid, $2, true, true, 0, NULL)
+    ON CONFLICT (collaborator_id) DO UPDATE SET
+      pin_hash = EXCLUDED.pin_hash,
+      enabled = true,
+      must_change_pin = true,
+      failed_attempts = 0,
+      locked_until = NULL,
+      updated_at = now()
+    `,
+    [collaboratorId, pinHash],
+  )
 }
 
 export async function softDeleteCollaborator(

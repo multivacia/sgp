@@ -14,6 +14,7 @@ export type ConveyorPlanGenerationStepInput = {
   optionOrderIndex: number
   areaOrderIndex: number
   stepOrderIndex: number
+  /** Carga planejada total (min/un. × qtd) — gravada em `conveyor_operational_plan_items.planned_minutes`. */
   plannedMinutes: number | null
   defaultResponsibleId: string | null
   collaboratorAssigneeIds: string[]

@@ -12,6 +12,7 @@ function queueItem(overrides: Partial<MyWorkQueueItem>): MyWorkQueueItem {
     status: 'PLANNED',
     group: 'today',
     conveyorId: 'conveyor',
+    conveyorOperationalStatus: 'A_INICIAR',
     conveyorTitle: '7452',
     clientName: 'Cliente',
     vehicleDescription: 'Veículo',

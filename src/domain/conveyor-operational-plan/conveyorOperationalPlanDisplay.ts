@@ -82,7 +82,11 @@ export function labelConveyorOperationalPlanStatus(
 export function canCreateConveyorOperationalPlan(
   operationalStatus: string,
 ): boolean {
-  return operationalStatus === 'PRONTA_LIBERAR' || operationalStatus === 'EM_PRODUCAO'
+  return (
+    operationalStatus === 'EM_PLANEJAMENTO' ||
+    operationalStatus === 'A_INICIAR' ||
+    operationalStatus === 'EM_ANDAMENTO'
+  )
 }
 
 export function showApproveConveyorOperationalPlanButton(

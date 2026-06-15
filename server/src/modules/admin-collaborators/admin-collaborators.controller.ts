@@ -13,6 +13,7 @@ import {
 } from './admin-collaborators.schemas.js'
 import {
   serviceActivateAdmin,
+  serviceAdminResetProductionPin,
   serviceCreateAdmin,
   serviceGetAdminById,
   serviceInactivateAdmin,
@@ -118,5 +119,15 @@ export async function postAdminCollaboratorRestore(
   const id = uuidParamSchema.parse(req.params.id)
   const pool = req.app.locals.pool as pg.Pool
   const updated = await serviceRestoreAdmin(pool, id)
+  res.json(ok(updated))
+}
+
+export async function postAdminCollaboratorResetPin(
+  req: Request,
+  res: Response,
+): Promise<void> {
+  const id = uuidParamSchema.parse(req.params.id)
+  const pool = req.app.locals.pool as pg.Pool
+  const updated = await serviceAdminResetProductionPin(pool, id)
   res.json(ok(updated))
 }

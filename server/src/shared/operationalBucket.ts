@@ -4,18 +4,22 @@
  */
 
 export type OperationalBucket =
-  | 'no_backlog'
-  | 'em_revisao'
-  | 'em_andamento'
+  | 'em_elaboracao'
+  | 'aguardando_planejamento'
+  | 'em_planejamento'
+  | 'em_execucao'
   | 'em_atraso'
-  | 'concluidas'
+  | 'finalizadas'
+  | 'canceladas'
 
 type OperationalStatusUi =
-  | 'no_backlog'
-  | 'em_revisao'
-  | 'pronta_liberar'
-  | 'em_producao'
-  | 'concluida'
+  | 'em_elaboracao'
+  | 'aguardando_planejamento'
+  | 'em_planejamento'
+  | 'a_iniciar'
+  | 'em_andamento'
+  | 'finalizada'
+  | 'cancelada'
 
 function startOfLocalDay(d: Date): Date {
   const x = new Date(d.getTime())
@@ -45,7 +49,7 @@ function isEsteiraOverdueVersusToday(
   row: Pick<{ status: OperationalStatusUi; estimatedDeadline?: string | null }, 'status' | 'estimatedDeadline'>,
   now: Date = new Date(),
 ): boolean {
-  if (row.status === 'concluida') return false
+  if (row.status === 'finalizada' || row.status === 'cancelada') return false
   const dl = parseFlexibleDeadlineToDate(row.estimatedDeadline ?? undefined)
   if (dl === null) return false
   const today = startOfLocalDay(now)
@@ -57,18 +61,22 @@ function mapDbStatusToUi(
   operationalStatus: string,
 ): OperationalStatusUi {
   switch (operationalStatus) {
-    case 'NO_BACKLOG':
-      return 'no_backlog'
-    case 'EM_REVISAO':
-      return 'em_revisao'
-    case 'PRONTA_LIBERAR':
-      return 'pronta_liberar'
-    case 'EM_PRODUCAO':
-      return 'em_producao'
-    case 'CONCLUIDA':
-      return 'concluida'
+    case 'EM_ELABORACAO':
+      return 'em_elaboracao'
+    case 'AGUARDANDO_PLANEJAMENTO':
+      return 'aguardando_planejamento'
+    case 'EM_PLANEJAMENTO':
+      return 'em_planejamento'
+    case 'A_INICIAR':
+      return 'a_iniciar'
+    case 'EM_ANDAMENTO':
+      return 'em_andamento'
+    case 'FINALIZADA':
+      return 'finalizada'
+    case 'CANCELADA':
+      return 'cancelada'
     default:
-      return 'em_producao'
+      return 'em_andamento'
   }
 }
 
@@ -79,24 +87,28 @@ export function getOperationalBucketForConveyor(
 ): OperationalBucket {
   const status = mapDbStatusToUi(operationalStatus)
   const row = { status, estimatedDeadline }
-  if (status === 'concluida') return 'concluidas'
+  if (status === 'finalizada') return 'finalizadas'
+  if (status === 'cancelada') return 'canceladas'
   if (isEsteiraOverdueVersusToday(row, now)) return 'em_atraso'
-  if (status === 'no_backlog') return 'no_backlog'
-  if (status === 'em_revisao') return 'em_revisao'
-  if (status === 'pronta_liberar' || status === 'em_producao') {
-    return 'em_andamento'
+  if (status === 'em_elaboracao') return 'em_elaboracao'
+  if (status === 'aguardando_planejamento') return 'aguardando_planejamento'
+  if (status === 'em_planejamento') return 'em_planejamento'
+  if (status === 'a_iniciar' || status === 'em_andamento') {
+    return 'em_execucao'
   }
-  return 'em_andamento'
+  return 'em_execucao'
 }
 
-/** Ordem na lista: atraso → revisão → andamento → backlog → concluídas. */
+/** Ordem na lista: atraso → planejamento → execução → rascunho → finalizadas → canceladas. */
 export function operationalBucketSortRank(b: OperationalBucket): number {
   const order: Record<OperationalBucket, number> = {
     em_atraso: 0,
-    em_revisao: 1,
-    em_andamento: 2,
-    no_backlog: 3,
-    concluidas: 4,
+    aguardando_planejamento: 1,
+    em_planejamento: 2,
+    em_execucao: 3,
+    em_elaboracao: 4,
+    finalizadas: 5,
+    canceladas: 6,
   }
   return order[b]
 }

@@ -228,8 +228,8 @@ describe('Nova Esteira — materialização', () => {
   it('destino backlog vs exec mapeia status da row do backlog', () => {
     const bl = materializarNovaEsteira(inputManualValido(), 'backlog')
     const ex = materializarNovaEsteira(inputManualValido(), 'exec')
-    expect(bl.row.status).toBe('no_backlog')
-    expect(ex.row.status).toBe('em_producao')
+    expect(bl.row.status).toBe('em_elaboracao')
+    expect(ex.row.status).toBe('em_andamento')
     expect(bl.row.esteiraId).toBeDefined()
     expect(bl.row.id).toMatch(/^row-ne-/)
   })

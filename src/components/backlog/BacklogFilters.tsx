@@ -81,11 +81,13 @@ export function BacklogFilters({
           >
             <option value="">Todas</option>
             <option value="ativas">Ativas</option>
-            <option value="no_backlog">No backlog</option>
-            <option value="em_revisao">Em revisão</option>
-            <option value="em_andamento">Em andamento</option>
+            <option value="em_elaboracao">Rascunho / Em elaboração</option>
+            <option value="aguardando_planejamento">Aguardando planejamento</option>
+            <option value="em_planejamento">Em planejamento</option>
+            <option value="em_execucao">Em execução</option>
             <option value="em_atraso">Em atraso</option>
-            <option value="concluidas">Concluídas</option>
+            <option value="finalizadas">Finalizadas</option>
+            <option value="canceladas">Canceladas</option>
           </select>
         </div>
 

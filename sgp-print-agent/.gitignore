@@ -1,0 +1,5 @@
+logs/
+sgp-print-agent.config.json
+sgp-print-agent.config.local.json
+node_modules/
+dist/

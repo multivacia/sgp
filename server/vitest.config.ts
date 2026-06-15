@@ -13,6 +13,7 @@ export default defineConfig({
       'src/modules/auth/**/*.test.ts',
     ],
     testTimeout: 30000,
+    fileParallelism: false,
     env: {
       JWT_SECRET: 'test-jwt-secret-minimum-16-chars',
     },

@@ -4,22 +4,28 @@ import type { OperationalPanelKpis } from '../../lib/backlog/operationalBuckets'
 
 const items = (kpis: OperationalPanelKpis) => [
   {
-    key: 'noBacklog' as const,
-    label: 'No backlog',
-    value: kpis.noBacklog,
-    hint: backlogKpiHints.noBacklog,
+    key: 'emElaboracao' as const,
+    label: 'Rascunho',
+    value: kpis.emElaboracao,
+    hint: backlogKpiHints.emElaboracao,
   },
   {
-    key: 'emRevisao' as const,
-    label: 'Em revisão',
-    value: kpis.emRevisao,
-    hint: backlogKpiHints.emRevisao,
+    key: 'aguardandoPlanejamento' as const,
+    label: 'Aguard. planejamento',
+    value: kpis.aguardandoPlanejamento,
+    hint: backlogKpiHints.aguardandoPlanejamento,
   },
   {
-    key: 'emAndamento' as const,
-    label: 'Em andamento',
-    value: kpis.emAndamento,
-    hint: backlogKpiHints.emAndamento,
+    key: 'emPlanejamento' as const,
+    label: 'Em planejamento',
+    value: kpis.emPlanejamento,
+    hint: backlogKpiHints.emPlanejamento,
+  },
+  {
+    key: 'emExecucao' as const,
+    label: 'Em execução',
+    value: kpis.emExecucao,
+    hint: backlogKpiHints.emExecucao,
   },
   {
     key: 'emAtraso' as const,
@@ -28,10 +34,10 @@ const items = (kpis: OperationalPanelKpis) => [
     hint: backlogKpiHints.emAtraso,
   },
   {
-    key: 'concluidas' as const,
-    label: 'Concluídas',
-    value: kpis.concluidas,
-    hint: backlogKpiHints.concluidas,
+    key: 'finalizadas' as const,
+    label: 'Finalizadas',
+    value: kpis.finalizadas,
+    hint: backlogKpiHints.finalizadas,
   },
 ]
 
@@ -45,16 +51,17 @@ const bucketByKey: Record<
   ReturnType<typeof items>[number]['key'],
   OperationalBucket
 > = {
-  noBacklog: 'no_backlog',
-  emRevisao: 'em_revisao',
-  emAndamento: 'em_andamento',
+  emElaboracao: 'em_elaboracao',
+  aguardandoPlanejamento: 'aguardando_planejamento',
+  emPlanejamento: 'em_planejamento',
+  emExecucao: 'em_execucao',
   emAtraso: 'em_atraso',
-  concluidas: 'concluidas',
+  finalizadas: 'finalizadas',
 }
 
 export function BacklogKpiCards({ kpis, activeBucket = null, onBucketClick }: Props) {
   return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
       {items(kpis).map((item) => (
         <button
           key={item.key}

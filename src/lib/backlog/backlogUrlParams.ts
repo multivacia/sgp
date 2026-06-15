@@ -38,11 +38,13 @@ export type BacklogPriorityParam = 'alta' | 'media' | 'baixa'
 export type BacklogSituationFilterValue =
   | ''
   | 'ativas'
-  | 'no_backlog'
-  | 'em_revisao'
-  | 'em_andamento'
+  | 'em_elaboracao'
+  | 'aguardando_planejamento'
+  | 'em_planejamento'
+  | 'em_execucao'
   | 'em_atraso'
-  | 'concluidas'
+  | 'finalizadas'
+  | 'canceladas'
 
 export function parseBacklogDaysWindow(sp: URLSearchParams): number {
   const preferDays = sp.get('days')
@@ -96,11 +98,13 @@ export function parseBacklogSituationFilter(
   if (backlogHasScopeAtivas(sp)) return 'ativas'
   const s = sp.get('situacao')?.trim()
   if (
-    s === 'no_backlog' ||
-    s === 'em_revisao' ||
-    s === 'em_andamento' ||
+    s === 'em_elaboracao' ||
+    s === 'aguardando_planejamento' ||
+    s === 'em_planejamento' ||
+    s === 'em_execucao' ||
     s === 'em_atraso' ||
-    s === 'concluidas'
+    s === 'finalizadas' ||
+    s === 'canceladas'
   ) {
     return s
   }
@@ -114,9 +118,11 @@ export function parseBacklogSituationFilter(
 export function operationalStatusForConveyorsListApi(
   situation: BacklogSituationFilterValue,
 ): ConveyorOperationalStatus | undefined {
-  if (situation === 'no_backlog') return 'NO_BACKLOG'
-  if (situation === 'em_revisao') return 'EM_REVISAO'
-  if (situation === 'concluidas') return 'CONCLUIDA'
+  if (situation === 'em_elaboracao') return 'EM_ELABORACAO'
+  if (situation === 'aguardando_planejamento') return 'AGUARDANDO_PLANEJAMENTO'
+  if (situation === 'em_planejamento') return 'EM_PLANEJAMENTO'
+  if (situation === 'finalizadas') return 'FINALIZADA'
+  if (situation === 'canceladas') return 'CANCELADA'
   return undefined
 }
 
@@ -162,7 +168,7 @@ export function normalizeBacklogSearchParams(
       next.delete('completedWithinDays')
       changed = true
     }
-  } else if (situacao && situacao !== 'concluidas' && dw > 0) {
+  } else if (situacao && situacao !== 'finalizadas' && dw > 0) {
     next.delete('days')
     next.delete('completedWithinDays')
     changed = true

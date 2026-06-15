@@ -48,8 +48,8 @@ export type DashboardOperacionalFiltros = {
   statusAtividade?: AtividadeStatusDetalhe | 'all'
   responsavelChave?: string
   buscaTexto?: string
-  /** Restringe linhas do bloco entrada a `status === 'no_backlog'`. */
-  escopoEntrada?: 'todos' | 'somente_no_backlog'
+  /** Restringe linhas do bloco entrada a `status === 'em_elaboracao'`. */
+  escopoEntrada?: 'todos' | 'somente_em_elaboracao'
   somenteApontaveis?: boolean
   somenteComApontamento?: boolean
 }
@@ -349,8 +349,8 @@ export function aplicarFiltrosDashboard(
   let linhas = agregado.blocoEntrada.linhas.slice()
   let esteiras = agregado.blocoOperacao.esteiras.slice()
 
-  if (f.escopoEntrada === 'somente_no_backlog') {
-    linhas = linhas.filter((r) => r.status === 'no_backlog')
+  if (f.escopoEntrada === 'somente_em_elaboracao') {
+    linhas = linhas.filter((r) => r.status === 'em_elaboracao')
   }
 
   if (f.statusEsteira && f.statusEsteira !== 'all') {

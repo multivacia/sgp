@@ -36,6 +36,7 @@ export type CreateConveyorStepInput = {
   titulo: string
   orderIndex: number
   plannedMinutes: number
+  plannedQuantity?: number
   sourceOrigin: ConveyorSourceOrigin
   required?: boolean
   /** Se não vazio, deve haver exatamente um `isPrimary: true` (validação no servidor). */
@@ -118,11 +119,13 @@ export type CreateConveyorInput = {
 }
 
 export type ConveyorOperationalStatus =
-  | 'NO_BACKLOG'
-  | 'EM_REVISAO'
-  | 'PRONTA_LIBERAR'
-  | 'EM_PRODUCAO'
-  | 'CONCLUIDA'
+  | 'EM_ELABORACAO'
+  | 'AGUARDANDO_PLANEJAMENTO'
+  | 'EM_PLANEJAMENTO'
+  | 'A_INICIAR'
+  | 'EM_ANDAMENTO'
+  | 'FINALIZADA'
+  | 'CANCELADA'
 
 /** Envelope `data` da resposta 201 — alinhado a `ConveyorCreatedApi` no servidor */
 export type ConveyorCreatedSummary = {
@@ -163,6 +166,7 @@ export type ConveyorStructureStep = {
   name: string
   orderIndex: number
   plannedMinutes: number | null
+  plannedQuantity?: number
   /** Presente no GET detalhe — alocações por etapa. */
   assignees?: ConveyorStructureStepAssignee[]
   operationalStatus: ConveyorNodeStepOperationalStatus
@@ -238,6 +242,11 @@ export type PatchConveyorStructureBody = {
 /** Corpo do PATCH /api/v1/conveyors/:id/status */
 export type PatchConveyorStatusBody = {
   operationalStatus: ConveyorOperationalStatus
+}
+
+/** Corpo do POST /api/v1/conveyors/:id/return-to-backlog | return-to-planning */
+export type ConveyorReturnBody = {
+  reason: string
 }
 
 export type ConveyorStepCompletionAction = 'COMPLETE' | 'REOPEN'

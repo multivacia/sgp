@@ -13,15 +13,15 @@ import { serviceCreateConveyor } from '../modules/conveyors/conveyors.service.js
 import type { PostConveyorBody } from '../modules/conveyors/conveyors.schemas.js'
 import { serviceCreateConveyorNodeAssignee } from '../modules/conveyors/conveyorAssignments.service.js'
 import { sessionCookieForUser } from './sessionTestCookie.js'
-import { ensureMariaCollaboratorSeedForIntegration } from './integrationSeedFixtures.js'
+import { ensureMariaCollaboratorSeedForIntegration, linkAppUserToCollaborator, MARIA_APP_USER_EMAIL, MARIA_APP_USER_ID, MARIA_COLLABORATOR_ID, unlinkAppUserCollaborator } from './integrationSeedFixtures.js'
+import { setConveyorProductionStatusForIntegration } from './integrationConveyorFixtures.js'
 
 loadDotenvFiles()
 
 const hasDb = hasDatabaseConnectionInEnv(process.env)
 
-const COLAB_SEED = '3a5f3c72-2e75-4e0a-8f6e-6d4d086e5f1c'
-const MARIA_APP_USER_ID = '44444444-4444-4444-4444-444444444444'
-const MARIA_EMAIL = 'maria@exemplo.com'
+const COLAB_SEED = MARIA_COLLABORATOR_ID
+const MARIA_EMAIL = MARIA_APP_USER_EMAIL
 const GOV_ADMIN_USER_ID = '55555555-5555-5555-5555-555555555555'
 const GOV_ADMIN_EMAIL = 'gov-collab-test@sgp-argos.local'
 const ADMIN_ROLE_ID = '11111111-1111-1111-1111-111111111111'
@@ -123,10 +123,7 @@ describe.skipIf(!hasDb)('GET /api/v1/me/time-entry-candidates (integração)', (
   })
 
   it('sem colaborador vinculado → 200, lista vazia e meta.unavailableReason', async () => {
-    await pool.query(
-      `UPDATE app_users SET collaborator_id = NULL WHERE id = $1::uuid`,
-      [MARIA_APP_USER_ID],
-    )
+    await unlinkAppUserCollaborator(pool, MARIA_APP_USER_ID)
     const res = await request(app)
       .get('/api/v1/me/time-entry-candidates')
       .set(
@@ -138,23 +135,18 @@ describe.skipIf(!hasDb)('GET /api/v1/me/time-entry-candidates (integração)', (
     expect(res.body.data).toHaveLength(0)
     expect(res.body.meta.collaboratorId).toBeNull()
     expect(String(res.body.meta.unavailableReason ?? '')).toContain('colaborador')
-    await pool.query(
-      `UPDATE app_users SET collaborator_id = $1::uuid WHERE id = $2::uuid`,
-      [COLAB_SEED, MARIA_APP_USER_ID],
-    )
+    await linkAppUserToCollaborator(pool, MARIA_APP_USER_ID, COLAB_SEED)
   })
 
   it('lista STEPs abertos; filtro q; exclusão após conclusão explícita; POST tempo inválido', async () => {
-    await pool.query(
-      `UPDATE app_users SET collaborator_id = $1::uuid WHERE id = $2::uuid`,
-      [COLAB_SEED, MARIA_APP_USER_ID],
-    )
+    await linkAppUserToCollaborator(pool, MARIA_APP_USER_ID, COLAB_SEED)
 
     const tag = randomUUID().slice(0, 8)
     const created = await serviceCreateConveyor(
       pool,
       minimalConveyorBody(`Cand ${tag}`),
     )
+    await setConveyorProductionStatusForIntegration(pool, created.id)
     const stepId = await firstNodeId(created.id, 'STEP')
     await serviceCreateConveyorNodeAssignee(pool, {
       conveyorId: created.id,
@@ -166,7 +158,7 @@ describe.skipIf(!hasDb)('GET /api/v1/me/time-entry-candidates (integração)', (
     const cookieMaria = await sessionCookieForUser(pool, MARIA_APP_USER_ID, MARIA_EMAIL)
 
     const list1 = await request(app)
-      .get('/api/v1/me/time-entry-candidates')
+      .get(`/api/v1/me/time-entry-candidates?q=${encodeURIComponent(tag)}`)
       .set('Cookie', cookieMaria)
     expect(list1.status).toBe(200)
     expect(list1.body.meta.collaboratorId).toBe(COLAB_SEED)
@@ -236,6 +228,7 @@ describe.skipIf(!hasDb)('GET /api/v1/me/time-entry-candidates (integração)', (
       pool,
       minimalConveyorBody(`CandTE ${randomUUID().slice(0, 8)}`),
     )
+    await setConveyorProductionStatusForIntegration(pool, created2.id)
     const step2 = await firstNodeId(created2.id, 'STEP')
     await serviceCreateConveyorNodeAssignee(pool, {
       conveyorId: created2.id,

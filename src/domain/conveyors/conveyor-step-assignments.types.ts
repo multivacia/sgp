@@ -29,6 +29,7 @@ export type ConveyorStepTimeEntryListItem = TimeEntryDelegationClient & {
   collaboratorName: string | null
   conveyorNodeAssigneeId: string | null
   minutes: number
+  executedQuantity?: number | null
   notes: string | null
   entryMode: 'manual' | 'guided' | 'imported'
   /** Ausente em respostas antigas — tratar como ASSIGNED. */
@@ -50,6 +51,7 @@ export type ConveyorStepTimeEntryCreated = TimeEntryDelegationClient & {
   collaboratorId: string
   conveyorNodeAssigneeId: string | null
   minutes: number
+  executedQuantity?: number | null
   notes: string | null
   entryMode: 'manual' | 'guided' | 'imported'
   entryOrigin?: 'ASSIGNED' | 'UNASSIGNED_EXCEPTION'
@@ -62,6 +64,7 @@ export type ConveyorStepTimeEntryCreated = TimeEntryDelegationClient & {
 
 export type PostConveyorStepTimeEntryBody = {
   minutes: number
+  executedQuantity?: number | null
   notes?: string | null
   /** Alias aceite pelo backend (mapeia para `notes`). */
   description?: string | null
@@ -71,12 +74,15 @@ export type PostConveyorStepTimeEntryBody = {
   outOfSequenceJustification?: string | null
   entryAt?: string
   entryMode?: 'manual' | 'guided' | 'imported'
+  /** Quando true, conclui operacionalmente o STEP na mesma transação. */
+  markAsDone?: boolean
 }
 
 /** POST .../time-entries/on-behalf */
 export type PostConveyorStepTimeEntryOnBehalfBody = {
   targetCollaboratorId: string
   minutes: number
+  executedQuantity?: number | null
   notes?: string | null
   entryAt?: string
   reason: string

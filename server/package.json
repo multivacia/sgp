@@ -10,6 +10,7 @@
     "migrate": "tsx src/scripts/migrate.ts",
     "migrate:file": "tsx src/scripts/migrate-file.ts",
     "seed": "tsx src/scripts/seed.ts",
+    "seed:production-pins": "tsx src/scripts/seed-production-pins.ts",
     "test": "vitest run",
     "test:watch": "vitest"
   },

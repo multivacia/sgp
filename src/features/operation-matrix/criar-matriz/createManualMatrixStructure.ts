@@ -50,6 +50,7 @@ async function createActivityUnderSector(
     name: r.name.trim(),
     isActive: true,
     plannedMinutes: pm == null || Number.isNaN(pm) ? null : Math.round(pm),
+    plannedQuantity: Math.max(1, Math.floor(r.plannedQuantity ?? 1)),
     teamIds: teamPrimary ? [teamPrimary] : [],
     metadataJson: buildMatrixActivityMetadataJson(supportIds),
   })

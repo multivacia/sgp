@@ -11,7 +11,7 @@ const baseSelect = `
   SELECT
     id, parent_id, root_id, node_type, code, name, description,
     order_index, level_depth, is_active,
-    planned_minutes, default_responsible_id, ARRAY[]::uuid[] AS team_ids,
+    planned_minutes, planned_quantity, default_responsible_id, ARRAY[]::uuid[] AS team_ids,
     required,
     source_key, metadata_json,
     created_at, updated_at, deleted_at
@@ -242,6 +242,7 @@ export type InsertNodeInput = {
   level_depth: number
   is_active: boolean
   planned_minutes: number | null
+  planned_quantity?: number
   default_responsible_id: string | null
   required: boolean
   source_key: string | null
@@ -256,18 +257,18 @@ export async function insertNode(
     `INSERT INTO matrix_nodes (
       id, parent_id, root_id, node_type, code, name, description,
       order_index, level_depth, is_active,
-      planned_minutes, default_responsible_id, required,
+      planned_minutes, planned_quantity, default_responsible_id, required,
       source_key, metadata_json
     ) VALUES (
       $1, $2, $3, $4, $5, $6, $7,
       $8, $9, $10,
-      $11, $12, $13,
-      $14, $15::jsonb
+      $11, $12, $13, $14,
+      $15, $16::jsonb
     )
     RETURNING
       id, parent_id, root_id, node_type, code, name, description,
       order_index, level_depth, is_active,
-      planned_minutes, default_responsible_id,
+      planned_minutes, planned_quantity, default_responsible_id,
       ARRAY[]::uuid[] AS team_ids,
       required,
       source_key, metadata_json,
@@ -284,6 +285,7 @@ export async function insertNode(
       input.level_depth,
       input.is_active,
       input.planned_minutes,
+      input.planned_quantity ?? 1,
       input.default_responsible_id,
       input.required,
       input.source_key,
@@ -334,6 +336,7 @@ export type PatchNodeDbInput = {
   order_index?: number
   is_active?: boolean
   planned_minutes?: number | null
+  planned_quantity?: number
   default_responsible_id?: string | null
   required?: boolean
   source_key?: string | null
@@ -362,6 +365,9 @@ export async function updateNode(
   if (patch.is_active !== undefined) push('is_active', patch.is_active)
   if (patch.planned_minutes !== undefined) {
     push('planned_minutes', patch.planned_minutes)
+  }
+  if (patch.planned_quantity !== undefined) {
+    push('planned_quantity', patch.planned_quantity)
   }
   if (patch.default_responsible_id !== undefined) {
     push('default_responsible_id', patch.default_responsible_id)
@@ -393,7 +399,7 @@ export async function updateNode(
     RETURNING
       id, parent_id, root_id, node_type, code, name, description,
       order_index, level_depth, is_active,
-      planned_minutes, default_responsible_id, required,
+      planned_minutes, planned_quantity, default_responsible_id, required,
       source_key, metadata_json,
       created_at, updated_at, deleted_at
   `
@@ -462,7 +468,7 @@ export async function listSubtreeFromNode(
      )
      SELECT mn.id, mn.parent_id, mn.root_id, mn.node_type, mn.code, mn.name, mn.description,
        mn.order_index, mn.level_depth, mn.is_active,
-       mn.planned_minutes, mn.default_responsible_id, ARRAY[]::uuid[] AS team_ids,
+       mn.planned_minutes, mn.planned_quantity, mn.default_responsible_id, ARRAY[]::uuid[] AS team_ids,
        mn.required,
        mn.source_key, mn.metadata_json,
        mn.created_at, mn.updated_at, mn.deleted_at

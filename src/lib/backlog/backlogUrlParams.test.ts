@@ -38,14 +38,14 @@ describe('backlogHasScopeAtivas', () => {
   })
 
   it('não confunde outras situações', () => {
-    expect(backlogHasScopeAtivas(params('situacao=concluidas'))).toBe(false)
+    expect(backlogHasScopeAtivas(params('situacao=finalizadas'))).toBe(false)
   })
 })
 
 describe('normalizeBacklogSearchParams', () => {
   it('com scope=ativas remove situacao conflitante', () => {
     const n = normalizeBacklogSearchParams(
-      params('scope=ativas&situacao=concluidas'),
+      params('scope=ativas&situacao=finalizadas'),
     )
     expect(n).not.toBeNull()
     expect(n!.get('scope')).toBe('ativas')
@@ -62,20 +62,20 @@ describe('normalizeBacklogSearchParams', () => {
     expect(n!.has('completedWithinDays')).toBe(false)
   })
 
-  it('com situacao diferente de concluidas remove days quando há janela', () => {
-    const n = normalizeBacklogSearchParams(params('situacao=no_backlog&days=30'))
+  it('com situacao diferente de finalizadas remove days quando há janela', () => {
+    const n = normalizeBacklogSearchParams(params('situacao=em_elaboracao&days=30'))
     expect(n).not.toBeNull()
-    expect(n!.get('situacao')).toBe('no_backlog')
+    expect(n!.get('situacao')).toBe('em_elaboracao')
     expect(n!.has('days')).toBe(false)
   })
 
-  it('não remove days com situacao=concluidas e janela válida', () => {
-    expect(normalizeBacklogSearchParams(params('situacao=concluidas&days=30'))).toBeNull()
+  it('não remove days com situacao=finalizadas e janela válida', () => {
+    expect(normalizeBacklogSearchParams(params('situacao=finalizadas&days=30'))).toBeNull()
   })
 
   it('remove completedWithinDays quando days também existe (days vence)', () => {
     const n = normalizeBacklogSearchParams(
-      params('situacao=concluidas&days=30&completedWithinDays=60'),
+      params('situacao=finalizadas&days=30&completedWithinDays=60'),
     )
     expect(n).not.toBeNull()
     expect(n!.get('days')).toBe('30')
@@ -83,7 +83,7 @@ describe('normalizeBacklogSearchParams', () => {
   })
 
   it('retorna null quando já está normalizado', () => {
-    expect(normalizeBacklogSearchParams(params('situacao=concluidas&days=7'))).toBeNull()
+    expect(normalizeBacklogSearchParams(params('situacao=finalizadas&days=7'))).toBeNull()
     expect(normalizeBacklogSearchParams(params(''))).toBeNull()
   })
 
@@ -103,13 +103,13 @@ describe('normalizeBacklogSearchParams', () => {
 
 describe('listConveyorsQueryFromBacklogUrl', () => {
   it('mapeia q, priority, responsible e operationalStatus só quando aplicável', () => {
-    const sp = params('q=acme&priority=alta&responsible=João&situacao=no_backlog')
+    const sp = params('q=acme&priority=alta&responsible=João&situacao=em_elaboracao')
     const q = listConveyorsQueryFromBacklogUrl(sp, parseBacklogSituationFilter(sp))
     expect(q).toEqual({
       q: 'acme',
       priority: 'alta',
       responsible: 'João',
-      operationalStatus: 'NO_BACKLOG',
+      operationalStatus: 'EM_ELABORACAO',
     })
   })
 

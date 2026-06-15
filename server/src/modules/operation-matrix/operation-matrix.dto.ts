@@ -12,6 +12,7 @@ export type MatrixNodeApi = {
   level_depth: number
   is_active: boolean
   planned_minutes: number | null
+  planned_quantity?: number
   default_responsible_id: string | null
   team_ids: string[]
   required: boolean
@@ -55,6 +56,7 @@ export type MatrixNodeRow = {
   level_depth: number
   is_active: boolean
   planned_minutes: number | null
+  planned_quantity?: number
   default_responsible_id: string | null
   team_ids: string[]
   required: boolean
@@ -78,6 +80,7 @@ export function rowToMatrixNodeApi(row: MatrixNodeRow): MatrixNodeApi {
     level_depth: row.level_depth,
     is_active: row.is_active,
     planned_minutes: row.planned_minutes,
+    planned_quantity: row.planned_quantity ?? 1,
     default_responsible_id: row.default_responsible_id,
     team_ids: Array.isArray(row.team_ids) ? row.team_ids : [],
     required: row.required,

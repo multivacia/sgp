@@ -17,6 +17,10 @@ import {
   patchConveyorStructure,
 } from './conveyors.patch.controller.js'
 import { deleteConveyor } from './conveyors.delete.controller.js'
+import {
+  postConveyorReturnToBacklog,
+  postConveyorReturnToPlanning,
+} from './conveyor-lifecycle.controller.js'
 import { patchConveyorStatus } from './conveyors.status.controller.js'
 import { registerConveyorOperationalPlanRoutes } from '../conveyor-operational-plan/conveyor-operational-plan.routes.js'
 import { registerConveyorHealthRoutes } from './health/conveyor-health.routes.js'
@@ -36,6 +40,18 @@ export function conveyorsRouter(env: Env): Router {
     requireAuth(),
     requirePermission('conveyors.edit_status'),
     asyncRoute(patchConveyorStatus),
+  )
+  r.post(
+    '/conveyors/:id/return-to-backlog',
+    requireAuth(),
+    requirePermission('conveyors.edit_status'),
+    asyncRoute(postConveyorReturnToBacklog),
+  )
+  r.post(
+    '/conveyors/:id/return-to-planning',
+    requireAuth(),
+    requirePermission('conveyors.edit_status'),
+    asyncRoute(postConveyorReturnToPlanning),
   )
   r.patch(
     '/conveyors/:id/structure',
