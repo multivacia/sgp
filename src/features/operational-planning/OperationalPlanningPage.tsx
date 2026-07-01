@@ -128,13 +128,16 @@ import {
   buildActivityTicketPrintModel,
   buildActivityTicketPrintModelsFromPlanningInputs,
 } from '../operational-tickets/activityTicketPrintModel'
-import { resolvePlanningItemsForTicketBatchPrint } from '../operational-tickets/resolvePlanningItemsForTicketBatch'
+import { resolvePlanningItemsForTicketBatchPrint, resolveWeekPlanningItemsForTicketPrint } from '../operational-tickets/resolvePlanningItemsForTicketBatch'
 import { ACTIVITY_TICKET_PRINT_SUPPORT_MESSAGE, ACTIVITY_TICKET_SILENT_PRINT_HINT } from '../operational-tickets/activityTicketPrintCopy'
 import { ThermalActivityTicketsPrintArea } from '../operational-tickets/ThermalActivityTicketsPrintArea'
 import { ThermalPrintAgentControls } from '../operational-tickets/ThermalPrintAgentControls'
 import { ThermalTicketPrintProgressOverlay } from '../operational-tickets/ThermalTicketPrintProgressOverlay'
 import { isBatchThermalTicketPrint } from '../operational-tickets/thermalTicketPrintQueue'
 import { useActivityTicketPrint } from '../operational-tickets/useActivityTicketPrint'
+import { filterPlanningActivityTicketSources } from '../operational-tickets/activityTicketPlanningSource'
+import { buildPlanningGroupedTicketPrintItems } from '../operational-tickets/buildPlanningGroupedTicketPrintItems'
+import { PlanningWeekTicketsPrintDialog } from '../operational-tickets/PlanningWeekTicketsPrintDialog'
 
 export { ACTIVITY_TICKET_PRINT_SUPPORT_MESSAGE } from '../operational-tickets/activityTicketPrintCopy'
 
@@ -621,6 +624,7 @@ export function OperationalPlanningPage() {
   const [cardActionBusyKey, setCardActionBusyKey] = useState<string | null>(null)
   const [planningViewMode, setPlanningViewMode] = useState<PlanningViewMode>('week')
   const [dailySelectedDay, setDailySelectedDay] = useState<PlanningDailySelectedDay>('week')
+  const [weekTicketsPrintOpen, setWeekTicketsPrintOpen] = useState(false)
   const {
     currentSheet,
     printProgress,
@@ -1321,6 +1325,16 @@ export function OperationalPlanningPage() {
     [visibleDraftItems, planningViewMode, dailySelectedDay],
   )
 
+  const weekTicketSources = useMemo(
+    () => resolveWeekPlanningItemsForTicketPrint(draftItems),
+    [draftItems],
+  )
+
+  const weekPrintableTicketCount = useMemo(
+    () => filterPlanningActivityTicketSources(weekTicketSources, false).length,
+    [weekTicketSources],
+  )
+
   const handleCardPrintTicket = useCallback(
     (item: DraftPlanItem) => {
       const input = buildActivityTicketInputFromPlanningSource(item, backlogExecutionLookup)
@@ -1337,6 +1351,20 @@ export function OperationalPlanningPage() {
     )
     requestTicketPrint(buildActivityTicketPrintModelsFromPlanningInputs(inputs))
   }, [ticketBatchSources, backlogExecutionLookup, requestTicketPrint])
+
+  const handleWeekTicketsPrint = useCallback(
+    (options: { grouping: 'task' | 'responsible'; includeCompleted: boolean }) => {
+      const items = buildPlanningGroupedTicketPrintItems(weekTicketSources, {
+        grouping: options.grouping,
+        includeCompleted: options.includeCompleted,
+        backlogExecutionLookup,
+      })
+      if (!items.some((item) => item.kind === 'ticket')) return
+      requestTicketPrint(items)
+      setWeekTicketsPrintOpen(false)
+    },
+    [weekTicketSources, backlogExecutionLookup, requestTicketPrint],
+  )
 
   const backlogEmptyMessage = useMemo(() => {
     if (visibleBacklogItems.length > 0) return null
@@ -1398,6 +1426,20 @@ export function OperationalPlanningPage() {
                 : PLAN_STATUS_DRAFT_LABEL}
             </span>
 
+            <button
+              type="button"
+              className="rounded-xl border border-white/[0.12] bg-white/[0.06] px-4 py-2 text-[13px] font-medium text-slate-100 hover:bg-white/[0.09] disabled:opacity-50"
+              title={
+                weekTicketSources.length === 0
+                  ? 'Nenhuma atividade planejada nesta semana'
+                  : 'Imprimir tickets de todas as atividades planejadas na semana'
+              }
+              disabled={busy || weekTicketSources.length === 0}
+              onClick={() => setWeekTicketsPrintOpen(true)}
+            >
+              Imprimir tickets da semana
+              {weekTicketSources.length > 0 ? ` (${weekTicketSources.length})` : ''}
+            </button>
             <button
               type="button"
               className="rounded-xl border border-white/[0.12] bg-white/[0.06] px-4 py-2 text-[13px] font-medium text-slate-100 hover:bg-white/[0.09] disabled:opacity-50"
@@ -2109,6 +2151,21 @@ export function OperationalPlanningPage() {
         current={printProgress?.current ?? 0}
         total={printProgress?.total ?? 0}
         onCancel={cancelPrint}
+      />
+
+      <PlanningWeekTicketsPrintDialog
+        open={weekTicketsPrintOpen}
+        totalCount={weekTicketSources.length}
+        printableCount={weekPrintableTicketCount}
+        agentStatus={agentStatus}
+        agentFallbackNotice={agentFallbackNotice}
+        testPrintLoading={testPrintLoading}
+        onClose={() => setWeekTicketsPrintOpen(false)}
+        onPrint={handleWeekTicketsPrint}
+        onDismissAgentNotice={clearAgentFallbackNotice}
+        onTestThermalPrinter={() => {
+          void testThermalPrinter()
+        }}
       />
     </PageCanvas>
   )

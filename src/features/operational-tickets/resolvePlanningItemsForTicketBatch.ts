@@ -1,6 +1,9 @@
 import { filterPlanningDailyItemsByDay } from '../operational-planning/planningDailyBoard'
 import type { PlanningDailySelectedDay, PlanningViewMode } from '../operational-planning/planningDailyBoard'
-import type { ActivityTicketPlanningSource } from './activityTicketPlanningSource'
+import {
+  isPlanningActivityTicketSourceCancelled,
+  type ActivityTicketPlanningSource,
+} from './activityTicketPlanningSource'
 
 export function sortPlanningSourcesForTicketPrint(
   items: readonly ActivityTicketPlanningSource[],
@@ -27,4 +30,12 @@ export function resolvePlanningItemsForTicketBatchPrint(
       : [...visibleItems]
 
   return sortPlanningSourcesForTicketPrint(base)
+}
+
+/** Todos os itens planejados da semana (ignora filtros do quadro). */
+export function resolveWeekPlanningItemsForTicketPrint(
+  draftItems: readonly ActivityTicketPlanningSource[],
+): ActivityTicketPlanningSource[] {
+  const active = draftItems.filter((item) => !isPlanningActivityTicketSourceCancelled(item))
+  return sortPlanningSourcesForTicketPrint(active)
 }

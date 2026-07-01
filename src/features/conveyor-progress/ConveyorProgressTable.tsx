@@ -5,6 +5,10 @@ import type {
   SectorProgressItem,
   TaskProgressItem,
 } from '../../domain/conveyor-progress/conveyorProgress.types'
+import {
+  isProgressActivityPrintable,
+  type ActivityTicketProgressContext,
+} from '../operational-tickets/activityTicketProgressSource'
 import { labelConveyorOperationalStatus } from '../../domain/conveyors/conveyorOperationalStatus'
 import type { ConveyorOperationalStatus } from '../../domain/conveyors/conveyor.types'
 import { resolvePlanningItemOperationalStatusLabel } from '../operational-planning/planningExecutionHelpers'
@@ -29,6 +33,7 @@ type Props = {
   onToggleSelect: (conveyorId: string) => void
   onSelectAll: (ids: string[]) => void
   onClearSelection: (ids: string[]) => void
+  onPrintActivity?: (context: ActivityTicketProgressContext) => void
 }
 
 export function ConveyorProgressTable({
@@ -37,6 +42,7 @@ export function ConveyorProgressTable({
   onToggleSelect,
   onSelectAll,
   onClearSelection,
+  onPrintActivity,
 }: Props) {
   const [page, setPage] = useState(0)
   const [pageSize, setPageSize] = useState<number>(25)
@@ -95,6 +101,7 @@ export function ConveyorProgressTable({
                 item={item}
                 selected={selectedIds.has(item.conveyorId)}
                 onToggleSelect={() => onToggleSelect(item.conveyorId)}
+                onPrintActivity={onPrintActivity}
               />
             ))}
           </tbody>
@@ -158,10 +165,12 @@ function ConveyorRows({
   item,
   selected,
   onToggleSelect,
+  onPrintActivity,
 }: {
   item: ConveyorProgressItem
   selected: boolean
   onToggleSelect: () => void
+  onPrintActivity?: (context: ActivityTicketProgressContext) => void
 }) {
   const [open, setOpen] = useState(false)
   const statusLabel = labelConveyorOperationalStatus(
@@ -193,13 +202,28 @@ function ConveyorRows({
         rowClassName="bg-white font-medium"
       />
       {open
-        ? item.tasks.map((task) => <TaskRows key={task.taskId} task={task} />)
+        ? item.tasks.map((task) => (
+            <TaskRows
+              key={task.taskId}
+              task={task}
+              conveyor={item}
+              onPrintActivity={onPrintActivity}
+            />
+          ))
         : null}
     </>
   )
 }
 
-function TaskRows({ task }: { task: TaskProgressItem }) {
+function TaskRows({
+  task,
+  conveyor,
+  onPrintActivity,
+}: {
+  task: TaskProgressItem
+  conveyor: ConveyorProgressItem
+  onPrintActivity?: (context: ActivityTicketProgressContext) => void
+}) {
   const [open, setOpen] = useState(false)
   const hasChildren = task.sectors.length > 0
 
@@ -215,13 +239,31 @@ function TaskRows({ task }: { task: TaskProgressItem }) {
         onToggle={() => setOpen((v) => !v)}
       />
       {open
-        ? task.sectors.map((sector) => <SectorRows key={sector.sectorId} sector={sector} />)
+        ? task.sectors.map((sector) => (
+            <SectorRows
+              key={sector.sectorId}
+              sector={sector}
+              conveyor={conveyor}
+              task={task}
+              onPrintActivity={onPrintActivity}
+            />
+          ))
         : null}
     </>
   )
 }
 
-function SectorRows({ sector }: { sector: SectorProgressItem }) {
+function SectorRows({
+  sector,
+  conveyor,
+  task,
+  onPrintActivity,
+}: {
+  sector: SectorProgressItem
+  conveyor: ConveyorProgressItem
+  task: TaskProgressItem
+  onPrintActivity?: (context: ActivityTicketProgressContext) => void
+}) {
   const [open, setOpen] = useState(false)
   const hasChildren = sector.activities.length > 0
 
@@ -238,18 +280,47 @@ function SectorRows({ sector }: { sector: SectorProgressItem }) {
       />
       {open
         ? sector.activities.map((activity) => (
-            <ActivityRows key={activity.activityId} activity={activity} />
+            <ActivityRows
+              key={activity.activityId}
+              activity={activity}
+              conveyor={conveyor}
+              task={task}
+              sector={sector}
+              onPrintActivity={onPrintActivity}
+            />
           ))
         : null}
     </>
   )
 }
 
-function ActivityRows({ activity }: { activity: ActivityProgressItem }) {
+function ActivityRows({
+  activity,
+  conveyor,
+  task,
+  sector,
+  onPrintActivity,
+}: {
+  activity: ActivityProgressItem
+  conveyor: ConveyorProgressItem
+  task: TaskProgressItem
+  sector: SectorProgressItem
+  onPrintActivity?: (context: ActivityTicketProgressContext) => void
+}) {
   const [open, setOpen] = useState(false)
   const statusLabel =
     resolvePlanningItemOperationalStatusLabel(activity.status) ?? activity.status
   const hasChildren = activity.timeEntries.length > 0
+
+  const printContext: ActivityTicketProgressContext = {
+    conveyorId: conveyor.conveyorId,
+    conveyorTitle: conveyor.conveyorName,
+    conveyorCode: conveyor.conveyorCode,
+    taskTitle: task.taskName,
+    sectorTitle: sector.sectorName,
+    activity,
+  }
+  const canPrint = onPrintActivity != null && isProgressActivityPrintable(printContext)
 
   return (
     <>
@@ -263,6 +334,23 @@ function ActivityRows({ activity }: { activity: ActivityProgressItem }) {
         expanded={open}
         hasChildren={hasChildren}
         onToggle={() => setOpen((v) => !v)}
+        actions={
+          onPrintActivity ? (
+            <button
+              type="button"
+              className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-[11px] font-medium text-slate-600 hover:border-amber-300 hover:text-amber-700 disabled:cursor-not-allowed disabled:opacity-40"
+              title={
+                canPrint
+                  ? 'Imprimir ticket térmico desta atividade'
+                  : 'Dados insuficientes para montar o ticket'
+              }
+              disabled={!canPrint}
+              onClick={() => onPrintActivity(printContext)}
+            >
+              Imprimir ticket
+            </button>
+          ) : null
+        }
       />
       {open ? (
         <ConveyorProgressAnalyticalEntries entries={activity.timeEntries} indentLevel={4} />
@@ -283,6 +371,7 @@ function MetricsRow({
   hasChildren,
   onToggle,
   selection,
+  actions,
   rowClassName = '',
 }: {
   level: number
@@ -296,6 +385,7 @@ function MetricsRow({
   hasChildren: boolean
   onToggle: () => void
   selection?: ReactNode
+  actions?: ReactNode
   rowClassName?: string
 }) {
   const indent = `${level * 1.25 + 1}rem`
@@ -347,7 +437,9 @@ function MetricsRow({
       <td className="px-3 py-3">
         <EvolutionColumn metrics={metrics} />
       </td>
-      <td className="px-3 py-3 text-center">{selection ?? null}</td>
+      <td className="px-3 py-3 text-center">
+        {actions ?? selection ?? null}
+      </td>
     </tr>
   )
 }

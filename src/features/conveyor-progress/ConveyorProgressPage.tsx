@@ -21,6 +21,15 @@ import {
   filterSelectedConveyors,
 } from './ConveyorProgressTable'
 import { useConveyorProgressPrint } from './useConveyorProgressPrint'
+import {
+  buildActivityTicketInputFromProgressContext,
+  type ActivityTicketProgressContext,
+} from '../operational-tickets/activityTicketProgressSource'
+import { buildActivityTicketPrintModel } from '../operational-tickets/activityTicketPrintModel'
+import { ThermalActivityTicketsPrintArea } from '../operational-tickets/ThermalActivityTicketsPrintArea'
+import { ThermalTicketPrintProgressOverlay } from '../operational-tickets/ThermalTicketPrintProgressOverlay'
+import { isBatchThermalTicketPrint } from '../operational-tickets/thermalTicketPrintQueue'
+import { useActivityTicketPrint } from '../operational-tickets/useActivityTicketPrint'
 
 const LOAD_BLOCKING_TITLE = 'Não foi possível carregar a evolução das esteiras'
 const LOAD_BLOCKING_MESSAGE =
@@ -46,6 +55,12 @@ export function ConveyorProgressPage() {
   const [collaboratorsLoading, setCollaboratorsLoading] = useState(true)
 
   const { printPayload, isPrinting, printError, requestPrint } = useConveyorProgressPrint()
+  const {
+    currentSheet,
+    printProgress,
+    requestPrint: requestTicketPrint,
+    cancelPrint,
+  } = useActivityTicketPrint()
 
   useRegisterTransientContext({
     id: 'evolucao-esteiras',
@@ -157,6 +172,14 @@ export function ConveyorProgressPage() {
     requestPrint(selectedItems, filters)
   }
 
+  const handlePrintActivity = useCallback(
+    (context: ActivityTicketProgressContext) => {
+      const input = buildActivityTicketInputFromProgressContext(context)
+      requestTicketPrint([buildActivityTicketPrintModel(input)])
+    },
+    [requestTicketPrint],
+  )
+
   const selectionHint =
     selectedIds.size === 0
       ? 'Selecione ao menos uma esteira.'
@@ -213,6 +236,7 @@ export function ConveyorProgressPage() {
             onToggleSelect={toggleSelect}
             onSelectAll={addToSelection}
             onClearSelection={removeFromSelection}
+            onPrintActivity={handlePrintActivity}
           />
         </div>
       )}
@@ -225,6 +249,14 @@ export function ConveyorProgressPage() {
           summary={computeConveyorProgressSummary(printPayload.items)}
         />
       ) : null}
+
+      {currentSheet ? <ThermalActivityTicketsPrintArea sheet={currentSheet} /> : null}
+      <ThermalTicketPrintProgressOverlay
+        open={printProgress !== null && isBatchThermalTicketPrint(printProgress)}
+        current={printProgress?.current ?? 0}
+        total={printProgress?.total ?? 0}
+        onCancel={cancelPrint}
+      />
     </PageCanvas>
   )
 }

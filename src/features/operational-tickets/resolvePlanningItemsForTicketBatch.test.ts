@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { resolvePlanningItemsForTicketBatchPrint } from './resolvePlanningItemsForTicketBatch'
+import {
+  resolvePlanningItemsForTicketBatchPrint,
+  resolveWeekPlanningItemsForTicketPrint,
+} from './resolvePlanningItemsForTicketBatch'
 import type { ActivityTicketPlanningSource } from './activityTicketPlanningSource'
 
 function item(
@@ -45,5 +48,18 @@ describe('resolvePlanningItemsForTicketBatchPrint', () => {
     })
 
     expect(result).toHaveLength(2)
+  })
+})
+
+describe('resolveWeekPlanningItemsForTicketPrint', () => {
+  it('usa todos os itens da semana exceto cancelados', () => {
+    const draft = [
+      item({ activityNodeId: 'a1', plannedDate: '2026-05-19', plannedOrder: 1 }),
+      item({ activityNodeId: 'a2', plannedDate: '2026-05-18', plannedOrder: 0 }),
+      item({ activityNodeId: 'a3', status: 'CANCELLED' }),
+    ]
+
+    const result = resolveWeekPlanningItemsForTicketPrint(draft)
+    expect(result.map((r) => r.activityNodeId)).toEqual(['a2', 'a1'])
   })
 })

@@ -1,6 +1,7 @@
 import {
   resolvePlanningItemRealizedForCard,
 } from '../operational-planning/planningExecutionHelpers'
+import { isConveyorActivityTicketSourceCompleted } from './activityTicketConveyorSource'
 import type { ActivityTicketPrintModelInput } from './activityTicketPrintModel'
 
 /** Campos mínimos de um card do planejamento para montar ticket (allowlist). */
@@ -56,4 +57,21 @@ export function buildActivityTicketInputsFromPlanningSources(
   return items.map((item) =>
     buildActivityTicketInputFromPlanningSource(item, backlogExecutionLookup),
   )
+}
+
+export function isPlanningActivityTicketSourceCancelled(
+  source: Pick<ActivityTicketPlanningSource, 'status'>,
+): boolean {
+  return source.status?.trim() === 'CANCELLED'
+}
+
+export function filterPlanningActivityTicketSources(
+  sources: readonly ActivityTicketPlanningSource[],
+  includeCompleted: boolean,
+): ActivityTicketPlanningSource[] {
+  return sources.filter((source) => {
+    if (isPlanningActivityTicketSourceCancelled(source)) return false
+    if (!includeCompleted && isConveyorActivityTicketSourceCompleted(source)) return false
+    return true
+  })
 }
