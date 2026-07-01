@@ -40,3 +40,12 @@ yarn-error.log*
 server/.env.local
 scripts/db/*.local.sql
 sgp-print-agent/*.local.json
+
+
+# AI local/runtime files
+.claude/settings.local.json
+.cursor/cache/
+.cursor/index/
+.cursor/**/*.local
+.cursor/**/*.log
+

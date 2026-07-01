@@ -281,3 +281,45 @@ Template completo documentado em `docs/` (gerado na sessão de planejamento).
 - Gestor precisa de visão rápida sem navegar em múltiplas telas
 - Tablet fixo na fábrica = touch-first, botões grandes, sem dependência de hover states
 - Foco atual do produto: **governança de acesso primeiro, expansão de features depois**
+
+---
+
+## Camada neutra de IA — SGP+ Web
+
+Este projeto usa uma camada neutra de instruções operacionais de IA em:
+
+`docs/ai/`
+
+Ela não pertence ao Claude, Codex, Cursor ou qualquer ferramenta específica.
+
+### Estrutura
+
+- `docs/ai/agents/`: papéis especializados;
+- `docs/ai/skills/`: conhecimento por domínio;
+- `docs/ai/playbooks/`: fluxos de trabalho;
+- `docs/ai/templates/`: formatos de saída.
+
+### Regra principal
+
+Somente o agente implementador pode alterar código, e apenas com escopo fechado.
+
+Agentes de contexto, impacto, especificação e teste não devem alterar arquivos, salvo instrução explícita.
+
+### Fluxo recomendado
+
+Para demandas médias ou grandes:
+
+1. Ler contexto.
+2. Analisar impacto.
+3. Gerar especificação curta.
+4. Implementar com escopo fechado.
+5. Revisar testes e regressão.
+6. Entregar relatório.
+
+### Subagente inicial
+
+O subagente inicial do Claude fica em:
+
+`.claude/agents/sgp-impact-analyst.md`
+
+Use antes de mudanças que envolvam esteiras, matrizes, planejamento semanal, produção/kiosk, apontamentos, permissões ou impressão térmica.

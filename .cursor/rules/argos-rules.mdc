@@ -1,0 +1,27 @@
+---
+description: Regras operacionais de IA para o SGP+ Web / ARGOS
+alwaysApply: true
+---
+
+# Regras ARGOS para Cursor
+
+Este projeto usa a camada neutra de IA em `docs/ai/`.
+
+## Regras principais
+
+- Não alterar código sem escopo claro.
+- Separar análise, especificação, implementação e teste.
+- Não fazer refatoração estética fora do escopo.
+- Não alterar permissões sem análise de impacto.
+- Não alterar ciclo de vida de esteira sem revisar impacto.
+- Não quebrar preview de documentos que não sejam tickets operacionais.
+- Não assumir comportamento sem indicar onde foi verificado.
+
+## Para demandas médias ou grandes
+
+Antes de implementar:
+
+1. Ler `AGENTS.md`.
+2. Ler o agente aplicável em `docs/ai/agents/`.
+3. Ler a skill aplicável em `docs/ai/skills/`.
+4. Gerar relatório ou especificação antes de alterar código.
