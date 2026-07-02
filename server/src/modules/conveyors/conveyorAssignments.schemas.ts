@@ -82,8 +82,14 @@ export const postTimeEntryBodySchema = z
     entryMode: z.enum(['manual', 'guided', 'imported']).optional(),
     /** Obrigatória quando o colaborador não está alocado na atividade (origem derivada no servidor). */
     exceptionJustification: z.union([z.string().max(4000), z.null()]).optional(),
+    exceptionJustificationId: z.string().uuid().optional(),
+    exceptionJustificationComplement: z.union([z.string().max(2000), z.null()]).optional(),
     /** Obrigatória quando existem atividades anteriores ainda não concluídas nesta esteira. */
     outOfSequenceJustification: z.union([z.string().max(4000), z.null()]).optional(),
+    outOfSequenceJustificationId: z.string().uuid().optional(),
+    outOfSequenceJustificationComplement: z.union([z.string().max(2000), z.null()]).optional(),
+    justificationId: z.string().uuid().optional(),
+    justificationComplement: z.union([z.string().max(2000), z.null()]).optional(),
     /** Quando true, conclui operacionalmente o STEP na mesma transação do apontamento. */
     markAsDone: z.boolean().optional(),
   })
@@ -112,7 +118,22 @@ export const postTimeEntryBodySchema = z
             : undefined,
       entryMode: b.entryMode,
       exceptionJustification: ejRaw && ejRaw.length > 0 ? ejRaw : undefined,
+      exceptionJustificationId: b.exceptionJustificationId,
+      exceptionJustificationComplement:
+        b.exceptionJustificationComplement === null ||
+        b.exceptionJustificationComplement === undefined
+          ? undefined
+          : b.exceptionJustificationComplement.trim() || undefined,
       outOfSequenceJustification: oosRaw && oosRaw.length > 0 ? oosRaw : undefined,
+      outOfSequenceJustificationId:
+        b.outOfSequenceJustificationId ?? b.justificationId,
+      outOfSequenceJustificationComplement:
+        b.outOfSequenceJustificationComplement === null ||
+        b.outOfSequenceJustificationComplement === undefined
+          ? b.justificationComplement === null || b.justificationComplement === undefined
+            ? undefined
+            : b.justificationComplement.trim() || undefined
+          : b.outOfSequenceJustificationComplement.trim() || undefined,
       markAsDone: b.markAsDone === true,
     }
   })
@@ -130,6 +151,10 @@ export const postTimeEntryOnBehalfBodySchema = z.object({
     .min(1, 'Indique o motivo.')
     .max(4000),
   outOfSequenceJustification: z.union([z.string().max(4000), z.null()]).optional(),
+  outOfSequenceJustificationId: z.string().uuid().optional(),
+  outOfSequenceJustificationComplement: z.union([z.string().max(2000), z.null()]).optional(),
+  justificationId: z.string().uuid().optional(),
+  justificationComplement: z.union([z.string().max(2000), z.null()]).optional(),
 })
 
 export type PostTimeEntryOnBehalfBody = z.infer<typeof postTimeEntryOnBehalfBodySchema>

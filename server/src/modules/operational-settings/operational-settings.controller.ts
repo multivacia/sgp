@@ -295,3 +295,11 @@ export const getExtraTimeEntryDescriptions = getExtraTimeEntryDescriptionsContro
 export const postExtraTimeEntryDescription = postExtraTimeEntryDescriptionController
 export const putExtraTimeEntryDescription = putExtraTimeEntryDescriptionController
 export const deleteExtraTimeEntryDescription = deleteExtraTimeEntryDescriptionController
+
+export {
+  getTimeEntryJustifications,
+  postTimeEntryJustification,
+  patchTimeEntryJustification,
+  patchTimeEntryJustificationActivate,
+  patchTimeEntryJustificationDeactivate,
+} from './time-entry-justifications.controller.js'

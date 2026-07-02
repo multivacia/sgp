@@ -26,12 +26,16 @@ const baseItem = (
   isActivityCompleted: false,
   isOverdue: false,
   isOutOfSequence: false,
+  isNextRecommended: false,
+  requiresOutOfSequenceJustification: false,
   previousOpenCount: 0,
   previousOpenActivities: [],
+  hasPreviousOpenActivitiesFromOtherCollaborators: false,
+  previousOpenActivitiesFromOtherCollaborators: [],
+  previousOpenActivitiesWarningMessage: null,
   group: 'today',
   canTrackTime: true,
   canCompleteStep: true,
-  requiresOutOfSequenceJustification: false,
   ...overrides,
 })
 
@@ -58,7 +62,6 @@ describe('kioskActivityCardLogic', () => {
     expect(
       canSubmitKioskProductionTimeEntry({
         minutesValid: true,
-        isOutOfSequence: true,
         requiresOutOfSequenceJustification: true,
         outOfSequenceJustification: '',
       }),
@@ -66,9 +69,15 @@ describe('kioskActivityCardLogic', () => {
     expect(
       canSubmitKioskProductionTimeEntry({
         minutesValid: true,
-        isOutOfSequence: true,
         requiresOutOfSequenceJustification: true,
         outOfSequenceJustification: 'Autorizado pelo gestor.',
+      }),
+    ).toBe(true)
+    expect(
+      canSubmitKioskProductionTimeEntry({
+        minutesValid: true,
+        requiresOutOfSequenceJustification: false,
+        outOfSequenceJustification: '',
       }),
     ).toBe(true)
   })

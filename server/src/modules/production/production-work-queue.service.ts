@@ -9,7 +9,6 @@ import type {
 import {
   resolveProductionCanCompleteStep,
   resolveProductionCanTrackTime,
-  resolveProductionRequiresOutOfSequenceJustification,
 } from './production-work-queue.rules.js'
 
 function mapToProductionItem(
@@ -44,17 +43,27 @@ function mapToProductionItem(
     isActivityCompleted: item.isActivityCompleted,
     isOverdue: item.isOverdue,
     isOutOfSequence: item.isOutOfSequence,
+    isNextRecommended: item.isNextRecommended,
     previousOpenCount: item.previousOpenCount,
     previousOpenActivities: item.previousOpenActivities.map((p) => ({
       activityTitle: p.activityTitle,
       sectorTitle: p.sectorTitle,
       taskTitle: p.taskTitle,
     })),
+    hasPreviousOpenActivitiesFromOtherCollaborators:
+      item.hasPreviousOpenActivitiesFromOtherCollaborators,
+    previousOpenActivitiesFromOtherCollaborators:
+      item.previousOpenActivitiesFromOtherCollaborators.map((p) => ({
+        activityTitle: p.activityTitle,
+        sectorTitle: p.sectorTitle,
+        taskTitle: p.taskTitle,
+        collaboratorNames: p.collaboratorNames,
+      })),
+    previousOpenActivitiesWarningMessage: item.previousOpenActivitiesWarningMessage,
     group: item.group,
     canTrackTime: resolveProductionCanTrackTime(trackInput),
     canCompleteStep: resolveProductionCanCompleteStep(trackInput),
-    requiresOutOfSequenceJustification:
-      resolveProductionRequiresOutOfSequenceJustification(trackInput),
+    requiresOutOfSequenceJustification: item.requiresOutOfSequenceJustification,
   }
 }
 

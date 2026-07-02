@@ -94,7 +94,11 @@ export async function postConveyorStepTimeEntry(
     notes: body.notes,
     entryMode: body.entryMode,
     exceptionJustification: body.exceptionJustification,
+    exceptionJustificationId: body.exceptionJustificationId,
+    exceptionJustificationComplement: body.exceptionJustificationComplement,
     outOfSequenceJustification: body.outOfSequenceJustification,
+    outOfSequenceJustificationId: body.outOfSequenceJustificationId,
+    outOfSequenceJustificationComplement: body.outOfSequenceJustificationComplement,
     markAsDone: body.markAsDone,
   })
   res.status(201).json(ok(created))
@@ -124,6 +128,10 @@ export async function postConveyorStepTimeEntryOnBehalf(
     notes: body.notes,
     reason: body.reason,
     outOfSequenceJustification: body.outOfSequenceJustification?.trim(),
+    outOfSequenceJustificationId:
+      body.outOfSequenceJustificationId ?? body.justificationId,
+    outOfSequenceJustificationComplement:
+      body.outOfSequenceJustificationComplement ?? body.justificationComplement ?? undefined,
   })
   res.status(201).json(ok(created))
 }

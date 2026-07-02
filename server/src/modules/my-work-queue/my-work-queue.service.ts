@@ -12,6 +12,9 @@ import {
   type MyWorkQueueListOptions,
   type MyWorkQueueRawRow,
 } from './my-work-queue.repository.js'
+import { applyWorkQueuePrioritization } from './work-queue-prioritization.js'
+import { buildConveyorStepOwnershipIndex } from './my-work-queue-step-assignees.repository.js'
+import { analyzeWorkQueueSequenceForCollaborator } from './work-queue-sequence-for-collaborator.js'
 
 function todayIsoLocal(): string {
   const t = new Date()
@@ -111,20 +114,33 @@ export async function serviceGetWorkQueueForCollaborator(
 
   const conveyorIds = [...new Set(raw.map((row) => row.conveyor_id))]
   const nodesByConveyor = new Map<string, SequenceAnalysisNode[]>()
+  const ownershipByConveyor = new Map<
+    string,
+    Awaited<ReturnType<typeof buildConveyorStepOwnershipIndex>>
+  >()
   await Promise.all(
     conveyorIds.map(async (cid) => {
-      const nodes = await listConveyorNodesForSequenceAnalysis(pool, cid)
+      const [nodes, ownership] = await Promise.all([
+        listConveyorNodesForSequenceAnalysis(pool, cid),
+        buildConveyorStepOwnershipIndex(pool, cid),
+      ])
       nodesByConveyor.set(cid, mapNodesForSequence(nodes))
+      ownershipByConveyor.set(cid, ownership)
     }),
   )
 
-  const items = raw.map((row): MyWorkQueueItemApi => {
+  const mappedItems = raw.map((row): MyWorkQueueItemApi => {
     const isActivityCompleted = row.activity_operational_status === 'COMPLETED'
     const seq = analyzeConveyorActivitySequence(
       nodesByConveyor.get(row.conveyor_id) ?? [],
       row.activity_node_id,
     )
-    const isOutOfSequence = !isActivityCompleted && seq.isOutOfSequence
+    const sequenceForCollaborator = analyzeWorkQueueSequenceForCollaborator(
+      seq,
+      collaboratorId,
+      ownershipByConveyor.get(row.conveyor_id) ?? new Map(),
+    )
+    const isOutOfSequence = !isActivityCompleted && sequenceForCollaborator.isOutOfSequence
     return {
       workPlanId: row.work_plan_id,
       workPlanItemId: row.work_plan_item_id,
@@ -147,14 +163,30 @@ export async function serviceGetWorkQueueForCollaborator(
       isActivityCompleted,
       isOverdue: row.planned_date < date,
       isOutOfSequence,
-      requiresOutOfSequenceJustification: isOutOfSequence,
-      previousOpenCount: isOutOfSequence ? seq.previousOpenCount : 0,
-      previousOpenActivities: isOutOfSequence ? seq.previousOpenActivities.slice(0, 3) : [],
+      requiresOutOfSequenceJustification:
+        !isActivityCompleted && sequenceForCollaborator.requiresOutOfSequenceJustification,
+      previousOpenCount: isOutOfSequence ? sequenceForCollaborator.previousOpenCount : 0,
+      previousOpenActivities: isOutOfSequence
+        ? sequenceForCollaborator.previousOpenActivities
+        : [],
+      hasPreviousOpenActivitiesFromOtherCollaborators:
+        !isActivityCompleted &&
+        sequenceForCollaborator.hasPreviousOpenActivitiesFromOtherCollaborators,
+      previousOpenActivitiesFromOtherCollaborators: !isActivityCompleted
+        ? sequenceForCollaborator.previousOpenActivitiesFromOtherCollaborators
+        : [],
+      previousOpenActivitiesWarningMessage: !isActivityCompleted
+        ? sequenceForCollaborator.previousOpenActivitiesWarningMessage
+        : null,
+      structuralSequenceIndex: sequenceForCollaborator.structuralSequenceIndex,
       isAssignedToMe: row.is_assigned_to_me,
       requiresUnassignedJustification: !row.is_assigned_to_me,
       plannedVsCapacity,
+      isNextRecommended: false,
     }
   })
+
+  const items = applyWorkQueuePrioritization(mappedItems)
 
   const summary = {
     plannedItemsToday: raw.filter((row) => row.planned_date === date).length,

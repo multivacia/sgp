@@ -101,3 +101,4 @@ export const getMyExtraTimeEntryDescriptions =
   getMyExtraTimeEntryDescriptionsController
 export const getMyExtraTimeEntries = getMyExtraTimeEntriesController
 export const postMyExtraTimeEntry = postMyExtraTimeEntryController
+export { getActiveTimeEntryJustificationsForSelection as getMyTimeEntryJustifications } from '../operational-settings/time-entry-justifications.controller.js'

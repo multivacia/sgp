@@ -5,10 +5,19 @@ import {
   canShowCompleteActivityButton,
   canShowSaveAndCompleteButton,
   candidateNeedsOutOfSequenceJustification,
+  emptyJustificationValue,
   resolveTimeEntrySuccessToast,
   validateCompleteOutOfSequenceJustification,
   validateTimeEntryForm,
 } from './quickTimeEntryDrawerLogic'
+
+function jv(legacyText: string, id: string | null = null) {
+  return {
+    justificationId: id,
+    justificationComplement: '',
+    legacyText,
+  }
+}
 
 function baseCandidate(
   overrides: Partial<TimeEntryCandidateItem> = {},
@@ -75,8 +84,8 @@ describe('quickTimeEntryDrawerLogic', () => {
       minutes: 15,
       executedQuantity: 1,
       description: 'ok',
-      exceptionJustification: '',
-      outOfSequenceJustification: '',
+      exceptionJustification: emptyJustificationValue(),
+      outOfSequenceJustification: emptyJustificationValue(),
       markAsDone: true,
     })
     expect(payload.markAsDone).toBe(true)
@@ -89,8 +98,8 @@ describe('quickTimeEntryDrawerLogic', () => {
       minutes: 15,
       executedQuantity: 1,
       description: '',
-      exceptionJustification: '',
-      outOfSequenceJustification: '',
+      exceptionJustification: emptyJustificationValue(),
+      outOfSequenceJustification: emptyJustificationValue(),
       markAsDone: false,
     })
     expect(payload.markAsDone).toBeUndefined()
@@ -102,8 +111,8 @@ describe('quickTimeEntryDrawerLogic', () => {
       minutes: 10,
       executedQuantity: 0,
       description: '',
-      exceptionJustification: '',
-      outOfSequenceJustification: ' urgente ',
+      exceptionJustification: emptyJustificationValue(),
+      outOfSequenceJustification: jv('urgente'),
       markAsDone: true,
     })
     expect(payload.outOfSequenceJustification).toBe('urgente')
@@ -115,38 +124,52 @@ describe('quickTimeEntryDrawerLogic', () => {
     expect(resolveTimeEntrySuccessToast(true)).toContain('concluída')
   })
 
+  it('buildTimeEntryPayload com id padronizado inclui campos estruturados', () => {
+    const payload = buildTimeEntryPayload({
+      candidate: baseCandidate({ isOutOfSequence: true }),
+      minutes: 10,
+      executedQuantity: 0,
+      description: '',
+      exceptionJustification: emptyJustificationValue(),
+      outOfSequenceJustification: jv('Sequência liberada', '22222222-2222-2222-2222-222222222222'),
+      markAsDone: false,
+    })
+    expect(payload.outOfSequenceJustificationId).toBe('22222222-2222-2222-2222-222222222222')
+    expect(payload.outOfSequenceJustification).toBe('Sequência liberada')
+  })
+
   it('validateTimeEntryForm exige justificativas', () => {
     expect(
       validateTimeEntryForm({
         candidate: baseCandidate({ requiresJustification: true, isAssignedToMe: false }),
-        exceptionJustification: '',
-        outOfSequenceJustification: '',
+        exceptionJustification: emptyJustificationValue(),
+        outOfSequenceJustification: emptyJustificationValue(),
       }),
     ).toContain('justificativa')
     expect(
       validateTimeEntryForm({
         candidate: baseCandidate({ isOutOfSequence: true }),
-        exceptionJustification: '',
-        outOfSequenceJustification: '',
+        exceptionJustification: emptyJustificationValue(),
+        outOfSequenceJustification: emptyJustificationValue(),
       }),
-    ).toContain('sequência')
+    ).toContain('justificativa')
     expect(
       validateTimeEntryForm({
         candidate: baseCandidate(),
-        exceptionJustification: '',
-        outOfSequenceJustification: '',
+        exceptionJustification: emptyJustificationValue(),
+        outOfSequenceJustification: emptyJustificationValue(),
       }),
     ).toBeNull()
   })
 
   it('validateCompleteOutOfSequenceJustification', () => {
     expect(
-      validateCompleteOutOfSequenceJustification(baseCandidate(), ''),
+      validateCompleteOutOfSequenceJustification(baseCandidate(), emptyJustificationValue()),
     ).toBeNull()
     expect(
       validateCompleteOutOfSequenceJustification(
         baseCandidate({ isOutOfSequence: true }),
-        '',
+        emptyJustificationValue(),
       ),
     ).toContain('justificativa')
     expect(candidateNeedsOutOfSequenceJustification(baseCandidate({ isOutOfSequence: true }))).toBe(

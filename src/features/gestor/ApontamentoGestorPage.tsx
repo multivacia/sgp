@@ -17,6 +17,15 @@ import {
   getConveyorStepTimeEntries,
   postConveyorStepTimeEntryOnBehalf,
 } from '../../services/conveyors/conveyorStepAssignmentsApiService'
+import {
+  getConveyorStepSequenceCheck,
+  type ConveyorStepSequenceCheckResult,
+} from '../../services/conveyors/conveyorsApiService'
+import { JustificationSelect } from '../../components/operational/JustificationSelect'
+import {
+  emptyJustificationValue,
+  type JustificationFieldValue,
+} from '../shell/quickTimeEntryDrawerLogic'
 import type { ConveyorStepTimeEntryListItem } from '../../domain/conveyors/conveyor-step-assignments.types'
 import { useAuth } from '../../lib/use-auth'
 
@@ -62,21 +71,28 @@ export function ApontamentoGestorPage() {
   )
   const [motivoRemocao, setMotivoRemocao] = useState('')
   const [deleting, setDeleting] = useState(false)
+  const [sequenceCheck, setSequenceCheck] = useState<ConveyorStepSequenceCheckResult | null>(
+    null,
+  )
+  const [outOfSequenceJustification, setOutOfSequenceJustification] =
+    useState<JustificationFieldValue>(emptyJustificationValue())
 
   const loadData = useCallback(async () => {
     if (!stepNodeId?.trim() || !conveyorId?.trim()) {
       setError('Indique a esteira e o passo (URL incompleta).')
       setAssigneeOptions([])
       setEntries([])
+      setSequenceCheck(null)
       setLoading(false)
       return
     }
     setLoading(true)
     setError(null)
     try {
-      const [assignees, te] = await Promise.all([
+      const [assignees, te, seq] = await Promise.all([
         getConveyorStepAssignees(conveyorId.trim(), stepNodeId.trim()),
         getConveyorStepTimeEntries(conveyorId.trim(), stepNodeId.trim()),
+        getConveyorStepSequenceCheck(conveyorId.trim(), stepNodeId.trim()),
       ])
       const collaboratorAssignees = assignees.filter(
         (a) => a.type === 'COLLABORATOR' && !!a.collaboratorId,
@@ -89,6 +105,8 @@ export function ApontamentoGestorPage() {
         })),
       )
       setEntries(te)
+      setSequenceCheck(seq)
+      setOutOfSequenceJustification(emptyJustificationValue())
       setTargetCollaboratorId((prev) => {
         if (prev && collaboratorAssignees.some((x) => x.collaboratorId === prev)) return prev
         return collaboratorAssignees[0]?.collaboratorId ?? ''
@@ -96,6 +114,7 @@ export function ApontamentoGestorPage() {
     } catch (e) {
       setAssigneeOptions([])
       setEntries([])
+      setSequenceCheck(null)
       const n = reportClientError(e, {
         module: 'gestor',
         action: 'apontamento_gestor_load',
@@ -126,6 +145,11 @@ export function ApontamentoGestorPage() {
     setToast({ message, variant })
   }
 
+  const needsOosJustification =
+    sequenceCheck?.isOutOfSequence === true || sequenceCheck?.requiresJustification === true
+  const oosJustificationOk =
+    !needsOosJustification || outOfSequenceJustification.legacyText.trim().length > 0
+
   async function executarCriacao() {
     if (
       !conveyorId?.trim() ||
@@ -133,6 +157,7 @@ export function ApontamentoGestorPage() {
       !targetCollaboratorId ||
       !minutosValidos ||
       !motivoOk ||
+      !oosJustificationOk ||
       submitting
     ) {
       return
@@ -145,10 +170,23 @@ export function ApontamentoGestorPage() {
         minutes: minutos,
         notes: observacao.trim() || null,
         reason: motivo.trim(),
+        ...(needsOosJustification
+          ? {
+              outOfSequenceJustification: outOfSequenceJustification.legacyText.trim(),
+              ...(outOfSequenceJustification.justificationId
+                ? {
+                    outOfSequenceJustificationId: outOfSequenceJustification.justificationId,
+                    outOfSequenceJustificationComplement:
+                      outOfSequenceJustification.justificationComplement.trim() || undefined,
+                  }
+                : {}),
+            }
+          : {}),
       })
       setConfirmCreateOpen(false)
       setMotivo('')
       setObservacao('')
+      setOutOfSequenceJustification(emptyJustificationValue())
       pushToast('Apontamento registado em nome do colaborador selecionado.', 'success')
       await loadData()
     } catch (e) {
@@ -372,9 +410,34 @@ export function ApontamentoGestorPage() {
                   onChange={(e) => setMotivo(e.target.value)}
                 />
               </label>
+              {needsOosJustification ? (
+                <div className="mt-4 rounded-lg border border-sky-500/25 bg-sky-500/[0.07] px-3 py-3">
+                  <p className="text-xs text-sky-100/90">
+                    Esta atividade está fora da sequência recomendada. Informe a justificativa
+                    operacional.
+                  </p>
+                  <div className="mt-3">
+                    <JustificationSelect
+                      channel="app"
+                      idPrefix="gestor-oos"
+                      value={outOfSequenceJustification.justificationId ?? ''}
+                      complement={outOfSequenceJustification.justificationComplement}
+                      legacyText={outOfSequenceJustification.legacyText}
+                      disabled={submitting}
+                      onChange={(next) =>
+                        setOutOfSequenceJustification({
+                          justificationId: next.justificationId,
+                          justificationComplement: next.justificationComplement,
+                          legacyText: next.legacyText,
+                        })
+                      }
+                    />
+                  </div>
+                </div>
+              ) : null}
               <button
                 type="button"
-                disabled={!minutosValidos || !motivoOk || submitting}
+                disabled={!minutosValidos || !motivoOk || !oosJustificationOk || submitting}
                 className="sgp-cta-primary disabled:opacity-50"
                 onClick={() => setConfirmCreateOpen(true)}
               >

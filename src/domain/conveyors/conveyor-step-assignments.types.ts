@@ -70,8 +70,14 @@ export type PostConveyorStepTimeEntryBody = {
   description?: string | null
   /** Obrigatório quando o colaborador não está alocado na atividade. */
   exceptionJustification?: string | null
+  exceptionJustificationId?: string
+  exceptionJustificationComplement?: string
   /** Obrigatório quando a atividade está fora da sequência recomendada (S3). */
   outOfSequenceJustification?: string | null
+  outOfSequenceJustificationId?: string
+  outOfSequenceJustificationComplement?: string
+  justificationId?: string
+  justificationComplement?: string
   entryAt?: string
   entryMode?: 'manual' | 'guided' | 'imported'
   /** Quando true, conclui operacionalmente o STEP na mesma transação. */
@@ -86,4 +92,9 @@ export type PostConveyorStepTimeEntryOnBehalfBody = {
   notes?: string | null
   entryAt?: string
   reason: string
+  outOfSequenceJustification?: string
+  outOfSequenceJustificationId?: string
+  outOfSequenceJustificationComplement?: string
+  justificationId?: string
+  justificationComplement?: string
 }

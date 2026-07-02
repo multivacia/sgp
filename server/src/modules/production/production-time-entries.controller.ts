@@ -22,6 +22,8 @@ export async function postProductionTimeEntry(
     sessionCompletionPct: body.sessionCompletionPct ?? null,
     markAsDone: body.markAsDone ?? false,
     outOfSequenceJustification: body.outOfSequenceJustification ?? null,
+    justificationId: body.justificationId ?? null,
+    justificationComplement: body.justificationComplement ?? null,
   })
 
   res.status(201).json(ok(created))

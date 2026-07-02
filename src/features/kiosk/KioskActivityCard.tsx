@@ -13,6 +13,11 @@ import {
   productionTimePlannedCoveragePct,
 } from '../../domain/production/kioskActivityCardLogic'
 import { resolveProductionOperationalStatusDisplay } from '../../domain/production/production.helpers'
+import { JustificationSelect } from '../../components/operational/JustificationSelect'
+import {
+  emptyJustificationValue,
+  type JustificationFieldValue,
+} from '../shell/quickTimeEntryDrawerLogic'
 
 const PRESETS = [15, 30, 45, 60] as const
 
@@ -82,7 +87,8 @@ export function KioskActivityCard({ item, onSuccess }: Props) {
   const [minutesCustom, setMinutesCustom] = useState('30')
   const [sessionPct, setSessionPct] = useState(50)
   const [markAsDone, setMarkAsDone] = useState(false)
-  const [outOfSequenceJustification, setOutOfSequenceJustification] = useState('')
+  const [outOfSequenceJustification, setOutOfSequenceJustification] =
+    useState<JustificationFieldValue>(emptyJustificationValue())
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
@@ -92,8 +98,9 @@ export function KioskActivityCard({ item, onSuccess }: Props) {
   const timeCoverageLabel = productionTimePlannedCoverageLabel(timeCoveragePct)
   const statusDisplay = resolveProductionOperationalStatusDisplay(item)
   const plannedTimeHint = productionPlannedTimeReachedHint(item)
-  const needsOosJustification =
-    item.requiresOutOfSequenceJustification || item.isOutOfSequence
+  const needsOosJustification = item.requiresOutOfSequenceJustification
+  const showOtherCollaboratorWarning =
+    item.hasPreviousOpenActivitiesFromOtherCollaborators === true
 
   const minutes =
     preset !== null ? preset : Number.parseInt(minutesCustom, 10) || 0
@@ -102,9 +109,8 @@ export function KioskActivityCard({ item, onSuccess }: Props) {
 
   const canSubmit = canSubmitKioskProductionTimeEntry({
     minutesValid,
-    isOutOfSequence: item.isOutOfSequence,
     requiresOutOfSequenceJustification: item.requiresOutOfSequenceJustification,
-    outOfSequenceJustification,
+    outOfSequenceJustification: outOfSequenceJustification.legacyText,
   })
 
   function selectPreset(p: number) {
@@ -124,14 +130,26 @@ export function KioskActivityCard({ item, onSuccess }: Props) {
     setSubmitting(true)
     setError(null)
     try {
-      const oos = outOfSequenceJustification.trim()
+      const oos = outOfSequenceJustification.legacyText.trim()
       await createProductionTimeEntry({
         conveyorId: item.conveyorId,
         stepNodeId: item.activityNodeId,
         minutes,
         sessionCompletionPct: sessionPct,
         markAsDone,
-        ...(needsOosJustification && oos ? { outOfSequenceJustification: oos } : {}),
+        ...(needsOosJustification && oos
+          ? {
+              outOfSequenceJustification: oos,
+              ...(outOfSequenceJustification.justificationId
+                ? {
+                    justificationId: outOfSequenceJustification.justificationId,
+                    justificationComplement:
+                      outOfSequenceJustification.justificationComplement.trim() ||
+                      undefined,
+                  }
+                : {}),
+            }
+          : {}),
       })
       setSuccess(true)
       setTimeout(() => {
@@ -158,7 +176,9 @@ export function KioskActivityCard({ item, onSuccess }: Props) {
 
   function handleRegister() {
     if (needsOosJustification) {
-      const oosErr = productionOutOfSequenceJustificationError(outOfSequenceJustification)
+      const oosErr = productionOutOfSequenceJustificationError(
+        outOfSequenceJustification.legacyText,
+      )
       if (oosErr) {
         setError(oosErr)
         return
@@ -237,6 +257,20 @@ export function KioskActivityCard({ item, onSuccess }: Props) {
       )}
 
       <div className="border-b border-white/[0.07] p-5">
+        {(item.isNextRecommended || needsOosJustification || showOtherCollaboratorWarning) && (
+          <div className="mb-3 flex flex-wrap gap-2">
+            {item.isNextRecommended ? (
+              <span className="inline-flex items-center rounded-full border border-sgp-gold/40 bg-sgp-gold/15 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-sgp-gold">
+                Próxima atividade recomendada
+              </span>
+            ) : null}
+            {needsOosJustification ? (
+              <span className="inline-flex items-center rounded-full border border-amber-500/40 bg-amber-500/15 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-amber-300">
+                Fora de sequência — exceção
+              </span>
+            ) : null}
+          </div>
+        )}
         <div className="flex items-start gap-4">
           <ProgressRing pct={timeCoveragePct} label={timeCoverageLabel} />
           <div className="min-w-0 flex-1">
@@ -287,12 +321,46 @@ export function KioskActivityCard({ item, onSuccess }: Props) {
                   : 'Apontamento bloqueado para esta atividade'}
               </p>
             ) : null}
+            {showOtherCollaboratorWarning ? (
+              <div className="mt-2 rounded-xl border border-sky-500/30 bg-sky-500/10 px-3 py-2">
+                <p className="text-xs font-semibold text-sky-100">
+                  {item.previousOpenActivitiesWarningMessage ??
+                    'Atenção: existe atividade anterior pendente atribuída a outro colaborador. Você pode apontar esta atividade, mas a esteira ainda possui etapas anteriores abertas.'}
+                </p>
+                {item.previousOpenActivitiesFromOtherCollaborators.length > 0 ? (
+                  <ul className="mt-1.5 list-inside list-disc text-xs text-sky-100/90">
+                    {item.previousOpenActivitiesFromOtherCollaborators.map((prev) => (
+                      <li
+                        key={`${prev.taskTitle}-${prev.sectorTitle}-${prev.activityTitle}`}
+                      >
+                        {prev.taskTitle} · {prev.sectorTitle} · {prev.activityTitle}
+                        {prev.collaboratorNames.length > 0
+                          ? ` (${prev.collaboratorNames.join(', ')})`
+                          : ''}
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
+              </div>
+            ) : null}
             {item.canTrackTime && needsOosJustification ? (
-              <p className="mt-2 text-xs font-medium text-amber-400">
-                {item.previousOpenCount > 0
-                  ? `Existe${item.previousOpenCount > 1 ? 'm' : ''} ${item.previousOpenCount} atividade(s) anterior(es) pendente(s). Para apontar mesmo assim, informe o motivo.`
-                  : 'Esta atividade está fora da sequência planejada. Para apontar, informe o motivo.'}
-              </p>
+              <div className="mt-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2">
+                <p className="text-xs font-semibold text-amber-200">
+                  Esta atividade depende de etapas anteriores ainda pendentes.
+                </p>
+                {item.previousOpenActivities.length > 0 ? (
+                  <ul className="mt-1.5 list-inside list-disc text-xs text-amber-100/90">
+                    {item.previousOpenActivities.map((prev) => (
+                      <li key={`${prev.taskTitle}-${prev.sectorTitle}-${prev.activityTitle}`}>
+                        {prev.taskTitle} · {prev.sectorTitle} · {prev.activityTitle}
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
+                <p className="mt-1.5 text-xs text-amber-100/80">
+                  O apontamento abaixo é uma exceção e exige justificativa.
+                </p>
+              </div>
             ) : null}
           </div>
         </div>
@@ -365,20 +433,22 @@ export function KioskActivityCard({ item, onSuccess }: Props) {
 
           {needsOosJustification ? (
             <div>
-              <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-500">
-                Justificativa
-                <textarea
-                  value={outOfSequenceJustification}
-                  onChange={(e) => {
-                    setOutOfSequenceJustification(e.target.value)
-                    setError(null)
-                  }}
-                  disabled={submitting}
-                  rows={3}
-                  placeholder="Ex.: autorizado pelo gestor."
-                  className="mt-2 w-full resize-none rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2.5 text-sm text-white placeholder:text-slate-600 focus:border-sgp-gold/40 focus:outline-none focus:ring-1 focus:ring-sgp-gold/20"
-                />
-              </label>
+              <JustificationSelect
+                channel="production"
+                idPrefix={`kiosk-oos-${item.activityNodeId}`}
+                value={outOfSequenceJustification.justificationId ?? ''}
+                complement={outOfSequenceJustification.justificationComplement}
+                legacyText={outOfSequenceJustification.legacyText}
+                disabled={submitting}
+                onChange={(next) => {
+                  setOutOfSequenceJustification({
+                    justificationId: next.justificationId,
+                    justificationComplement: next.justificationComplement,
+                    legacyText: next.legacyText,
+                  })
+                  setError(null)
+                }}
+              />
               <p className="mt-1.5 text-xs text-slate-500">
                 Para apontar mesmo assim, informe o motivo.
               </p>
@@ -416,9 +486,16 @@ export function KioskActivityCard({ item, onSuccess }: Props) {
             type="button"
             onClick={handleRegister}
             disabled={submitting || !canSubmit}
-            className="sgp-cta-primary min-h-14 w-full text-base disabled:cursor-not-allowed disabled:opacity-50"
+            className={[
+              'min-h-14 w-full text-base disabled:cursor-not-allowed disabled:opacity-50',
+              needsOosJustification ? 'sgp-cta-secondary' : 'sgp-cta-primary',
+            ].join(' ')}
           >
-            {submitting ? 'Registrando…' : 'Registrar apontamento'}
+            {submitting
+              ? 'Registrando…'
+              : needsOosJustification
+                ? 'Registrar apontamento (exceção)'
+                : 'Registrar apontamento'}
           </button>
         </div>
       ) : (

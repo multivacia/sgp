@@ -45,6 +45,11 @@ import type { ConveyorActivitySequenceAnalysis } from './conveyorActivitySequenc
 import { completeConveyorStepOnClient } from './conveyor-step-operational.service.js'
 import type { ConveyorNodeStepOperationalStatusDb } from './stepOperationalStatus.js'
 import { serviceCreateConveyorOperationalEvent } from './operational-events/conveyor-operational-events.service.js'
+import {
+  pickStandardJustificationSnapshot,
+  resolveTimeEntryJustification,
+  type ResolvedStandardJustification,
+} from '../../shared/timeEntryJustificationResolver.js'
 
 function isPgUniqueViolation(err: unknown): boolean {
   return err instanceof DatabaseError && err.code === '23505'
@@ -245,9 +250,13 @@ export type CreateTimeEntryInput = {
   metadataJson?: unknown | null
   entryOrigin?: 'ASSIGNED' | 'UNASSIGNED_EXCEPTION'
   exceptionJustification?: string | null
+  exceptionJustificationId?: string | null
+  exceptionJustificationComplement?: string | null
   /** Derivado da análise de sequência; quando true, `outOfSequenceJustification` é obrigatória. */
   isOutOfSequence?: boolean
   outOfSequenceJustification?: string | null
+  outOfSequenceJustificationId?: string | null
+  outOfSequenceJustificationComplement?: string | null
   /** Para evento operacional opcional após insert. */
   actorAppUserId?: string | null
   /** Avaliação subjetiva do colaborador sobre o estado atual da atividade (0-100). Kiosk only. */
@@ -256,6 +265,8 @@ export type CreateTimeEntryInput = {
   markAsDone?: boolean
   /** Análise de sequência prévia (evita releitura na transação). */
   sequence?: ConveyorActivitySequenceAnalysis
+  standardJustificationException?: ResolvedStandardJustification | null
+  standardJustificationOos?: ResolvedStandardJustification | null
 }
 
 export type CreateTimeEntryForAppUserInput = {
@@ -266,7 +277,11 @@ export type CreateTimeEntryForAppUserInput = {
   executedQuantity?: number | null
   notes?: string | null
   exceptionJustification?: string
+  exceptionJustificationId?: string
+  exceptionJustificationComplement?: string
   outOfSequenceJustification?: string
+  outOfSequenceJustificationId?: string
+  outOfSequenceJustificationComplement?: string
   entryAt?: Date
   entryMode?: 'manual' | 'guided' | 'imported'
   markAsDone?: boolean
@@ -283,6 +298,8 @@ export type CreateTimeEntryOnBehalfInput = {
   notes?: string | null
   reason: string
   outOfSequenceJustification?: string
+  outOfSequenceJustificationId?: string
+  outOfSequenceJustificationComplement?: string
 }
 
 const DELEGATION_REASON_MAX = 4000
@@ -317,16 +334,19 @@ export async function serviceCreateConveyorTimeEntryForAppUser(
   }
 
   let outSeqJust: string | null = null
+  let oosStandard: ResolvedStandardJustification | null = null
   if (seq.isOutOfSequence) {
-    const j = (input.outOfSequenceJustification ?? '').trim()
-    if (!j.length) {
-      throw new AppError(
+    const resolved = await resolveTimeEntryJustification(pool, {
+      required: true,
+      justificationId: input.outOfSequenceJustificationId,
+      justificationComplement: input.outOfSequenceJustificationComplement,
+      legacyText: input.outOfSequenceJustification,
+      requiredErrorCode: ErrorCodes.TIME_ENTRY_OUT_OF_SEQUENCE_REQUIRES_JUSTIFICATION,
+      requiredErrorMessage:
         'Informe uma justificativa para executar esta atividade fora da sequência recomendada.',
-        422,
-        ErrorCodes.TIME_ENTRY_OUT_OF_SEQUENCE_REQUIRES_JUSTIFICATION,
-      )
-    }
-    outSeqJust = j
+    })
+    outSeqJust = resolved.legacyText
+    oosStandard = resolved.standard
   }
 
   const collaboratorId = await findCollaboratorIdByAppUserId(pool, input.appUserId)
@@ -365,18 +385,23 @@ export async function serviceCreateConveyorTimeEntryForAppUser(
       exceptionJustification: null,
       markAsDone: input.markAsDone,
       sequence: seq,
+      outOfSequenceJustificationId: input.outOfSequenceJustificationId,
+      outOfSequenceJustificationComplement: input.outOfSequenceJustificationComplement,
+      standardJustificationException: null,
+      standardJustificationOos: oosStandard,
       ...commonSeq,
     })
   }
 
-  const justification = (input.exceptionJustification ?? '').trim()
-  if (!justification.length) {
-    throw new AppError(
+  const exceptionResolved = await resolveTimeEntryJustification(pool, {
+    required: true,
+    justificationId: input.exceptionJustificationId,
+    justificationComplement: input.exceptionJustificationComplement,
+    legacyText: input.exceptionJustification,
+    requiredErrorCode: ErrorCodes.TIME_ENTRY_UNASSIGNED_REQUIRES_JUSTIFICATION,
+    requiredErrorMessage:
       'Para apontar horas em uma atividade onde você não está alocado, informe uma justificativa.',
-      422,
-      ErrorCodes.TIME_ENTRY_UNASSIGNED_REQUIRES_JUSTIFICATION,
-    )
-  }
+  })
 
   return serviceCreateConveyorTimeEntry(pool, {
     conveyorId: input.conveyorId,
@@ -389,9 +414,13 @@ export async function serviceCreateConveyorTimeEntryForAppUser(
     notes: input.notes ?? null,
     entryMode: input.entryMode,
     entryOrigin: 'UNASSIGNED_EXCEPTION',
-    exceptionJustification: justification,
+    exceptionJustification: exceptionResolved.legacyText,
     markAsDone: input.markAsDone,
     sequence: seq,
+    outOfSequenceJustificationId: input.outOfSequenceJustificationId,
+    outOfSequenceJustificationComplement: input.outOfSequenceJustificationComplement,
+    standardJustificationException: exceptionResolved.standard,
+    standardJustificationOos: oosStandard,
     ...commonSeq,
   })
 }
@@ -458,16 +487,30 @@ export async function serviceCreateConveyorTimeEntry(
 
   const entryOrigin = input.entryOrigin ?? 'ASSIGNED'
   let exceptionJustification: string | null = null
+  let exceptionStandard = input.standardJustificationException ?? null
   if (entryOrigin === 'UNASSIGNED_EXCEPTION') {
-    const j = input.exceptionJustification?.trim() ?? ''
-    if (!j.length) {
+    if (exceptionStandard || input.exceptionJustification?.trim()) {
+      exceptionJustification = input.exceptionJustification?.trim() ?? null
+    } else {
+      const resolved = await resolveTimeEntryJustification(pool, {
+        required: true,
+        justificationId: input.exceptionJustificationId,
+        justificationComplement: input.exceptionJustificationComplement,
+        legacyText: input.exceptionJustification,
+        requiredErrorCode: ErrorCodes.TIME_ENTRY_UNASSIGNED_REQUIRES_JUSTIFICATION,
+        requiredErrorMessage:
+          'Para apontar horas em uma atividade onde você não está alocado, informe uma justificativa.',
+      })
+      exceptionJustification = resolved.legacyText
+      exceptionStandard = resolved.standard
+    }
+    if (!exceptionJustification?.length) {
       throw new AppError(
         'Para apontar horas em uma atividade onde você não está alocado, informe uma justificativa.',
         422,
         ErrorCodes.TIME_ENTRY_UNASSIGNED_REQUIRES_JUSTIFICATION,
       )
     }
-    exceptionJustification = j
     if (input.conveyorNodeAssigneeId != null) {
       throw new AppError(
         'Apontamento por exceção não pode referenciar alocação.',
@@ -479,17 +522,33 @@ export async function serviceCreateConveyorTimeEntry(
 
   const isOos = Boolean(input.isOutOfSequence)
   let oosJustDb: string | null = null
+  let oosStandard = input.standardJustificationOos ?? null
   if (isOos) {
-    const t = input.outOfSequenceJustification?.trim() ?? ''
-    if (!t.length) {
+    if (oosStandard || input.outOfSequenceJustification?.trim()) {
+      oosJustDb = input.outOfSequenceJustification?.trim() ?? null
+    } else {
+      const resolved = await resolveTimeEntryJustification(pool, {
+        required: true,
+        justificationId: input.outOfSequenceJustificationId,
+        justificationComplement: input.outOfSequenceJustificationComplement,
+        legacyText: input.outOfSequenceJustification,
+        requiredErrorCode: ErrorCodes.TIME_ENTRY_OUT_OF_SEQUENCE_REQUIRES_JUSTIFICATION,
+        requiredErrorMessage:
+          'Informe uma justificativa para executar esta atividade fora da sequência recomendada.',
+      })
+      oosJustDb = resolved.legacyText
+      oosStandard = resolved.standard
+    }
+    if (!oosJustDb?.length) {
       throw new AppError(
         'Informe uma justificativa para executar esta atividade fora da sequência recomendada.',
         422,
         ErrorCodes.TIME_ENTRY_OUT_OF_SEQUENCE_REQUIRES_JUSTIFICATION,
       )
     }
-    oosJustDb = t
   }
+
+  const standardFields = pickStandardJustificationSnapshot(exceptionStandard, oosStandard)
 
   const row: InsertConveyorTimeEntryRow = {
     id: newAssignmentId(),
@@ -509,6 +568,7 @@ export async function serviceCreateConveyorTimeEntry(
     out_of_sequence_justification: isOos ? oosJustDb : null,
     session_completion_pct: typeof input.sessionCompletionPct === 'number' ? input.sessionCompletionPct : null,
     mark_as_done: input.markAsDone ?? false,
+    ...standardFields,
   }
 
   const shouldAutoStart =
@@ -660,16 +720,19 @@ export async function serviceCreateConveyorTimeEntryOnBehalf(
   }
 
   let outSeqJust: string | null = null
+  let oosStandard: ResolvedStandardJustification | null = null
   if (seq.isOutOfSequence) {
-    const j = (input.outOfSequenceJustification ?? '').trim()
-    if (!j.length) {
-      throw new AppError(
+    const resolved = await resolveTimeEntryJustification(pool, {
+      required: true,
+      justificationId: input.outOfSequenceJustificationId,
+      justificationComplement: input.outOfSequenceJustificationComplement,
+      legacyText: input.outOfSequenceJustification,
+      requiredErrorCode: ErrorCodes.TIME_ENTRY_OUT_OF_SEQUENCE_REQUIRES_JUSTIFICATION,
+      requiredErrorMessage:
         'Informe uma justificativa para executar esta atividade fora da sequência recomendada.',
-        422,
-        ErrorCodes.TIME_ENTRY_OUT_OF_SEQUENCE_REQUIRES_JUSTIFICATION,
-      )
-    }
-    outSeqJust = j
+    })
+    outSeqJust = resolved.legacyText
+    oosStandard = resolved.standard
   }
 
   const assigneeId = await findAssigneeIdForStepAndCollaborator(
@@ -703,6 +766,8 @@ export async function serviceCreateConveyorTimeEntryOnBehalf(
     )
   }
 
+  const standardFields = pickStandardJustificationSnapshot(null, oosStandard)
+
   const row: InsertConveyorTimeEntryRow = {
     id: newAssignmentId(),
     conveyor_id: input.conveyorId,
@@ -721,6 +786,7 @@ export async function serviceCreateConveyorTimeEntryOnBehalf(
     out_of_sequence_justification: seq.isOutOfSequence ? outSeqJust : null,
     session_completion_pct: null,
     mark_as_done: false,
+    ...standardFields,
   }
 
   const client = await pool.connect()

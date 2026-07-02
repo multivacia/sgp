@@ -8,14 +8,19 @@ import {
   deleteOperationalCollaboratorRole,
   deleteOperationalSector,
   getExtraTimeEntryDescriptions,
+  getTimeEntryJustifications,
   getCollaboratorCapacity,
   getOperationalCapacitySettings,
   getOperationalCollaboratorRoles,
   getOperationalSectors,
   postExtraTimeEntryDescription,
+  postTimeEntryJustification,
   putCollaboratorCapacity,
   putOperationalCapacitySettings,
   putExtraTimeEntryDescription,
+  patchTimeEntryJustification,
+  patchTimeEntryJustificationActivate,
+  patchTimeEntryJustificationDeactivate,
   patchOperationalCollaboratorRole,
   patchOperationalSector,
   postOperationalCollaboratorRole,
@@ -92,6 +97,32 @@ export function operationalSettingsRouter(): Router {
     '/operational-settings/extra-time-entry-descriptions/:id',
     ...ap(m),
     asyncRoute(deleteExtraTimeEntryDescription),
+  )
+
+  r.get(
+    '/admin/operational-settings/time-entry-justifications',
+    ...ap(m),
+    asyncRoute(getTimeEntryJustifications),
+  )
+  r.post(
+    '/admin/operational-settings/time-entry-justifications',
+    ...ap(m),
+    asyncRoute(postTimeEntryJustification),
+  )
+  r.patch(
+    '/admin/operational-settings/time-entry-justifications/:id',
+    ...ap(m),
+    asyncRoute(patchTimeEntryJustification),
+  )
+  r.patch(
+    '/admin/operational-settings/time-entry-justifications/:id/activate',
+    ...ap(m),
+    asyncRoute(patchTimeEntryJustificationActivate),
+  )
+  r.patch(
+    '/admin/operational-settings/time-entry-justifications/:id/deactivate',
+    ...ap(m),
+    asyncRoute(patchTimeEntryJustificationDeactivate),
   )
 
   return r

@@ -36,10 +36,18 @@ export function workQueueApontamentoCandidate(
 }
 
 export function sortWorkQueueItems(items: MyWorkQueueItem[]): MyWorkQueueItem[] {
+  const groupRank = (group: MyWorkQueueItem['group']) => {
+    if (group === 'overdue') return 0
+    if (group === 'today') return 1
+    return 2
+  }
   return [...items].sort(
     (a, b) =>
+      groupRank(a.group) - groupRank(b.group) ||
+      Number(a.isOutOfSequence) - Number(b.isOutOfSequence) ||
       a.plannedDate.localeCompare(b.plannedDate) ||
-      a.plannedOrder - b.plannedOrder ||
+      a.conveyorId.localeCompare(b.conveyorId) ||
+      a.structuralSequenceIndex - b.structuralSequenceIndex ||
       a.workPlanItemId.localeCompare(b.workPlanItemId),
   )
 }

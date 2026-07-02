@@ -20,12 +20,7 @@ import {
   type JornadaStepDefinition,
   type JornadaStepId,
 } from './novaEsteiraTotemUi'
-
-type WizardExtras = {
-  inicioPrevisto: string
-  fimPrevisto: string
-  tempoTotalPrevistoMin: number | ''
-}
+import type { WizardExtras } from '../conveyorBasicDataExtras'
 
 export type NovaEsteiraCreateTotemShellProps = {
   dados: CreateConveyorDados
@@ -335,6 +330,26 @@ export function NovaEsteiraCreateTotemShell(props: NovaEsteiraCreateTotemShellPr
                 className="sgp-input-app mt-1 w-full px-3 py-2 text-slate-100"
                 value={dados.veiculo ?? ''}
                 onChange={(ev) => setDados((d) => ({ ...d, veiculo: ev.target.value }))}
+              />
+            </label>
+            <label className="block text-sm">
+              <span className="text-slate-400">Placa</span>
+              <input
+                className="sgp-input-app mt-1 w-full px-3 py-2 font-mono uppercase text-slate-100"
+                value={dados.placa ?? ''}
+                onChange={(ev) => setDados((d) => ({ ...d, placa: ev.target.value }))}
+                placeholder="ABC1D23"
+                autoComplete="off"
+              />
+            </label>
+            <label className="block text-sm">
+              <span className="text-slate-400">Modelo / versão</span>
+              <input
+                className="sgp-input-app mt-1 w-full px-3 py-2 text-slate-100"
+                value={dados.modeloVersao ?? ''}
+                onChange={(ev) => setDados((d) => ({ ...d, modeloVersao: ev.target.value }))}
+                placeholder="Ex.: 1.0 · 4 portas"
+                autoComplete="off"
               />
             </label>
             <label className="block text-sm">

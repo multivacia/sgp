@@ -5,7 +5,6 @@ import { PageCanvas } from '../../components/ui/PageCanvas'
 import { SgpInlineBanner } from '../../components/ui/SgpToast'
 import type {
   ConveyorDetail,
-  ConveyorStructure,
   CreateConveyorDados,
   CreateConveyorStepAssigneeInput,
   PatchConveyorDadosBody,
@@ -52,14 +51,27 @@ import {
 } from './nova-esteira/novaEsteiraTotemUi'
 import { NOVA_ESTEIRA_DRAG_MIME, parseDragPayload } from './nova-esteira/novaEsteiraDnD'
 import { useNovaEsteiraResponsaveisOptions } from './nova-esteira/useNovaEsteiraResponsaveisOptions'
+import {
+  buildStructureBaselineFromApiDetail,
+  hasPersistableStructureChanges,
+} from './conveyorEditStructureSnapshot'
+import {
+  canReplaceConveyorStructure,
+  resolveCanSaveConveyorChanges,
+  resolveConveyorEditSubmitPlan,
+  shouldValidateStructureOnSubmit,
+  STRUCTURE_TAB_BLOCKED_UX_MESSAGE,
+} from './conveyorEditSavePolicy'
+import {
+  buildDadosParaApi,
+  parseWizardExtrasFromPersisted,
+  stripWizardPlanningFromObservacoes,
+  type WizardExtras,
+} from './conveyorBasicDataExtras'
+import type { ConveyorOperationalStatus } from '../../domain/conveyors/conveyor.types'
 
 type Mode = 'create' | 'edit'
 type Aba = 'dados' | 'estrutura' | 'revisao'
-type WizardExtras = {
-  inicioPrevisto: string
-  fimPrevisto: string
-  tempoTotalPrevistoMin: number | ''
-}
 
 const collaboratorsApi = createCollaboratorsApiService()
 
@@ -103,145 +115,6 @@ function detailToDados(d: ConveyorDetail): CreateConveyorDados {
     prioridade: d.priority,
     colaboradorId: null,
   }
-}
-
-/**
- * Detalhe da API: ids de opção/área/etapa vêm do servidor e alinham com `conveyor_node_assignees`.
- * Chaves de etapa = id do nó STEP — obrigatório para hidratar `manualAloc`.
- */
-function structureToManualRootsFromApiDetail(structure: ConveyorStructure): ManualOptionDraft[] {
-  return [...structure.options]
-    .sort((a, b) => a.orderIndex - b.orderIndex)
-    .map((op) => ({
-      key: op.id,
-      titulo: op.name,
-      areas: [...op.areas]
-        .sort((a, b) => a.orderIndex - b.orderIndex)
-        .map((ar) => ({
-          key: ar.id,
-          titulo: ar.name,
-          steps: [...ar.steps]
-            .sort((a, b) => a.orderIndex - b.orderIndex)
-            .map((st) => ({
-              key: st.id,
-              titulo: st.name,
-              plannedMinutes: Math.max(0, Math.floor(Number(st.plannedMinutes ?? 0))),
-            })),
-        })),
-    }))
-}
-
-function detailStructureToManualAloc(
-  structure: ConveyorStructure,
-): Record<string, NovaEsteiraAlocacaoLinha[]> {
-  const out: Record<string, NovaEsteiraAlocacaoLinha[]> = {}
-  for (const op of structure.options) {
-    for (const ar of op.areas) {
-      for (const st of ar.steps) {
-        const assignees = st.assignees ?? []
-        if (assignees.length === 0) continue
-        out[st.id] = assignees.map((a) => {
-          if (a.type === 'TEAM') {
-            return {
-              type: 'TEAM' as const,
-              teamId: a.teamId ?? undefined,
-              isPrimary: false,
-            }
-          }
-          return {
-            type: 'COLLABORATOR' as const,
-            collaboratorId: a.collaboratorId ?? undefined,
-            isPrimary: a.isPrimary,
-          }
-        })
-      }
-    }
-  }
-  return out
-}
-
-/** Linha de alocação normalizada para comparação estável (modo edit). */
-type NormalizedAllocSnapshotRow = {
-  type: 'COLLABORATOR' | 'TEAM'
-  collaboratorId: string | null
-  teamId: string | null
-  isPrimary: boolean
-}
-
-function normalizeAllocRowsForSnapshot(
-  rows: NovaEsteiraAlocacaoLinha[],
-): NormalizedAllocSnapshotRow[] {
-  const out: NormalizedAllocSnapshotRow[] = rows.map((r) => {
-    const type = r.type === 'TEAM' ? 'TEAM' : 'COLLABORATOR'
-    return {
-      type,
-      collaboratorId:
-        type === 'COLLABORATOR' ? (r.collaboratorId?.trim() || null) : null,
-      teamId: type === 'TEAM' ? (r.teamId?.trim() || null) : null,
-      isPrimary: Boolean(r.isPrimary),
-    }
-  })
-  out.sort((a, b) => {
-    if (a.type !== b.type) return a.type.localeCompare(b.type)
-    const ac = a.collaboratorId ?? ''
-    const bc = b.collaboratorId ?? ''
-    if (ac !== bc) return ac.localeCompare(bc)
-    const at = a.teamId ?? ''
-    const bt = b.teamId ?? ''
-    if (at !== bt) return at.localeCompare(bt)
-    return Number(a.isPrimary) - Number(b.isPrimary)
-  })
-  return out
-}
-
-/**
- * Snapshot persistível no modo edit: estrutura (títulos/minutos) + alocações por etapa,
- * com ordem de linhas de alocação normalizada (evita falso negativo só por permuta no array).
- */
-function buildPersistableStructureSnapshot(
-  roots: ManualOptionDraft[],
-  manualAloc: Record<string, NovaEsteiraAlocacaoLinha[]>,
-): string {
-  return JSON.stringify(
-    roots.map((o) => ({
-      t: o.titulo.trim(),
-      a: o.areas.map((ar) => ({
-        t: ar.titulo.trim(),
-        s: ar.steps.map((st) => ({
-          t: st.titulo.trim(),
-          m: Math.max(0, Math.floor(st.plannedMinutes)),
-          alloc: normalizeAllocRowsForSnapshot(manualAloc[st.key] ?? []),
-        })),
-      })),
-    })),
-  )
-}
-
-function parseExtrasFromPersisted(dados: CreateConveyorDados): WizardExtras {
-  const prazo = dados.prazoEstimado ?? ''
-  const inicio = prazo.match(/Início previsto:\s*([^·]+)/)?.[1]?.trim() ?? ''
-  const fim = prazo.match(/Fim previsto:\s*([^·]+)/)?.[1]?.trim() ?? ''
-  const obs = dados.observacoes ?? ''
-  const tempo = obs.match(/Tempo total previsto:\s*(\d+)\s*min/i)?.[1]
-  return {
-    inicioPrevisto: inicio,
-    fimPrevisto: fim,
-    tempoTotalPrevistoMin: tempo ? Number(tempo) : '',
-  }
-}
-
-function buildDadosParaApi(dados: CreateConveyorDados, extras: WizardExtras): CreateConveyorDados {
-  const prazoPartes: string[] = []
-  if (extras.inicioPrevisto.trim()) prazoPartes.push(`Início previsto: ${extras.inicioPrevisto.trim()}`)
-  if (extras.fimPrevisto.trim()) prazoPartes.push(`Fim previsto: ${extras.fimPrevisto.trim()}`)
-  const prazoEstimado = prazoPartes.length > 0 ? prazoPartes.join(' · ') : dados.prazoEstimado
-
-  let observacoes = dados.observacoes ?? ''
-  if (typeof extras.tempoTotalPrevistoMin === 'number') {
-    const line = `[Planeamento] Tempo total previsto: ${extras.tempoTotalPrevistoMin} min`
-    observacoes = observacoes.trim() ? `${observacoes}\n\n${line}` : line
-  }
-  return { ...dados, prazoEstimado, observacoes }
 }
 
 function normalizeDados(d: CreateConveyorDados): CreateConveyorDados {
@@ -299,6 +172,7 @@ export function ConveyorCreateEditPage({ mode }: { mode: Mode }) {
   /** Recorte de planeamento inicial (início/fim/tempo) para detetar alterações — `dados` sozinho não reflete `extras`. */
   const [baselineExtras, setBaselineExtras] = useState<WizardExtras>(extrasVazio)
   const [detailId, setDetailId] = useState<string | null>(null)
+  const [operationalStatus, setOperationalStatus] = useState<ConveyorOperationalStatus | null>(null)
 
   const [matrizes, setMatrizes] = useState<MatrixNodeApi[]>([])
   const [matrizesLoading, setMatrizesLoading] = useState(true)
@@ -355,17 +229,21 @@ export function ConveyorCreateEditPage({ mode }: { mode: Mode }) {
         const detail = await getConveyorById(id.trim())
         if (cancelled) return
         const dd = detailToDados(detail)
-        const ex0 = parseExtrasFromPersisted(dd)
-        setDados(dd)
-        setBaselineDados(dd)
+        const ex0 = parseWizardExtrasFromPersisted(dd)
+        const cleanedDados = {
+          ...dd,
+          observacoes: stripWizardPlanningFromObservacoes(dd.observacoes ?? ''),
+        }
+        setDados(cleanedDados)
+        setBaselineDados(cleanedDados)
         setExtras(ex0)
         setBaselineExtras(ex0)
         setDetailId(detail.id)
-        const roots = structureToManualRootsFromApiDetail(detail.structure)
-        const initialAloc = detailStructureToManualAloc(detail.structure)
-        setManualRoots(roots)
-        setManualAloc(initialAloc)
-        setBaselineStructureSig(buildPersistableStructureSnapshot(roots, initialAloc))
+        setOperationalStatus(detail.operationalStatus)
+        const structureBaseline = buildStructureBaselineFromApiDetail(detail.structure)
+        setManualRoots(structureBaseline.roots)
+        setManualAloc(structureBaseline.manualAloc)
+        setBaselineStructureSig(structureBaseline.baselineStructureSig)
       } catch (e) {
         const n = reportClientError(e, {
           module: 'esteiras',
@@ -621,9 +499,11 @@ export function ConveyorCreateEditPage({ mode }: { mode: Mode }) {
   const hasDadosChanges = Object.keys(dirtyDadosPatch).length > 0
   const hasStructureChanges =
     mode === 'edit'
-      ? buildPersistableStructureSnapshot(manualRoots, manualAloc) !==
-        baselineStructureSig
+      ? hasPersistableStructureChanges(manualRoots, manualAloc, baselineStructureSig)
       : true
+  const canReplaceStructure =
+    operationalStatus != null ? canReplaceConveyorStructure(operationalStatus) : true
+  const structureEditLocked = mode === 'edit' && !canReplaceStructure
   const pendenciasRevisao = useMemo(() => {
     const basePendencias = pendenciasParaResumo(dados.nome, manualRoots, manualAloc)
     if (!hasDadosChanges && !hasStructureChanges) {
@@ -631,12 +511,19 @@ export function ConveyorCreateEditPage({ mode }: { mode: Mode }) {
     }
     return basePendencias
   }, [dados.nome, manualRoots, manualAloc, hasDadosChanges, hasStructureChanges])
-  const canSaveChanges = estruturaOk && (hasDadosChanges || hasStructureChanges)
+  const canSaveChanges = resolveCanSaveConveyorChanges({
+    hasDadosChanges,
+    hasStructureChanges,
+    estruturaOk,
+    canReplaceStructure,
+  })
 
   async function handleSubmit() {
-    const s = validateManualStructure(manualRoots)
-    const a = validateManualStepAssignees(manualRoots, manualAloc)
-    if (s || a) return setSubmitError(s ?? a ?? null)
+    if (shouldValidateStructureOnSubmit({ mode, hasStructureChanges })) {
+      const s = validateManualStructure(manualRoots)
+      const a = validateManualStepAssignees(manualRoots, manualAloc)
+      if (s || a) return setSubmitError(s ?? a ?? null)
+    }
     const assignMap: Record<string, CreateConveyorStepAssigneeInput[]> = {}
     for (const op of manualRoots) for (const ar of op.areas) for (const st of ar.steps) {
       const rows = manualAloc[st.key] ?? []
@@ -655,10 +542,16 @@ export function ConveyorCreateEditPage({ mode }: { mode: Mode }) {
         return
       }
       if (!detailId) throw new Error('ID da esteira ausente para atualização.')
-      if (hasDadosChanges) {
+      const submitPlan = resolveConveyorEditSubmitPlan({
+        mode,
+        hasDadosChanges,
+        hasStructureChanges,
+        canReplaceStructure,
+      })
+      if (submitPlan.patchDados) {
         await patchConveyorDados(detailId, dirtyDadosPatch as PatchConveyorDadosBody)
       }
-      if (hasStructureChanges) {
+      if (submitPlan.patchStructure) {
         const body = buildManualConveyorInput(dadosApi, manualRoots, assignMap)
         await patchConveyorStructure(detailId, {
           originType: body.originType,
@@ -840,6 +733,8 @@ export function ConveyorCreateEditPage({ mode }: { mode: Mode }) {
               </label>
               <label className="block text-sm"><span className="text-slate-400">Cliente</span><input className="sgp-input-app mt-1 w-full px-3 py-2 text-slate-100" value={dados.cliente ?? ''} onChange={(ev) => setDados((d) => ({ ...d, cliente: ev.target.value }))} /></label>
               <label className="block text-sm"><span className="text-slate-400">Veículo</span><input className="sgp-input-app mt-1 w-full px-3 py-2 text-slate-100" value={dados.veiculo ?? ''} onChange={(ev) => setDados((d) => ({ ...d, veiculo: ev.target.value }))} /></label>
+              <label className="block text-sm"><span className="text-slate-400">Placa</span><input className="sgp-input-app mt-1 w-full px-3 py-2 font-mono uppercase text-slate-100" value={dados.placa ?? ''} onChange={(ev) => setDados((d) => ({ ...d, placa: ev.target.value }))} placeholder="ABC1D23" autoComplete="off" /></label>
+              <label className="block text-sm"><span className="text-slate-400">Modelo / versão</span><input className="sgp-input-app mt-1 w-full px-3 py-2 text-slate-100" value={dados.modeloVersao ?? ''} onChange={(ev) => setDados((d) => ({ ...d, modeloVersao: ev.target.value }))} placeholder="Ex.: 1.0 · 4 portas" autoComplete="off" /></label>
               <label className="block text-sm"><span className="text-slate-400">Início previsto</span><input type="datetime-local" className="sgp-input-app mt-1 w-full px-3 py-2 text-slate-100" value={extras.inicioPrevisto} onChange={(ev) => setExtras((x) => ({ ...x, inicioPrevisto: ev.target.value }))} /></label>
               <label className="block text-sm"><span className="text-slate-400">Fim previsto</span><input type="datetime-local" className="sgp-input-app mt-1 w-full px-3 py-2 text-slate-100" value={extras.fimPrevisto} onChange={(ev) => setExtras((x) => ({ ...x, fimPrevisto: ev.target.value }))} /></label>
               <label className="block text-sm md:col-span-2">
@@ -855,7 +750,11 @@ export function ConveyorCreateEditPage({ mode }: { mode: Mode }) {
                 </select>
               </label>
               <label className="block text-sm"><span className="text-slate-400">Prioridade</span><select className="sgp-input-app mt-1 w-full px-3 py-2 text-slate-100" value={dados.prioridade || 'media'} onChange={(ev) => setDados((d) => ({ ...d, prioridade: ev.target.value as CreateConveyorDados['prioridade'] }))}><option value="baixa">Baixa</option><option value="media">Média</option><option value="alta">Alta</option></select></label>
-              <label className="block text-sm"><span className="text-slate-400">Tempo total previsto (minutos)</span><input type="number" min={0} className="sgp-input-app mt-1 w-full px-3 py-2 tabular-nums text-slate-100" value={extras.tempoTotalPrevistoMin} onChange={(ev) => setExtras((x) => ({ ...x, tempoTotalPrevistoMin: ev.target.value === '' ? '' : Number(ev.target.value) }))} /></label>
+              <label className="block text-sm"><span className="text-slate-400">Tempo total previsto (min)</span><input type="number" min={0} className="sgp-input-app mt-1 w-full px-3 py-2 tabular-nums text-slate-100" value={extras.tempoTotalPrevistoMin} onChange={(ev) => setExtras((x) => ({ ...x, tempoTotalPrevistoMin: ev.target.value === '' ? '' : Number(ev.target.value) }))} /></label>
+              <label className="block text-sm md:col-span-2">
+                <span className="text-slate-400">Observações</span>
+                <textarea className="sgp-input-app mt-1 min-h-[88px] w-full px-3 py-2 text-slate-100" value={dados.observacoes ?? ''} onChange={(ev) => setDados((d) => ({ ...d, observacoes: ev.target.value }))} placeholder="Contexto adicional do pedido (opcional)" />
+              </label>
             </div>
             <div className="flex flex-wrap gap-3 pt-2">
               <button type="button" disabled={!podeAvancarDados} onClick={() => setAba('estrutura')} className="sgp-cta-primary disabled:opacity-40">Continuar para estrutura</button>
@@ -865,18 +764,23 @@ export function ConveyorCreateEditPage({ mode }: { mode: Mode }) {
 
         {aba === 'estrutura' && (
           <section className="space-y-4">
+            {structureEditLocked ? (
+              <SgpInlineBanner variant="neutral" message={STRUCTURE_TAB_BLOCKED_UX_MESSAGE} />
+            ) : null}
             <div className="flex flex-col gap-5 xl:grid xl:grid-cols-[minmax(0,15rem)_minmax(0,1fr)] xl:items-start xl:gap-4">
               <button
                 type="button"
                 className="flex w-full items-center justify-between rounded-xl border border-white/[0.1] bg-white/[0.04] px-3 py-2.5 text-left text-sm font-semibold text-slate-200 xl:hidden"
                 onClick={() => setCatalogDrawerOpenEdit((o) => !o)}
+                disabled={structureEditLocked}
               >
                 Bases e extras
                 <span className="text-sgp-gold">{catalogDrawerOpenEdit ? '▲' : '▼'}</span>
               </button>
 
               <aside
-                className={`min-h-0 space-y-3 xl:block ${catalogDrawerOpenEdit ? 'block' : 'hidden'} xl:max-h-[calc(100vh-10rem)] xl:overflow-y-auto`}
+                className={`min-h-0 space-y-3 xl:block ${catalogDrawerOpenEdit ? 'block' : 'hidden'} xl:max-h-[calc(100vh-10rem)] xl:overflow-y-auto ${structureEditLocked ? 'pointer-events-none opacity-60' : ''}`}
+                aria-disabled={structureEditLocked}
               >
                 <NovaEsteiraCatalogoPanel
                   totemLayout
@@ -886,22 +790,24 @@ export function ConveyorCreateEditPage({ mode }: { mode: Mode }) {
                   treeByMatrixId={treeByMatrixId}
                   treesLoading={treesLoading}
                   treesError={treesError}
-                  onRemoveDraftOption={removeDraftOptionKey}
-                  onUseMatrixAsBase={useMatrixAsBase}
-                  onSwapMatrixBase={swapMatrixBase}
-                  onAddManualTask={addManualTask}
+                  onRemoveDraftOption={structureEditLocked ? () => {} : removeDraftOptionKey}
+                  onUseMatrixAsBase={structureEditLocked ? () => {} : useMatrixAsBase}
+                  onSwapMatrixBase={structureEditLocked ? () => {} : swapMatrixBase}
+                  onAddManualTask={structureEditLocked ? () => {} : addManualTask}
                   manualRoots={manualRoots}
                 />
               </aside>
 
               <main
-                className="min-h-[320px] min-w-0 rounded-2xl border border-white/[0.08] bg-white/[0.03] p-4 xl:max-h-[calc(100vh-10rem)] xl:overflow-y-auto"
+                className={`min-h-[320px] min-w-0 rounded-2xl border border-white/[0.08] bg-white/[0.03] p-4 xl:max-h-[calc(100vh-10rem)] xl:overflow-y-auto ${structureEditLocked ? 'pointer-events-none opacity-75' : ''}`}
+                aria-disabled={structureEditLocked}
                 onDragOver={(e) => {
+                  if (structureEditLocked) return
                   if (!e.dataTransfer.types.includes(NOVA_ESTEIRA_DRAG_MIME)) return
                   e.preventDefault()
                   e.dataTransfer.dropEffect = 'copy'
                 }}
-                onDrop={handleDropOnRascunho}
+                onDrop={structureEditLocked ? undefined : handleDropOnRascunho}
               >
                 <div className="flex flex-wrap items-end justify-between gap-2 border-b border-white/[0.06] pb-3">
                   <div>

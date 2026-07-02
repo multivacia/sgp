@@ -35,14 +35,55 @@ export function canShowSaveAndCompleteButton(candidate: TimeEntryCandidateItem):
   return candidate.canCompleteStep !== false
 }
 
+export type JustificationFieldValue = {
+  justificationId: string | null
+  justificationComplement: string
+  legacyText: string
+}
+
+export const emptyJustificationValue = (): JustificationFieldValue => ({
+  justificationId: null,
+  justificationComplement: '',
+  legacyText: '',
+})
+
 export type BuildTimeEntryPayloadInput = {
   candidate: TimeEntryCandidateItem
   minutes: number
   executedQuantity: number
   description: string
-  exceptionJustification: string
-  outOfSequenceJustification: string
+  exceptionJustification: JustificationFieldValue
+  outOfSequenceJustification: JustificationFieldValue
   markAsDone: boolean
+}
+
+function appendJustificationFields(
+  payload: PostConveyorStepTimeEntryBody,
+  prefix: 'exception' | 'outOfSequence',
+  value: JustificationFieldValue,
+): void {
+  if (value.justificationId) {
+    if (prefix === 'exception') {
+      payload.exceptionJustificationId = value.justificationId
+      if (value.justificationComplement.trim()) {
+        payload.exceptionJustificationComplement = value.justificationComplement.trim()
+      }
+      payload.exceptionJustification = value.legacyText.trim()
+    } else {
+      payload.outOfSequenceJustificationId = value.justificationId
+      if (value.justificationComplement.trim()) {
+        payload.outOfSequenceJustificationComplement = value.justificationComplement.trim()
+      }
+      payload.outOfSequenceJustification = value.legacyText.trim()
+    }
+    return
+  }
+  const legacy = value.legacyText.trim()
+  if (prefix === 'exception') {
+    payload.exceptionJustification = legacy
+  } else {
+    payload.outOfSequenceJustification = legacy
+  }
 }
 
 export function buildTimeEntryPayload(
@@ -50,18 +91,19 @@ export function buildTimeEntryPayload(
 ): PostConveyorStepTimeEntryBody {
   const needsJ = candidateNeedsJustification(input.candidate)
   const needsOos = candidateNeedsOutOfSequenceJustification(input.candidate)
-  const ej = input.exceptionJustification.trim()
-  const oos = input.outOfSequenceJustification.trim()
 
-  return {
+  const payload: PostConveyorStepTimeEntryBody = {
     minutes: input.minutes,
     executedQuantity: input.executedQuantity,
     description: input.description.trim() || null,
     entryMode: 'manual',
-    ...(needsJ ? { exceptionJustification: ej } : {}),
-    ...(needsOos ? { outOfSequenceJustification: oos } : {}),
     ...(input.markAsDone ? { markAsDone: true } : {}),
   }
+
+  if (needsJ) appendJustificationFields(payload, 'exception', input.exceptionJustification)
+  if (needsOos) appendJustificationFields(payload, 'outOfSequence', input.outOfSequenceJustification)
+
+  return payload
 }
 
 export function resolveTimeEntrySuccessToast(markAsDone: boolean): string {
@@ -72,17 +114,17 @@ export function resolveTimeEntrySuccessToast(markAsDone: boolean): string {
 
 export function validateTimeEntryForm(input: {
   candidate: TimeEntryCandidateItem
-  exceptionJustification: string
-  outOfSequenceJustification: string
+  exceptionJustification: JustificationFieldValue
+  outOfSequenceJustification: JustificationFieldValue
 }): string | null {
   if (candidateNeedsJustification(input.candidate)) {
-    if (!input.exceptionJustification.trim().length) {
-      return 'Para apontar horas nesta atividade, informe a justificativa da exceção.'
+    if (!input.exceptionJustification.legacyText.trim().length) {
+      return 'Selecione uma justificativa para continuar.'
     }
   }
   if (candidateNeedsOutOfSequenceJustification(input.candidate)) {
-    if (!input.outOfSequenceJustification.trim().length) {
-      return 'Informe uma justificativa para executar esta atividade fora da sequência recomendada.'
+    if (!input.outOfSequenceJustification.legacyText.trim().length) {
+      return 'Selecione uma justificativa para continuar.'
     }
   }
   return null
@@ -90,10 +132,10 @@ export function validateTimeEntryForm(input: {
 
 export function validateCompleteOutOfSequenceJustification(
   candidate: TimeEntryCandidateItem,
-  justification: string,
+  justification: JustificationFieldValue,
 ): string | null {
   if (!candidateNeedsOutOfSequenceJustification(candidate)) return null
-  if (!justification.trim().length) {
+  if (!justification.legacyText.trim().length) {
     return QUICK_TIME_ENTRY_ERRORS.outOfSequenceJustificationRequired
   }
   return null

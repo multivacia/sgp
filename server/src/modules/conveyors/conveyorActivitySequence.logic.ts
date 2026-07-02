@@ -28,6 +28,54 @@ export type ConveyorActivitySequenceAnalysis = {
   previousOpenCount: number
   /** Atividades anteriores ainda não concluídas (operational_status ≠ COMPLETED), na ordem estrutural. */
   previousOpenActivities: PreviousOpenActivitySummary[]
+  /** Posição 0-based na linearização estrutural da esteira. */
+  structuralSequenceIndex: number
+}
+
+type LinearEntry = {
+  step: SequenceAnalysisNode
+  taskTitle: string
+  sectorTitle: string
+  orderPath: string
+}
+
+function linearizeConveyorActivities(nodes: SequenceAnalysisNode[]): LinearEntry[] {
+  const linear: LinearEntry[] = []
+  const rootOptions = sortByOrderIndex(
+    nodes.filter((n) => n.node_type === 'OPTION' && n.parent_id === null && n.is_active),
+  )
+
+  let taskOrdinal = 0
+  for (const opt of rootOptions) {
+    taskOrdinal += 1
+    const areas = childrenOf(nodes, opt.id, 'AREA').filter((a) => a.is_active)
+    let sectorOrdinal = 0
+    for (const area of areas) {
+      sectorOrdinal += 1
+      const steps = childrenOf(nodes, area.id, 'STEP').filter((s) => s.is_active)
+      let actOrdinal = 0
+      for (const step of steps) {
+        actOrdinal += 1
+        linear.push({
+          step,
+          taskTitle: opt.name,
+          sectorTitle: area.name,
+          orderPath: `${taskOrdinal}.${sectorOrdinal}.${actOrdinal}`,
+        })
+      }
+    }
+  }
+
+  return linear
+}
+
+export function getStructuralSequenceIndex(
+  nodes: SequenceAnalysisNode[],
+  activityNodeId: string,
+): number | null {
+  const linear = linearizeConveyorActivities(nodes)
+  const idx = linear.findIndex((e) => e.step.id === activityNodeId)
+  return idx === -1 ? null : idx
 }
 
 function sortByOrderIndex<T extends { order_index: number; id: string }>(rows: T[]): T[] {
@@ -58,41 +106,11 @@ export function analyzeConveyorActivitySequence(
       isOutOfSequence: false,
       previousOpenCount: 0,
       previousOpenActivities: [],
+      structuralSequenceIndex: -1,
     }
   }
 
-  type LinearEntry = {
-    step: SequenceAnalysisNode
-    taskTitle: string
-    sectorTitle: string
-    orderPath: string
-  }
-
-  const linear: LinearEntry[] = []
-  const rootOptions = sortByOrderIndex(
-    nodes.filter((n) => n.node_type === 'OPTION' && n.parent_id === null && n.is_active),
-  )
-
-  let taskOrdinal = 0
-  for (const opt of rootOptions) {
-    taskOrdinal += 1
-    const areas = childrenOf(nodes, opt.id, 'AREA').filter((a) => a.is_active)
-    let sectorOrdinal = 0
-    for (const area of areas) {
-      sectorOrdinal += 1
-      const steps = childrenOf(nodes, area.id, 'STEP').filter((s) => s.is_active)
-      let actOrdinal = 0
-      for (const step of steps) {
-        actOrdinal += 1
-        linear.push({
-          step,
-          taskTitle: opt.name,
-          sectorTitle: area.name,
-          orderPath: `${taskOrdinal}.${sectorOrdinal}.${actOrdinal}`,
-        })
-      }
-    }
-  }
+  const linear = linearizeConveyorActivities(nodes)
 
   const idx = linear.findIndex((e) => e.step.id === activityNodeId)
   if (idx === -1) {
@@ -101,6 +119,7 @@ export function analyzeConveyorActivitySequence(
       isOutOfSequence: false,
       previousOpenCount: 0,
       previousOpenActivities: [],
+      structuralSequenceIndex: -1,
     }
   }
 
@@ -122,5 +141,6 @@ export function analyzeConveyorActivitySequence(
     isOutOfSequence: openBefore.length > 0,
     previousOpenCount: openBefore.length,
     previousOpenActivities: summaries,
+    structuralSequenceIndex: idx,
   }
 }

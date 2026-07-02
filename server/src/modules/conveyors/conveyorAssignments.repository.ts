@@ -101,6 +101,10 @@ export type InsertConveyorTimeEntryRow = {
   out_of_sequence_justification: string | null
   session_completion_pct: number | null
   mark_as_done: boolean
+  standard_justification_id?: string | null
+  standard_justification_label_snapshot?: string | null
+  standard_justification_category_snapshot?: string | null
+  standard_justification_complement?: string | null
 }
 
 export async function insertConveyorTimeEntry(
@@ -113,13 +117,16 @@ export async function insertConveyorTimeEntry(
       conveyor_node_assignee_id, entry_at, minutes, executed_quantity, notes, entry_mode, metadata_json,
       entry_origin, exception_justification,
       is_out_of_sequence, out_of_sequence_justification,
-      session_completion_pct, mark_as_done
+      session_completion_pct, mark_as_done,
+      standard_justification_id, standard_justification_label_snapshot,
+      standard_justification_category_snapshot, standard_justification_complement
     ) VALUES (
       $1, $2, $3, $4,
       $5, $6, $7, $8, $9, $10, $11::jsonb,
       $12, $13,
       $14, $15,
-      $16, $17
+      $16, $17,
+      $18, $19, $20, $21
     )
     RETURNING id`,
     [
@@ -142,6 +149,10 @@ export async function insertConveyorTimeEntry(
       row.out_of_sequence_justification,
       row.session_completion_pct,
       row.mark_as_done,
+      row.standard_justification_id ?? null,
+      row.standard_justification_label_snapshot ?? null,
+      row.standard_justification_category_snapshot ?? null,
+      row.standard_justification_complement ?? null,
     ],
   )
   const out = r.rows[0]

@@ -3,7 +3,7 @@ import { findAppUserIdByCollaboratorId } from '../auth/auth.repository.js'
 import { AppError } from '../../shared/errors/AppError.js'
 import { ErrorCodes } from '../../shared/errors/errorCodes.js'
 import { normalizeExecutedQuantityInput } from '../../shared/activityOperationalQuantity.js'
-import { serviceAnalyzeConveyorActivitySequence } from '../conveyors/conveyorActivitySequence.service.js'
+import { serviceAnalyzeWorkQueueSequenceForCollaborator } from '../my-work-queue/work-queue-sequence.service.js'
 import {
   assertNodeIsStepForConveyor,
   collaboratorActiveForOperations,
@@ -25,7 +25,10 @@ import { completeConveyorStepOnClient } from '../conveyors/conveyor-step-operati
 import type { ConveyorNodeStepOperationalStatusDb } from '../conveyors/stepOperationalStatus.js'
 import { serviceCreateConveyorOperationalEvent } from '../conveyors/operational-events/conveyor-operational-events.service.js'
 import { resolveProductionStepAssigneeId } from './production-plan-assignee.js'
-import { assertProductionOutOfSequenceJustification } from './production-out-of-sequence.js'
+import {
+  pickStandardJustificationSnapshot,
+  resolveTimeEntryJustification,
+} from '../../shared/timeEntryJustificationResolver.js'
 
 export type CreateProductionTimeEntryInput = {
   collaboratorId: string
@@ -37,6 +40,8 @@ export type CreateProductionTimeEntryInput = {
   sessionCompletionPct?: number | null
   markAsDone?: boolean
   outOfSequenceJustification?: string | null
+  justificationId?: string | null
+  justificationComplement?: string | null
 }
 
 /**
@@ -103,12 +108,12 @@ export async function serviceCreateProductionTimeEntry(
     )
   }
 
-  const seq = await serviceAnalyzeConveyorActivitySequence(
-    pool,
-    input.conveyorId,
-    input.stepNodeId,
-  )
-  if (!seq.targetFound) {
+  const seq = await serviceAnalyzeWorkQueueSequenceForCollaborator(pool, {
+    conveyorId: input.conveyorId,
+    activityNodeId: input.stepNodeId,
+    collaboratorId: input.collaboratorId,
+  })
+  if (seq.structuralSequenceIndex < 0) {
     throw new AppError(
       'Esta atividade não está incluída na sequência operacional da esteira.',
       422,
@@ -116,11 +121,31 @@ export async function serviceCreateProductionTimeEntry(
     )
   }
 
-  const isOos = seq.isOutOfSequence
+  const isOos = seq.requiresOutOfSequenceJustification
   let oosJustDb: string | null = null
+  let oosStandard = null
   if (isOos) {
-    oosJustDb = assertProductionOutOfSequenceJustification(input.outOfSequenceJustification)
+    const resolved = await resolveTimeEntryJustification(pool, {
+      required: true,
+      justificationId: input.justificationId,
+      justificationComplement: input.justificationComplement,
+      legacyText: input.outOfSequenceJustification,
+      requiredErrorCode: ErrorCodes.TIME_ENTRY_OUT_OF_SEQUENCE_REQUIRES_JUSTIFICATION,
+      requiredErrorMessage:
+        'Informe uma justificativa para executar esta atividade fora da sequência recomendada.',
+    })
+    oosJustDb = resolved.legacyText
+    oosStandard = resolved.standard
+    if (!oosJustDb || oosJustDb.length < 3) {
+      throw new AppError(
+        'A justificativa deve ter pelo menos 3 caracteres.',
+        422,
+        ErrorCodes.TIME_ENTRY_OUT_OF_SEQUENCE_REQUIRES_JUSTIFICATION,
+      )
+    }
   }
+
+  const standardFields = pickStandardJustificationSnapshot(null, oosStandard)
 
   const assigneeId = await resolveProductionStepAssigneeId(pool, {
     conveyorId: input.conveyorId,
@@ -158,6 +183,7 @@ export async function serviceCreateProductionTimeEntry(
     session_completion_pct:
       typeof input.sessionCompletionPct === 'number' ? input.sessionCompletionPct : null,
     mark_as_done: markAsDone,
+    ...standardFields,
   }
 
   const client = await pool.connect()

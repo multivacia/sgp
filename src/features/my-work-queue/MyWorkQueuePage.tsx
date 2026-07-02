@@ -13,7 +13,7 @@ import type {
 } from '../../domain/my-work-queue/my-work-queue.types'
 import { getMyWorkQueue } from '../../services/my-work-queue/myWorkQueueApiService'
 import { QuickTimeEntryDrawer } from '../shell/QuickTimeEntryDrawer'
-import { sortWorkQueueItems, workQueueApontamentoCandidate } from './myWorkQueueUi'
+import { workQueueApontamentoCandidate } from './myWorkQueueUi'
 
 function todayIsoLocal(): string {
   const t = new Date()
@@ -245,7 +245,7 @@ export function MyWorkQueuePage() {
   }, [load])
 
   const groups = useMemo(() => {
-    const items = sortWorkQueueItems(queue?.items ?? [])
+    const items = queue?.items ?? []
     return {
       overdue: items.filter((item) => item.group === 'overdue'),
       today: items.filter((item) => item.group === 'today'),

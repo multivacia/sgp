@@ -12,6 +12,8 @@ export const productionTimeEntryBodySchema = z.object({
   outOfSequenceJustification: z
     .union([z.string().max(PRODUCTION_OUT_OF_SEQUENCE_JUSTIFICATION_MAX), z.null()])
     .optional(),
+  justificationId: z.string().uuid().optional(),
+  justificationComplement: z.union([z.string().max(2000), z.null()]).optional(),
 })
 
 export type ProductionTimeEntryBody = z.infer<typeof productionTimeEntryBodySchema>

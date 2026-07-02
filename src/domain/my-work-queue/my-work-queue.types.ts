@@ -6,6 +6,15 @@ export type MyWorkQueuePreviousOpenActivity = {
   orderPath: string
 }
 
+export type MyWorkQueuePreviousOpenFromOtherCollaborator = {
+  activityNodeId: string
+  activityTitle: string
+  sectorTitle: string
+  taskTitle: string
+  orderPath: string
+  collaboratorNames: string[]
+}
+
 export type MyWorkQueueItemGroup = 'overdue' | 'today' | 'completed'
 
 export type MyWorkQueueItem = {
@@ -30,9 +39,14 @@ export type MyWorkQueueItem = {
   isActivityCompleted: boolean
   isOverdue: boolean
   isOutOfSequence: boolean
+  isNextRecommended: boolean
   requiresOutOfSequenceJustification: boolean
   previousOpenCount: number
   previousOpenActivities: MyWorkQueuePreviousOpenActivity[]
+  hasPreviousOpenActivitiesFromOtherCollaborators: boolean
+  previousOpenActivitiesFromOtherCollaborators: MyWorkQueuePreviousOpenFromOtherCollaborator[]
+  previousOpenActivitiesWarningMessage: string | null
+  structuralSequenceIndex: number
   isAssignedToMe: boolean
   requiresUnassignedJustification: boolean
   plannedVsCapacity: {

@@ -54,6 +54,23 @@ describe('buildPlanningGroupedTicketPrintItems', () => {
     expect(items.filter((i) => i.kind === 'header')).toHaveLength(1)
   })
 
+  it('inclui concluídas quando includeCompleted = true', () => {
+    const items = buildPlanningGroupedTicketPrintItems(
+      [
+        item({ activityNodeId: 'step-open', activityOperationalStatus: 'IN_PROGRESS', plannedOrder: 0 }),
+        item({ activityNodeId: 'step-done', activityOperationalStatus: 'COMPLETED', plannedOrder: 1 }),
+      ],
+      { grouping: 'task', includeCompleted: true },
+    )
+
+    const tickets = items.filter((i) => i.kind === 'ticket')
+    expect(tickets).toHaveLength(2)
+    // plannedOrder controla a ordem; ambos devem estar presentes
+    const ids = tickets.map((t) => t.kind === 'ticket' && t.model.activityNodeId)
+    expect(ids).toContain('step-open')
+    expect(ids).toContain('step-done')
+  })
+
   it('não altera campos do layout do ticket', () => {
     const items = buildPlanningGroupedTicketPrintItems(
       [item({ activityNodeId: 'node-abcd' })],

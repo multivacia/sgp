@@ -3,6 +3,10 @@ import type {
   ProductionCollaboratorSummary,
   ProductionWorkQueueItem,
 } from '../../domain/production/production.types'
+import {
+  findInitialKioskCarouselIndex,
+  partitionKioskWorkQueue,
+} from '../../domain/production/kioskWorkQueueUi'
 import { getProductionWorkQueue } from '../../services/production/productionApiService'
 import { ProductionCollaboratorAvatar } from '../production/ProductionCollaboratorAvatar'
 import { KioskActivityCard } from './KioskActivityCard'
@@ -18,7 +22,9 @@ type ViewMode = 'carousel' | 'list'
 export function KioskActivityCards({ collaborator, initialItems, onExit }: Props) {
   const [items, setItems] = useState(initialItems)
   const [viewMode, setViewMode] = useState<ViewMode>('carousel')
-  const [currentIndex, setCurrentIndex] = useState(0)
+  const [currentIndex, setCurrentIndex] = useState(() =>
+    findInitialKioskCarouselIndex(initialItems),
+  )
   const [search, setSearch] = useState('')
   const touchStartX = useRef(0)
 
@@ -33,12 +39,15 @@ export function KioskActivityCards({ collaborator, initialItems, onExit }: Props
     )
   }, [items, search])
 
-  // Ao filtrar, reset ao primeiro card
+  const listSections = useMemo(() => partitionKioskWorkQueue(filtered), [filtered])
+
+  // Ao filtrar ou recarregar, reposiciona no item recomendado visível
   useEffect(() => {
-    setCurrentIndex(0)
-  }, [search])
+    setCurrentIndex(findInitialKioskCarouselIndex(filtered))
+  }, [search, filtered])
 
   const safeIndex = Math.min(currentIndex, Math.max(0, filtered.length - 1))
+  const activeItem = filtered[safeIndex] ?? null
 
   const prev = useCallback(() => setCurrentIndex((i) => Math.max(0, i - 1)), [])
   const next = useCallback(
@@ -50,11 +59,11 @@ export function KioskActivityCards({ collaborator, initialItems, onExit }: Props
     try {
       const queue = await getProductionWorkQueue()
       setItems(queue.items)
+      setCurrentIndex(findInitialKioskCarouselIndex(queue.items))
     } catch {
       // mantém items existentes se a recarga falhar
     }
-    setCurrentIndex((i) => Math.min(filtered.length - 1, i + 1))
-  }, [filtered.length])
+  }, [])
 
   function handleTouchStart(e: React.TouchEvent) {
     touchStartX.current = e.touches[0].clientX
@@ -160,6 +169,26 @@ export function KioskActivityCards({ collaborator, initialItems, onExit }: Props
         </div>
       ) : viewMode === 'carousel' ? (
         <div className="flex flex-1 flex-col overflow-hidden">
+          {activeItem ? (
+            <div className="shrink-0 border-b border-white/[0.07] px-5 py-2">
+              <p
+                className={[
+                  'text-center text-[10px] font-bold uppercase tracking-widest',
+                  activeItem.isNextRecommended
+                    ? 'text-sgp-gold'
+                    : activeItem.isOutOfSequence
+                      ? 'text-amber-400'
+                      : 'text-slate-500',
+                ].join(' ')}
+              >
+                {activeItem.isNextRecommended
+                  ? 'Próxima atividade recomendada'
+                  : activeItem.isOutOfSequence
+                    ? 'Atividade fora de sequência'
+                    : 'Atividades'}
+              </p>
+            </div>
+          ) : null}
           {/* Área do carrossel */}
           <div
             className="flex-1 overflow-hidden"
@@ -236,17 +265,42 @@ export function KioskActivityCards({ collaborator, initialItems, onExit }: Props
       ) : (
         /* Modo lista */
         <div className="flex-1 overflow-y-auto p-5">
-          <div className="flex flex-col gap-4">
-            {filtered.map((item) => (
-              <div
-                key={item.workPlanItemId}
-                className="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03]"
-              >
-                <KioskActivityCard
-                  item={item}
-                  onSuccess={() => void handleCardSuccess()}
-                />
-              </div>
+          <div className="flex flex-col gap-6">
+            {listSections.map((section) => (
+              <section key={section.id} className="flex flex-col gap-3">
+                <h2
+                  className={[
+                    'text-xs font-bold uppercase tracking-widest',
+                    section.id === 'recommended'
+                      ? 'text-sgp-gold'
+                      : section.id === 'outOfSequence'
+                        ? 'text-amber-400'
+                        : 'text-slate-500',
+                  ].join(' ')}
+                >
+                  {section.title}
+                </h2>
+                <div className="flex flex-col gap-4">
+                  {section.items.map((item) => (
+                    <div
+                      key={item.workPlanItemId}
+                      className={[
+                        'overflow-hidden rounded-2xl border bg-white/[0.03]',
+                        item.isNextRecommended
+                          ? 'border-sgp-gold/40 ring-1 ring-sgp-gold/20'
+                          : item.isOutOfSequence
+                            ? 'border-amber-500/35'
+                            : 'border-white/10',
+                      ].join(' ')}
+                    >
+                      <KioskActivityCard
+                        item={item}
+                        onSuccess={() => void handleCardSuccess()}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </section>
             ))}
           </div>
         </div>

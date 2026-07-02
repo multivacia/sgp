@@ -9,6 +9,7 @@ import {
 import { getProductionCollaborators } from './production-collaborators.controller.js'
 import { getProductionWorkQueue } from './production-work-queue.controller.js'
 import { postProductionTimeEntry } from './production-time-entries.controller.js'
+import { getProductionTimeEntryJustifications } from './production-time-entry-justifications.controller.js'
 import { requireProductionAuth, requireProductionPinChanged } from './production-auth.middleware.js'
 import { requireKioskToken } from './production-kiosk.middleware.js'
 
@@ -39,6 +40,12 @@ export function productionRouter(): Router {
     requireProductionAuth(),
     requireProductionPinChanged(),
     asyncRoute(postProductionTimeEntry),
+  )
+  r.get(
+    '/production/time-entry-justifications',
+    requireProductionAuth(),
+    requireProductionPinChanged(),
+    asyncRoute(getProductionTimeEntryJustifications),
   )
 
   return r

@@ -8,6 +8,13 @@ export type ProductionWorkQueuePreviousOpenActivityApi = {
   taskTitle: string
 }
 
+export type ProductionWorkQueuePreviousOpenFromOtherCollaboratorApi = {
+  activityTitle: string
+  sectorTitle: string
+  taskTitle: string
+  collaboratorNames: string[]
+}
+
 export type ProductionWorkQueueItemApi = {
   workPlanItemId: string
 
@@ -30,8 +37,13 @@ export type ProductionWorkQueueItemApi = {
   isActivityCompleted: boolean
   isOverdue: boolean
   isOutOfSequence: boolean
+  /** Próxima atividade recomendada na sequência estrutural (nunca true se fora de sequência). */
+  isNextRecommended: boolean
   previousOpenCount: number
   previousOpenActivities: ProductionWorkQueuePreviousOpenActivityApi[]
+  hasPreviousOpenActivitiesFromOtherCollaborators: boolean
+  previousOpenActivitiesFromOtherCollaborators: ProductionWorkQueuePreviousOpenFromOtherCollaboratorApi[]
+  previousOpenActivitiesWarningMessage: string | null
 
   group: 'overdue' | 'today' | 'completed'
 

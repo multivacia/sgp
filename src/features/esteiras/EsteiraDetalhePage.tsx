@@ -23,6 +23,11 @@ import {
 import type { ConveyorNodeWorkload } from '../../domain/conveyors/conveyorNodeWorkload.types'
 import type { ConveyorOperationalEvent } from '../../domain/conveyors/conveyorOperationalEvents.types'
 import { ConveyorOperationalEventsTimeline } from './ConveyorOperationalEventsTimeline'
+import {
+  displayUsuarioObservacoes,
+  extractWizardTempoTotalPrevistoMin,
+  parseWizardPrazoForDisplay,
+} from './conveyorBasicDataExtras'
 import type { StepAnaliticoDetalhe } from '../../domain/esteiras/step-analitico.types'
 import { useAuth } from '../../lib/use-auth'
 import { ApiError } from '../../lib/api/apiErrors'
@@ -781,6 +786,9 @@ function EsteiraDetalheBasicoReal({ id }: { id: string | undefined }) {
     detail.code?.trim() && detail.code.length > 0
       ? detail.code
       : detail.name.trim() || detail.id
+  const prazoDisplay = parseWizardPrazoForDisplay(detail.estimatedDeadline)
+  const tempoTotalPrevistoMin = extractWizardTempoTotalPrevistoMin(detail.initialNotes)
+  const observacoesUsuario = displayUsuarioObservacoes(detail.initialNotes)
 
   return (
     <PageCanvas>
@@ -1130,7 +1138,7 @@ function EsteiraDetalheBasicoReal({ id }: { id: string | undefined }) {
 
       <section className="mt-8 rounded-2xl border border-white/[0.08] bg-white/[0.02] p-6">
         <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">
-          Dados cadastrais
+          Dados básicos
         </p>
         <dl className="mt-4 grid gap-4 sm:grid-cols-2">
           <div>
@@ -1187,18 +1195,46 @@ function EsteiraDetalheBasicoReal({ id }: { id: string | undefined }) {
           </div>
           <div>
             <dt className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
-              Atividades (total)
+              Início previsto
             </dt>
-            <dd className="mt-1 text-sm tabular-nums text-slate-200">
-              {detail.totalSteps}
+            <dd className="mt-1 text-sm text-slate-200">
+              {prazoDisplay.inicioPrevisto || '—'}
             </dd>
           </div>
           <div>
             <dt className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
-              Prazo estimado
+              Fim previsto
             </dt>
             <dd className="mt-1 text-sm text-slate-200">
-              {detail.estimatedDeadline?.trim() || '—'}
+              {prazoDisplay.fimPrevisto || '—'}
+            </dd>
+          </div>
+          {prazoDisplay.prazoLegado ? (
+            <div>
+              <dt className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                Prazo estimado
+              </dt>
+              <dd className="mt-1 text-sm text-slate-200">
+                {prazoDisplay.prazoLegado}
+              </dd>
+            </div>
+          ) : null}
+          {tempoTotalPrevistoMin != null ? (
+            <div>
+              <dt className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                Tempo total previsto (min)
+              </dt>
+              <dd className="mt-1 text-sm tabular-nums text-slate-200">
+                {tempoTotalPrevistoMin}
+              </dd>
+            </div>
+          ) : null}
+          <div>
+            <dt className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+              Atividades (total)
+            </dt>
+            <dd className="mt-1 text-sm tabular-nums text-slate-200">
+              {detail.totalSteps}
             </dd>
           </div>
           <div>
@@ -1224,7 +1260,7 @@ function EsteiraDetalheBasicoReal({ id }: { id: string | undefined }) {
               Observações
             </dt>
             <dd className="mt-1 text-sm leading-relaxed text-slate-200">
-              {detail.initialNotes?.trim() || '—'}
+              {observacoesUsuario || '—'}
             </dd>
           </div>
         </dl>

@@ -51,8 +51,12 @@ export type ProductionWorkQueueItem = {
   isActivityCompleted: boolean
   isOverdue: boolean
   isOutOfSequence: boolean
+  isNextRecommended: boolean
   previousOpenCount: number
   previousOpenActivities: ProductionWorkQueuePreviousOpenActivity[]
+  hasPreviousOpenActivitiesFromOtherCollaborators: boolean
+  previousOpenActivitiesFromOtherCollaborators: ProductionWorkQueuePreviousOpenFromOtherCollaborator[]
+  previousOpenActivitiesWarningMessage: string | null
 
   group: 'overdue' | 'today' | 'completed'
 
@@ -67,6 +71,13 @@ export type ProductionWorkQueuePreviousOpenActivity = {
   taskTitle: string
 }
 
+export type ProductionWorkQueuePreviousOpenFromOtherCollaborator = {
+  activityTitle: string
+  sectorTitle: string
+  taskTitle: string
+  collaboratorNames: string[]
+}
+
 export type ProductionTimeEntryPayload = {
   conveyorId: string
   stepNodeId: string
@@ -76,6 +87,8 @@ export type ProductionTimeEntryPayload = {
   sessionCompletionPct?: number | null
   markAsDone?: boolean
   outOfSequenceJustification?: string | null
+  justificationId?: string
+  justificationComplement?: string
 }
 
 export type ProductionTimeEntryResult = {

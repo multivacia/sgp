@@ -29,12 +29,15 @@ import {
   canShowSaveAndCompleteButton,
   candidateNeedsJustification,
   candidateNeedsOutOfSequenceJustification,
+  emptyJustificationValue,
   QUICK_TIME_ENTRY_ERRORS,
   QUICK_TIME_ENTRY_TOAST,
   resolveTimeEntrySuccessToast,
   validateCompleteOutOfSequenceJustification,
   validateTimeEntryForm,
+  type JustificationFieldValue,
 } from './quickTimeEntryDrawerLogic'
+import { JustificationSelect } from '../../components/operational/JustificationSelect'
 import { QuickTimeEntryCandidateActions } from './QuickTimeEntryCandidateActions'
 
 const SEARCH_DEBOUNCE_MS = 200
@@ -83,8 +86,10 @@ export function QuickTimeEntryDrawer({
   const [minutesStr, setMinutesStr] = useState('0')
   const [executedQuantityStr, setExecutedQuantityStr] = useState('1')
   const [description, setDescription] = useState('')
-  const [exceptionJustification, setExceptionJustification] = useState('')
-  const [outOfSequenceJustification, setOutOfSequenceJustification] = useState('')
+  const [exceptionJustification, setExceptionJustification] =
+    useState<JustificationFieldValue>(emptyJustificationValue())
+  const [outOfSequenceJustification, setOutOfSequenceJustification] =
+    useState<JustificationFieldValue>(emptyJustificationValue())
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [toast, setToast] = useState<ToastState>(null)
@@ -105,7 +110,8 @@ export function QuickTimeEntryDrawer({
   const [extraSubmitError, setExtraSubmitError] = useState<string | null>(null)
   const [completeConfirmCandidate, setCompleteConfirmCandidate] =
     useState<TimeEntryCandidateItem | null>(null)
-  const [completeJustification, setCompleteJustification] = useState('')
+  const [completeJustification, setCompleteJustification] =
+    useState<JustificationFieldValue>(emptyJustificationValue())
   const [completeError, setCompleteError] = useState<string | null>(null)
   const [completing, setCompleting] = useState(false)
 
@@ -130,8 +136,8 @@ export function QuickTimeEntryDrawer({
       setToast(null)
       setMinutesStr('0')
       setDescription('')
-      setExceptionJustification('')
-      setOutOfSequenceJustification('')
+      setExceptionJustification(emptyJustificationValue())
+      setOutOfSequenceJustification(emptyJustificationValue())
       setExtraDescriptions([])
       setExtraDescriptionsLoading(false)
       setExtraDescriptionsError(null)
@@ -146,7 +152,7 @@ export function QuickTimeEntryDrawer({
       setExtraSubmitting(false)
       setExtraSubmitError(null)
       setCompleteConfirmCandidate(null)
-      setCompleteJustification('')
+      setCompleteJustification(emptyJustificationValue())
       setCompleteError(null)
       setCompleting(false)
     }
@@ -289,8 +295,8 @@ export function QuickTimeEntryDrawer({
   const canSubmitForm =
     minutesValid &&
     executedQuantityValid &&
-    (!formNeedsJustification || exceptionJustification.trim().length > 0) &&
-    (!formNeedsOutOfSequence || outOfSequenceJustification.trim().length > 0)
+    (!formNeedsJustification || exceptionJustification.legacyText.trim().length > 0) &&
+    (!formNeedsOutOfSequence || outOfSequenceJustification.legacyText.trim().length > 0)
   const showSaveAndComplete =
     selected != null && canShowSaveAndCompleteButton(selected)
   const extraMinutes = Number.parseInt(extraMinutesStr, 10)
@@ -302,8 +308,8 @@ export function QuickTimeEntryDrawer({
     setSubmitError(null)
     setMinutesStr('0')
     setDescription('')
-    setExceptionJustification('')
-    setOutOfSequenceJustification('')
+    setExceptionJustification(emptyJustificationValue())
+    setOutOfSequenceJustification(emptyJustificationValue())
   }, [])
 
   useEffect(() => {
@@ -358,8 +364,8 @@ export function QuickTimeEntryDrawer({
       setPhase('list')
       setSelected(null)
       setDescription('')
-      setExceptionJustification('')
-      setOutOfSequenceJustification('')
+      setExceptionJustification(emptyJustificationValue())
+      setOutOfSequenceJustification(emptyJustificationValue())
       onTimeEntrySaved?.()
       void load()
     } catch (e) {
@@ -381,14 +387,14 @@ export function QuickTimeEntryDrawer({
 
   function openCompleteConfirm(c: TimeEntryCandidateItem) {
     setCompleteConfirmCandidate(c)
-    setCompleteJustification('')
+    setCompleteJustification(emptyJustificationValue())
     setCompleteError(null)
   }
 
   function closeCompleteConfirm() {
     if (completing) return
     setCompleteConfirmCandidate(null)
-    setCompleteJustification('')
+    setCompleteJustification(emptyJustificationValue())
     setCompleteError(null)
   }
 
@@ -406,12 +412,21 @@ export function QuickTimeEntryDrawer({
       await patchConveyorStepCompletion(c.conveyorId, c.stepNodeId, {
         action: 'COMPLETE',
         ...(candidateNeedsOutOfSequenceJustification(c)
-          ? { outOfSequenceJustification: completeJustification.trim() }
+          ? {
+              outOfSequenceJustification: completeJustification.legacyText.trim(),
+              ...(completeJustification.justificationId
+                ? {
+                    justificationId: completeJustification.justificationId,
+                    justificationComplement:
+                      completeJustification.justificationComplement.trim() || undefined,
+                  }
+                : {}),
+            }
           : {}),
       })
       pushToast(QUICK_TIME_ENTRY_TOAST.activityCompleted, 'success')
       setCompleteConfirmCandidate(null)
-      setCompleteJustification('')
+      setCompleteJustification(emptyJustificationValue())
       onTimeEntrySaved?.()
       void load()
     } catch (e) {
@@ -849,16 +864,23 @@ export function QuickTimeEntryDrawer({
                             (apontamento por exceção).
                           </p>
                         </div>
-                        <label className="mt-4 block text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">
-                          Justificativa da exceção
-                          <textarea
-                            value={exceptionJustification}
-                            onChange={(e) => setExceptionJustification(e.target.value)}
-                            rows={3}
-                            placeholder="Descreva o motivo operacional…"
-                            className="mt-1.5 w-full resize-none rounded-xl border border-[color:var(--semantic-border-glass-strong)] bg-sgp-app-panel-deep/90 px-3 py-2 text-sm text-slate-200 outline-none focus:ring-2 focus:ring-sgp-blue-bright/25"
+                        <div className="mt-4">
+                          <JustificationSelect
+                            channel="app"
+                            idPrefix="qte-exception"
+                            value={exceptionJustification.justificationId ?? ''}
+                            complement={exceptionJustification.justificationComplement}
+                            legacyText={exceptionJustification.legacyText}
+                            disabled={submitting}
+                            onChange={(next) =>
+                              setExceptionJustification({
+                                justificationId: next.justificationId,
+                                justificationComplement: next.justificationComplement,
+                                legacyText: next.legacyText,
+                              })
+                            }
                           />
-                        </label>
+                        </div>
                       </>
                     ) : null}
 
@@ -898,16 +920,23 @@ export function QuickTimeEntryDrawer({
                             </ul>
                           ) : null}
                         </div>
-                        <label className="mt-4 block text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">
-                          Justificativa para executar fora da sequência
-                          <textarea
-                            value={outOfSequenceJustification}
-                            onChange={(e) => setOutOfSequenceJustification(e.target.value)}
-                            rows={3}
-                            placeholder="Explique o motivo operacional para executar esta atividade antes das anteriores…"
-                            className="mt-1.5 w-full resize-none rounded-xl border border-[color:var(--semantic-border-glass-strong)] bg-sgp-app-panel-deep/90 px-3 py-2 text-sm text-slate-200 outline-none focus:ring-2 focus:ring-sgp-blue-bright/25"
+                        <div className="mt-4">
+                          <JustificationSelect
+                            channel="app"
+                            idPrefix="qte-oos"
+                            value={outOfSequenceJustification.justificationId ?? ''}
+                            complement={outOfSequenceJustification.justificationComplement}
+                            legacyText={outOfSequenceJustification.legacyText}
+                            disabled={submitting}
+                            onChange={(next) =>
+                              setOutOfSequenceJustification({
+                                justificationId: next.justificationId,
+                                justificationComplement: next.justificationComplement,
+                                legacyText: next.legacyText,
+                              })
+                            }
                           />
-                        </label>
+                        </div>
                       </>
                     ) : null}
 
@@ -1114,15 +1143,23 @@ export function QuickTimeEntryDrawer({
                     Esta atividade está fora da sequência planejada. Informe uma justificativa para
                     concluir mesmo assim.
                   </p>
-                  <label className="mt-3 block text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">
-                    Justificativa
-                    <textarea
-                      value={completeJustification}
-                      onChange={(e) => setCompleteJustification(e.target.value)}
-                      rows={3}
-                      className="mt-1.5 w-full resize-none rounded-xl border border-[color:var(--semantic-border-glass-strong)] bg-sgp-app-panel-deep/90 px-3 py-2 text-sm text-slate-200 outline-none focus:ring-2 focus:ring-sgp-blue-bright/25"
+                  <div className="mt-3">
+                    <JustificationSelect
+                      channel="app"
+                      idPrefix="qte-complete-oos"
+                      value={completeJustification.justificationId ?? ''}
+                      complement={completeJustification.justificationComplement}
+                      legacyText={completeJustification.legacyText}
+                      disabled={completing}
+                      onChange={(next) =>
+                        setCompleteJustification({
+                          justificationId: next.justificationId,
+                          justificationComplement: next.justificationComplement,
+                          legacyText: next.legacyText,
+                        })
+                      }
                     />
-                  </label>
+                  </div>
                 </>
               ) : null}
               {completeError ? (
@@ -1144,7 +1181,7 @@ export function QuickTimeEntryDrawer({
                   disabled={
                     completing ||
                     (candidateNeedsOutOfSequenceJustification(completeConfirmCandidate) &&
-                      !completeJustification.trim().length)
+                      !completeJustification.legacyText.trim().length)
                   }
                 >
                   {completing ? 'A concluir…' : 'Concluir atividade'}

@@ -4,6 +4,7 @@ import { asyncRoute } from '../../shared/asyncRoute.js'
 import {
   getMyExtraTimeEntries,
   getMyExtraTimeEntryDescriptions,
+  getMyTimeEntryJustifications,
   getMyActivities,
   getMyOperationalJourney,
   postMyExtraTimeEntry,
@@ -21,6 +22,11 @@ export function myActivitiesRouter(): Router {
     '/me/extra-time-entry-descriptions',
     requireAuth(),
     asyncRoute(getMyExtraTimeEntryDescriptions),
+  )
+  r.get(
+    '/me/time-entry-justifications',
+    requireAuth(),
+    asyncRoute(getMyTimeEntryJustifications),
   )
   r.get('/me/extra-time-entries', requireAuth(), asyncRoute(getMyExtraTimeEntries))
   r.post('/me/extra-time-entries', requireAuth(), asyncRoute(postMyExtraTimeEntry))

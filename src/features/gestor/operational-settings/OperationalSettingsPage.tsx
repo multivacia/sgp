@@ -30,9 +30,10 @@ import {
   patchOperationalSector,
 } from '../../../services/admin/operationalSettingsApiService'
 import { ExtraTimeEntryDescriptionsTab } from './ExtraTimeEntryDescriptionsTab'
+import { TimeEntryJustificationsTab } from './TimeEntryJustificationsTab'
 import { OperationalCapacityTab } from './capacity/OperationalCapacityTab'
 
-type TabId = 'sectors' | 'roles' | 'capacity' | 'extraTimeDescriptions'
+type TabId = 'sectors' | 'roles' | 'capacity' | 'extraTimeDescriptions' | 'timeEntryJustifications'
 
 type ToastState = { message: string; variant: SgpToastVariant } | null
 
@@ -179,12 +180,25 @@ export function OperationalSettingsPage() {
         >
           Descrições de apontamentos
         </button>
+        <button
+          type="button"
+          onClick={() => setTab('timeEntryJustifications')}
+          className={`rounded-lg px-4 py-2 text-sm font-bold transition ${
+            tab === 'timeEntryJustifications'
+              ? 'bg-sgp-gold/15 text-sgp-gold ring-1 ring-sgp-gold/35'
+              : 'text-slate-400 hover:bg-white/[0.04]'
+          }`}
+        >
+          Justificativas operacionais
+        </button>
       </div>
 
       {tab === 'capacity' ? (
         <OperationalCapacityTab />
       ) : tab === 'extraTimeDescriptions' ? (
         <ExtraTimeEntryDescriptionsTab onError={govErr} onToast={pushToast} />
+      ) : tab === 'timeEntryJustifications' ? (
+        <TimeEntryJustificationsTab onError={govErr} onToast={pushToast} />
       ) : tab === 'sectors' ? (
         <section className="mt-6">
           <div className="sgp-panel sgp-panel-hover">

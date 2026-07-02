@@ -58,12 +58,11 @@ export function productionPlannedTimeReachedHint(
 
 export function canSubmitKioskProductionTimeEntry(input: {
   minutesValid: boolean
-  isOutOfSequence: boolean
   requiresOutOfSequenceJustification: boolean
   outOfSequenceJustification: string
 }): boolean {
   if (!input.minutesValid) return false
-  if (input.isOutOfSequence || input.requiresOutOfSequenceJustification) {
+  if (input.requiresOutOfSequenceJustification) {
     return isProductionOutOfSequenceJustificationValid(input.outOfSequenceJustification)
   }
   return true

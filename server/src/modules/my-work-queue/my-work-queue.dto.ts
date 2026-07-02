@@ -6,6 +6,15 @@ export type MyWorkQueuePreviousOpenActivityApi = {
   orderPath: string
 }
 
+export type MyWorkQueuePreviousOpenFromOtherCollaboratorApi = {
+  activityNodeId: string
+  activityTitle: string
+  sectorTitle: string
+  taskTitle: string
+  orderPath: string
+  collaboratorNames: string[]
+}
+
 export type MyWorkQueueItemApi = {
   workPlanId: string
   workPlanItemId: string
@@ -32,9 +41,16 @@ export type MyWorkQueueItemApi = {
   isOverdue: boolean
 
   isOutOfSequence: boolean
+  /** Próxima atividade recomendada na sequência estrutural para o colaborador atual. */
+  isNextRecommended: boolean
   requiresOutOfSequenceJustification: boolean
   previousOpenCount: number
   previousOpenActivities: MyWorkQueuePreviousOpenActivityApi[]
+  hasPreviousOpenActivitiesFromOtherCollaborators: boolean
+  previousOpenActivitiesFromOtherCollaborators: MyWorkQueuePreviousOpenFromOtherCollaboratorApi[]
+  previousOpenActivitiesWarningMessage: string | null
+  /** Posição na sequência estrutural da esteira (ordenação operacional). */
+  structuralSequenceIndex: number
 
   isAssignedToMe: boolean
   requiresUnassignedJustification: boolean
