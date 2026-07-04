@@ -1,21 +1,34 @@
 import { useEffect, useMemo, useState } from 'react'
 import { PageCanvas } from '../../components/ui/PageCanvas'
+import { listPlanningSyncIssues } from '../../domain/operational-planning/planningSyncIssues'
 import { buildPlanningDaySummaries } from '../operational-planning/planningBoardHelpers'
 import {
   isIsoDateInWeekdays,
   localTodayIsoDate,
   weekdayLabelsPt,
 } from '../operational-planning/operationalPlanningWeekRange'
+import { WeeklyAgendaAttentionDrawer } from './components/WeeklyAgendaAttentionDrawer'
+import { WeeklyAgendaBacklogDrawer } from './components/WeeklyAgendaBacklogDrawer'
+import { WeeklyAgendaBacklogFab } from './components/WeeklyAgendaBacklogFab'
 import { WeeklyAgendaBoard } from './components/WeeklyAgendaBoard'
 import { WeeklyAgendaDayTabs } from './components/WeeklyAgendaDayTabs'
 import { WeeklyAgendaHeader } from './components/WeeklyAgendaHeader'
 import { WeeklyAgendaSummaryStrip } from './components/WeeklyAgendaSummaryStrip'
+import { useWeeklyAgendaBacklog } from './hooks/useWeeklyAgendaBacklog'
 import { useWeeklyAgendaWeek } from './hooks/useWeeklyAgendaWeek'
+import { buildWeeklyAgendaBacklogEmptyMessage } from './weeklyAgendaBacklogEmptyMessage'
 import { buildWeeklyAgendaSummaryStrip } from './weeklyAgendaSummary'
 
 export function WeeklyAgendaPage() {
-  const { weekMonday, setWeekMonday, weekPayload, collaborators, loading, error } =
+  const { weekMonday, setWeekMonday, weekPayload, collaborators, loading, error, reload } =
     useWeeklyAgendaWeek()
+  const {
+    backlogItems,
+    backlogQ,
+    setBacklogQ,
+    loading: backlogLoading,
+    reloadBacklog,
+  } = useWeeklyAgendaBacklog()
 
   const weekdayDates = useMemo(
     () => weekPayload?.week.weekdayDates ?? [],
@@ -35,6 +48,8 @@ export function WeeklyAgendaPage() {
   )
 
   const [selectedDay, setSelectedDay] = useState<string>('')
+  const [attentionDrawerOpen, setAttentionDrawerOpen] = useState(false)
+  const [backlogDrawerOpen, setBacklogDrawerOpen] = useState(false)
 
   useEffect(() => {
     if (weekdayDates.length === 0) {
@@ -49,6 +64,26 @@ export function WeeklyAgendaPage() {
   }, [weekMonday, weekdayDates, todayInDisplayedWeek, todayIso])
 
   const summaryStrip = useMemo(() => buildWeeklyAgendaSummaryStrip(weekPayload), [weekPayload])
+
+  const syncIssueItems = useMemo(() => listPlanningSyncIssues(planItems), [planItems])
+  const executionOutsidePlanEntries = useMemo(
+    () => weekPayload?.executionOutsidePlanEntries ?? [],
+    [weekPayload?.executionOutsidePlanEntries],
+  )
+  const executionOutsidePlanTotalMinutes = useMemo(
+    () => weekPayload?.executionOutsidePlanSummary.totalMinutes ?? 0,
+    [weekPayload?.executionOutsidePlanSummary.totalMinutes],
+  )
+
+  const backlogEmptyMessage = useMemo(
+    () =>
+      buildWeeklyAgendaBacklogEmptyMessage({
+        visibleCount: backlogItems.length,
+        loadedCount: backlogItems.length,
+        searchQuery: backlogQ,
+      }),
+    [backlogItems.length, backlogQ],
+  )
 
   const daySummaries = useMemo(
     () =>
@@ -74,6 +109,11 @@ export function WeeklyAgendaPage() {
   )
 
   const activeSelectedDay = selectedDay || weekdayDates[0] || ''
+
+  async function handleWeekApplied() {
+    await reload()
+    await reloadBacklog()
+  }
 
   return (
     <PageCanvas>
@@ -103,7 +143,10 @@ export function WeeklyAgendaPage() {
         {!loading && !error ? (
           <>
             <div className="mt-8">
-              <WeeklyAgendaSummaryStrip summary={summaryStrip} />
+              <WeeklyAgendaSummaryStrip
+                summary={summaryStrip}
+                onAttentionClick={() => setAttentionDrawerOpen(true)}
+              />
             </div>
 
             <section className="mt-8 space-y-4">
@@ -167,6 +210,31 @@ export function WeeklyAgendaPage() {
           </>
         ) : null}
       </div>
+
+      <WeeklyAgendaBacklogFab
+        count={backlogItems.length}
+        onClick={() => setBacklogDrawerOpen(true)}
+      />
+
+      <WeeklyAgendaAttentionDrawer
+        open={attentionDrawerOpen}
+        onClose={() => setAttentionDrawerOpen(false)}
+        syncItems={syncIssueItems}
+        outsidePlanEntries={executionOutsidePlanEntries}
+        outsidePlanTotalMinutes={executionOutsidePlanTotalMinutes}
+        onWeekApplied={handleWeekApplied}
+      />
+
+      <WeeklyAgendaBacklogDrawer
+        open={backlogDrawerOpen}
+        onClose={() => setBacklogDrawerOpen(false)}
+        items={backlogItems}
+        searchQuery={backlogQ}
+        onSearchChange={setBacklogQ}
+        onSearchSubmit={() => void reloadBacklog()}
+        emptyMessage={backlogEmptyMessage}
+        loading={backlogLoading}
+      />
     </PageCanvas>
   )
 }

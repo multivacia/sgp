@@ -3,10 +3,11 @@ import type { WeeklyAgendaSummaryStripModel } from '../weeklyAgendaSummary'
 
 type WeeklyAgendaSummaryStripProps = {
   summary: WeeklyAgendaSummaryStripModel
+  onAttentionClick?: () => void
 }
 
 export function WeeklyAgendaSummaryStrip(props: WeeklyAgendaSummaryStripProps) {
-  const { summary } = props
+  const { summary, onAttentionClick } = props
 
   return (
     <section className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-stretch">
@@ -34,9 +35,10 @@ export function WeeklyAgendaSummaryStrip(props: WeeklyAgendaSummaryStripProps) {
       {summary.attentionCount > 0 ? (
         <button
           type="button"
-          disabled
-          title="Painel de atenção disponível no próximo passo (PR-3)"
-          className="inline-flex min-h-[4.25rem] items-center gap-2 rounded-xl border border-amber-400/25 bg-amber-500/[0.08] px-4 py-3 text-left opacity-90 disabled:cursor-not-allowed"
+          title="Abrir painel de atenção"
+          data-testid="weekly-agenda-attention-chip"
+          className="inline-flex min-h-[4.25rem] items-center gap-2 rounded-xl border border-amber-400/25 bg-amber-500/[0.08] px-4 py-3 text-left transition hover:bg-amber-500/[0.12] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-300/50"
+          onClick={onAttentionClick}
         >
           <span className="flex size-8 shrink-0 items-center justify-center rounded-full border border-amber-300/30 bg-amber-500/15 text-[13px] font-bold tabular-nums text-amber-100">
             {summary.attentionCount}
