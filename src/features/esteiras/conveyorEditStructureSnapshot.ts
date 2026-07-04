@@ -60,6 +60,7 @@ export function structureToManualRootsFromApiDetail(
               key: st.id,
               titulo: st.name,
               plannedMinutes: Math.max(0, Math.floor(Number(st.plannedMinutes ?? 0))),
+              plannedQuantity: Math.max(1, Math.floor(Number(st.plannedQuantity ?? 1))),
             })),
         })),
     }))

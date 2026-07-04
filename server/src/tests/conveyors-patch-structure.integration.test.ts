@@ -159,7 +159,37 @@ describe.skipIf(!hasDb)('conveyors PATCH structure/dados (integração)', () => 
     }
     expect(res.status).toBe(200)
     expect(res.body.data.structure.options[0].areas[0].steps[0].name).toBe('Etapa renomeada')
+    expect(res.body.data.totalPlannedMinutes).toBe(45)
     expect(res.body.error?.errorRef).not.toBe('SGP-API-HANDLER-001')
+  })
+
+  it('POST e PATCH dados ignoram tempo manual nas observações', async () => {
+    const body = minimalValidBody()
+    body.dados.observacoes =
+      'Contexto\n\n[Planeamento] Tempo total previsto: 9999 min'
+    const post = await request(app)
+      .post('/api/v1/conveyors')
+      .set('Cookie', await sessionCookieForUser(pool, GOV_ADMIN_USER_ID, GOV_ADMIN_EMAIL))
+      .send(body)
+    expect(post.status).toBe(201)
+    expect(post.body.data.totals.totalPlannedMinutes).toBe(30)
+
+    const cid = post.body.data.id as string
+    const get1 = await request(app)
+      .get(`/api/v1/conveyors/${cid}`)
+      .set('Cookie', await sessionCookieForUser(pool, GOV_ADMIN_USER_ID, GOV_ADMIN_EMAIL))
+    expect(get1.body.data.totalPlannedMinutes).toBe(30)
+    expect(get1.body.data.initialNotes).toBe('Contexto')
+
+    const patch = await request(app)
+      .patch(`/api/v1/conveyors/${cid}`)
+      .set('Cookie', await sessionCookieForUser(pool, GOV_ADMIN_USER_ID, GOV_ADMIN_EMAIL))
+      .send({
+        observacoes: 'Atualizado\n\n[Planeamento] Tempo total previsto: 5000 min',
+      })
+    expect(patch.status).toBe(200)
+    expect(patch.body.data.totalPlannedMinutes).toBe(30)
+    expect(patch.body.data.initialNotes).toBe('Atualizado')
   })
 
   it('PATCH dados com plano operacional vinculado continua permitido', async () => {

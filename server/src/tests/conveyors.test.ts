@@ -516,6 +516,8 @@ describe.skipIf(!hasDb)('conveyors POST (integração)', () => {
 
   it('POST /api/v1/conveyors 201 e totais recalculados no servidor', async () => {
     const body = minimalValidBody()
+    body.dados.observacoes =
+      'Nota\n\n[Planeamento] Tempo total previsto: 9999 min'
     const res = await request(app)
       .post('/api/v1/conveyors')
       .set(
@@ -538,6 +540,14 @@ describe.skipIf(!hasDb)('conveyors POST (integração)', () => {
       totalSteps: 1,
       totalPlannedMinutes: 30,
     })
+    const det = await request(app)
+      .get(`/api/v1/conveyors/${d.id}`)
+      .set(
+        'Cookie',
+        await sessionCookieForUser(pool, GOV_ADMIN_USER_ID, GOV_ADMIN_EMAIL),
+      )
+    expect(det.status).toBe(200)
+    expect(det.body.data.initialNotes).toBe('Nota')
     expect(typeof d.createdAt).toBe('string')
   })
 

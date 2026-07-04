@@ -14,6 +14,7 @@ import type {
 import {
   listActivitiesRawForCollaborator,
   listTimeEntryCandidatesForCollaborator,
+  listTimeEntryCandidatesFromPublishedPlan,
   listTimeEntryUnassignedOpenStepsForCollaborator,
   type TimeEntryCandidateRawRow,
 } from './my-activities.repository.js'
@@ -21,6 +22,15 @@ import { analyzeConveyorActivitySequence } from '../conveyors/conveyorActivitySe
 import { resolveActivityPlannedTotalMinutes } from '../../shared/activityOperationalQuantity.js'
 import type { SequenceAnalysisNode } from '../conveyors/conveyorActivitySequence.logic.js'
 import { listConveyorNodesForSequenceAnalysis } from '../conveyors/conveyors.repository.js'
+
+function todayIsoLocal(): string {
+  const t = new Date()
+  return [
+    t.getFullYear(),
+    String(t.getMonth() + 1).padStart(2, '0'),
+    String(t.getDate()).padStart(2, '0'),
+  ].join('-')
+}
 
 export type GetMyActivitiesQuery = {
   userId: string
@@ -139,7 +149,7 @@ export async function serviceListActivitiesForCollaborator(
 
 function mapCandidateRow(
   row: TimeEntryCandidateRawRow,
-  opts: { isAssignedToMe: boolean },
+  opts: { isAssignedToMe: boolean; referenceDate: string },
   nodesByConveyor: Map<string, SequenceAnalysisNode[]>,
 ): TimeEntryCandidateItemApi {
   const planned =
@@ -159,6 +169,9 @@ function mapCandidateRow(
     sectorTitle: p.sectorTitle,
     activityTitle: p.activityTitle,
   }))
+  const plannedDate = row.planned_date?.trim() || null
+  const isOverdue =
+    plannedDate != null && plannedDate < opts.referenceDate.trim()
   return {
     conveyorId: row.conveyor_id,
     conveyorCode: row.conveyor_code,
@@ -186,6 +199,8 @@ function mapCandidateRow(
     previousOpenCount: seq.previousOpenCount,
     previousOpenActivities: prevSlice,
     canCompleteStep: true,
+    plannedDate,
+    isOverdue,
   }
 }
 
@@ -220,12 +235,27 @@ export async function serviceListTimeEntryCandidates(
     },
   )
 
+  const referenceDate = todayIsoLocal()
+  const rawFromPlan = await listTimeEntryCandidatesFromPublishedPlan(pool, {
+    collaboratorId: input.collaboratorId,
+    date: referenceDate,
+    q: input.q,
+    limit: input.limit,
+  })
+
+  const seenStep = new Set(rawAssigned.map((r) => r.step_node_id))
+  let tagged: Array<{ row: TimeEntryCandidateRawRow; isAssignedToMe: boolean }> =
+    rawAssigned.map((r) => ({ row: r, isAssignedToMe: true }))
+
+  for (const row of rawFromPlan) {
+    if (seenStep.has(row.step_node_id)) continue
+    seenStep.add(row.step_node_id)
+    tagged.push({ row, isAssignedToMe: true })
+  }
+
   const qOk =
     input.includeUnassigned &&
     Boolean(input.q && input.q.trim().length >= 2)
-
-  let tagged: Array<{ row: TimeEntryCandidateRawRow; isAssignedToMe: boolean }> =
-    rawAssigned.map((r) => ({ row: r, isAssignedToMe: true }))
 
   if (qOk) {
     const rawUnassigned = await listTimeEntryUnassignedOpenStepsForCollaborator(
@@ -233,7 +263,6 @@ export async function serviceListTimeEntryCandidates(
       input.collaboratorId,
       { q: input.q, limit: input.limit },
     )
-    const seenStep = new Set(rawAssigned.map((r) => r.step_node_id))
     tagged = [
       ...tagged,
       ...rawUnassigned
@@ -252,7 +281,7 @@ export async function serviceListTimeEntryCandidates(
   )
 
   const items = tagged.map(({ row, isAssignedToMe }) =>
-    mapCandidateRow(row, { isAssignedToMe }, nodesByConveyor),
+    mapCandidateRow(row, { isAssignedToMe, referenceDate }, nodesByConveyor),
   )
 
   return {

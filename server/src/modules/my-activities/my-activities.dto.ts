@@ -40,6 +40,10 @@ export type TimeEntryCandidateItemApi = {
   previousOpenActivities: TimeEntryCandidatePreviousOpenApi[]
   /** true quando o STEP pode ser concluído explicitamente (não está COMPLETED). */
   canCompleteStep: boolean
+  /** Data planejada no plano semanal publicado, quando aplicável. */
+  plannedDate?: string | null
+  /** true quando `plannedDate` é anterior ao dia de referência do servidor. */
+  isOverdue?: boolean
 }
 
 /** Item de GET /api/v1/my-activities — alocação real em STEP + contexto da esteira. */

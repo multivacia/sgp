@@ -4,7 +4,6 @@ import { parseFlexibleDeadlineToDate } from '../../lib/backlog/operationalBucket
 export type WizardExtras = {
   inicioPrevisto: string
   fimPrevisto: string
-  tempoTotalPrevistoMin: number | ''
 }
 
 const PLANEAMENTO_TEMPO_LINE_RE =
@@ -69,12 +68,9 @@ export function parseWizardExtrasFromPersisted(
 ): WizardExtras {
   const prazo = dados.prazoEstimado ?? ''
   const { inicio, fim } = parseWizardPrazoRawParts(prazo)
-  const obs = dados.observacoes ?? ''
-  const tempo = obs.match(/\[Planeamento\]\s*Tempo total previsto:\s*(\d+)\s*min/i)?.[1]
   return {
     inicioPrevisto: inicio ?? '',
     fimPrevisto: fim ?? '',
-    tempoTotalPrevistoMin: tempo ? Number(tempo) : '',
   }
 }
 
@@ -91,11 +87,7 @@ export function buildDadosParaApi(
   }
   const prazoEstimado = prazoPartes.length > 0 ? prazoPartes.join(' · ') : dados.prazoEstimado
 
-  let observacoes = stripWizardPlanningFromObservacoes(dados.observacoes ?? '')
-  if (typeof extras.tempoTotalPrevistoMin === 'number') {
-    const line = `[Planeamento] Tempo total previsto: ${extras.tempoTotalPrevistoMin} min`
-    observacoes = observacoes.trim() ? `${observacoes}\n\n${line}` : line
-  }
+  const observacoes = stripWizardPlanningFromObservacoes(dados.observacoes ?? '')
   return { ...dados, prazoEstimado, observacoes }
 }
 

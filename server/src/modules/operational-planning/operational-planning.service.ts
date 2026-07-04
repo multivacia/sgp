@@ -688,7 +688,7 @@ export async function servicePatchOperationalWeekPlan(
   if (!existing) {
     throw new AppError('Plano não encontrado.', 404, ErrorCodes.NOT_FOUND)
   }
-  if (body.weekStartDate !== existing.week_start_date || body.weekEndDate !== existing.week_end_date) {
+  if (body.weekStartDate !== existing.week_start_date) {
     throw new AppError(
       'Semana do corpo não coincide com o plano. Use weekStartDate/weekEndDate do plano.',
       400,
@@ -701,6 +701,19 @@ export async function servicePatchOperationalWeekPlan(
   const client = await pool.connect()
   try {
     await client.query('BEGIN')
+    if (body.weekEndDate !== existing.week_end_date) {
+      await client.query(
+        `
+        UPDATE operational_work_plans
+        SET
+          week_end_date = $2::date,
+          updated_at = now()
+        WHERE id = $1::uuid
+          AND deleted_at IS NULL
+        `,
+        [planId, body.weekEndDate],
+      )
+    }
     await replaceWeekPlanItemsWithConveyorReconciliation(client, planId, body)
     await touchOperationalWorkPlanUpdatedAt(client, planId)
     await client.query('COMMIT')

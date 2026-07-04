@@ -25,7 +25,6 @@ import type { ConveyorOperationalEvent } from '../../domain/conveyors/conveyorOp
 import { ConveyorOperationalEventsTimeline } from './ConveyorOperationalEventsTimeline'
 import {
   displayUsuarioObservacoes,
-  extractWizardTempoTotalPrevistoMin,
   parseWizardPrazoForDisplay,
 } from './conveyorBasicDataExtras'
 import type { StepAnaliticoDetalhe } from '../../domain/esteiras/step-analitico.types'
@@ -787,7 +786,6 @@ function EsteiraDetalheBasicoReal({ id }: { id: string | undefined }) {
       ? detail.code
       : detail.name.trim() || detail.id
   const prazoDisplay = parseWizardPrazoForDisplay(detail.estimatedDeadline)
-  const tempoTotalPrevistoMin = extractWizardTempoTotalPrevistoMin(detail.initialNotes)
   const observacoesUsuario = displayUsuarioObservacoes(detail.initialNotes)
 
   return (
@@ -1219,16 +1217,14 @@ function EsteiraDetalheBasicoReal({ id }: { id: string | undefined }) {
               </dd>
             </div>
           ) : null}
-          {tempoTotalPrevistoMin != null ? (
-            <div>
-              <dt className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
-                Tempo total previsto (min)
-              </dt>
-              <dd className="mt-1 text-sm tabular-nums text-slate-200">
-                {tempoTotalPrevistoMin}
-              </dd>
-            </div>
-          ) : null}
+          <div>
+            <dt className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+              Tempo total previsto (min)
+            </dt>
+            <dd className="mt-1 text-sm tabular-nums text-slate-200">
+              {formatMinutosHumanos(detail.totalPlannedMinutes)}
+            </dd>
+          </div>
           <div>
             <dt className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
               Atividades (total)

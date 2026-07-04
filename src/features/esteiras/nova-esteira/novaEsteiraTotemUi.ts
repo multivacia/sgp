@@ -1,6 +1,34 @@
+import { resolveActivityPlannedTotalMinutes } from '../../../domain/operational/activityOperationalQuantity'
 import type { MatrixNodeTreeApi } from '../../../domain/operation-matrix/operation-matrix.types'
 import type { ManualOptionDraft, NovaEsteiraAlocacaoLinha } from './matrixToConveyorCreateInput'
 import { validateManualStepAssignees, validateManualStructure } from './matrixToConveyorCreateInput'
+
+/** Soma canônica (unitário × quantidade) — alinhada ao backend em `computeTotalsForOptions`. */
+export function sumPlannedMinutesInManualRoots(roots: ManualOptionDraft[]): number {
+  let total = 0
+  for (const op of roots) {
+    for (const ar of op.areas) {
+      for (const st of ar.steps) {
+        total += resolveActivityPlannedTotalMinutes(st.plannedMinutes, st.plannedQuantity)
+      }
+    }
+  }
+  return total
+}
+
+export type TotalPlannedMinutesDisplay = {
+  text: string
+  hint: string | null
+}
+
+export function formatTotalPlannedMinutesDisplay(
+  roots: ManualOptionDraft[],
+): TotalPlannedMinutesDisplay {
+  if (roots.length === 0) {
+    return { text: '0 min', hint: 'Calculado após definir a estrutura' }
+  }
+  return { text: `${sumPlannedMinutesInManualRoots(roots)} min`, hint: null }
+}
 
 /** IDs de matriz (raiz ITEM) inferidos a partir de `catalogSourceKey` das tarefas importadas. */
 export function matrixRootIdsFromManualRoots(roots: ManualOptionDraft[]): string[] {

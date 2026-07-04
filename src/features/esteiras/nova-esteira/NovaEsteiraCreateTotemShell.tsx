@@ -15,6 +15,7 @@ import {
   countStepsInRoots,
   countSectorsInRoots,
   deriveJornadaStepperSteps,
+  formatTotalPlannedMinutesDisplay,
   matrixRootIdsFromManualRoots,
   pendenciasParaResumo,
   type JornadaStepDefinition,
@@ -178,6 +179,7 @@ export function NovaEsteiraCreateTotemShell(props: NovaEsteiraCreateTotemShellPr
   const pendencias = pendenciasParaResumo(dados.nome, manualRoots, manualAloc)
   const podeCriar = estruturaOk && dados.nome.trim().length > 0
   const matrixLabel = matrixLabelFromRoots(manualRoots, matrizes)
+  const totalPlannedDisplay = formatTotalPlannedMinutesDisplay(manualRoots)
   const nTarefas = manualRoots.length
   const nSetores = countSectorsInRoots(manualRoots)
   const nEtapas = countStepsInRoots(manualRoots)
@@ -409,21 +411,20 @@ export function NovaEsteiraCreateTotemShell(props: NovaEsteiraCreateTotemShellPr
                 <option value="alta">Alta</option>
               </select>
             </label>
-            <label className="block text-sm">
+            <div className="block text-sm">
               <span className="text-slate-400">Tempo total previsto (min)</span>
               <input
-                type="number"
-                min={0}
-                className="sgp-input-app mt-1 w-full px-3 py-2 tabular-nums text-slate-100"
-                value={extras.tempoTotalPrevistoMin}
-                onChange={(ev) =>
-                  setExtras((x) => ({
-                    ...x,
-                    tempoTotalPrevistoMin: ev.target.value === '' ? '' : Number(ev.target.value),
-                  }))
-                }
+                type="text"
+                readOnly
+                tabIndex={-1}
+                aria-readonly="true"
+                className="sgp-input-app mt-1 w-full cursor-default px-3 py-2 tabular-nums text-slate-300 opacity-90"
+                value={totalPlannedDisplay.text}
               />
-            </label>
+              {totalPlannedDisplay.hint ? (
+                <p className="mt-1 text-xs text-slate-500">{totalPlannedDisplay.hint}</p>
+              ) : null}
+            </div>
             <label className="block text-sm md:col-span-2">
               <span className="text-slate-400">Observações</span>
               <textarea

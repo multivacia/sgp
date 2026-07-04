@@ -61,4 +61,8 @@ export type TimeEntryCandidateItem = {
   previousOpenActivities: TimeEntryCandidatePreviousOpen[]
   /** true quando o STEP pode ser concluído explicitamente. */
   canCompleteStep?: boolean
+  /** Data planejada no plano semanal publicado, quando aplicável. */
+  plannedDate?: string | null
+  /** true quando a data planejada é anterior ao dia de referência. */
+  isOverdue?: boolean
 }

@@ -8,6 +8,7 @@ import {
   resolveActivityPlannedTotalMinutes,
   resolveInitialConveyorStepPlannedQuantity,
 } from '../../shared/activityOperationalQuantity.js'
+import { stripConveyorPlanningTempoFromNotes } from '../../shared/conveyorPlanningNotes.js'
 import { collaboratorExists } from '../operation-matrix/operation-matrix.repository.js'
 import { findTeamById } from '../teams/teams.repository.js'
 import type {
@@ -690,7 +691,7 @@ export async function serviceCreateConveyor(
       vehicle: emptyToNull(dados.veiculo),
       model_version: emptyToNull(dados.modeloVersao),
       plate: emptyToNull(dados.placa),
-      initial_notes: emptyToNull(dados.observacoes),
+      initial_notes: emptyToNull(stripConveyorPlanningTempoFromNotes(dados.observacoes)),
       responsible: emptyToNull(dados.responsavel),
       estimated_deadline: emptyToNull(dados.prazoEstimado),
       priority,
@@ -804,7 +805,7 @@ export async function servicePatchConveyorDados(
     patch.plate = emptyToNull(body.placa)
   }
   if (body.observacoes !== undefined) {
-    patch.initial_notes = emptyToNull(body.observacoes)
+    patch.initial_notes = emptyToNull(stripConveyorPlanningTempoFromNotes(body.observacoes))
   }
   if (body.responsavel !== undefined) {
     patch.responsible = emptyToNull(body.responsavel)

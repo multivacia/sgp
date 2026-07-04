@@ -21,6 +21,8 @@ describe('operational-planning.week', () => {
 
   it('fridayAfterMonday', () => {
     expect(fridayAfterMonday('2026-05-11')).toBe('2026-05-15')
+    expect(fridayAfterMonday('2026-06-29')).toBe('2026-07-03')
+    expect(fridayAfterMonday('2026-06-29')).not.toBe('2026-07-05')
   })
 
   it('isDateInWeekInclusive', () => {

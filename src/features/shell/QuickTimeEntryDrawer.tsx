@@ -674,6 +674,13 @@ export function QuickTimeEntryDrawer({
                                       {c.conveyorName}
                                     </p>
                                     <p className="mt-2 text-xs text-slate-500">{buildContextLine(c)}</p>
+                                    {c.isOverdue ? (
+                                      <div className="mt-2 flex flex-wrap gap-2">
+                                        <span className="rounded border border-rose-500/35 bg-rose-500/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-rose-100">
+                                          Atrasada
+                                        </span>
+                                      </div>
+                                    ) : null}
                                     <p className="mt-3 text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500">
                                       Tarefa
                                     </p>

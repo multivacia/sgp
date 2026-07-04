@@ -50,6 +50,7 @@ import {
   resolveTimeEntryJustification,
   type ResolvedStandardJustification,
 } from '../../shared/timeEntryJustificationResolver.js'
+import { resolveProductionStepAssigneeId } from '../production/production-plan-assignee.js'
 
 function isPgUniqueViolation(err: unknown): boolean {
   return err instanceof DatabaseError && err.code === '23505'
@@ -376,6 +377,34 @@ export async function serviceCreateConveyorTimeEntryForAppUser(
       conveyorNodeId: input.conveyorNodeId,
       collaboratorId,
       conveyorNodeAssigneeId: assigneeId,
+      entryAt: input.entryAt,
+      minutes: input.minutes,
+      executedQuantity: input.executedQuantity,
+      notes: input.notes ?? null,
+      entryMode: input.entryMode,
+      entryOrigin: 'ASSIGNED',
+      exceptionJustification: null,
+      markAsDone: input.markAsDone,
+      sequence: seq,
+      outOfSequenceJustificationId: input.outOfSequenceJustificationId,
+      outOfSequenceJustificationComplement: input.outOfSequenceJustificationComplement,
+      standardJustificationException: null,
+      standardJustificationOos: oosStandard,
+      ...commonSeq,
+    })
+  }
+
+  const planAssigneeId = await resolveProductionStepAssigneeId(pool, {
+    conveyorId: input.conveyorId,
+    stepNodeId: input.conveyorNodeId,
+    collaboratorId,
+  })
+  if (planAssigneeId) {
+    return serviceCreateConveyorTimeEntry(pool, {
+      conveyorId: input.conveyorId,
+      conveyorNodeId: input.conveyorNodeId,
+      collaboratorId,
+      conveyorNodeAssigneeId: planAssigneeId,
       entryAt: input.entryAt,
       minutes: input.minutes,
       executedQuantity: input.executedQuantity,

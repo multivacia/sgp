@@ -64,7 +64,11 @@ import {
   SAVE_PUBLISHED_AUTO_SUCCESS_MESSAGE,
   resolvePlanningPublishButtonTitle,
   resolvePlanningSaveButtonLabel,
+  resolvePlanningSaveErrorMessage,
   resolvePlanningSaveSuccessMessage,
+  resolvePlanningSaveWeekDates,
+  hasLegacyPlanWeekEndDate,
+  LEGACY_PLAN_WEEK_END_NOTICE,
 } from './operationalPlanningPlanStatusCopy'
 import {
   DEFAULT_FACTORY_INTAKE_FILTERS,
@@ -988,11 +992,8 @@ export function OperationalPlanningPage() {
   const persistPublishedPlanItems = useCallback(
     async (items: DraftPlanItem[]) => {
       if (!weekPayload?.plan || weekPayload.plan.status !== 'PUBLISHED') return
-      const body = buildSavePayload(
-        weekPayload.week.weekStartDate,
-        weekPayload.week.weekEndDate,
-        items,
-      )
+      const { weekStartDate, weekEndDate } = resolvePlanningSaveWeekDates(weekPayload)
+      const body = buildSavePayload(weekStartDate, weekEndDate, items)
       setBusy(true)
       setErrorMsg(null)
       try {
@@ -1006,8 +1007,12 @@ export function OperationalPlanningPage() {
         void loadFactoryIntake()
       } catch (e) {
         reportClientError(e, { module: 'operational-planning', action: 'save_published_remove' })
-        const detail = e instanceof ApiError ? e.message : null
-        setErrorMsg(detail ?? 'Não foi possível salvar as alterações no plano ativo.')
+        setErrorMsg(
+          resolvePlanningSaveErrorMessage(
+            e,
+            'Não foi possível salvar as alterações no plano ativo.',
+          ),
+        )
         void loadWeek()
       } finally {
         setBusy(false)
@@ -1051,7 +1056,8 @@ export function OperationalPlanningPage() {
 
   async function handleSaveDraft() {
     if (!weekPayload) return
-    const body = buildSavePayload(weekPayload.week.weekStartDate, weekPayload.week.weekEndDate, draftItems)
+    const { weekStartDate, weekEndDate } = resolvePlanningSaveWeekDates(weekPayload)
+    const body = buildSavePayload(weekStartDate, weekEndDate, draftItems)
     setBusy(true)
     setErrorMsg(null)
     setSuccessMsg(null)
@@ -1076,13 +1082,14 @@ export function OperationalPlanningPage() {
       void loadFactoryIntake()
     } catch (e) {
       reportClientError(e, { module: 'operational-planning', action: 'save_week' })
-      const detail = e instanceof ApiError ? e.message : null
       const isPublished = weekPayload.plan?.status === 'PUBLISHED'
       setErrorMsg(
-        detail ??
-          (isPublished
+        resolvePlanningSaveErrorMessage(
+          e,
+          isPublished
             ? 'Não foi possível salvar as alterações no plano ativo.'
-            : 'Não foi possível salvar o rascunho.'),
+            : 'Não foi possível salvar o rascunho.',
+        ),
       )
     } finally {
       setBusy(false)
@@ -1377,37 +1384,50 @@ export function OperationalPlanningPage() {
     return 'Nenhuma atividade disponível no backlog operacional. Esteiras com Plano Operacional enviado à fábrica aparecem em Aguardando encaixe.'
   }, [visibleBacklogItems.length, backlogItems.length, backlogQ])
 
+  const displayedWeekRange = useMemo(() => {
+    if (weekPayload) {
+      const dates = resolvePlanningSaveWeekDates(weekPayload)
+      return { start: dates.weekStartDate, end: dates.weekEndDate }
+    }
+    return { start: weekMonday, end: weekFriday }
+  }, [weekPayload, weekMonday, weekFriday])
+
+  const legacyPlanWeekEndNotice = useMemo(
+    () => (weekPayload && hasLegacyPlanWeekEndDate(weekPayload) ? LEGACY_PLAN_WEEK_END_NOTICE : null),
+    [weekPayload],
+  )
+
   return (
     <PageCanvas>
-      <div className="mx-auto max-w-[1600px] px-4 pb-16 pt-8">
-        <header className="border-b border-white/[0.06] pb-6">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
-            Gestão
-          </p>
-          <h1 className="mt-1 text-2xl font-semibold tracking-tight text-slate-50">
-            Planejamento da Semana
-          </h1>
-          <p className="mt-2 max-w-2xl text-[14px] leading-relaxed text-slate-400">
-            Distribua atividades por colaborador e acompanhe a execução diária.
-          </p>
+      <div className="mx-auto max-w-[1600px] pb-16">
+        <header className="sgp-header-card space-y-5">
+          <div className="max-w-3xl">
+            <h1 className="sgp-page-title">Planejamento da Semana</h1>
+            <p className="sgp-page-lead mt-2">
+              Distribua atividades por colaborador e acompanhe a execução diária.
+            </p>
+          </div>
 
-          <div className="mt-6 flex flex-wrap items-center gap-3">
+          <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-center">
             <div className="flex items-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.03] px-2 py-1">
               <button
                 type="button"
-                className="rounded-lg px-2 py-1 text-sm text-slate-300 hover:bg-white/[0.06]"
+                className="rounded-lg px-2 py-1 text-sm text-slate-300 hover:bg-white/[0.06] disabled:opacity-40"
                 onClick={() => setWeekMonday((w) => shiftWeek(w, -1))}
+                disabled={busy}
+                aria-label="Semana anterior"
               >
                 ‹
               </button>
-              <span className="min-w-[200px] text-center text-[13px] text-slate-200">
-                {weekPayload?.week.weekStartDate ?? weekMonday} →{' '}
-                {weekPayload?.week.weekEndDate ?? weekFriday}
+              <span className="min-w-[13.5rem] whitespace-nowrap text-center text-[13px] tabular-nums text-slate-200 sm:min-w-[15rem]">
+                {displayedWeekRange.start} → {displayedWeekRange.end}
               </span>
               <button
                 type="button"
-                className="rounded-lg px-2 py-1 text-sm text-slate-300 hover:bg-white/[0.06]"
+                className="rounded-lg px-2 py-1 text-sm text-slate-300 hover:bg-white/[0.06] disabled:opacity-40"
                 onClick={() => setWeekMonday((w) => shiftWeek(w, 1))}
+                disabled={busy}
+                aria-label="Próxima semana"
               >
                 ›
               </button>
@@ -1415,7 +1435,7 @@ export function OperationalPlanningPage() {
 
             <span
               className={[
-                'rounded-full border px-3 py-1 text-[12px]',
+                'inline-flex shrink-0 rounded-full border px-3 py-1 text-[12px]',
                 weekPayload?.plan?.status === 'PUBLISHED'
                   ? 'border-emerald-400/25 bg-emerald-500/10 text-emerald-100'
                   : 'border-white/[0.08] bg-white/[0.04] text-slate-300',
@@ -1425,7 +1445,9 @@ export function OperationalPlanningPage() {
                 ? PLAN_STATUS_PUBLISHED_LABEL
                 : PLAN_STATUS_DRAFT_LABEL}
             </span>
+          </div>
 
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
             <button
               type="button"
               className="rounded-xl border border-white/[0.12] bg-white/[0.06] px-4 py-2 text-[13px] font-medium text-slate-100 hover:bg-white/[0.09] disabled:opacity-50"
@@ -1469,24 +1491,40 @@ export function OperationalPlanningPage() {
           </div>
 
           {weekPayload?.plan?.status === 'PUBLISHED' ? (
-            <p className="mt-3 max-w-3xl text-[13px] leading-relaxed text-slate-400">
+            <p className="max-w-3xl text-[13px] leading-relaxed text-slate-400">
               {PLAN_PUBLISHED_HELPER_TEXT}
             </p>
           ) : null}
 
-          {successMsg ? (
+          {legacyPlanWeekEndNotice ? (
             <p
               role="status"
-              aria-live="polite"
-              className="mt-4 rounded-lg border border-emerald-400/25 bg-emerald-500/10 px-3 py-2 text-[13px] text-emerald-100"
+              className="max-w-3xl rounded-lg border border-amber-400/25 bg-amber-500/10 px-3 py-2 text-[13px] leading-relaxed text-amber-100"
             >
-              {successMsg}
+              {legacyPlanWeekEndNotice}
             </p>
           ) : null}
-          {errorMsg ? (
-            <p className="mt-4 rounded-lg border border-rose-400/25 bg-rose-500/10 px-3 py-2 text-[13px] text-rose-100">
-              {errorMsg}
-            </p>
+
+          {successMsg || errorMsg ? (
+            <div className="space-y-3 border-t border-white/[0.06] pt-4">
+              {successMsg ? (
+                <p
+                  role="status"
+                  aria-live="polite"
+                  className="rounded-lg border border-emerald-400/25 bg-emerald-500/10 px-3 py-2 text-[13px] text-emerald-100"
+                >
+                  {successMsg}
+                </p>
+              ) : null}
+              {errorMsg ? (
+                <p
+                  role="alert"
+                  className="rounded-lg border border-rose-400/25 bg-rose-500/10 px-3 py-2 text-[13px] text-rose-100"
+                >
+                  {errorMsg}
+                </p>
+              ) : null}
+            </div>
           ) : null}
         </header>
 

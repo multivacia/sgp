@@ -38,6 +38,24 @@ export function fridayAfterMonday(mondayIso: string): string {
   return `${y}-${mm}-${dd}`
 }
 
+/** Semana operacional canônica: segunda (início) e sexta (+4 dias), nunca domingo. */
+export function resolveOperationalWeekRange(weekStartDate: string): {
+  weekStartDate: string
+  weekEndDate: string
+} {
+  return {
+    weekStartDate,
+    weekEndDate: fridayAfterMonday(weekStartDate),
+  }
+}
+
+export function isCanonicalOperationalWeekEnd(
+  weekStartDate: string,
+  weekEndDate: string,
+): boolean {
+  return weekEndDate === fridayAfterMonday(weekStartDate)
+}
+
 export function weekdayLabelsPt(): readonly string[] {
   return ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta']
 }

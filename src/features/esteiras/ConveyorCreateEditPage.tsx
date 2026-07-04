@@ -46,8 +46,10 @@ import {
 import {
   countSectorsInRoots,
   countStepsInRoots,
+  formatTotalPlannedMinutesDisplay,
   matrixRootIdsFromManualRoots,
   pendenciasParaResumo,
+  sumPlannedMinutesInManualRoots,
 } from './nova-esteira/novaEsteiraTotemUi'
 import { NOVA_ESTEIRA_DRAG_MIME, parseDragPayload } from './nova-esteira/novaEsteiraDnD'
 import { useNovaEsteiraResponsaveisOptions } from './nova-esteira/useNovaEsteiraResponsaveisOptions'
@@ -99,7 +101,7 @@ function dadosVazio(): CreateConveyorDados {
 }
 
 function extrasVazio(): WizardExtras {
-  return { inicioPrevisto: '', fimPrevisto: '', tempoTotalPrevistoMin: '' }
+  return { inicioPrevisto: '', fimPrevisto: '' }
 }
 
 function detailToDados(d: ConveyorDetail): CreateConveyorDados {
@@ -147,13 +149,6 @@ function buildPatchDados(baseline: CreateConveyorDados, draft: CreateConveyorDad
   if (a.prioridade !== b.prioridade) patch.prioridade = b.prioridade
   if (a.colaboradorId !== b.colaboradorId) patch.colaboradorId = b.colaboradorId
   return patch
-}
-
-function sumPlannedMinutes(roots: ManualOptionDraft[]): number {
-  return roots.reduce(
-    (s, o) => s + o.areas.reduce((a, ar) => a + ar.steps.reduce((t, st) => t + st.plannedMinutes, 0), 0),
-    0,
-  )
 }
 
 export function ConveyorCreateEditPage({ mode }: { mode: Mode }) {
@@ -268,8 +263,7 @@ export function ConveyorCreateEditPage({ mode }: { mode: Mode }) {
       dados.nome.trim().length > 0 ||
       manualRoots.length > 0 ||
       extras.inicioPrevisto.length > 0 ||
-      extras.fimPrevisto.length > 0 ||
-      extras.tempoTotalPrevistoMin !== '',
+      extras.fimPrevisto.length > 0,
     onReset: () => {
       if (mode === 'edit') setAba('dados')
       setSubmitError(null)
@@ -472,7 +466,8 @@ export function ConveyorCreateEditPage({ mode }: { mode: Mode }) {
 
   const podeAvancarDados = dados.nome.trim().length > 0
   const estruturaOk = validateManualStructure(manualRoots) === null && validateManualStepAssignees(manualRoots, manualAloc) === null && manualRoots.length > 0
-  const minutosCalculados = sumPlannedMinutes(manualRoots)
+  const minutosCalculados = sumPlannedMinutesInManualRoots(manualRoots)
+  const totalPlannedDisplay = formatTotalPlannedMinutesDisplay(manualRoots)
   const nTarefas = manualRoots.length
   const nSetores = countSectorsInRoots(manualRoots)
   const nEtapas = countStepsInRoots(manualRoots)
@@ -750,7 +745,20 @@ export function ConveyorCreateEditPage({ mode }: { mode: Mode }) {
                 </select>
               </label>
               <label className="block text-sm"><span className="text-slate-400">Prioridade</span><select className="sgp-input-app mt-1 w-full px-3 py-2 text-slate-100" value={dados.prioridade || 'media'} onChange={(ev) => setDados((d) => ({ ...d, prioridade: ev.target.value as CreateConveyorDados['prioridade'] }))}><option value="baixa">Baixa</option><option value="media">Média</option><option value="alta">Alta</option></select></label>
-              <label className="block text-sm"><span className="text-slate-400">Tempo total previsto (min)</span><input type="number" min={0} className="sgp-input-app mt-1 w-full px-3 py-2 tabular-nums text-slate-100" value={extras.tempoTotalPrevistoMin} onChange={(ev) => setExtras((x) => ({ ...x, tempoTotalPrevistoMin: ev.target.value === '' ? '' : Number(ev.target.value) }))} /></label>
+              <div className="block text-sm">
+                <span className="text-slate-400">Tempo total previsto (min)</span>
+                <input
+                  type="text"
+                  readOnly
+                  tabIndex={-1}
+                  aria-readonly="true"
+                  className="sgp-input-app mt-1 w-full cursor-default px-3 py-2 tabular-nums text-slate-300 opacity-90"
+                  value={totalPlannedDisplay.text}
+                />
+                {totalPlannedDisplay.hint ? (
+                  <p className="mt-1 text-xs text-slate-500">{totalPlannedDisplay.hint}</p>
+                ) : null}
+              </div>
               <label className="block text-sm md:col-span-2">
                 <span className="text-slate-400">Observações</span>
                 <textarea className="sgp-input-app mt-1 min-h-[88px] w-full px-3 py-2 text-slate-100" value={dados.observacoes ?? ''} onChange={(ev) => setDados((d) => ({ ...d, observacoes: ev.target.value }))} placeholder="Contexto adicional do pedido (opcional)" />

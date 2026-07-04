@@ -23,38 +23,38 @@ const baseDados: CreateConveyorDados = {
 }
 
 describe('conveyorBasicDataExtras', () => {
-  it('parseia início, fim e tempo do formato persistido', () => {
+  it('parseia início e fim do formato persistido', () => {
     const extras = parseWizardExtrasFromPersisted({
       prazoEstimado: 'Início previsto: 2026-04-01T08:00 · Fim previsto: 2026-04-10T18:00',
       observacoes: 'Contexto\n\n[Planeamento] Tempo total previsto: 480 min',
     })
     expect(extras.inicioPrevisto).toBe('2026-04-01T08:00')
     expect(extras.fimPrevisto).toBe('2026-04-10T18:00')
-    expect(extras.tempoTotalPrevistoMin).toBe(480)
   })
 
-  it('monta payload com placa e remove linha de planeamento antes de regravar', () => {
+  it('monta payload com placa e não grava tempo manual nas observações', () => {
     const first = buildDadosParaApi(baseDados, {
       inicioPrevisto: '2026-04-01T08:00',
       fimPrevisto: '',
-      tempoTotalPrevistoMin: 120,
     })
     expect(first.placa).toBe('ABC1D23')
     expect(first.modeloVersao).toBe('1.0')
     expect(first.prazoEstimado).toBe('Início previsto: 2026-04-01T08:00')
-    expect(first.observacoes).toContain('[Planeamento] Tempo total previsto: 120 min')
+    expect(first.observacoes).not.toContain('[Planeamento]')
     expect(first.observacoes).toContain('Nota do gestor')
 
     const second = buildDadosParaApi(
-      { ...baseDados, observacoes: first.observacoes ?? '' },
+      {
+        ...baseDados,
+        observacoes: 'Nota do gestor\n\n[Planeamento] Tempo total previsto: 150 min',
+      },
       {
         inicioPrevisto: '2026-04-01T08:00',
         fimPrevisto: '',
-        tempoTotalPrevistoMin: 150,
       },
     )
-    expect(second.observacoes?.match(/\[Planeamento\]/g)?.length).toBe(1)
-    expect(second.observacoes).toContain('Tempo total previsto: 150 min')
+    expect(second.observacoes).toBe('Nota do gestor')
+    expect(second.observacoes).not.toContain('[Planeamento]')
   })
 
   it('exibe prazo legado quando não está no formato wizard', () => {
