@@ -23,6 +23,7 @@ import { OperationMatrixEditorPage } from '../features/operation-matrix/Operatio
 import { OperationMatrixPreviewPage } from '../features/operation-matrix/OperationMatrixPreviewPage'
 import { DashboardPage } from '../features/gestor/DashboardPage'
 import { OperationalPlanningPage } from '../features/operational-planning/OperationalPlanningPage'
+import { WeeklyAgendaPage } from '../features/weekly-agenda/WeeklyAgendaPage'
 import { ConveyorProgressPage } from '../features/conveyor-progress/ConveyorProgressPage'
 import { ApontamentoGestorPage } from '../features/gestor/ApontamentoGestorPage'
 import { MinhasAtividadesPage } from '../features/colaborador/MinhasAtividadesPage'
@@ -98,6 +99,14 @@ export function AppRoutes() {
               element={
                 <RequirePermission permission="conveyors.create">
                   <OperationalPlanningPage />
+                </RequirePermission>
+              }
+            />
+            <Route
+              path="agenda-semanal"
+              element={
+                <RequirePermission permission="conveyors.create">
+                  <WeeklyAgendaPage />
                 </RequirePermission>
               }
             />
