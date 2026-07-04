@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { PageCanvas } from '../../components/ui/PageCanvas'
 import { listPlanningSyncIssues } from '../../domain/operational-planning/planningSyncIssues'
-import { buildVisiblePlanningBacklogItems } from '../operational-planning/buildVisiblePlanningBacklogItems'
 import { buildPlanningDaySummaries } from '../operational-planning/planningBoardHelpers'
 import {
   isIsoDateInWeekdays,
@@ -76,18 +75,14 @@ export function WeeklyAgendaPage() {
     [weekPayload?.executionOutsidePlanSummary.totalMinutes],
   )
 
-  const visibleBacklogItems = useMemo(
-    () => buildVisiblePlanningBacklogItems(backlogItems, planItems),
-    [backlogItems, planItems],
-  )
   const backlogEmptyMessage = useMemo(
     () =>
       buildWeeklyAgendaBacklogEmptyMessage({
-        visibleCount: visibleBacklogItems.length,
+        visibleCount: backlogItems.length,
         loadedCount: backlogItems.length,
         searchQuery: backlogQ,
       }),
-    [visibleBacklogItems.length, backlogItems.length, backlogQ],
+    [backlogItems.length, backlogQ],
   )
 
   const daySummaries = useMemo(
@@ -217,7 +212,7 @@ export function WeeklyAgendaPage() {
       </div>
 
       <WeeklyAgendaBacklogFab
-        count={visibleBacklogItems.length}
+        count={backlogItems.length}
         onClick={() => setBacklogDrawerOpen(true)}
       />
 
@@ -233,7 +228,7 @@ export function WeeklyAgendaPage() {
       <WeeklyAgendaBacklogDrawer
         open={backlogDrawerOpen}
         onClose={() => setBacklogDrawerOpen(false)}
-        items={visibleBacklogItems}
+        items={backlogItems}
         searchQuery={backlogQ}
         onSearchChange={setBacklogQ}
         onSearchSubmit={() => void reloadBacklog()}
