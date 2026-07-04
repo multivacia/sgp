@@ -1,50 +1,171 @@
+import { useEffect, useMemo, useState } from 'react'
 import { PageCanvas } from '../../components/ui/PageCanvas'
+import { buildPlanningDaySummaries } from '../operational-planning/planningBoardHelpers'
+import {
+  isIsoDateInWeekdays,
+  localTodayIsoDate,
+  weekdayLabelsPt,
+} from '../operational-planning/operationalPlanningWeekRange'
+import { WeeklyAgendaBoard } from './components/WeeklyAgendaBoard'
+import { WeeklyAgendaDayTabs } from './components/WeeklyAgendaDayTabs'
+import { WeeklyAgendaHeader } from './components/WeeklyAgendaHeader'
+import { WeeklyAgendaSummaryStrip } from './components/WeeklyAgendaSummaryStrip'
+import { useWeeklyAgendaWeek } from './hooks/useWeeklyAgendaWeek'
+import { buildWeeklyAgendaSummaryStrip } from './weeklyAgendaSummary'
 
-/**
- * Casca inicial da Agenda da Semana — PR-1.
- * Leitura, grade, DnD e modo Fila entram nos PRs seguintes.
- */
 export function WeeklyAgendaPage() {
+  const { weekMonday, setWeekMonday, weekPayload, collaborators, loading, error } =
+    useWeeklyAgendaWeek()
+
+  const weekdayDates = useMemo(
+    () => weekPayload?.week.weekdayDates ?? [],
+    [weekPayload?.week.weekdayDates],
+  )
+  const weekdayLabels = useMemo(() => weekdayLabelsPt(), [])
+  const planItems = useMemo(() => weekPayload?.plan?.items ?? [], [weekPayload?.plan?.items])
+  const capacityRows = useMemo(
+    () => weekPayload?.capacityByCollaboratorDay ?? [],
+    [weekPayload?.capacityByCollaboratorDay],
+  )
+
+  const todayIso = useMemo(() => localTodayIsoDate(), [])
+  const todayInDisplayedWeek = useMemo(
+    () => isIsoDateInWeekdays(todayIso, weekdayDates),
+    [todayIso, weekdayDates],
+  )
+
+  const [selectedDay, setSelectedDay] = useState<string>('')
+
+  useEffect(() => {
+    if (weekdayDates.length === 0) {
+      setSelectedDay('')
+      return
+    }
+    setSelectedDay((current) => {
+      if (current && weekdayDates.includes(current)) return current
+      if (todayInDisplayedWeek && weekdayDates.includes(todayIso)) return todayIso
+      return weekdayDates[0] ?? ''
+    })
+  }, [weekMonday, weekdayDates, todayInDisplayedWeek, todayIso])
+
+  const summaryStrip = useMemo(() => buildWeeklyAgendaSummaryStrip(weekPayload), [weekPayload])
+
+  const daySummaries = useMemo(
+    () =>
+      buildPlanningDaySummaries(
+        planItems.map((item) => ({
+          plannedDate: item.plannedDate,
+          plannedMinutes: item.plannedMinutes,
+          assignedCollaboratorId: item.assignedCollaboratorId ?? undefined,
+        })),
+      ),
+    [planItems],
+  )
+  const maxDayMinutes = useMemo(
+    () => Math.max(0, ...Object.values(daySummaries).map((d) => d.totalMinutes)),
+    [daySummaries],
+  )
+  const dayLoadMinutes = useMemo(
+    () =>
+      Object.fromEntries(
+        weekdayDates.map((date) => [date, daySummaries[date]?.totalMinutes ?? 0]),
+      ) as Record<string, number>,
+    [weekdayDates, daySummaries],
+  )
+
+  const activeSelectedDay = selectedDay || weekdayDates[0] || ''
+
   return (
     <PageCanvas>
-      <header className="sgp-header-card">
-        <h1 className="sgp-page-title">Agenda da Semana</h1>
-        <p className="mt-2 max-w-2xl text-sm leading-relaxed text-slate-400">
-          Nova experiência de planejamento semanal — grade colaborador × dia, backlog em gaveta e
-          alocação em lote. Convive com a tela Planejamento até aposentarmos a versão anterior.
-        </p>
-        <p className="mt-4 inline-flex items-center gap-2 rounded-xl border border-amber-500/20 bg-amber-500/[0.07] px-3 py-2 text-xs font-medium text-amber-100/90">
-          <span
-            className="size-1.5 shrink-0 rounded-full bg-amber-400/90 shadow-[0_0_8px_rgba(251,191,36,0.35)]"
-            aria-hidden
-          />
-          Em construção — próximo passo: visualização com dados reais da semana.
-        </p>
-      </header>
+      <div className="mx-auto max-w-[1600px] pb-16">
+        <WeeklyAgendaHeader
+          weekMonday={weekMonday}
+          weekPayload={weekPayload}
+          loading={loading}
+          onWeekChange={setWeekMonday}
+        />
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {[
-          {
-            title: 'Semana e plano',
-            description: 'Navegação de semana, status rascunho/publicado e publicar plano.',
-          },
-          {
-            title: 'Grade da agenda',
-            description: 'Colaboradores × dias úteis com cards compactos de atividade.',
-          },
-          {
-            title: 'Backlog e fila',
-            description: 'Gaveta de pendentes e modo Fila de alocação em lote.',
-          },
-        ].map((block) => (
-          <section
-            key={block.title}
-            className="flex min-h-[8.5rem] flex-col rounded-2xl border border-dashed border-white/[0.12] bg-sgp-app-panel-deep/40 p-4 shadow-inner ring-1 ring-white/[0.04]"
+        {loading ? (
+          <p className="mt-8 text-center text-[13px] text-slate-500" role="status">
+            Carregando semana…
+          </p>
+        ) : null}
+
+        {error ? (
+          <p
+            className="mt-8 rounded-lg border border-rose-400/25 bg-rose-500/10 px-3 py-2 text-[13px] text-rose-100"
+            role="alert"
           >
-            <h2 className="text-sm font-semibold text-slate-200">{block.title}</h2>
-            <p className="mt-2 text-xs leading-relaxed text-slate-500">{block.description}</p>
-          </section>
-        ))}
+            {error}
+          </p>
+        ) : null}
+
+        {!loading && !error ? (
+          <>
+            <div className="mt-8">
+              <WeeklyAgendaSummaryStrip summary={summaryStrip} />
+            </div>
+
+            <section className="mt-8 space-y-4">
+              <div className="flex flex-wrap items-end justify-between gap-3">
+                <div>
+                  <h2 className="text-[15px] font-semibold text-slate-100">Grade da semana</h2>
+                  <p className="mt-1 text-[12px] text-slate-500">
+                    Somente leitura nesta versão — arrastar e editar chegam no PR-4.
+                  </p>
+                  {activeSelectedDay ? (
+                    <p
+                      className="mt-1 text-[11px] text-slate-400 lg:hidden"
+                      data-testid="weekly-agenda-mobile-selected-day"
+                    >
+                      Exibindo:{' '}
+                      <span className="font-medium text-slate-200">
+                        {weekdayLabels[weekdayDates.indexOf(activeSelectedDay)] ?? activeSelectedDay}
+                      </span>{' '}
+                      ({activeSelectedDay})
+                    </p>
+                  ) : null}
+                </div>
+                <div className="hidden flex-wrap gap-3 text-[11px] text-slate-500 lg:flex">
+                  <span className="inline-flex items-center gap-1.5">
+                    <span className="size-2 rounded-sm bg-white/35" /> Planejada
+                  </span>
+                  <span className="inline-flex items-center gap-1.5">
+                    <span className="size-2 rounded-sm bg-sky-400/80" /> Em execução
+                  </span>
+                  <span className="inline-flex items-center gap-1.5">
+                    <span className="size-2 rounded-sm bg-emerald-400/80" /> Concluída
+                  </span>
+                  <span className="inline-flex items-center gap-1.5">
+                    <span className="size-2 rounded-sm bg-sgp-gold/80" /> Divergente
+                  </span>
+                </div>
+              </div>
+
+              {weekdayDates.length > 0 ? (
+                <WeeklyAgendaDayTabs
+                  weekdayDates={weekdayDates}
+                  weekdayLabels={weekdayLabels}
+                  selectedDay={activeSelectedDay}
+                  dayLoadMinutes={dayLoadMinutes}
+                  maxDayMinutes={maxDayMinutes}
+                  onSelectDay={setSelectedDay}
+                />
+              ) : null}
+
+              <WeeklyAgendaBoard
+                collaborators={collaborators}
+                planItems={planItems}
+                weekdayDates={weekdayDates}
+                weekdayLabels={weekdayLabels}
+                capacityRows={capacityRows}
+                selectedDay={activeSelectedDay}
+                todayIso={todayIso}
+                todayInDisplayedWeek={todayInDisplayedWeek}
+              />
+            </section>
+          </>
+        ) : null}
       </div>
     </PageCanvas>
   )
