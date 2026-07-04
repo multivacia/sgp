@@ -84,6 +84,13 @@ export const GESTAO_NAV_ITEMS: ShellNavItem[] = [
     permission: 'conveyors.create',
   },
   {
+    to: '/app/agenda-semanal',
+    label: 'Agenda da semana',
+    section: 'gestao',
+    navGroup: 'gestao',
+    permission: 'conveyors.create',
+  },
+  {
     to: '/app/gestao/evolucao-esteiras',
     label: 'Evolução das Esteiras',
     section: 'gestao',
