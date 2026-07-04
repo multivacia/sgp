@@ -11,6 +11,7 @@ import {
   resolvePlanningCapacityState,
   sumPlanningItemMinutes,
 } from '../../operational-planning/planningBoardHelpers'
+import { weeklyAgendaDayColumnClass } from '../weeklyAgendaDayColumnVisibility'
 import { WeeklyAgendaPlanCard } from './WeeklyAgendaPlanCard'
 
 type WeeklyAgendaBoardProps = {
@@ -19,8 +20,7 @@ type WeeklyAgendaBoardProps = {
   weekdayDates: readonly string[]
   weekdayLabels: readonly string[]
   capacityRows: OperationalPlanningWeekPayload['capacityByCollaboratorDay']
-  selectedDay: string | null
-  visibleWeekdayDates: readonly string[]
+  selectedDay: string
   todayIso: string
   todayInDisplayedWeek: boolean
 }
@@ -45,20 +45,17 @@ export function WeeklyAgendaBoard(props: WeeklyAgendaBoardProps) {
     buildPlanningAssigneeSummaries(boardItems).map((row) => [row.assigneeId, row]),
   )
 
-  const columns = props.visibleWeekdayDates.map((dateIso) => {
-    const labelIndex = props.weekdayDates.indexOf(dateIso)
-    return {
-      dateIso,
-      label: labelIndex >= 0 ? (props.weekdayLabels[labelIndex] ?? dateIso) : dateIso,
-    }
-  })
+  const columns = props.weekdayDates.map((dateIso, index) => ({
+    dateIso,
+    label: props.weekdayLabels[index] ?? dateIso,
+  }))
 
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full min-w-[720px] border-separate border-spacing-2">
+    <div className="overflow-x-auto lg:overflow-x-visible" data-testid="weekly-agenda-board">
+      <table className="w-full min-w-0 border-separate border-spacing-2 lg:min-w-[720px]">
         <thead>
           <tr>
-            <th className="w-40 rounded-lg bg-white/[0.03] px-2 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+            <th className="w-36 rounded-lg bg-white/[0.03] px-2 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-500 sm:w-40">
               Colaborador
             </th>
             {columns.map((col) => {
@@ -67,7 +64,9 @@ export function WeeklyAgendaBoard(props: WeeklyAgendaBoardProps) {
               return (
                 <th
                   key={col.dateIso}
+                  data-testid={`weekly-agenda-day-col-${col.dateIso}`}
                   className={[
+                    weeklyAgendaDayColumnClass(props.selectedDay, col.dateIso),
                     'rounded-lg px-2 py-2 text-left text-[11px] font-semibold uppercase tracking-wide',
                     isTodayCol
                       ? 'border border-sgp-gold/25 bg-sgp-gold/[0.06] text-slate-200 ring-1 ring-sgp-gold/20'
@@ -139,7 +138,12 @@ export function WeeklyAgendaBoard(props: WeeklyAgendaBoardProps) {
                     return (
                       <td
                         key={col.dateIso}
-                        className={isTodayCol ? 'align-top rounded-lg bg-sgp-gold/[0.02]' : 'align-top'}
+                        data-testid={`weekly-agenda-cell-${collaborator.id}-${col.dateIso}`}
+                        className={[
+                          weeklyAgendaDayColumnClass(props.selectedDay, col.dateIso),
+                          isTodayCol ? 'rounded-lg bg-sgp-gold/[0.02]' : '',
+                          'align-top',
+                        ].join(' ')}
                       >
                         {capacityState === 'over_capacity' && cap ? (
                           <p className="mb-1 text-[10px] font-medium text-amber-200/90">

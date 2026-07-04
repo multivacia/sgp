@@ -14,7 +14,10 @@ function formatShortDate(isoDate: string): string {
 
 export function WeeklyAgendaDayTabs(props: WeeklyAgendaDayTabsProps) {
   return (
-    <div className="grid grid-cols-5 gap-1.5 sm:gap-2 lg:hidden">
+    <div
+      className="grid grid-cols-5 gap-1.5 sm:gap-2 lg:hidden"
+      data-testid="weekly-agenda-day-tabs"
+    >
       {props.weekdayDates.map((isoDate, index) => {
         const active = isoDate === props.selectedDay
         const load = props.dayLoadMinutes[isoDate] ?? 0
@@ -25,6 +28,8 @@ export function WeeklyAgendaDayTabs(props: WeeklyAgendaDayTabsProps) {
           <button
             key={isoDate}
             type="button"
+            data-testid={`weekly-agenda-day-tab-${isoDate}`}
+            aria-pressed={active}
             onClick={() => props.onSelectDay(isoDate)}
             className={[
               'rounded-xl border px-1 py-2 text-center transition',

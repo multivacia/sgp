@@ -11,13 +11,11 @@ import { WeeklyAgendaDayTabs } from './components/WeeklyAgendaDayTabs'
 import { WeeklyAgendaHeader } from './components/WeeklyAgendaHeader'
 import { WeeklyAgendaSummaryStrip } from './components/WeeklyAgendaSummaryStrip'
 import { useWeeklyAgendaWeek } from './hooks/useWeeklyAgendaWeek'
-import { useMinLgViewport } from './hooks/useMinLgViewport'
 import { buildWeeklyAgendaSummaryStrip } from './weeklyAgendaSummary'
 
 export function WeeklyAgendaPage() {
   const { weekMonday, setWeekMonday, weekPayload, collaborators, loading, error } =
     useWeeklyAgendaWeek()
-  const isLargeScreen = useMinLgViewport()
 
   const weekdayDates = useMemo(
     () => weekPayload?.week.weekdayDates ?? [],
@@ -43,11 +41,11 @@ export function WeeklyAgendaPage() {
       setSelectedDay('')
       return
     }
-    if (todayInDisplayedWeek && weekdayDates.includes(todayIso)) {
-      setSelectedDay(todayIso)
-      return
-    }
-    setSelectedDay(weekdayDates[0] ?? '')
+    setSelectedDay((current) => {
+      if (current && weekdayDates.includes(current)) return current
+      if (todayInDisplayedWeek && weekdayDates.includes(todayIso)) return todayIso
+      return weekdayDates[0] ?? ''
+    })
   }, [weekMonday, weekdayDates, todayInDisplayedWeek, todayIso])
 
   const summaryStrip = useMemo(() => buildWeeklyAgendaSummaryStrip(weekPayload), [weekPayload])
@@ -75,12 +73,7 @@ export function WeeklyAgendaPage() {
     [weekdayDates, daySummaries],
   )
 
-  const visibleWeekdayDates = useMemo(() => {
-    if (weekdayDates.length === 0) return []
-    if (isLargeScreen) return weekdayDates
-    const day = selectedDay || weekdayDates[0]
-    return day ? [day] : weekdayDates
-  }, [weekdayDates, selectedDay, isLargeScreen])
+  const activeSelectedDay = selectedDay || weekdayDates[0] || ''
 
   return (
     <PageCanvas>
@@ -120,6 +113,18 @@ export function WeeklyAgendaPage() {
                   <p className="mt-1 text-[12px] text-slate-500">
                     Somente leitura nesta versão — arrastar e editar chegam no PR-4.
                   </p>
+                  {activeSelectedDay ? (
+                    <p
+                      className="mt-1 text-[11px] text-slate-400 lg:hidden"
+                      data-testid="weekly-agenda-mobile-selected-day"
+                    >
+                      Exibindo:{' '}
+                      <span className="font-medium text-slate-200">
+                        {weekdayLabels[weekdayDates.indexOf(activeSelectedDay)] ?? activeSelectedDay}
+                      </span>{' '}
+                      ({activeSelectedDay})
+                    </p>
+                  ) : null}
                 </div>
                 <div className="hidden flex-wrap gap-3 text-[11px] text-slate-500 lg:flex">
                   <span className="inline-flex items-center gap-1.5">
@@ -141,7 +146,7 @@ export function WeeklyAgendaPage() {
                 <WeeklyAgendaDayTabs
                   weekdayDates={weekdayDates}
                   weekdayLabels={weekdayLabels}
-                  selectedDay={selectedDay || weekdayDates[0]}
+                  selectedDay={activeSelectedDay}
                   dayLoadMinutes={dayLoadMinutes}
                   maxDayMinutes={maxDayMinutes}
                   onSelectDay={setSelectedDay}
@@ -154,8 +159,7 @@ export function WeeklyAgendaPage() {
                 weekdayDates={weekdayDates}
                 weekdayLabels={weekdayLabels}
                 capacityRows={capacityRows}
-                selectedDay={selectedDay}
-                visibleWeekdayDates={visibleWeekdayDates}
+                selectedDay={activeSelectedDay}
                 todayIso={todayIso}
                 todayInDisplayedWeek={todayInDisplayedWeek}
               />
