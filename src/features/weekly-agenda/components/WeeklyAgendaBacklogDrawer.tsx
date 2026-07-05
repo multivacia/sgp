@@ -1,6 +1,8 @@
 import { useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import type { OperationalPlanningBacklogItem } from '../../../domain/operational-planning/operational-planning.types'
+import { BATCH_QUEUE_MIN_ITEMS } from '../weeklyAgendaBatchQueue'
+import { WeeklyAgendaBacklogBatchInvite } from './WeeklyAgendaBacklogBatchInvite'
 import { WeeklyAgendaBacklogCard } from './WeeklyAgendaBacklogCard'
 
 type WeeklyAgendaBacklogDrawerProps = {
@@ -12,6 +14,7 @@ type WeeklyAgendaBacklogDrawerProps = {
   onSearchSubmit: () => void
   emptyMessage: string | null
   loading?: boolean
+  onStartBatchQueue?: () => void
 }
 
 export function WeeklyAgendaBacklogDrawer(props: WeeklyAgendaBacklogDrawerProps) {
@@ -24,6 +27,7 @@ export function WeeklyAgendaBacklogDrawer(props: WeeklyAgendaBacklogDrawerProps)
     onSearchSubmit,
     emptyMessage,
     loading = false,
+    onStartBatchQueue,
   } = props
 
   useEffect(() => {
@@ -101,6 +105,12 @@ export function WeeklyAgendaBacklogDrawer(props: WeeklyAgendaBacklogDrawerProps)
             </p>
           ) : (
             <div className="space-y-3">
+              {items.length >= BATCH_QUEUE_MIN_ITEMS && onStartBatchQueue ? (
+                <WeeklyAgendaBacklogBatchInvite
+                  itemCount={items.length}
+                  onStart={onStartBatchQueue}
+                />
+              ) : null}
               {items.map((item) => (
                 <WeeklyAgendaBacklogCard key={item.activityNodeId} item={item} />
               ))}

@@ -12,6 +12,12 @@
  *   pr4-day-tab-drop — plan|* → day-tab|* (mobile; colaborador mantido, dia muda)
  *   pr4-mobile-reorder — reorder na mesma célula (mobile; scroll + save)
  *   pr4-touch-reorder-probe — investigação reorder: mouse desktop vs mouse/touch mobile
+ *   pr5-desktop — modo Fila: convite, fluxo completo, overlay sem gaveta (1280px)
+ *   pr5-mobile — modo Fila + saída no meio preserva rascunho (390px)
+ *   pr5-invite-threshold — convite só com 3+ itens no backlog
+ *   pr5-save-persist — Fila: 2 atribuições → salvar → reload → persistência
+ *   pr5-skip-defer — "Deixar para depois" reordena fila local em runtime
+ *   pr5-pr4-regression — reexecuta pr4-mid-drag + pr4-drag-follow-trail pós PR-5
  *
  * Uso:
  *   node scripts/capture-weekly-agenda-mobile.mjs [baseUrl]
@@ -23,7 +29,12 @@
  *   node scripts/capture-weekly-agenda-mobile.mjs --scenario pr4-drag-follow-trail [baseUrl]
  *   node scripts/capture-weekly-agenda-mobile.mjs --scenario pr4-day-tab-drop [baseUrl]
  *   node scripts/capture-weekly-agenda-mobile.mjs --scenario pr4-mobile-reorder [baseUrl]
- *   node scripts/capture-weekly-agenda-mobile.mjs --scenario pr4-touch-reorder-probe [baseUrl]
+ *   node scripts/capture-weekly-agenda-mobile.mjs --scenario pr5-desktop [baseUrl]
+ *   node scripts/capture-weekly-agenda-mobile.mjs --scenario pr5-mobile [baseUrl]
+ *   node scripts/capture-weekly-agenda-mobile.mjs --scenario pr5-invite-threshold [baseUrl]
+ *   node scripts/capture-weekly-agenda-mobile.mjs --scenario pr5-save-persist [baseUrl]
+ *   node scripts/capture-weekly-agenda-mobile.mjs --scenario pr5-skip-defer [baseUrl]
+ *   node scripts/capture-weekly-agenda-mobile.mjs --scenario pr5-pr4-regression [baseUrl]
  */
 import { chromium } from 'playwright'
 import { mkdir } from 'node:fs/promises'
@@ -32,7 +43,9 @@ import { fileURLToPath } from 'node:url'
 import {
   installWeeklyAgendaRoutes,
   installWeeklyAgendaPr4Routes,
+  installWeeklyAgendaPr5Routes,
   mockBacklogPr3,
+  mockBacklogPr5Small,
   mockWeekPr2,
   mockWeekPr3,
   weekdayDates,
@@ -896,6 +909,341 @@ async function runPr4TouchReorderProbe(page, { appBaseUrl, viewportLabel, inputM
   }
 }
 
+async function assertNoGhostOverlays(page) {
+  const drawer = await page.getByTestId('weekly-agenda-backlog-drawer').count()
+  const queue = await page.getByTestId('weekly-agenda-batch-queue-overlay').count()
+  if (drawer > 0 || queue > 0) {
+    throw new Error(`Ghost overlay detected: drawer=${drawer}, queue=${queue}`)
+  }
+}
+
+async function startBatchQueueFromDrawer(page) {
+  await page.getByTestId('weekly-agenda-backlog-fab').click()
+  await page.waitForSelector('[data-testid="weekly-agenda-backlog-drawer"]', { timeout: 10000 })
+  await page.waitForSelector('[data-testid="weekly-agenda-backlog-batch-invite"]', { timeout: 5000 })
+  await page.getByTestId('weekly-agenda-backlog-batch-start').click()
+  await page.waitForSelector('[data-testid="weekly-agenda-batch-queue-overlay"]', { timeout: 10000 })
+  await page.waitForSelector('[data-testid="weekly-agenda-backlog-drawer"]', {
+    state: 'detached',
+    timeout: 5000,
+  })
+}
+
+async function runPr5SavePersist(page, { pr5Api, appBaseUrl }) {
+  const screenshotPath = path.join(outDir, 'pr5-save-after-queue.png')
+  const assignedIds = ['act-bq-1', 'act-bq-2']
+
+  await page.goto(`${appBaseUrl}/app/agenda-semanal`, { waitUntil: 'networkidle', timeout: 60000 })
+  await page.waitForSelector('[data-testid="weekly-agenda-board"]', { timeout: 60000 })
+
+  await startBatchQueueFromDrawer(page)
+
+  for (let i = 0; i < 2; i += 1) {
+    await page.getByTestId('weekly-agenda-batch-queue-confirm-suggestion').click()
+    await page.waitForTimeout(350)
+  }
+
+  await page.getByTestId('weekly-agenda-batch-queue-exit').click()
+  await page.waitForSelector('[data-testid="weekly-agenda-batch-queue-overlay"]', {
+    state: 'detached',
+    timeout: 5000,
+  })
+  await waitForWeeklyAgendaDirty(page)
+
+  const board = page.getByTestId('weekly-agenda-board')
+  if (!(await board.getByText('Fila item 1 — PR5').isVisible())) {
+    throw new Error('Queue assign: item 1 missing from board before save')
+  }
+  if (!(await board.getByText('Fila item 2 — PR5').isVisible())) {
+    throw new Error('Queue assign: item 2 missing from board before save')
+  }
+
+  await page.getByTestId('weekly-agenda-save-draft').click()
+  await page.waitForSelector('[data-testid="weekly-agenda-success-msg"]', { timeout: 10000 })
+  if (pr5Api.getMetrics().saveCalls < 1) {
+    throw new Error('Expected save/patch API call after queue assignments')
+  }
+
+  const savedIds = pr5Api
+    .getWeekState()
+    .plan.items.map((i) => i.activityNodeId)
+    .filter((id) => assignedIds.includes(id))
+  if (savedIds.length !== 2) {
+    throw new Error(`Expected 2 queue-assigned items in API state, got: ${savedIds.join(',')}`)
+  }
+
+  await page.reload({ waitUntil: 'networkidle' })
+  await page.waitForSelector('[data-testid="weekly-agenda-board"]', { timeout: 60000 })
+
+  if (!(await board.getByText('Fila item 1 — PR5').isVisible())) {
+    throw new Error('Queue save: item 1 missing after reload')
+  }
+  if (!(await board.getByText('Fila item 2 — PR5').isVisible())) {
+    throw new Error('Queue save: item 2 missing after reload')
+  }
+
+  const afterReloadIds = pr5Api
+    .getWeekState()
+    .plan.items.map((i) => i.activityNodeId)
+    .filter((id) => assignedIds.includes(id))
+  if (afterReloadIds.length !== 2) {
+    throw new Error(`API state lost queue items after reload: ${afterReloadIds.join(',')}`)
+  }
+
+  await mkdir(outDir, { recursive: true })
+  await page.screenshot({ path: screenshotPath, fullPage: false })
+
+  return {
+    screenshot: screenshotPath,
+    saveCalls: pr5Api.getMetrics().saveCalls,
+    persistedActivityIds: afterReloadIds,
+    dirtyClearedAfterSave: !(await page.getByTestId('weekly-agenda-save-draft').isEnabled()),
+  }
+}
+
+async function runPr5SkipDefer(page, { appBaseUrl }) {
+  const screenshotPath = path.join(outDir, 'pr5-skip-defer.png')
+  const expectedOrder = [
+    'Fila item 1 — PR5',
+    'Fila item 2 — PR5',
+    'Fila item 3 — PR5',
+    'Fila item 1 — PR5',
+  ]
+
+  await page.goto(`${appBaseUrl}/app/agenda-semanal`, { waitUntil: 'networkidle', timeout: 60000 })
+  await page.waitForSelector('[data-testid="weekly-agenda-board"]', { timeout: 60000 })
+  await startBatchQueueFromDrawer(page)
+
+  const seenTitles = []
+  for (let step = 0; step < expectedOrder.length; step += 1) {
+    const title = await page.getByTestId('weekly-agenda-batch-queue-item-title').innerText()
+    seenTitles.push(title.trim())
+    if (title.trim() !== expectedOrder[step]) {
+      throw new Error(
+        `Skip defer step ${step + 1}: expected "${expectedOrder[step]}", got "${title.trim()}"`,
+      )
+    }
+    await page.getByTestId('weekly-agenda-batch-queue-skip').click()
+    await page.waitForTimeout(250)
+  }
+
+  await page.getByTestId('weekly-agenda-batch-queue-exit').click()
+  await page.waitForSelector('[data-testid="weekly-agenda-batch-queue-overlay"]', {
+    state: 'detached',
+    timeout: 5000,
+  })
+  await assertNoGhostOverlays(page)
+
+  await mkdir(outDir, { recursive: true })
+  await page.screenshot({ path: screenshotPath, fullPage: false })
+
+  return { screenshot: screenshotPath, seenTitles, queueRotationVerified: true }
+}
+
+async function runPr5Pr4Regression(browser, { appBaseUrl }) {
+  const midCtx = await browser.newContext({ viewport: { width: 1280, height: 900 } })
+  const midPage = await midCtx.newPage()
+  await installWeeklyAgendaPr4Routes(midPage)
+  const midDrag = await runPr4MidDrag(midPage, { appBaseUrl })
+  await midCtx.close()
+
+  await mkdir(outDir, { recursive: true })
+  const videoDir = path.join(outDir, 'pr5-pr4-regression-video-tmp')
+  await mkdir(videoDir, { recursive: true })
+  const trailCtx = await browser.newContext({
+    viewport: { width: 1280, height: 900 },
+    recordVideo: { dir: videoDir, size: { width: 1280, height: 900 } },
+  })
+  const trailPage = await trailCtx.newPage()
+  await installWeeklyAgendaPr4Routes(trailPage)
+  const dragTrail = await runPr4DragFollowTrail(trailPage, { appBaseUrl })
+  const video = trailPage.video()
+  await trailPage.close()
+  await trailCtx.close()
+  let videoPath = null
+  if (video) {
+    videoPath = path.join(outDir, 'pr5-pr4-regression-drag-trail.webm')
+    await video.saveAs(videoPath)
+  }
+
+  return {
+    midDrag,
+    dragTrail: { ...dragTrail, video: videoPath },
+    drawerClosedOnDragStart: midDrag.drawerClosed === true,
+    dragOverlayFollowsPointer: dragTrail.maxTravelPx >= 80,
+  }
+}
+
+async function runPr5InviteThreshold(browser, { appBaseUrl }) {
+  const ctxSmall = await browser.newContext({ viewport: { width: 1280, height: 900 } })
+  const pageSmall = await ctxSmall.newPage()
+  await installWeeklyAgendaPr5Routes(pageSmall, { backlog: mockBacklogPr5Small })
+  await pageSmall.goto(`${appBaseUrl}/app/agenda-semanal`, {
+    waitUntil: 'networkidle',
+    timeout: 60000,
+  })
+  await pageSmall.getByTestId('weekly-agenda-backlog-fab').click()
+  await pageSmall.waitForSelector('[data-testid="weekly-agenda-backlog-drawer"]', { timeout: 10000 })
+  const inviteSmall = await pageSmall.getByTestId('weekly-agenda-backlog-batch-invite').count()
+  if (inviteSmall !== 0) {
+    throw new Error('Invite must not appear with only 2 backlog items')
+  }
+  await ctxSmall.close()
+
+  const ctxFull = await browser.newContext({ viewport: { width: 1280, height: 900 } })
+  const pageFull = await ctxFull.newPage()
+  await installWeeklyAgendaPr5Routes(pageFull)
+  await pageFull.goto(`${appBaseUrl}/app/agenda-semanal`, {
+    waitUntil: 'networkidle',
+    timeout: 60000,
+  })
+  await pageFull.getByTestId('weekly-agenda-backlog-fab').click()
+  await pageFull.waitForSelector('[data-testid="weekly-agenda-backlog-drawer"]', { timeout: 10000 })
+  await pageFull.waitForSelector('[data-testid="weekly-agenda-backlog-batch-invite"]', {
+    timeout: 5000,
+  })
+  const inviteText = await pageFull.getByTestId('weekly-agenda-backlog-batch-invite').innerText()
+  if (!inviteText.includes('3 itens parados')) {
+    throw new Error(`Expected invite for 3 items, got: ${inviteText}`)
+  }
+  await ctxFull.close()
+
+  return { inviteWithTwoItems: inviteSmall, inviteWithThreeItems: true }
+}
+
+async function runPr5Flows(page, { mobile, appBaseUrl }) {
+  const tuesday = weekdayDates[1]
+  const screenshotName = mobile ? 'pr5-mobile-batch-queue.png' : 'pr5-desktop-batch-queue.png'
+  const screenshotPath = path.join(outDir, screenshotName)
+
+  await page.goto(`${appBaseUrl}/app/agenda-semanal`, { waitUntil: 'networkidle', timeout: 60000 })
+  await page.waitForSelector('[data-testid="weekly-agenda-board"]', { timeout: 60000 })
+
+  if (mobile) {
+    await page.getByTestId('weekly-agenda-backlog-fab').click()
+    await page.waitForSelector('[data-testid="weekly-agenda-backlog-drawer"]', { timeout: 10000 })
+    await page.waitForSelector('[data-testid="weekly-agenda-backlog-batch-invite"]', { timeout: 5000 })
+    await page.getByTestId('weekly-agenda-backlog-batch-start').click()
+    await page.waitForSelector('[data-testid="weekly-agenda-batch-queue-overlay"]', { timeout: 10000 })
+    await page.waitForSelector('[data-testid="weekly-agenda-backlog-drawer"]', {
+      state: 'detached',
+      timeout: 5000,
+    })
+
+    const suggestionName = await page
+      .getByTestId('weekly-agenda-batch-queue-suggestion-name')
+      .innerText()
+    if (!suggestionName.includes('Ana')) {
+      throw new Error(`Expected Ana as top free collaborator, got: ${suggestionName}`)
+    }
+
+    for (let i = 0; i < 3; i += 1) {
+      await page.getByTestId('weekly-agenda-batch-queue-confirm-suggestion').click()
+      await page.waitForTimeout(350)
+    }
+
+    await page.waitForSelector('[data-testid="weekly-agenda-batch-queue-overlay"]', {
+      state: 'detached',
+      timeout: 8000,
+    })
+    await waitForWeeklyAgendaDirty(page)
+    await assertNoGhostOverlays(page)
+
+    await page.getByTestId('weekly-agenda-backlog-fab').click()
+    await page.waitForSelector('[data-testid="weekly-agenda-backlog-drawer"]', { timeout: 10000 })
+    if ((await page.getByTestId('weekly-agenda-backlog-batch-invite').count()) !== 0) {
+      throw new Error('Invite should not show when visible backlog < 3 after queue')
+    }
+    await page.keyboard.press('Escape')
+    await assertNoGhostOverlays(page)
+
+    // Saída no meio (nova sessão na mesma página)
+    await page.reload({ waitUntil: 'networkidle' })
+    await page.waitForSelector('[data-testid="weekly-agenda-board"]', { timeout: 60000 })
+    await page.getByTestId('weekly-agenda-backlog-fab').click()
+    await page.waitForSelector('[data-testid="weekly-agenda-backlog-batch-invite"]', { timeout: 5000 })
+    await page.getByTestId('weekly-agenda-backlog-batch-start').click()
+    await page.waitForSelector('[data-testid="weekly-agenda-batch-queue-overlay"]', { timeout: 10000 })
+    await page.getByTestId('weekly-agenda-batch-queue-confirm-suggestion').click()
+    await page.waitForTimeout(300)
+    await page.getByTestId('weekly-agenda-batch-queue-exit').click()
+    await page.waitForSelector('[data-testid="weekly-agenda-batch-queue-overlay"]', {
+      state: 'detached',
+      timeout: 5000,
+    })
+    await waitForWeeklyAgendaDirty(page)
+    await assertNoGhostOverlays(page)
+
+    await mkdir(outDir, { recursive: true })
+    await page.screenshot({ path: screenshotPath, fullPage: true })
+
+    return {
+      screenshot: screenshotPath,
+      suggestionWasAna: true,
+      overlayClosedAfterFullRun: true,
+      exitMidPreservedDirty: true,
+      noGhostOverlays: true,
+      mobile: true,
+    }
+  }
+
+  // Desktop: convite → fila abre sem gaveta → alt assign → sair no meio → rascunho dirty
+  await page.getByTestId('weekly-agenda-backlog-fab').click()
+  await page.waitForSelector('[data-testid="weekly-agenda-backlog-drawer"]', { timeout: 10000 })
+  await page.waitForSelector('[data-testid="weekly-agenda-backlog-batch-invite"]', { timeout: 5000 })
+  await page.getByTestId('weekly-agenda-backlog-batch-start').click()
+  await page.waitForSelector('[data-testid="weekly-agenda-batch-queue-overlay"]', { timeout: 10000 })
+  await page.waitForSelector('[data-testid="weekly-agenda-backlog-drawer"]', {
+    state: 'detached',
+    timeout: 5000,
+  })
+
+  const suggestionName = await page.getByTestId('weekly-agenda-batch-queue-suggestion-name').innerText()
+  if (!suggestionName.includes('Ana')) {
+    throw new Error(`Expected Ana as top free collaborator, got: ${suggestionName}`)
+  }
+
+  await page.getByTestId('weekly-agenda-batch-queue-alt-toggle').click()
+  await page.waitForSelector('[data-testid="weekly-agenda-batch-queue-alt-panel"]', { timeout: 5000 })
+  await page.getByTestId('weekly-agenda-batch-queue-person-col-1').click()
+  await page.getByTestId(`weekly-agenda-batch-queue-day-${tuesday}`).click()
+  await page.getByTestId('weekly-agenda-batch-queue-confirm-alt').click()
+  await page.waitForTimeout(400)
+
+  await page.getByTestId('weekly-agenda-batch-queue-exit').click()
+  await page.waitForSelector('[data-testid="weekly-agenda-batch-queue-overlay"]', {
+    state: 'detached',
+    timeout: 5000,
+  })
+  await assertNoGhostOverlays(page)
+  await waitForWeeklyAgendaDirty(page)
+
+  const tueCell = page.getByTestId(`weekly-agenda-cell-col-1-${tuesday}`)
+  if (!(await tueCell.getByText('Fila item 1 — PR5').isVisible())) {
+    throw new Error('Alt assign to Carlos on Tuesday not reflected in board')
+  }
+
+  // Segunda verificação: gaveta sem convite com 2 itens visíveis restantes
+  await page.getByTestId('weekly-agenda-backlog-fab').click()
+  await page.waitForSelector('[data-testid="weekly-agenda-backlog-drawer"]', { timeout: 10000 })
+  if ((await page.getByTestId('weekly-agenda-backlog-batch-invite').count()) !== 0) {
+    throw new Error('Invite should not appear with 2 visible backlog items')
+  }
+  await page.keyboard.press('Escape')
+
+  await mkdir(outDir, { recursive: true })
+  await page.screenshot({ path: screenshotPath, fullPage: false })
+
+  return {
+    screenshot: screenshotPath,
+    suggestionWasAna: suggestionName.includes('Ana'),
+    altAssignOnTuesday: true,
+    dirtyAfterExit: true,
+    noGhostOverlays: true,
+    mobile: false,
+  }
+}
+
 const browser = await chromium.launch({ headless: true })
 
 try {
@@ -1072,9 +1420,51 @@ try {
     }
     console.log(`OK scenario=${scenario}`)
     console.log(JSON.stringify(report, null, 2))
+  } else if (scenario === 'pr5-desktop' || scenario === 'pr5-mobile') {
+    const mobile = scenario === 'pr5-mobile'
+    const context = await browser.newContext(
+      mobile
+        ? {
+            viewport: { width: 390, height: 844 },
+            deviceScaleFactor: 2,
+            isMobile: true,
+            hasTouch: true,
+          }
+        : { viewport: { width: 1280, height: 900 } },
+    )
+    const page = await context.newPage()
+    await installWeeklyAgendaPr5Routes(page)
+    const result = await runPr5Flows(page, { mobile, appBaseUrl: baseUrl })
+    await context.close()
+    console.log(`OK scenario=${scenario}`)
+    console.log(JSON.stringify(result))
+  } else if (scenario === 'pr5-invite-threshold') {
+    const result = await runPr5InviteThreshold(browser, { appBaseUrl: baseUrl })
+    console.log(`OK scenario=${scenario}`)
+    console.log(JSON.stringify(result))
+  } else if (scenario === 'pr5-save-persist') {
+    const context = await browser.newContext({ viewport: { width: 1280, height: 900 } })
+    const page = await context.newPage()
+    const pr5Api = await installWeeklyAgendaPr5Routes(page)
+    const result = await runPr5SavePersist(page, { pr5Api, appBaseUrl: baseUrl })
+    await context.close()
+    console.log(`OK scenario=${scenario}`)
+    console.log(JSON.stringify(result))
+  } else if (scenario === 'pr5-skip-defer') {
+    const context = await browser.newContext({ viewport: { width: 1280, height: 900 } })
+    const page = await context.newPage()
+    await installWeeklyAgendaPr5Routes(page)
+    const result = await runPr5SkipDefer(page, { appBaseUrl: baseUrl })
+    await context.close()
+    console.log(`OK scenario=${scenario}`)
+    console.log(JSON.stringify(result))
+  } else if (scenario === 'pr5-pr4-regression') {
+    const result = await runPr5Pr4Regression(browser, { appBaseUrl: baseUrl })
+    console.log(`OK scenario=${scenario}`)
+    console.log(JSON.stringify(result))
   } else {
     throw new Error(
-      `Unknown scenario: ${scenario}. Use pr2-mobile, pr3-desktop, pr3-mobile, pr4-desktop, pr4-mobile, pr4-mid-drag, pr4-drag-follow-trail, pr4-day-tab-drop, pr4-mobile-reorder, or pr4-touch-reorder-probe.`,
+      `Unknown scenario: ${scenario}. Use pr2-mobile, pr3-desktop, pr3-mobile, pr4-desktop, pr4-mobile, pr4-mid-drag, pr4-drag-follow-trail, pr4-day-tab-drop, pr4-mobile-reorder, pr4-touch-reorder-probe, pr5-desktop, pr5-mobile, pr5-invite-threshold, pr5-save-persist, pr5-skip-defer, or pr5-pr4-regression.`,
     )
   }
 } finally {
