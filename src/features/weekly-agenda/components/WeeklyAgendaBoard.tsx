@@ -30,6 +30,8 @@ type WeeklyAgendaBoardProps = {
   onCardComplete?: (item: DraftPlanItem) => void
   onCardPrintTicket?: (item: DraftPlanItem) => void
   onCardRemoveFromPlan?: (item: DraftPlanItem) => void
+  backlogTapPlaceActivityId?: string | null
+  onBacklogCellTap?: (collaboratorId: string, plannedDate: string) => void
 }
 
 function cellItems(
@@ -160,6 +162,12 @@ export function WeeklyAgendaBoard(props: WeeklyAgendaBoardProps) {
                           collaboratorId={collaborator.id}
                           plannedDate={col.dateIso}
                           sortableIds={sortableIds}
+                          tapPlaceActive={Boolean(props.backlogTapPlaceActivityId)}
+                          onTapPlace={
+                            props.onBacklogCellTap
+                              ? () => props.onBacklogCellTap!(collaborator.id, col.dateIso)
+                              : undefined
+                          }
                         >
                           {capacityState === 'over_capacity' && cap ? (
                             <p className="mb-1 text-[10px] font-medium text-amber-200/90">
@@ -175,7 +183,9 @@ export function WeeklyAgendaBoard(props: WeeklyAgendaBoardProps) {
                           <div className="min-h-[3rem] space-y-2">
                             {items.length === 0 ? (
                               <p className="py-4 text-center text-[10px] leading-relaxed text-slate-600">
-                                Nenhuma atividade planejada.
+                                {props.backlogTapPlaceActivityId
+                                  ? 'Toque para atribuir aqui'
+                                  : 'Nenhuma atividade planejada.'}
                               </p>
                             ) : (
                               items.map((item, idx) => (

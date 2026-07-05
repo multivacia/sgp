@@ -80,6 +80,7 @@ import {
   removeDraftPlanItem,
 } from './weeklyAgendaDraft'
 import {
+  applyBacklogToCellDrop,
   applyWeeklyAgendaDragEnd,
   BACKLOG_DRAG_PREFIX,
   CELL_DRAG_PREFIX,
@@ -96,6 +97,12 @@ type ActiveDragState =
   | { kind: 'backlog'; item: OperationalPlanningBacklogItem }
   | { kind: 'plan'; item: DraftPlanItem }
   | null
+
+type BacklogPlacingState = {
+  activityNodeId: string
+  activityTitle: string
+  mode: 'drag' | 'tap'
+}
 
 export function WeeklyAgendaPage() {
   const { can } = useAuth()
@@ -159,7 +166,7 @@ export function WeeklyAgendaPage() {
   const [backlogDrawerOpen, setBacklogDrawerOpen] = useState(false)
   const [batchQueueOpen, setBatchQueueOpen] = useState(false)
   const [batchQueueSession, setBatchQueueSession] = useState(0)
-  const [backlogPlacingTitle, setBacklogPlacingTitle] = useState<string | null>(null)
+  const [backlogPlacing, setBacklogPlacing] = useState<BacklogPlacingState | null>(null)
   const backlogDragFromOpenDrawerRef = useRef(false)
   const backlogDragCancelRequestedRef = useRef(false)
 
@@ -420,7 +427,7 @@ export function WeeklyAgendaPage() {
   }
 
   function clearBacklogPlacingMode(options?: { reopenDrawer?: boolean }) {
-    setBacklogPlacingTitle(null)
+    setBacklogPlacing(null)
     backlogDragFromOpenDrawerRef.current = false
     backlogDragCancelRequestedRef.current = false
     if (options?.reopenDrawer) {
@@ -429,11 +436,39 @@ export function WeeklyAgendaPage() {
   }
 
   function handlePlacingCancel() {
+    if (backlogPlacing?.mode === 'tap') {
+      clearBacklogPlacingMode({ reopenDrawer: backlogDragFromOpenDrawerRef.current })
+      return
+    }
     backlogDragCancelRequestedRef.current = true
-    setBacklogPlacingTitle(null)
+    setBacklogPlacing(null)
     if (backlogDragFromOpenDrawerRef.current) {
       setBacklogDrawerOpen(true)
     }
+  }
+
+  function handleBacklogAssignTap(item: OperationalPlanningBacklogItem) {
+    backlogDragFromOpenDrawerRef.current = true
+    setBacklogDrawerOpen(false)
+    setBacklogPlacing({
+      activityNodeId: item.activityNodeId,
+      activityTitle: item.activityTitle,
+      mode: 'tap',
+    })
+  }
+
+  function handleBacklogCellTap(collaboratorId: string, plannedDate: string) {
+    if (!backlogPlacing || backlogPlacing.mode !== 'tap') return
+    const next = applyBacklogToCellDrop({
+      activityNodeId: backlogPlacing.activityNodeId,
+      cell: { collaboratorId, plannedDate },
+      draftItems,
+      backlogItems,
+      collaborators,
+      plannedActivityIds,
+    })
+    clearBacklogPlacingMode()
+    if (next) setDraftItems(next)
   }
 
   function handleDragStart(ev: DragStartEvent) {
@@ -451,7 +486,11 @@ export function WeeklyAgendaPage() {
       } else {
         backlogDragFromOpenDrawerRef.current = false
       }
-      setBacklogPlacingTitle(item.activityTitle)
+      setBacklogPlacing({
+        activityNodeId: item.activityNodeId,
+        activityTitle: item.activityTitle,
+        mode: 'drag',
+      })
       setActiveDrag({ kind: 'backlog', item })
       return
     }
@@ -465,7 +504,7 @@ export function WeeklyAgendaPage() {
   function clearDragVisualState() {
     setActiveDrag(null)
     setDragOverlayWidth(null)
-    setBacklogPlacingTitle(null)
+    setBacklogPlacing((current) => (current?.mode === 'drag' ? null : current))
   }
 
   function handleDragEnd(ev: DragEndEvent) {
@@ -600,7 +639,9 @@ export function WeeklyAgendaPage() {
     [backlogExecutionLookup, requestPrint],
   )
 
-  const isDragInProgress = activeDrag !== null || backlogPlacingTitle !== null
+  const isDragInProgress = activeDrag !== null || backlogPlacing !== null
+  const backlogTapPlaceActivityId =
+    backlogPlacing?.mode === 'tap' ? backlogPlacing.activityNodeId : null
 
   function handleStartBatchQueue() {
     setBacklogDrawerOpen(false)
@@ -644,9 +685,10 @@ export function WeeklyAgendaPage() {
         onDragCancel={handleDragCancel}
       >
         <div className="mx-auto max-w-[1600px] pb-24 lg:pr-20">
-          {backlogPlacingTitle ? (
+          {backlogPlacing ? (
             <WeeklyAgendaPlacingBanner
-              activityTitle={backlogPlacingTitle}
+              activityTitle={backlogPlacing.activityTitle}
+              mode={backlogPlacing.mode}
               onCancel={handlePlacingCancel}
             />
           ) : null}
@@ -754,6 +796,8 @@ export function WeeklyAgendaPage() {
                   onCardComplete={(item) => void handleCardComplete(item)}
                   onCardPrintTicket={handleCardPrintTicket}
                   onCardRemoveFromPlan={handleRemoveFromPlan}
+                  backlogTapPlaceActivityId={backlogTapPlaceActivityId}
+                  onBacklogCellTap={handleBacklogCellTap}
                 />
               </section>
             </>
@@ -775,6 +819,7 @@ export function WeeklyAgendaPage() {
           emptyMessage={backlogEmptyMessage}
           loading={backlogLoading}
           onStartBatchQueue={handleStartBatchQueue}
+          onAssignItem={handleBacklogAssignTap}
         />
 
         {batchQueueOpen ? (

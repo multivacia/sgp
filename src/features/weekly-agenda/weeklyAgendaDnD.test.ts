@@ -95,6 +95,36 @@ describe('applyBacklogToCellDrop', () => {
     expect(created?.plannedDate).toBe('2026-06-29')
     expect(created?.plannedOrder).toBe(2)
   })
+
+  it('produces the same draft as backlog drag-end for the same cell', () => {
+    const cell = { collaboratorId: 'col-1', plannedDate: '2026-06-30' }
+    const viaDrop = applyBacklogToCellDrop({
+      activityNodeId: 'act-backlog',
+      cell,
+      draftItems: [],
+      backlogItems: [backlogItem],
+      collaborators,
+      plannedActivityIds: new Set(),
+    })
+    const viaDrag = applyWeeklyAgendaDragEnd({
+      activeId: dragBacklogId('act-backlog'),
+      overId: dragCellId(cell.collaboratorId, cell.plannedDate),
+      draftItems: [],
+      backlogItems: [backlogItem],
+      collaborators,
+      plannedActivityIds: new Set(),
+    })
+    expect(viaDrop).not.toBeNull()
+    expect(viaDrag).not.toBeNull()
+    const dropItem = viaDrop!.find((i) => i.activityNodeId === 'act-backlog')!
+    const dragItem = viaDrag!.find((i) => i.activityNodeId === 'act-backlog')!
+    expect(dropItem.assignedCollaboratorId).toBe(dragItem.assignedCollaboratorId)
+    expect(dropItem.plannedDate).toBe(dragItem.plannedDate)
+    expect(dropItem.plannedOrder).toBe(dragItem.plannedOrder)
+    expect(dropItem.plannedMinutes).toBe(dragItem.plannedMinutes)
+    expect(dropItem.conveyorId).toBe(dragItem.conveyorId)
+    expect(dropItem.isOutOfSequence).toBe(dragItem.isOutOfSequence)
+  })
 })
 
 describe('applyPlanToCellDrop', () => {

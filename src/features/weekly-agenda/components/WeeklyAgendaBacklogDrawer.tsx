@@ -15,6 +15,7 @@ type WeeklyAgendaBacklogDrawerProps = {
   emptyMessage: string | null
   loading?: boolean
   onStartBatchQueue?: () => void
+  onAssignItem?: (item: OperationalPlanningBacklogItem) => void
 }
 
 export function WeeklyAgendaBacklogDrawer(props: WeeklyAgendaBacklogDrawerProps) {
@@ -28,6 +29,7 @@ export function WeeklyAgendaBacklogDrawer(props: WeeklyAgendaBacklogDrawerProps)
     emptyMessage,
     loading = false,
     onStartBatchQueue,
+    onAssignItem,
   } = props
 
   useEffect(() => {
@@ -75,7 +77,8 @@ export function WeeklyAgendaBacklogDrawer(props: WeeklyAgendaBacklogDrawerProps)
             </button>
           </div>
           <p className="mt-1 text-[12px] text-slate-500">
-            Arraste uma atividade para a grade da semana — a gaveta fecha ao arrastar para revelar a agenda.
+            Arraste para a grade ou toque em Atribuir e depois numa célula — a gaveta fecha para revelar a
+            agenda.
           </p>
           <div className="mt-3 flex gap-2">
             <input
@@ -112,7 +115,11 @@ export function WeeklyAgendaBacklogDrawer(props: WeeklyAgendaBacklogDrawerProps)
                 />
               ) : null}
               {items.map((item) => (
-                <WeeklyAgendaBacklogCard key={item.activityNodeId} item={item} />
+                <WeeklyAgendaBacklogCard
+                  key={item.activityNodeId}
+                  item={item}
+                  onAssignClick={onAssignItem ? () => onAssignItem(item) : undefined}
+                />
               ))}
               {emptyMessage ? (
                 <p className="rounded-xl border border-white/[0.06] bg-white/[0.02] px-3 py-4 text-center text-[13px] text-slate-500">
