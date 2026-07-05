@@ -45,4 +45,19 @@ describe('AppSidebar', () => {
     expect(html).not.toContain('Família ARGOS')
     expect(html).toContain('Sistema de Gestão da Produção')
   })
+
+  it('renderiza badge Novo em Agenda da semana', () => {
+    const html = renderToStaticMarkup(
+      createElement(AppSidebar, {
+        open: true,
+        onClose: () => {},
+        collapsed: false,
+        onToggleCollapsed: () => {},
+      }),
+    )
+
+    expect(html).toContain('Agenda da semana')
+    expect(html).toContain('aria-label="Novo"')
+    expect(html).toContain('>Novo<')
+  })
 })

@@ -51,6 +51,12 @@ export type ShellNavItem = {
   anyOfPermissions?: string[]
   /** Só aparece quando o módulo de chamados (flag) está ativo no cliente. */
   requiresSupportTickets?: boolean
+  /**
+   * Pill "Novo" temporária ao lado do label no sidebar.
+   * Remover quando o critério de produto for atendido (ex.: N semanas em produção
+   * ou aposentadoria do Planejamento antigo) — sem expiração automática.
+   */
+  showNovoBadge?: boolean
 }
 
 export const GESTAO_NAV_ITEMS: ShellNavItem[] = [
@@ -89,6 +95,7 @@ export const GESTAO_NAV_ITEMS: ShellNavItem[] = [
     section: 'gestao',
     navGroup: 'gestao',
     permission: 'conveyors.create',
+    showNovoBadge: true,
   },
   {
     to: '/app/gestao/evolucao-esteiras',

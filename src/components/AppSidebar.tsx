@@ -175,6 +175,18 @@ function navLinkClass(active: boolean, rail: boolean) {
   ].join(' ')
 }
 
+/** Pill de destaque no item de menu — paleta gold do shell (ver `showNovoBadge` em app-nav-config). */
+function ShellNavNovoBadge() {
+  return (
+    <span
+      className="shrink-0 rounded-full border border-sgp-gold/35 bg-sgp-gold/15 px-1.5 py-px text-[9px] font-bold uppercase leading-none tracking-wide text-sgp-gold-warm"
+      aria-label="Novo"
+    >
+      Novo
+    </span>
+  )
+}
+
 function NavGroupLabel({
   id,
   children,
@@ -217,15 +229,19 @@ function NavItemLink({
     requestNavigateWithTransientGuard(item.to)
   }
 
-  const labelNode =
-    rail ? (
-      <>
-        <ShellNavRouteIcon route={item.to} className="hidden size-5 md:inline-flex" />
-        <span className="inline md:sr-only">{item.label}</span>
-      </>
-    ) : (
-      item.label
-    )
+  const linkTitle = item.showNovoBadge ? `${item.label} (Novo)` : item.label
+
+  const labelNode = rail ? (
+    <>
+      <ShellNavRouteIcon route={item.to} className="hidden size-5 md:inline-flex" />
+      <span className="inline md:sr-only">{item.label}</span>
+    </>
+  ) : (
+    <span className="inline-flex min-w-0 items-center gap-1.5">
+      <span className="truncate">{item.label}</span>
+      {item.showNovoBadge ? <ShellNavNovoBadge /> : null}
+    </span>
+  )
 
   if (item.to === '/app/minhas-atividades') {
     const active =
@@ -235,7 +251,7 @@ function NavItemLink({
       <NavLink
         to={item.to}
         onClick={handleNavClick}
-        title={item.label}
+        title={linkTitle}
         className={() => navLinkClass(active, rail)}
       >
         {labelNode}
@@ -249,7 +265,7 @@ function NavItemLink({
       <NavLink
         to={item.to}
         onClick={handleNavClick}
-        title={item.label}
+        title={linkTitle}
         className={() => navLinkClass(active, rail)}
       >
         {labelNode}
@@ -263,7 +279,7 @@ function NavItemLink({
       <NavLink
         to={item.to}
         onClick={handleNavClick}
-        title={item.label}
+        title={linkTitle}
         className={() => navLinkClass(active, rail)}
       >
         {labelNode}
@@ -276,7 +292,7 @@ function NavItemLink({
       to={item.to}
       end={item.to === '/app/usuarios'}
       onClick={handleNavClick}
-      title={item.label}
+      title={linkTitle}
       className={({ isActive }) => navLinkClass(isActive, rail)}
     >
       {labelNode}
