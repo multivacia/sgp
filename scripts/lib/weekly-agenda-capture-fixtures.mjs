@@ -516,3 +516,260 @@ export async function installWeeklyAgendaPr4Routes(page) {
     getMetrics: () => ({ ...metrics }),
   }
 }
+
+export const mockCollaboratorsPr5 = [
+  {
+    id: 'col-1',
+    full_name: 'Carlos',
+    code: 'COL-001',
+    status: 'ACTIVE',
+    is_active: true,
+  },
+  {
+    id: 'col-2',
+    full_name: 'Ana',
+    code: 'COL-002',
+    status: 'ACTIVE',
+    is_active: true,
+  },
+]
+
+/** PR-5: semana leve + 2 colaboradores para sugestão de folga. */
+export const mockWeekPr5 = {
+  hasPlan: true,
+  week: { weekStartDate: weekStart, weekEndDate: weekEnd, weekdayDates },
+  plan: {
+    id: 'plan-pr5',
+    weekStartDate: weekStart,
+    weekEndDate: weekEnd,
+    status: 'DRAFT',
+    publishedAt: null,
+    createdAt: '2026-06-29T12:00:00.000Z',
+    updatedAt: '2026-06-29T12:00:00.000Z',
+    items: [
+      {
+        id: 'item-mon',
+        conveyorId: 'conv-1',
+        conveyorTitle: 'ET-001 · Reforma bancos',
+        activityNodeId: 'act-mon',
+        taskTitle: 'Tapeçaria',
+        sectorTitle: 'Montagem',
+        activityTitle: 'Item leve — SEG',
+        assignedCollaboratorId: 'col-1',
+        assignedCollaboratorName: 'Carlos',
+        plannedDate: weekdayDates[0],
+        plannedOrder: 0,
+        plannedMinutes: 420,
+        status: 'ACTIVE',
+        notes: null,
+        realizedMinutes: 0,
+        activityOperationalStatus: 'PENDING',
+        syncStatus: 'SYNCED',
+      },
+    ],
+  },
+  summary: { plannedMinutes: 420, plannedItems: 1, collaboratorsCount: 2 },
+  capacityByCollaboratorDay: weekdayDates.flatMap((date) => [
+    {
+      collaboratorId: 'col-1',
+      date,
+      capacityMinutes: 480,
+      plannedMinutes: date === weekdayDates[0] ? 420 : 0,
+    },
+    {
+      collaboratorId: 'col-2',
+      date,
+      capacityMinutes: 480,
+      plannedMinutes: 0,
+    },
+  ]),
+  executionOutsidePlanSummary: {
+    totalMinutes: 0,
+    entriesCount: 0,
+    activitiesCount: 0,
+    conveyorsCount: 0,
+  },
+  executionOutsidePlanEntries: [],
+}
+
+export const mockBacklogPr5 = {
+  items: [
+    {
+      conveyorId: 'conv-3',
+      conveyorTitle: 'ET-003 · Backlog A',
+      clientName: null,
+      vehicleDescription: null,
+      licensePlate: null,
+      taskTitle: 'Tapeçaria',
+      sectorTitle: 'Montagem',
+      activityNodeId: 'act-bq-1',
+      activityTitle: 'Fila item 1 — PR5',
+      plannedMinutes: 60,
+      realizedMinutes: 0,
+      pendingMinutes: 60,
+      assignedCollaborators: [],
+      assignedTeams: [],
+      isOutOfSequence: false,
+      previousOpenCount: 0,
+      isOverdue: false,
+      hasAssignees: false,
+    },
+    {
+      conveyorId: 'conv-4',
+      conveyorTitle: 'ET-004 · Backlog B',
+      clientName: null,
+      vehicleDescription: null,
+      licensePlate: null,
+      taskTitle: 'Tapeçaria',
+      sectorTitle: 'Acabamento',
+      activityNodeId: 'act-bq-2',
+      activityTitle: 'Fila item 2 — PR5',
+      plannedMinutes: 45,
+      realizedMinutes: 0,
+      pendingMinutes: 45,
+      assignedCollaborators: [],
+      assignedTeams: [],
+      isOutOfSequence: false,
+      previousOpenCount: 0,
+      isOverdue: false,
+      hasAssignees: false,
+    },
+    {
+      conveyorId: 'conv-5',
+      conveyorTitle: 'ET-005 · Backlog C',
+      clientName: null,
+      vehicleDescription: null,
+      licensePlate: null,
+      taskTitle: 'Tapeçaria',
+      sectorTitle: 'Costura',
+      activityNodeId: 'act-bq-3',
+      activityTitle: 'Fila item 3 — PR5',
+      plannedMinutes: 30,
+      realizedMinutes: 0,
+      pendingMinutes: 30,
+      assignedCollaborators: [],
+      assignedTeams: [],
+      isOutOfSequence: false,
+      previousOpenCount: 0,
+      isOverdue: false,
+      hasAssignees: false,
+    },
+  ],
+  meta: { limit: 100 },
+}
+
+/** Backlog com 2 itens — convite da fila não deve aparecer. */
+export const mockBacklogPr5Small = {
+  items: mockBacklogPr5.items.slice(0, 2),
+  meta: { limit: 100 },
+}
+
+function mapSaveItemsToPlanItemsPr5(items, previousItems = []) {
+  const prevByActivity = new Map(previousItems.map((i) => [i.activityNodeId, i]))
+  const backlogByActivity = new Map(mockBacklogPr5.items.map((i) => [i.activityNodeId, i]))
+  return items.map((it, idx) => {
+    const prev = prevByActivity.get(it.activityNodeId)
+    const backlog = backlogByActivity.get(it.activityNodeId)
+    const collabName =
+      it.assignedCollaboratorId === 'col-2'
+        ? 'Ana'
+        : it.assignedCollaboratorId === 'col-1'
+          ? 'Carlos'
+          : 'Colaborador'
+    return {
+      id: prev?.id ?? `saved-${it.activityNodeId}-${idx}`,
+      conveyorId: it.conveyorId,
+      conveyorTitle: prev?.conveyorTitle ?? backlog?.conveyorTitle ?? 'ET · Salvo',
+      activityNodeId: it.activityNodeId,
+      taskTitle: prev?.taskTitle ?? backlog?.taskTitle ?? 'Tapeçaria',
+      sectorTitle: prev?.sectorTitle ?? backlog?.sectorTitle ?? 'Montagem',
+      activityTitle:
+        prev?.activityTitle ?? backlog?.activityTitle ?? `Atividade ${it.activityNodeId}`,
+      assignedCollaboratorId: it.assignedCollaboratorId,
+      assignedCollaboratorName: collabName,
+      plannedDate: it.plannedDate,
+      plannedOrder: it.plannedOrder,
+      plannedMinutes: it.plannedMinutes,
+      status: 'ACTIVE',
+      notes: it.notes ?? null,
+      realizedMinutes: prev?.realizedMinutes ?? 0,
+      activityOperationalStatus: prev?.activityOperationalStatus ?? 'PENDING',
+      syncStatus: 'SYNCED',
+      conveyorOperationalPlanItemId: it.conveyorOperationalPlanItemId ?? null,
+    }
+  })
+}
+
+function applySaveBodyToWeekPr5(week, body) {
+  const next = structuredClone(week)
+  next.hasPlan = true
+  next.plan = {
+    ...next.plan,
+    id: next.plan?.id ?? 'plan-pr5',
+    weekStartDate: body.weekStartDate,
+    weekEndDate: body.weekEndDate,
+    status: next.plan?.status ?? 'DRAFT',
+    items: mapSaveItemsToPlanItemsPr5(body.items, next.plan?.items ?? []),
+    updatedAt: new Date().toISOString(),
+  }
+  next.summary = {
+    plannedMinutes: next.plan.items.reduce((s, i) => s + (i.plannedMinutes ?? 0), 0),
+    plannedItems: next.plan.items.length,
+    collaboratorsCount: 2,
+  }
+  return next
+}
+
+/** Rotas stateful para PR-5 (fila em lote). */
+export async function installWeeklyAgendaPr5Routes(page, { backlog = mockBacklogPr5 } = {}) {
+  let weekState = structuredClone(mockWeekPr5)
+  const backlogState = structuredClone(backlog)
+  const metrics = { saveCalls: 0, publishCalls: 0 }
+
+  await page.route('**/api/v1/auth/me', (route) =>
+    route.fulfill(jsonRoute({ data: { user: mockUser, sessionIdle: mockSessionIdle } })),
+  )
+  await page.route('**/api/v1/collaborators**', (route) =>
+    route.fulfill(jsonRoute({ data: mockCollaboratorsPr5 })),
+  )
+  await page.route('**/api/v1/operational-planning/backlog**', (route) =>
+    route.fulfill(jsonRoute({ data: backlogState })),
+  )
+
+  await page.route('**/api/v1/operational-planning/week**', async (route) => {
+    const url = route.request().url()
+    const method = route.request().method()
+
+    if (method === 'GET' && url.includes('/operational-planning/week?')) {
+      return route.fulfill(jsonRoute({ data: weekState }))
+    }
+
+    if (method === 'PATCH' && url.includes('/operational-planning/week/')) {
+      const body = route.request().postDataJSON()
+      weekState = applySaveBodyToWeekPr5(weekState, body)
+      metrics.saveCalls += 1
+      return route.fulfill(jsonRoute({ data: weekState }))
+    }
+
+    if (method === 'POST' && url.includes('/publish')) {
+      weekState.plan.status = 'PUBLISHED'
+      weekState.plan.publishedAt = new Date().toISOString()
+      metrics.publishCalls += 1
+      return route.fulfill(jsonRoute({ data: { published: true } }))
+    }
+
+    if (method === 'POST' && url.endsWith('/operational-planning/week')) {
+      const body = route.request().postDataJSON()
+      weekState = applySaveBodyToWeekPr5(weekState, body)
+      metrics.saveCalls += 1
+      return route.fulfill(jsonRoute({ data: weekState }))
+    }
+
+    return route.continue()
+  })
+
+  return {
+    getWeekState: () => weekState,
+    getMetrics: () => ({ ...metrics }),
+  }
+}

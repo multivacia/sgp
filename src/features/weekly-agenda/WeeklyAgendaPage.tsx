@@ -60,6 +60,7 @@ import { QuickTimeEntryDrawer } from '../shell/QuickTimeEntryDrawer'
 import { PageCanvas } from '../../components/ui/PageCanvas'
 import { WeeklyAgendaAttentionDrawer } from './components/WeeklyAgendaAttentionDrawer'
 import { WeeklyAgendaBacklogCard } from './components/WeeklyAgendaBacklogCard'
+import { WeeklyAgendaBatchQueueOverlay } from './components/WeeklyAgendaBatchQueueOverlay'
 import { WeeklyAgendaBacklogDrawer } from './components/WeeklyAgendaBacklogDrawer'
 import { WeeklyAgendaBacklogFab } from './components/WeeklyAgendaBacklogFab'
 import { WeeklyAgendaBoard } from './components/WeeklyAgendaBoard'
@@ -89,6 +90,7 @@ import {
 } from './weeklyAgendaDnD'
 import { snapCenterToCursor } from './weeklyAgendaDragModifiers'
 import { buildWeeklyAgendaSummaryStrip } from './weeklyAgendaSummary'
+import { applyBatchQueueAssignment } from './weeklyAgendaBatchQueue'
 
 type ActiveDragState =
   | { kind: 'backlog'; item: OperationalPlanningBacklogItem }
@@ -155,6 +157,8 @@ export function WeeklyAgendaPage() {
   const [selectedDay, setSelectedDay] = useState<string>('')
   const [attentionDrawerOpen, setAttentionDrawerOpen] = useState(false)
   const [backlogDrawerOpen, setBacklogDrawerOpen] = useState(false)
+  const [batchQueueOpen, setBatchQueueOpen] = useState(false)
+  const [batchQueueSession, setBatchQueueSession] = useState(0)
   const [backlogPlacingTitle, setBacklogPlacingTitle] = useState<string | null>(null)
   const backlogDragFromOpenDrawerRef = useRef(false)
   const backlogDragCancelRequestedRef = useRef(false)
@@ -598,6 +602,38 @@ export function WeeklyAgendaPage() {
 
   const isDragInProgress = activeDrag !== null || backlogPlacingTitle !== null
 
+  function handleStartBatchQueue() {
+    setBacklogDrawerOpen(false)
+    setBatchQueueSession((s) => s + 1)
+    setBatchQueueOpen(true)
+  }
+
+  function handleBatchQueueClose() {
+    setBatchQueueOpen(false)
+  }
+
+  function handleBatchQueueAssign(input: {
+    activityNodeId: string
+    collaboratorId: string
+    plannedDate: string
+  }) {
+    const next = applyBatchQueueAssignment({
+      activityNodeId: input.activityNodeId,
+      collaboratorId: input.collaboratorId,
+      plannedDate: input.plannedDate,
+      draftItems,
+      backlogItems,
+      collaborators,
+      plannedActivityIds,
+    })
+    if (next) setDraftItems(next)
+  }
+
+  function handleBatchQueueComplete() {
+    setBatchQueueOpen(false)
+    setSuccessMsg('Todos os itens do lote foram atribuídos ao rascunho.')
+  }
+
   return (
     <PageCanvas>
       <DndContext
@@ -730,7 +766,7 @@ export function WeeklyAgendaPage() {
         />
 
         <WeeklyAgendaBacklogDrawer
-          open={backlogDrawerOpen}
+          open={backlogDrawerOpen && !batchQueueOpen}
           onClose={() => setBacklogDrawerOpen(false)}
           items={visibleBacklogItems}
           searchQuery={backlogQ}
@@ -738,7 +774,25 @@ export function WeeklyAgendaPage() {
           onSearchSubmit={() => void reloadBacklog()}
           emptyMessage={backlogEmptyMessage}
           loading={backlogLoading}
+          onStartBatchQueue={handleStartBatchQueue}
         />
+
+        {batchQueueOpen ? (
+          <WeeklyAgendaBatchQueueOverlay
+            key={batchQueueSession}
+            open
+            items={visibleBacklogItems}
+            collaborators={collaborators}
+            weekdayDates={weekdayDates}
+            weekdayLabels={weekdayLabels}
+            capacityRows={capacityRows}
+            draftItems={draftItems}
+            defaultPlannedDate={activeSelectedDay}
+            onClose={handleBatchQueueClose}
+            onAssign={handleBatchQueueAssign}
+            onComplete={handleBatchQueueComplete}
+          />
+        ) : null}
 
         {typeof document !== 'undefined'
           ? createPortal(
