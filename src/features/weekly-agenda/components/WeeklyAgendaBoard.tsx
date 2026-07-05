@@ -1,8 +1,5 @@
 import type { Collaborator } from '../../../domain/collaborators/collaborator.types'
-import type {
-  OperationalPlanningPlanItem,
-  OperationalPlanningWeekPayload,
-} from '../../../domain/operational-planning/operational-planning.types'
+import type { OperationalPlanningWeekPayload } from '../../../domain/operational-planning/operational-planning.types'
 import {
   buildPlanningAssigneeSummaries,
   buildPlanningDaySummaries,
@@ -11,32 +8,42 @@ import {
   resolvePlanningCapacityState,
   sumPlanningItemMinutes,
 } from '../../operational-planning/planningBoardHelpers'
+import type { DraftPlanItem } from '../weeklyAgendaDraft'
+import { dragPlanId } from '../weeklyAgendaDnD'
 import { weeklyAgendaDayColumnClass } from '../weeklyAgendaDayColumnVisibility'
+import { WeeklyAgendaCell } from './WeeklyAgendaCell'
 import { WeeklyAgendaPlanCard } from './WeeklyAgendaPlanCard'
 
 type WeeklyAgendaBoardProps = {
   collaborators: readonly Collaborator[]
-  planItems: readonly OperationalPlanningPlanItem[]
+  draftItems: readonly DraftPlanItem[]
   weekdayDates: readonly string[]
   weekdayLabels: readonly string[]
   capacityRows: OperationalPlanningWeekPayload['capacityByCollaboratorDay']
   selectedDay: string
   todayIso: string
   todayInDisplayedWeek: boolean
+  dragDisabled?: boolean
+  canAlterConveyor?: boolean
+  cardActionBusyKey?: string | null
+  onCardPointTime?: (item: DraftPlanItem) => void
+  onCardComplete?: (item: DraftPlanItem) => void
+  onCardPrintTicket?: (item: DraftPlanItem) => void
+  onCardRemoveFromPlan?: (item: DraftPlanItem) => void
 }
 
 function cellItems(
-  items: readonly OperationalPlanningPlanItem[],
+  items: readonly DraftPlanItem[],
   collaboratorId: string,
   plannedDate: string,
-): OperationalPlanningPlanItem[] {
+): DraftPlanItem[] {
   return items
     .filter((it) => it.assignedCollaboratorId === collaboratorId && it.plannedDate === plannedDate)
     .sort((a, b) => a.plannedOrder - b.plannedOrder)
 }
 
 export function WeeklyAgendaBoard(props: WeeklyAgendaBoardProps) {
-  const boardItems = props.planItems.map((item) => ({
+  const boardItems = props.draftItems.map((item) => ({
     ...item,
     assignedCollaboratorId: item.assignedCollaboratorId ?? undefined,
   }))
@@ -51,8 +58,11 @@ export function WeeklyAgendaBoard(props: WeeklyAgendaBoardProps) {
   }))
 
   return (
-    <div className="overflow-x-auto lg:overflow-x-visible" data-testid="weekly-agenda-board">
-      <table className="w-full min-w-0 border-separate border-spacing-2 lg:min-w-[720px]">
+    <div
+      className="overflow-x-auto overscroll-x-contain rounded-lg pb-1"
+      data-testid="weekly-agenda-board"
+    >
+      <table className="w-full min-w-0 border-separate border-spacing-2 lg:min-w-[1050px]">
         <thead>
           <tr>
             <th className="w-36 rounded-lg bg-white/[0.03] px-2 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-500 sm:w-40">
@@ -121,7 +131,8 @@ export function WeeklyAgendaBoard(props: WeeklyAgendaBoardProps) {
                     )}
                   </td>
                   {columns.map((col) => {
-                    const items = cellItems(props.planItems, collaborator.id, col.dateIso)
+                    const items = cellItems(props.draftItems, collaborator.id, col.dateIso)
+                    const sortableIds = items.map((item) => dragPlanId(item.localKey))
                     const cap = props.capacityRows.find(
                       (row) => row.collaboratorId === collaborator.id && row.date === col.dateIso,
                     )
@@ -145,28 +156,61 @@ export function WeeklyAgendaBoard(props: WeeklyAgendaBoardProps) {
                           'align-top',
                         ].join(' ')}
                       >
-                        {capacityState === 'over_capacity' && cap ? (
-                          <p className="mb-1 text-[10px] font-medium text-amber-200/90">
-                            {formatPlanningCapacityExceededMessage(plannedSum, cap.capacityMinutes)}
-                          </p>
-                        ) : null}
-                        <p className="mb-2 text-[10px] text-slate-500">
-                          {formatPlanningMinutes(plannedSum)} planejados
-                          {cap && capacityState !== 'unknown'
-                            ? ` · capacidade ${formatPlanningMinutes(cap.capacityMinutes)}`
-                            : ''}
-                        </p>
-                        <div className="space-y-2">
-                          {items.length === 0 ? (
-                            <p className="py-4 text-center text-[10px] leading-relaxed text-slate-600">
-                              Nenhuma atividade planejada.
+                        <WeeklyAgendaCell
+                          collaboratorId={collaborator.id}
+                          plannedDate={col.dateIso}
+                          sortableIds={sortableIds}
+                        >
+                          {capacityState === 'over_capacity' && cap ? (
+                            <p className="mb-1 text-[10px] font-medium text-amber-200/90">
+                              {formatPlanningCapacityExceededMessage(plannedSum, cap.capacityMinutes)}
                             </p>
-                          ) : (
-                            items.map((item, idx) => (
-                              <WeeklyAgendaPlanCard key={item.id} order={idx + 1} item={item} />
-                            ))
-                          )}
-                        </div>
+                          ) : null}
+                          <p className="mb-2 text-[10px] text-slate-500">
+                            {formatPlanningMinutes(plannedSum)} planejados
+                            {cap && capacityState !== 'unknown'
+                              ? ` · capacidade ${formatPlanningMinutes(cap.capacityMinutes)}`
+                              : ''}
+                          </p>
+                          <div className="min-h-[3rem] space-y-2">
+                            {items.length === 0 ? (
+                              <p className="py-4 text-center text-[10px] leading-relaxed text-slate-600">
+                                Nenhuma atividade planejada.
+                              </p>
+                            ) : (
+                              items.map((item, idx) => (
+                                <WeeklyAgendaPlanCard
+                                  key={item.localKey}
+                                  order={idx + 1}
+                                  item={item}
+                                  dragDisabled={props.dragDisabled}
+                                  canAlterConveyor={props.canAlterConveyor}
+                                  actionBusy={props.cardActionBusyKey === item.localKey}
+                                  onPointTime={
+                                    props.onCardPointTime
+                                      ? () => props.onCardPointTime!(item)
+                                      : undefined
+                                  }
+                                  onComplete={
+                                    props.onCardComplete
+                                      ? () => props.onCardComplete!(item)
+                                      : undefined
+                                  }
+                                  onPrintTicket={
+                                    props.onCardPrintTicket
+                                      ? () => props.onCardPrintTicket!(item)
+                                      : undefined
+                                  }
+                                  onRemoveFromPlan={
+                                    props.onCardRemoveFromPlan
+                                      ? () => props.onCardRemoveFromPlan!(item)
+                                      : undefined
+                                  }
+                                />
+                              ))
+                            )}
+                          </div>
+                        </WeeklyAgendaCell>
                       </td>
                     )
                   })}

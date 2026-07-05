@@ -71,7 +71,7 @@ export function WeeklyAgendaBacklogDrawer(props: WeeklyAgendaBacklogDrawerProps)
             </button>
           </div>
           <p className="mt-1 text-[12px] text-slate-500">
-            Somente leitura — arrastar para a grade chega no PR-4.
+            Arraste uma atividade para a grade da semana — a gaveta fecha ao arrastar para revelar a agenda.
           </p>
           <div className="mt-3 flex gap-2">
             <input

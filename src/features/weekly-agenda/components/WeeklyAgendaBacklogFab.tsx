@@ -1,3 +1,5 @@
+import { createPortal } from 'react-dom'
+
 type WeeklyAgendaBacklogFabProps = {
   count: number
   onClick: () => void
@@ -7,8 +9,10 @@ export function WeeklyAgendaBacklogFab(props: WeeklyAgendaBacklogFabProps) {
   const { count, onClick } = props
   const showPulse = count >= 3
 
-  return (
-    <div className="pointer-events-none fixed bottom-5 right-5 z-[45]">
+  if (typeof document === 'undefined') return null
+
+  return createPortal(
+    <div className="pointer-events-none fixed bottom-5 right-5 z-[60]">
       <div className="pointer-events-auto relative">
         {showPulse ? (
           <span
@@ -38,6 +42,7 @@ export function WeeklyAgendaBacklogFab(props: WeeklyAgendaBacklogFabProps) {
           ) : null}
         </button>
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }

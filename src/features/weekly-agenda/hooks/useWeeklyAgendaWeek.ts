@@ -22,10 +22,12 @@ export function useWeeklyAgendaWeek() {
       const week = await getOperationalPlanningWeek(weekMonday)
       setWeekPayload(week)
       setWeekMonday(week.week.weekStartDate)
+      return week
     } catch (e) {
       reportClientError(e, { module: 'weekly-agenda', action: 'load_week' })
       setError('Não foi possível carregar o plano desta semana.')
       setWeekPayload(null)
+      return null
     } finally {
       setLoading(false)
     }
@@ -50,6 +52,7 @@ export function useWeeklyAgendaWeek() {
     weekMonday,
     setWeekMonday,
     weekPayload,
+    setWeekPayload,
     collaborators,
     loading,
     error,
