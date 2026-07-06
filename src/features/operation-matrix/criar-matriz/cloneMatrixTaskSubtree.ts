@@ -1,4 +1,5 @@
 import type { MatrixNodeTreeApi } from '../../../domain/operation-matrix/operation-matrix.types'
+import { resolveNodeSourceKey } from '../../../domain/operation-matrix/resolveNodeSourceKey'
 import { matrixActivityPrimaryTeamId } from '../matrixTreeAggregates'
 import {
   createMatrixNode,
@@ -21,7 +22,7 @@ function buildCreatePayload(
     orderIndex: node.order_index,
     isActive: node.is_active,
     required: node.required,
-    sourceKey: node.source_key,
+    sourceKey: resolveNodeSourceKey(node),
     metadataJson: node.metadata_json ?? undefined,
   }
 

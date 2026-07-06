@@ -8,31 +8,38 @@ import {
 
 type Item = {
   group: 'overdue' | 'today' | 'completed'
-  isOutOfSequence: boolean
+  hasPreviousPendingStep: boolean
   plannedDate: string
   workPlanItemId: string
   isActivityCompleted: boolean
   conveyorId: string
   structuralSequenceIndex: number
+  conveyorOperationalStatus: string
+  isNextRecommended?: boolean
 }
 
 function item(overrides: Partial<Item> & Pick<Item, 'workPlanItemId'>): Item {
   return {
     group: 'today',
-    isOutOfSequence: false,
+    hasPreviousPendingStep: false,
     plannedDate: '2026-05-04',
     isActivityCompleted: false,
     conveyorId: 'cv-1',
     structuralSequenceIndex: 0,
+    conveyorOperationalStatus: 'EM_ANDAMENTO',
     ...overrides,
   }
 }
 
 describe('work-queue-prioritization', () => {
   describe('compareWorkQueueItems / sortWorkQueueItems', () => {
-    it('prioriza em sequência antes de fora de sequência no mesmo grupo', () => {
-      const a = item({ workPlanItemId: 'a', structuralSequenceIndex: 0, isOutOfSequence: false })
-      const c = item({ workPlanItemId: 'c', structuralSequenceIndex: 2, isOutOfSequence: true })
+    it('prioriza em sequência antes de pendência anterior no mesmo grupo', () => {
+      const a = item({ workPlanItemId: 'a', structuralSequenceIndex: 0 })
+      const c = item({
+        workPlanItemId: 'c',
+        structuralSequenceIndex: 2,
+        hasPreviousPendingStep: true,
+      })
       const sorted = sortWorkQueueItems([c, a])
       expect(sorted.map((i) => i.workPlanItemId)).toEqual(['a', 'c'])
     })
@@ -40,7 +47,11 @@ describe('work-queue-prioritization', () => {
     it('ordena pela sequência estrutural da esteira, não pelo planned_order implícito', () => {
       const a = item({ workPlanItemId: 'a', structuralSequenceIndex: 0 })
       const b = item({ workPlanItemId: 'b', structuralSequenceIndex: 1 })
-      const c = item({ workPlanItemId: 'c', structuralSequenceIndex: 2, isOutOfSequence: true })
+      const c = item({
+        workPlanItemId: 'c',
+        structuralSequenceIndex: 2,
+        hasPreviousPendingStep: true,
+      })
       const sorted = sortWorkQueueItems([c, b, a])
       expect(sorted.map((i) => i.workPlanItemId)).toEqual(['a', 'b', 'c'])
     })
@@ -62,66 +73,38 @@ describe('work-queue-prioritization', () => {
     })
   })
 
-  describe('assignWorkQueueRecommendations — cenário A, B, C mesmo colaborador', () => {
-    const a = item({
-      workPlanItemId: 'item-a',
-      structuralSequenceIndex: 0,
-      isOutOfSequence: false,
-    })
-    const b = item({
-      workPlanItemId: 'item-b',
-      structuralSequenceIndex: 1,
-      isOutOfSequence: true,
-    })
-    const c = item({
-      workPlanItemId: 'item-c',
-      structuralSequenceIndex: 2,
-      isOutOfSequence: true,
-    })
-
-    it('com A, B, C pendentes, A é a única recomendada', () => {
-      const result = assignWorkQueueRecommendations([c, b, a])
-      expect(result.find((i) => i.workPlanItemId === 'item-a')?.isNextRecommended).toBe(true)
-      expect(result.find((i) => i.workPlanItemId === 'item-b')?.isNextRecommended).toBe(false)
-      expect(result.find((i) => i.workPlanItemId === 'item-c')?.isNextRecommended).toBe(false)
-    })
-
-    it('após concluir A, B é recomendada e C continua bloqueada', () => {
-      const result = assignWorkQueueRecommendations([
-        { ...a, isActivityCompleted: true },
-        { ...b, isOutOfSequence: false },
-        c,
-      ])
-      expect(result.find((i) => i.workPlanItemId === 'item-b')?.isNextRecommended).toBe(true)
-      expect(result.find((i) => i.workPlanItemId === 'item-c')?.isNextRecommended).toBe(false)
-    })
-  })
-
-  describe('assignWorkQueueRecommendations — Maria com B alerta e C bloqueada', () => {
-    it('recomenda apenas B quando C depende de B da própria Maria', () => {
-      const b = item({
-        workPlanItemId: 'item-b',
-        structuralSequenceIndex: 1,
-        isOutOfSequence: false,
-      })
-      const c = item({
-        workPlanItemId: 'item-c',
-        structuralSequenceIndex: 2,
-        isOutOfSequence: true,
-      })
-      const result = assignWorkQueueRecommendations([c, b])
-      expect(result.find((i) => i.workPlanItemId === 'item-b')?.isNextRecommended).toBe(true)
-      expect(result.find((i) => i.workPlanItemId === 'item-c')?.isNextRecommended).toBe(false)
-    })
-  })
-
-  it('applyWorkQueuePrioritization combina ordenação e recomendação', () => {
+  it('applyWorkQueuePrioritization apenas ordena e preserva isNextRecommended', () => {
     const result = applyWorkQueuePrioritization([
-      item({ workPlanItemId: 'c', structuralSequenceIndex: 2, isOutOfSequence: true }),
-      item({ workPlanItemId: 'a', structuralSequenceIndex: 0 }),
+      item({
+        workPlanItemId: 'c',
+        structuralSequenceIndex: 2,
+        hasPreviousPendingStep: true,
+        isNextRecommended: false,
+      }),
+      item({
+        workPlanItemId: 'a',
+        structuralSequenceIndex: 0,
+        isNextRecommended: true,
+      }),
     ])
     expect(result.map((i) => i.workPlanItemId)).toEqual(['a', 'c'])
-    expect(result[0]?.isNextRecommended).toBe(true)
+    expect(result.find((i) => i.workPlanItemId === 'a')?.isNextRecommended).toBe(true)
+    expect(result.find((i) => i.workPlanItemId === 'c')?.isNextRecommended).toBe(false)
+  })
+
+  it('assignWorkQueueRecommendations não altera flags de recomendação (deprecated)', () => {
+    const input = [
+      item({ workPlanItemId: 'b', structuralSequenceIndex: 1, isNextRecommended: true }),
+      item({
+        workPlanItemId: 'c',
+        structuralSequenceIndex: 2,
+        hasPreviousPendingStep: true,
+        isNextRecommended: false,
+      }),
+    ]
+    const result = assignWorkQueueRecommendations(input)
+    expect(result.find((i) => i.workPlanItemId === 'b')?.isNextRecommended).toBe(true)
+    expect(result.find((i) => i.workPlanItemId === 'c')?.isNextRecommended).toBe(false)
   })
 
   it('compareWorkQueueItems é estável para empate', () => {

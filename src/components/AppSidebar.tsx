@@ -485,28 +485,6 @@ export function AppSidebar({ open, onClose, collapsed, onToggleCollapsed }: Prop
           ))}
         </nav>
 
-        <footer className="shrink-0 border-t border-white/[0.06] bg-gradient-to-t from-black/20 to-transparent px-4 py-4 md:px-2">
-          <p
-            className={[
-              'text-center text-[10px] leading-relaxed text-slate-500 md:text-left',
-              rail ? 'md:hidden' : '',
-            ].join(' ')}
-          >
-            <span className="font-medium text-slate-400">ARGOS</span>
-            <span className="text-slate-600"> · </span>
-            <span className="text-slate-500">Plataforma industrial</span>
-          </p>
-          {rail ? (
-            <p className="hidden text-center md:block">
-              <span
-                className="inline-flex min-h-[2.5rem] min-w-[2.5rem] items-center justify-center rounded-lg border border-white/[0.06] px-1 font-heading text-[10px] font-bold text-slate-500"
-                title="ARGOS · plataforma industrial"
-              >
-                AR
-              </span>
-            </p>
-          ) : null}
-        </footer>
       </aside>
     </>
   )

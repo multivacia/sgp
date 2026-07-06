@@ -32,6 +32,28 @@ export type AssigneeListItemDto = {
   updatedAt: string
 }
 
+export type ConveyorStepSequenceCheckPreviousOpenApi = {
+  activityNodeId: string
+  activityTitle: string
+  sectorTitle: string
+  taskTitle: string
+  orderPath: string
+}
+
+/** GET …/sequence-check — pré-checagem de sequência operacional recomendada (S3). */
+export type ConveyorStepSequenceCheckDto = {
+  targetFound: boolean
+  isOutOfSequence: boolean
+  hasPreviousPendingStep: boolean
+  sequenceWarningType?: 'PREVIOUS_STEP_PENDING' | 'OUT_OF_SEQUENCE'
+  sequenceWarningLabel?: string
+  requiresJustification: boolean
+  previousOpenCount: number
+  previousOpenActivities: ConveyorStepSequenceCheckPreviousOpenApi[]
+  allPreviousOpenActivities: ConveyorStepSequenceCheckPreviousOpenApi[]
+  awaitingPreviousActivities: ConveyorStepSequenceCheckPreviousOpenApi[]
+}
+
 /** Campos derivados de `metadata_json` interno — nunca expor o JSON bruto. */
 export type TimeEntryDelegationPublic = {
   isDelegated: boolean

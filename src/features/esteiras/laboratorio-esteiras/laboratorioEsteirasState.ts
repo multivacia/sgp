@@ -160,7 +160,7 @@ export function buildAppliedMatrixBlock(
   matrixId: string,
   matrixName: string,
   selectedActivityIds: Set<string>,
-  blockId = newKey(),
+  blockId: string = newKey(),
   activityOverrides: Record<string, LabActivityOverride> = {},
 ): AppliedMatrixBlock | null {
   const { options, allocations } = buildManualOptionsFromMatrixSelection(

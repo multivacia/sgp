@@ -92,6 +92,7 @@ describe('cloneTaskSubtreeUnderItem', () => {
       expect.objectContaining({
         nodeType: 'ACTIVITY',
         teamIds: ['team-1'],
+        sourceKey: 'activity-1',
       }),
     )
   })

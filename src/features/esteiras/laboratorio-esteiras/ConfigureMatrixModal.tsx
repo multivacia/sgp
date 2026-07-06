@@ -95,6 +95,7 @@ export function ConfigureMatrixModal({
   }
 
   function handleApply() {
+    if (!tree) return
     const block = buildAppliedMatrixBlock(
       tree,
       matrixId,

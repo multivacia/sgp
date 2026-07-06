@@ -20,7 +20,10 @@ import {
   serviceListConveyorTimeEntries,
 } from './conveyorAssignments.service.js'
 import { serviceAnalyzeConveyorActivitySequence } from './conveyorActivitySequence.service.js'
+import { findConveyorById } from './conveyors.repository.js'
+import { mapWorkQueueSequenceForCollaborator } from '../my-work-queue/work-queue-sequence-for-collaborator.js'
 import { servicePatchConveyorStepCompletion } from './conveyor-step-operational.service.js'
+import { findCollaboratorIdByAppUserId } from '../auth/auth.repository.js'
 
 export async function postConveyorStepAssignee(
   req: Request,
@@ -157,24 +160,42 @@ export async function getConveyorStepSequenceCheck(
 ): Promise<void> {
   const params = conveyorStepParamsSchema.parse(req.params)
   const pool = req.app.locals.pool as pg.Pool
+  const userId = req.authUser?.id
+  const collaboratorId = userId
+    ? await findCollaboratorIdByAppUserId(pool, userId)
+    : null
   const seq = await serviceAnalyzeConveyorActivitySequence(
     pool,
     params.conveyorId,
     params.stepNodeId,
+    collaboratorId ?? undefined,
   )
+  const conveyor = await findConveyorById(pool, params.conveyorId)
+  const mapped = mapWorkQueueSequenceForCollaborator({
+    seq,
+    isActivityCompleted: false,
+    conveyorOperationalStatus: conveyor?.operational_status ?? null,
+  })
+  const mapActivities = (items: typeof seq.allPreviousOpenActivities) =>
+    items.slice(0, 10).map((a) => ({
+      activityNodeId: a.activityNodeId,
+      activityTitle: a.activityTitle,
+      sectorTitle: a.sectorTitle,
+      taskTitle: a.taskTitle,
+      orderPath: a.orderPath,
+    }))
   res.json(
     ok({
-      targetFound: seq.targetFound,
-      isOutOfSequence: seq.isOutOfSequence,
-      requiresJustification: seq.isOutOfSequence,
-      previousOpenCount: seq.previousOpenCount,
-      previousOpenActivities: seq.previousOpenActivities.slice(0, 10).map((a) => ({
-        activityNodeId: a.activityNodeId,
-        activityTitle: a.activityTitle,
-        sectorTitle: a.sectorTitle,
-        taskTitle: a.taskTitle,
-        orderPath: a.orderPath,
-      })),
+      targetFound: mapped.targetFound,
+      isOutOfSequence: mapped.isOutOfSequence,
+      hasPreviousPendingStep: mapped.hasPreviousPendingStep,
+      sequenceWarningType: mapped.sequenceWarningType,
+      sequenceWarningLabel: mapped.sequenceWarningLabel,
+      requiresJustification: mapped.requiresOutOfSequenceJustification,
+      previousOpenCount: mapped.previousOpenCount,
+      previousOpenActivities: mapActivities(mapped.previousOpenActivities),
+      allPreviousOpenActivities: mapActivities(mapped.allPreviousOpenActivities),
+      awaitingPreviousActivities: mapActivities(mapped.awaitingPreviousActivities),
     }),
   )
 }

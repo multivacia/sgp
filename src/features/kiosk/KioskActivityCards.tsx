@@ -7,6 +7,7 @@ import {
   findInitialKioskCarouselIndex,
   partitionKioskWorkQueue,
 } from '../../domain/production/kioskWorkQueueUi'
+import { resolveSequenceListBadge } from '../../domain/production/production.helpers'
 import { getProductionWorkQueue } from '../../services/production/productionApiService'
 import { ProductionCollaboratorAvatar } from '../production/ProductionCollaboratorAvatar'
 import { KioskActivityCard } from './KioskActivityCard'
@@ -171,22 +172,26 @@ export function KioskActivityCards({ collaborator, initialItems, onExit }: Props
         <div className="flex flex-1 flex-col overflow-hidden">
           {activeItem ? (
             <div className="shrink-0 border-b border-white/[0.07] px-5 py-2">
-              <p
-                className={[
-                  'text-center text-[10px] font-bold uppercase tracking-widest',
-                  activeItem.isNextRecommended
-                    ? 'text-sgp-gold'
-                    : activeItem.isOutOfSequence
-                      ? 'text-amber-400'
-                      : 'text-slate-500',
-                ].join(' ')}
-              >
-                {activeItem.isNextRecommended
-                  ? 'Próxima atividade recomendada'
-                  : activeItem.isOutOfSequence
-                    ? 'Atividade fora de sequência'
-                    : 'Atividades'}
-              </p>
+              {(() => {
+                const badge = resolveSequenceListBadge(activeItem)
+                if (badge.kind === 'none') {
+                  return (
+                    <p className="text-center text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                      Atividades
+                    </p>
+                  )
+                }
+                return (
+                  <p
+                    className={[
+                      'text-center text-[10px] font-bold uppercase tracking-widest',
+                      badge.kind === 'recommended' ? 'text-sgp-gold' : 'text-slate-300',
+                    ].join(' ')}
+                  >
+                    {badge.label}
+                  </p>
+                )
+              })()}
             </div>
           ) : null}
           {/* Área do carrossel */}
@@ -273,8 +278,8 @@ export function KioskActivityCards({ collaborator, initialItems, onExit }: Props
                     'text-xs font-bold uppercase tracking-widest',
                     section.id === 'recommended'
                       ? 'text-sgp-gold'
-                      : section.id === 'outOfSequence'
-                        ? 'text-amber-400'
+                      : section.id === 'sequenceWarning'
+                        ? 'text-slate-300'
                         : 'text-slate-500',
                   ].join(' ')}
                 >
@@ -288,8 +293,8 @@ export function KioskActivityCards({ collaborator, initialItems, onExit }: Props
                         'overflow-hidden rounded-2xl border bg-white/[0.03]',
                         item.isNextRecommended
                           ? 'border-sgp-gold/40 ring-1 ring-sgp-gold/20'
-                          : item.isOutOfSequence
-                            ? 'border-amber-500/35'
+                          : item.hasPreviousPendingStep
+                            ? 'border-slate-500/35'
                             : 'border-white/10',
                       ].join(' ')}
                     >

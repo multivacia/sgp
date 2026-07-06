@@ -1,10 +1,12 @@
 import type pg from 'pg'
 import { analyzeConveyorActivitySequence } from '../conveyors/conveyorActivitySequence.logic.js'
 import type { SequenceAnalysisNode } from '../conveyors/conveyorActivitySequence.logic.js'
-import { listConveyorNodesForSequenceAnalysis } from '../conveyors/conveyors.repository.js'
-import { buildConveyorStepOwnershipIndex } from './my-work-queue-step-assignees.repository.js'
 import {
-  analyzeWorkQueueSequenceForCollaborator,
+  listConveyorNodesForSequenceAnalysis,
+  listPlannedCollaboratorsByActivityNode,
+} from '../conveyors/conveyors.repository.js'
+import {
+  mapWorkQueueSequenceForCollaborator,
   type WorkQueueSequenceForCollaborator,
 } from './work-queue-sequence-for-collaborator.js'
 
@@ -30,13 +32,17 @@ export async function serviceAnalyzeWorkQueueSequenceForCollaborator(
     collaboratorId: string
   },
 ): Promise<WorkQueueSequenceForCollaborator> {
-  const [nodes, ownership] = await Promise.all([
+  const [nodes, plannedByNode] = await Promise.all([
     listConveyorNodesForSequenceAnalysis(pool, input.conveyorId),
-    buildConveyorStepOwnershipIndex(pool, input.conveyorId),
+    listPlannedCollaboratorsByActivityNode(pool, input.conveyorId),
   ])
   const seq = analyzeConveyorActivitySequence(
     mapNodesForSequence(nodes),
     input.activityNodeId,
+    {
+      currentCollaboratorId: input.collaboratorId,
+      plannedCollaboratorsByActivityNodeId: plannedByNode,
+    },
   )
-  return analyzeWorkQueueSequenceForCollaborator(seq, input.collaboratorId, ownership)
+  return mapWorkQueueSequenceForCollaborator(seq)
 }

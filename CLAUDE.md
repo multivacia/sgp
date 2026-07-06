@@ -323,3 +323,19 @@ O subagente inicial do Claude fica em:
 `.claude/agents/sgp-impact-analyst.md`
 
 Use antes de mudanças que envolvam esteiras, matrizes, planejamento semanal, produção/kiosk, apontamentos, permissões ou impressão térmica.
+
+# Trecho opcional para adicionar ao CLAUDE.md existente
+
+Este projeto usa agentes em `.claude/agents/` e documentação neutra em `docs/ai/`.
+
+Regra soberana: somente `sgp-implementer` altera código.
+
+Fluxo para demandas médias/grandes:
+
+1. `sgp-context-reader`
+2. `sgp-impact-analyst`
+3. `sgp-feature-spec-writer`
+4. `sgp-implementer`
+5. `sgp-test-reviewer`
+
+Antes de agir, leia também `AGENTS.md`.

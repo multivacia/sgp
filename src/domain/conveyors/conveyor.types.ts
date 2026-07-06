@@ -39,6 +39,8 @@ export type CreateConveyorStepInput = {
   plannedQuantity?: number
   sourceOrigin: ConveyorSourceOrigin
   required?: boolean
+  /** Identidade estável da atividade (lineage matriz → esteira). Opcional — retrocompat. */
+  sourceKey?: string | null
   /** Se não vazio, deve haver exatamente um `isPrimary: true` (validação no servidor). */
   assignees?: CreateConveyorStepAssigneeInput[]
 }

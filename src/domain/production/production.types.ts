@@ -31,6 +31,8 @@ export type ProductionCollaboratorsList = {
   items: ProductionCollaboratorSummary[]
 }
 
+import type { SequenceWarningType } from '../production/production.helpers'
+
 export type ProductionWorkQueueItem = {
   workPlanItemId: string
 
@@ -52,8 +54,13 @@ export type ProductionWorkQueueItem = {
   isOverdue: boolean
   isOutOfSequence: boolean
   isNextRecommended: boolean
+  hasPreviousPendingStep: boolean
+  sequenceWarningType?: SequenceWarningType
+  sequenceWarningLabel?: string
   previousOpenCount: number
   previousOpenActivities: ProductionWorkQueuePreviousOpenActivity[]
+  allPreviousOpenActivities: ProductionWorkQueuePreviousOpenActivity[]
+  awaitingPreviousActivities: ProductionWorkQueuePreviousOpenActivity[]
   hasPreviousOpenActivitiesFromOtherCollaborators: boolean
   previousOpenActivitiesFromOtherCollaborators: ProductionWorkQueuePreviousOpenFromOtherCollaborator[]
   previousOpenActivitiesWarningMessage: string | null
@@ -61,6 +68,8 @@ export type ProductionWorkQueueItem = {
   group: 'overdue' | 'today' | 'completed'
 
   canTrackTime: boolean
+  canPointTime?: boolean
+  blockingReason?: string
   canCompleteStep: boolean
   requiresOutOfSequenceJustification: boolean
 }

@@ -72,6 +72,7 @@ function mockSequenceNodes() {
       is_active: true,
     },
   ] as never)
+  vi.spyOn(seqRepo, 'listPlannedCollaboratorsByActivityNode').mockResolvedValue(new Map())
 }
 
 describe('serviceListTimeEntryCandidates — alocação estrutural vs plano semanal', () => {

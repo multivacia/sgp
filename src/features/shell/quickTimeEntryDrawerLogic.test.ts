@@ -41,10 +41,12 @@ function baseCandidate(
     pendingMinutes: 30,
     isAssignedToMe: true,
     requiresJustification: false,
-    isOutOfSequence: false,
-    requiresOutOfSequenceJustification: false,
+  isOutOfSequence: false,
+  hasPreviousPendingStep: false,
+  requiresOutOfSequenceJustification: false,
     previousOpenCount: 0,
     previousOpenActivities: [],
+    awaitingPreviousActivities: [],
     canCompleteStep: true,
     ...overrides,
   }
@@ -175,5 +177,13 @@ describe('quickTimeEntryDrawerLogic', () => {
     expect(candidateNeedsOutOfSequenceJustification(baseCandidate({ isOutOfSequence: true }))).toBe(
       true,
     )
+    expect(
+      candidateNeedsOutOfSequenceJustification(
+        baseCandidate({
+          isOutOfSequence: false,
+          awaitingPreviousActivities: [{ activityTitle: 'Funilaria', sectorTitle: 'S', taskTitle: 'T' }],
+        }),
+      ),
+    ).toBe(false)
   })
 })

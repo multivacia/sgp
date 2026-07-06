@@ -27,9 +27,11 @@ function baseCandidate(
     isAssignedToMe: true,
     requiresJustification: false,
     isOutOfSequence: false,
+    hasPreviousPendingStep: false,
     requiresOutOfSequenceJustification: false,
     previousOpenCount: 0,
     previousOpenActivities: [],
+    awaitingPreviousActivities: [],
     canCompleteStep: true,
     ...overrides,
   }

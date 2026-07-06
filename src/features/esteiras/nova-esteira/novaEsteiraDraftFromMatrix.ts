@@ -1,4 +1,5 @@
 import type { MatrixNodeTreeApi } from '../../../domain/operation-matrix/operation-matrix.types'
+import { resolveNodeSourceKey } from '../../../domain/operation-matrix/resolveNodeSourceKey'
 import { matrixActivityPrimaryTeamId } from '../../operation-matrix/matrixTreeAggregates'
 import type {
   ManualAreaDraft,
@@ -38,6 +39,7 @@ function emptyStepFromActivity(act: MatrixNodeTreeApi): ManualStepDraft {
     titulo: act.name.trim(),
     plannedMinutes: Math.max(0, Math.floor(Number(act.planned_minutes ?? 0))),
     plannedQuantity: 1,
+    sourceKey: resolveNodeSourceKey(act),
   }
 }
 

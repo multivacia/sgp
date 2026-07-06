@@ -141,6 +141,11 @@ describe('emptyStepFromActivity via matrixItemTreeToManualOptions', () => {
     const { options } = matrixItemTreeToManualOptions(tree, 'item-1')
     expect(options[0].areas[0].steps[0].plannedQuantity).toBe(1)
   })
+
+  it('propaga sourceKey resolvida da atividade de origem', () => {
+    const { options } = matrixItemTreeToManualOptions(matrixTreeWithTeamActivity(), 'item-1')
+    expect(options[0].areas[0].steps[0].sourceKey).toBe('act-1')
+  })
 })
 
 describe('mapMatrixTreeToConveyorOptions', () => {
@@ -209,6 +214,31 @@ describe('buildManualConveyorInput', () => {
       {},
     )
     expect(input.options[0].areas[0].steps[0].plannedQuantity).toBe(1)
+  })
+
+  it('propaga sourceKey do draft para o POST', () => {
+    const roots = [
+      {
+        key: 'op-1',
+        titulo: 'Op',
+        areas: [
+          {
+            key: 'ar-1',
+            titulo: 'Área',
+            steps: [
+              {
+                key: 'st-1',
+                titulo: 'Etapa',
+                plannedMinutes: 20,
+                sourceKey: 'lineage-key',
+              },
+            ],
+          },
+        ],
+      },
+    ]
+    const input = buildManualConveyorInput({ nome: 'Teste', prioridade: 'media' }, roots, {})
+    expect(input.options[0].areas[0].steps[0].sourceKey).toBe('lineage-key')
   })
 })
 

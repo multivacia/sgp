@@ -1,0 +1,17 @@
+---
+description: Guardrails soberanos para qualquer atuação de IA no SGP+ Web.
+alwaysApply: true
+---
+
+# Guardrails SGP+ Web
+
+- Responda e documente em português do Brasil, salvo pedido contrário.
+- Backend é fonte da verdade para regra de negócio.
+- Não faça refatoração oportunista.
+- Não altere código em demanda média/grande sem spec ou plano aprovado.
+- Somente `sgp-implementer` pode alterar código; agentes de contexto, impacto, spec e revisão são readonly.
+- Nunca maquie falha de build, lint, typecheck ou teste.
+- Relatório em prosa não é prova: use saída real de comando e exit code.
+- Não execute migrations sem instrução explícita.
+- Não faça merge em `develop` ou `main` sem aprovação humana.
+- Preserve rastreabilidade: cite arquivos, comandos e critérios de aceite.

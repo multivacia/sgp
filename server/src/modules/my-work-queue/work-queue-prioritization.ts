@@ -3,7 +3,7 @@ import type { MyWorkQueueItemApi } from './my-work-queue.dto.js'
 type WorkQueueSortableItem = Pick<
   MyWorkQueueItemApi,
   | 'group'
-  | 'isOutOfSequence'
+  | 'hasPreviousPendingStep'
   | 'plannedDate'
   | 'workPlanItemId'
   | 'isActivityCompleted'
@@ -18,9 +18,11 @@ function groupSortRank(group: MyWorkQueueItemApi['group']): number {
 }
 
 /**
- * Ordenação operacional da fila:
- * - em sequência (para o colaborador) antes de bloqueio/exceção;
+ * Ordenação operacional da fila (exibição apenas):
+ * - em sequência estrutural antes de pendência anterior;
  * - sequência estrutural da esteira (`structuralSequenceIndex`), não `planned_order`.
+ *
+ * `isNextRecommended` NÃO é derivado desta ordenação — veja `resolveIsNextRecommended`.
  */
 export function compareWorkQueueItems(
   a: WorkQueueSortableItem,
@@ -29,7 +31,8 @@ export function compareWorkQueueItems(
   const groupDiff = groupSortRank(a.group) - groupSortRank(b.group)
   if (groupDiff !== 0) return groupDiff
 
-  const sequenceDiff = Number(a.isOutOfSequence) - Number(b.isOutOfSequence)
+  const sequenceDiff =
+    Number(a.hasPreviousPendingStep) - Number(b.hasPreviousPendingStep)
   if (sequenceDiff !== 0) return sequenceDiff
 
   const dateDiff = a.plannedDate.localeCompare(b.plannedDate)
@@ -48,38 +51,19 @@ export function sortWorkQueueItems<T extends WorkQueueSortableItem>(items: T[]):
   return [...items].sort(compareWorkQueueItems)
 }
 
+/** Ordena a fila para exibição; preserva `isNextRecommended` já calculado por item. */
+export function applyWorkQueuePrioritization<T extends WorkQueueSortableItem>(
+  items: T[],
+): T[] {
+  return sortWorkQueueItems(items)
+}
+
+/**
+ * @deprecated Recomendação é por item via `resolveIsNextRecommended` (sequência estrutural).
+ * Mantido apenas para compatibilidade de import — retorna itens ordenados sem alterar flags.
+ */
 export function assignWorkQueueRecommendations<T extends WorkQueueSortableItem>(
   items: T[],
-): Array<T & { isNextRecommended: boolean }> {
-  const sorted = sortWorkQueueItems(items)
-  const recommendedConveyors = new Set<string>()
-
-  return sorted.map((item) => {
-    const canRecommend =
-      !item.isActivityCompleted &&
-      !item.isOutOfSequence &&
-      !recommendedConveyors.has(item.conveyorId)
-
-    if (canRecommend) {
-      recommendedConveyors.add(item.conveyorId)
-    }
-
-    return {
-      ...item,
-      isNextRecommended: canRecommend,
-    }
-  })
-}
-
-export function applyWorkQueuePrioritization<
-  T extends WorkQueueSortableItem & { isNextRecommended?: boolean },
->(items: T[]): Array<T & { isNextRecommended: boolean }> {
-  return assignWorkQueueRecommendations(items)
-}
-
-/** @deprecated Use assignWorkQueueRecommendations após montar isOutOfSequence por colaborador. */
-export function resolveIsNextRecommended(
-  item: Pick<MyWorkQueueItemApi, 'isActivityCompleted' | 'isOutOfSequence'>,
-): boolean {
-  return !item.isActivityCompleted && !item.isOutOfSequence
+): T[] {
+  return sortWorkQueueItems(items)
 }

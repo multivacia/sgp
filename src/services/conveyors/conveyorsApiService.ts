@@ -232,9 +232,26 @@ export async function patchConveyorStepCompletion(
 export type ConveyorStepSequenceCheckResult = {
   targetFound: boolean
   isOutOfSequence: boolean
+  hasPreviousPendingStep: boolean
+  sequenceWarningType?: 'PREVIOUS_STEP_PENDING' | 'OUT_OF_SEQUENCE'
+  sequenceWarningLabel?: string
   requiresJustification: boolean
   previousOpenCount: number
   previousOpenActivities: Array<{
+    activityNodeId: string
+    activityTitle: string
+    sectorTitle: string
+    taskTitle: string
+    orderPath: string
+  }>
+  allPreviousOpenActivities?: Array<{
+    activityNodeId: string
+    activityTitle: string
+    sectorTitle: string
+    taskTitle: string
+    orderPath: string
+  }>
+  awaitingPreviousActivities: Array<{
     activityNodeId: string
     activityTitle: string
     sectorTitle: string

@@ -7,6 +7,7 @@ import {
 
 const base = {
   isActivityCompleted: false,
+  hasPreviousPendingStep: false,
   isOutOfSequence: false,
   planItemStatus: 'PLANNED',
   conveyorOperationalStatus: 'A_INICIAR',
@@ -41,11 +42,12 @@ describe('resolveProductionCanTrackTime', () => {
 })
 
 describe('resolveProductionRequiresOutOfSequenceJustification', () => {
-  it('true quando fora de sequência e não concluída', () => {
+  it('true quando etapa anterior pendente e não concluída', () => {
     expect(
       resolveProductionRequiresOutOfSequenceJustification({
         isActivityCompleted: false,
-        isOutOfSequence: true,
+        hasPreviousPendingStep: true,
+        isOutOfSequence: false,
       }),
     ).toBe(true)
   })
@@ -54,6 +56,7 @@ describe('resolveProductionRequiresOutOfSequenceJustification', () => {
     expect(
       resolveProductionRequiresOutOfSequenceJustification({
         isActivityCompleted: true,
+        hasPreviousPendingStep: true,
         isOutOfSequence: true,
       }),
     ).toBe(false)

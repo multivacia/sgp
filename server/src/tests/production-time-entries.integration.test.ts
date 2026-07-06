@@ -18,7 +18,7 @@ import {
 } from './productionTestHelpers.js'
 import { sessionCookieForUser } from './sessionTestCookie.js'
 import { ensureMariaCollaboratorSeedForIntegration } from './integrationSeedFixtures.js'
-import { setConveyorProductionStatusForIntegration } from './integrationConveyorFixtures.js'
+import { setConveyorProductionStatusForIntegration, seedOperationalWorkPlanItemsForSteps } from './integrationConveyorFixtures.js'
 import { ErrorCodes } from '../shared/errors/errorCodes.js'
 import { mondayOfWeekContaining } from '../modules/operational-planning/operational-planning.week.js'
 import { serviceAnalyzeConveyorActivitySequence } from '../modules/conveyors/conveyorActivitySequence.service.js'
@@ -586,7 +586,21 @@ describe.skipIf(!hasDb)('production time entries (integração)', () => {
         isPrimary: true,
       })
 
-      const seq = await serviceAnalyzeConveyorActivitySequence(pool, conv.id, secondStep)
+      await seedOperationalWorkPlanItemsForSteps(pool, {
+        createdByUserId: TE_ADMIN_USER_ID,
+        conveyorId: conv.id,
+        steps: [
+          { activityNodeId: firstStep, collaboratorId: SEED_COLLABORATOR_MARIA_ID },
+          { activityNodeId: secondStep, collaboratorId: SEED_COLLABORATOR_MARIA_ID },
+        ],
+      })
+
+      const seq = await serviceAnalyzeConveyorActivitySequence(
+        pool,
+        conv.id,
+        secondStep,
+        SEED_COLLABORATOR_MARIA_ID,
+      )
       expect(seq.isOutOfSequence).toBe(true)
 
       const cookie = productionSessionCookie(SEED_COLLABORATOR_MARIA_ID)
@@ -654,6 +668,15 @@ describe.skipIf(!hasDb)('production time entries (integração)', () => {
         conveyorNodeId: secondStep,
         collaboratorId: SEED_COLLABORATOR_MARIA_ID,
         isPrimary: true,
+      })
+
+      await seedOperationalWorkPlanItemsForSteps(pool, {
+        createdByUserId: TE_ADMIN_USER_ID,
+        conveyorId: conv.id,
+        steps: [
+          { activityNodeId: steps.rows[0]!.id, collaboratorId: SEED_COLLABORATOR_MARIA_ID },
+          { activityNodeId: secondStep, collaboratorId: SEED_COLLABORATOR_MARIA_ID },
+        ],
       })
 
       const cookie = productionSessionCookie(SEED_COLLABORATOR_MARIA_ID)

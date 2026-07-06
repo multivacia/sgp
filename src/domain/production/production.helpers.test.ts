@@ -3,6 +3,7 @@ import {
   computeProductionCollaboratorInitials,
   filterProductionCollaboratorsByName,
   filterProductionWorkQueue,
+  formatAwaitingPreviousActivitiesLabel,
   formatProductionDate,
   formatProductionMinutes,
   isProductionDefaultInitialPin,
@@ -127,8 +128,11 @@ const baseItem = (
   isOverdue: false,
   isOutOfSequence: false,
   isNextRecommended: false,
+  hasPreviousPendingStep: false,
   previousOpenCount: 0,
   previousOpenActivities: [],
+  allPreviousOpenActivities: [],
+  awaitingPreviousActivities: [],
   hasPreviousOpenActivitiesFromOtherCollaborators: false,
   previousOpenActivitiesFromOtherCollaborators: [],
   previousOpenActivitiesWarningMessage: null,
@@ -137,6 +141,27 @@ const baseItem = (
   canCompleteStep: true,
   requiresOutOfSequenceJustification: false,
   ...overrides,
+})
+
+describe('formatAwaitingPreviousActivitiesLabel', () => {
+  it('retorna null quando vazio', () => {
+    expect(formatAwaitingPreviousActivitiesLabel([])).toBeNull()
+  })
+
+  it('nomeia uma etapa', () => {
+    expect(
+      formatAwaitingPreviousActivitiesLabel([{ activityTitle: 'Funilaria' }]),
+    ).toBe('Aguardando etapa Funilaria')
+  })
+
+  it('pluraliza várias etapas', () => {
+    expect(
+      formatAwaitingPreviousActivitiesLabel([
+        { activityTitle: 'Funilaria' },
+        { activityTitle: 'Pintura' },
+      ]),
+    ).toBe('Aguardando 2 etapas anteriores')
+  })
 })
 
 describe('formatProductionMinutes', () => {
@@ -179,11 +204,21 @@ describe('resolveProductionOperationalStatusDisplay', () => {
     expect(d.label).toBe('Concluída')
   })
 
-  it('fora da sequência → label específica', () => {
+  it('próxima recomendada → label específica', () => {
     const d = resolveProductionOperationalStatusDisplay(
-      baseItem({ isOutOfSequence: true }),
+      baseItem({ isNextRecommended: true }),
     )
-    expect(d.label).toBe('Fora da sequência')
+    expect(d.label).toBe('Próxima recomendada')
+  })
+
+  it('pendência anterior → alerta neutro', () => {
+    const d = resolveProductionOperationalStatusDisplay(
+      baseItem({
+        hasPreviousPendingStep: true,
+        sequenceWarningLabel: 'Etapa anterior pendente: Funilaria',
+      }),
+    )
+    expect(d.label).toBe('Atenção à sequência')
   })
 
   it('em atraso → label Em atraso', () => {
