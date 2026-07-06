@@ -8,6 +8,8 @@ export type WorkQueuePreviousOpenFromOtherCollaborator = PreviousOpenActivitySum
 }
 
 export type WorkQueueSequenceForCollaborator = {
+  /** Se a atividade alvo existe na linearização estrutural da esteira. */
+  targetFound: boolean
   structuralSequenceIndex: number
   /** Bloqueio operacional do colaborador atual (pendência própria ou sem responsável). */
   isOutOfSequence: boolean
@@ -44,6 +46,7 @@ export function analyzeWorkQueueSequenceForCollaborator(
 ): WorkQueueSequenceForCollaborator {
   if (!seq.targetFound) {
     return {
+      targetFound: false,
       structuralSequenceIndex: -1,
       isOutOfSequence: false,
       requiresOutOfSequenceJustification: false,
@@ -76,6 +79,7 @@ export function analyzeWorkQueueSequenceForCollaborator(
     !isOutOfSequence && fromOthers.length > 0
 
   return {
+    targetFound: true,
     structuralSequenceIndex: seq.structuralSequenceIndex,
     isOutOfSequence,
     requiresOutOfSequenceJustification: isOutOfSequence,

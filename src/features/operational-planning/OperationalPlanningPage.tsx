@@ -51,7 +51,6 @@ import {
   getOperationalPlanningWeek,
   getOperationalPlanningWeekActivity,
   listOperationalPlanningBacklog,
-  patchOperationalPlanningWeek,
   publishOperationalPlanningWeek,
   saveOperationalPlanningWeek,
 } from '../../services/operational-planning/operationalPlanningApiService'
@@ -998,6 +997,23 @@ export function OperationalPlanningPage() {
     setModalBacklogItem(null)
   }
 
+  const applyPlanningWeekFromServer = useCallback(
+    (out: OperationalPlanningWeekPayload) => {
+      setWeekPayload(out)
+      setWeekMonday(out.week.weekStartDate)
+      if (out.plan?.items?.length) {
+        const d = out.plan.items.map(planItemToDraft)
+        setDraftItems(d)
+        savedDraftJsonRef.current = JSON.stringify(d)
+      } else {
+        setDraftItems([])
+        savedDraftJsonRef.current = JSON.stringify([])
+      }
+      void loadWeekActivity(out.week.weekStartDate)
+    },
+    [loadWeekActivity],
+  )
+
   const persistPublishedPlanItems = useCallback(
     async (items: DraftPlanItem[]) => {
       if (!weekPayload?.plan || !shouldAutoPersistPlanChanges(weekPayload)) return
@@ -1006,11 +1022,8 @@ export function OperationalPlanningPage() {
       setBusy(true)
       setErrorMsg(null)
       try {
-        const out = await patchOperationalPlanningWeek(weekPayload.plan.id, body)
-        setWeekPayload(out)
-        const d = out.plan?.items?.length ? out.plan.items.map(planItemToDraft) : []
-        setDraftItems(d)
-        savedDraftJsonRef.current = JSON.stringify(d)
+        const out = await saveOperationalPlanningWeek(body)
+        applyPlanningWeekFromServer(out)
         setSuccessMsg(SAVE_REVISION_SUCCESS_MESSAGE)
         void loadBacklog()
         void loadFactoryIntake()
@@ -1027,7 +1040,7 @@ export function OperationalPlanningPage() {
         setBusy(false)
       }
     },
-    [weekPayload, loadBacklog, loadFactoryIntake, loadWeek],
+    [weekPayload, loadBacklog, loadFactoryIntake, loadWeek, applyPlanningWeekFromServer],
   )
 
   function removeDraft(localKey: string) {
@@ -1071,22 +1084,9 @@ export function OperationalPlanningPage() {
     setErrorMsg(null)
     setSuccessMsg(null)
     try {
-      let out: OperationalPlanningWeekPayload
-      if (weekPayload.hasPlan && weekPayload.plan) {
-        out = await patchOperationalPlanningWeek(weekPayload.plan.id, body)
-      } else {
-        out = await saveOperationalPlanningWeek(body)
-      }
-      setWeekPayload(out)
-      if (out.plan?.items?.length) {
-        const d = out.plan.items.map(planItemToDraft)
-        setDraftItems(d)
-        savedDraftJsonRef.current = JSON.stringify(d)
-      } else {
-        setDraftItems([])
-        savedDraftJsonRef.current = JSON.stringify([])
-      }
-      setSuccessMsg(resolvePlanningSaveSuccessMessage(resolvePlanningRevisionContext(weekPayload)))
+      const out = await saveOperationalPlanningWeek(body)
+      applyPlanningWeekFromServer(out)
+      setSuccessMsg(resolvePlanningSaveSuccessMessage(resolvePlanningRevisionContext(out)))
       void loadBacklog()
       void loadFactoryIntake()
     } catch (e) {
@@ -1111,8 +1111,8 @@ export function OperationalPlanningPage() {
     setErrorMsg(null)
     setSuccessMsg(null)
     try {
-      await publishOperationalPlanningWeek(weekPayload.plan.id)
-      await loadWeek()
+      const out = await publishOperationalPlanningWeek(weekPayload.plan.id)
+      applyPlanningWeekFromServer(out)
       void loadBacklog()
       void loadFactoryIntake()
       setSuccessMsg(PUBLISH_SUCCESS_MESSAGE)

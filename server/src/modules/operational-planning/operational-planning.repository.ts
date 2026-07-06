@@ -200,6 +200,92 @@ export async function findOperationalWorkPlanById(
   return mapOperationalWorkPlanRow(row)
 }
 
+/** Resolve semana de plano arquivado (ex.: id obsoleto após republicação). */
+export async function findOperationalWorkPlanByIdIncludingDeleted(
+  pool: pg.Pool | pg.PoolClient,
+  planId: string,
+): Promise<OperationalWorkPlanRow | null> {
+  const r = await pool.query<{
+    id: string
+    week_start_date: string
+    week_end_date: string
+    status: 'DRAFT' | 'PUBLISHED'
+    created_by: string
+    published_at: Date | null
+    published_by: string | null
+    created_at: Date
+    updated_at: Date
+  }>(
+    `
+    SELECT
+      id::text,
+      week_start_date::text AS week_start_date,
+      week_end_date::text AS week_end_date,
+      status,
+      created_by::text,
+      published_at,
+      published_by::text,
+      created_at,
+      updated_at
+    FROM operational_work_plans
+    WHERE id = $1::uuid
+    LIMIT 1
+    `,
+    [planId],
+  )
+  const row = r.rows[0]
+  if (!row) return null
+  return mapOperationalWorkPlanRow(row)
+}
+
+export async function listWorkPlanItemInsertsForPlan(
+  pool: pg.Pool | pg.PoolClient,
+  workPlanId: string,
+): Promise<OperationalWorkPlanItemInsert[]> {
+  const r = await pool.query<{
+    conveyor_id: string
+    activity_node_id: string
+    assigned_collaborator_id: string | null
+    assigned_team_id: string | null
+    planned_date: string
+    planned_order: number
+    planned_minutes: number | null
+    notes: string | null
+    conveyor_operational_plan_item_id: string | null
+  }>(
+    `
+    SELECT
+      conveyor_id::text,
+      activity_node_id::text,
+      assigned_collaborator_id::text,
+      assigned_team_id::text,
+      planned_date::text,
+      planned_order,
+      planned_minutes,
+      notes,
+      conveyor_operational_plan_item_id::text
+    FROM operational_work_plan_items
+    WHERE work_plan_id = $1::uuid
+      AND deleted_at IS NULL
+    ORDER BY planned_date, assigned_collaborator_id NULLS LAST, planned_order
+    `,
+    [workPlanId],
+  )
+  return r.rows
+    .filter((row) => row.assigned_collaborator_id)
+    .map((row) => ({
+      conveyorId: row.conveyor_id,
+      activityNodeId: row.activity_node_id,
+      assignedCollaboratorId: row.assigned_collaborator_id!,
+      assignedTeamId: row.assigned_team_id,
+      plannedDate: row.planned_date.trim(),
+      plannedOrder: row.planned_order,
+      plannedMinutes: row.planned_minutes,
+      notes: row.notes,
+      conveyorOperationalPlanItemId: row.conveyor_operational_plan_item_id,
+    }))
+}
+
 export async function softDeleteOperationalWorkPlanWithItems(
   client: pg.PoolClient,
   planId: string,

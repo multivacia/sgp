@@ -192,4 +192,26 @@ describe('analyzeWorkQueueSequenceForCollaborator', () => {
     expect(b.hasPreviousOpenActivitiesFromOtherCollaborators).toBe(false)
     expect(b.previousOpenActivities[0]?.activityTitle).toBe('Atividade A')
   })
+
+  it('propaga targetFound da análise estrutural', () => {
+    const nodes = abcNodes()
+    const ownership = ownershipIndex({
+      [STEP_B]: { collaboratorId: MARIA, name: 'Maria' },
+    })
+
+    const found = analyzeWorkQueueSequenceForCollaborator(
+      analyzeConveyorActivitySequence(nodes, STEP_B),
+      MARIA,
+      ownership,
+    )
+    const missing = analyzeWorkQueueSequenceForCollaborator(
+      analyzeConveyorActivitySequence(nodes, 'step-inexistente'),
+      MARIA,
+      ownership,
+    )
+
+    expect(found.targetFound).toBe(true)
+    expect(missing.targetFound).toBe(false)
+    expect(missing.structuralSequenceIndex).toBe(-1)
+  })
 })

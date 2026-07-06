@@ -41,8 +41,8 @@ export async function patchOperationalPlanningWeek(
 
 export async function publishOperationalPlanningWeek(
   planId: string,
-): Promise<{ published: boolean }> {
-  return requestJson<{ published: boolean }>(
+): Promise<OperationalPlanningWeekPayload> {
+  return requestJson<OperationalPlanningWeekPayload>(
     'POST',
     `${BASE}/operational-planning/week/${encodeURIComponent(planId)}/publish`,
     {},

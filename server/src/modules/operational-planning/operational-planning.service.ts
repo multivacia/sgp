@@ -27,9 +27,11 @@ import {
   findDraftOperationalWorkPlanByWeekStart,
   findEditableOperationalWorkPlanForWeek,
   findOperationalWorkPlanById,
+  findOperationalWorkPlanByIdIncludingDeleted,
   findPublishedOperationalWorkPlanByWeekStart,
   insertOperationalWorkPlan,
   insertWorkPlanItems,
+  listWorkPlanItemInsertsForPlan,
   isConveyorPlanItemLinkedElsewhere,
   listEnrichedItemsForWorkPlan,
   listExecutionOutsidePlanEntriesForWeek,
@@ -651,22 +653,88 @@ async function workPlanIdsToExcludeForValidation(
   return [...new Set([targetPlanId, draft?.id, published?.id].filter((id): id is string => Boolean(id)))]
 }
 
+async function seedDraftFromPublishedPlan(
+  client: pg.PoolClient,
+  publishedPlanId: string,
+  draftPlanId: string,
+): Promise<void> {
+  const sourceItems = await listWorkPlanItemInsertsForPlan(client, publishedPlanId)
+  if (sourceItems.length === 0) return
+  await insertWorkPlanItems(client, draftPlanId, sourceItems)
+}
+
 async function resolveOrCreateDraftPlanForSave(
   client: pg.PoolClient,
   existing: OperationalWorkPlanRow,
   actorUserId: string,
+  publishedPlanId?: string | null,
 ): Promise<string> {
   if (existing.status === 'DRAFT') return existing.id
 
   const draft = await findDraftOperationalWorkPlanByWeekStart(client, existing.week_start_date)
   if (draft) return draft.id
 
-  return insertOperationalWorkPlan(client, {
+  const draftPlanId = await insertOperationalWorkPlan(client, {
     weekStartDate: existing.week_start_date,
     weekEndDate: existing.week_end_date,
     createdByUserId: actorUserId,
     status: 'DRAFT',
   })
+
+  const sourcePublishedId =
+    publishedPlanId ??
+    (existing.status === 'PUBLISHED' ? existing.id : null) ??
+    (await findPublishedOperationalWorkPlanByWeekStart(client, existing.week_start_date))?.id ??
+    null
+  if (sourcePublishedId) {
+    await seedDraftFromPublishedPlan(client, sourcePublishedId, draftPlanId)
+  }
+
+  return draftPlanId
+}
+
+async function resolveOperationalWorkPlanForWeekMutation(
+  pool: pg.Pool,
+  planId: string,
+  weekStartDate: string,
+): Promise<OperationalWorkPlanRow> {
+  const byId = await findOperationalWorkPlanById(pool, planId)
+  if (byId) {
+    if (byId.week_start_date !== weekStartDate) {
+      throw new AppError(
+        'Semana do corpo não coincide com o plano. Use weekStartDate/weekEndDate do plano.',
+        400,
+        ErrorCodes.VALIDATION_ERROR,
+      )
+    }
+    return byId
+  }
+
+  const editable = await findEditableOperationalWorkPlanForWeek(pool, weekStartDate)
+  if (editable) return editable
+
+  throw new AppError('Plano não encontrado.', 404, ErrorCodes.NOT_FOUND)
+}
+
+async function resolveOperationalWorkPlanForPublish(
+  pool: pg.Pool,
+  planId: string,
+): Promise<OperationalWorkPlanRow> {
+  const active = await findOperationalWorkPlanById(pool, planId)
+  if (active) return active
+
+  const archived = await findOperationalWorkPlanByIdIncludingDeleted(pool, planId)
+  if (!archived) {
+    throw new AppError('Plano não encontrado.', 404, ErrorCodes.NOT_FOUND)
+  }
+
+  const draft = await findDraftOperationalWorkPlanByWeekStart(pool, archived.week_start_date)
+  if (draft) return draft
+
+  const published = await findPublishedOperationalWorkPlanByWeekStart(pool, archived.week_start_date)
+  if (published) return published
+
+  throw new AppError('Plano não encontrado.', 404, ErrorCodes.NOT_FOUND)
 }
 
 export async function serviceSaveOperationalWeekPlan(
@@ -695,6 +763,7 @@ export async function serviceSaveOperationalWeekPlan(
         createdByUserId: actorUserId,
         status: 'DRAFT',
       })
+      await seedDraftFromPublishedPlan(client, publishedPlan.id, planId)
     } else {
       planId = await insertOperationalWorkPlan(client, {
         weekStartDate: body.weekStartDate,
@@ -735,26 +804,27 @@ export async function servicePatchOperationalWeekPlan(
   actorUserId: string,
   body: SaveOperationalWeekPlanBody,
 ): Promise<OperationalPlanningWeekResponse> {
-  const existing = await findOperationalWorkPlanById(pool, planId)
-  if (!existing) {
-    throw new AppError('Plano não encontrado.', 404, ErrorCodes.NOT_FOUND)
-  }
-  if (body.weekStartDate !== existing.week_start_date) {
-    throw new AppError(
-      'Semana do corpo não coincide com o plano. Use weekStartDate/weekEndDate do plano.',
-      400,
-      ErrorCodes.VALIDATION_ERROR,
-    )
-  }
   validateWeekShape(body.weekStartDate, body.weekEndDate)
 
-  const excludeIds = await workPlanIdsToExcludeForValidation(pool, body.weekStartDate)
+  const existing = await resolveOperationalWorkPlanForWeekMutation(pool, planId, body.weekStartDate)
+
+  const publishedPlan = await findPublishedOperationalWorkPlanByWeekStart(pool, body.weekStartDate)
+  const excludeIds = await workPlanIdsToExcludeForValidation(
+    pool,
+    body.weekStartDate,
+    existing.status === 'DRAFT' ? existing.id : publishedPlan?.id,
+  )
   await validatePlanItems(pool, body, excludeIds)
 
   const client = await pool.connect()
   try {
     await client.query('BEGIN')
-    const targetPlanId = await resolveOrCreateDraftPlanForSave(client, existing, actorUserId)
+    const targetPlanId = await resolveOrCreateDraftPlanForSave(
+      client,
+      existing,
+      actorUserId,
+      publishedPlan?.id,
+    )
     if (body.weekEndDate !== existing.week_end_date || targetPlanId !== existing.id) {
       await client.query(
         `
@@ -911,16 +981,13 @@ export async function servicePublishOperationalWeekPlan(
   pool: pg.Pool,
   planId: string,
   publisherUserId: string,
-): Promise<{ published: boolean }> {
-  const existing = await findOperationalWorkPlanById(pool, planId)
-  if (!existing) {
-    throw new AppError('Plano não encontrado.', 404, ErrorCodes.NOT_FOUND)
-  }
+): Promise<OperationalPlanningWeekResponse> {
+  const existing = await resolveOperationalWorkPlanForPublish(pool, planId)
   if (existing.status === 'PUBLISHED') {
-    return { published: false }
+    return serviceGetOperationalPlanningWeek(pool, existing.week_start_date)
   }
 
-  const plannedItems = await listEnrichedItemsForWorkPlan(pool, planId)
+  const plannedItems = await listEnrichedItemsForWorkPlan(pool, existing.id)
   if (plannedItems.length === 0) {
     throw new AppError(
       'Adicione ao menos uma atividade antes de publicar o plano.',
@@ -937,7 +1004,7 @@ export async function servicePublishOperationalWeekPlan(
       client,
       existing.week_start_date,
     )
-    if (publishedPlan) {
+    if (publishedPlan && publishedPlan.id !== existing.id) {
       const oldLinks = await listWorkPlanItemLinks(client, publishedPlan.id)
       if (oldLinks.length > 0) {
         await clearConveyorPlanItemsByOriginWorkPlanItemIds(
@@ -948,7 +1015,7 @@ export async function servicePublishOperationalWeekPlan(
       await softDeleteOperationalWorkPlanWithItems(client, publishedPlan.id)
     }
 
-    const okPub = await publishOperationalWorkPlan(client, planId, publisherUserId)
+    const okPub = await publishOperationalWorkPlan(client, existing.id, publisherUserId)
     if (!okPub) {
       throw new AppError(
         'Não foi possível publicar o plano.',
@@ -957,16 +1024,17 @@ export async function servicePublishOperationalWeekPlan(
       )
     }
 
-    await reconcileConveyorLinksForPublishedPlan(client, planId)
+    await reconcileConveyorLinksForPublishedPlan(client, existing.id)
 
     await client.query('COMMIT')
-    return { published: true }
   } catch (e) {
     await client.query('ROLLBACK')
     throw e
   } finally {
     client.release()
   }
+
+  return serviceGetOperationalPlanningWeek(pool, existing.week_start_date)
 }
 
 export type BacklogItemApi = {

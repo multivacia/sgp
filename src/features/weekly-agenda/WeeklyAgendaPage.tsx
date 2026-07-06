@@ -16,7 +16,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import type { TimeEntryCandidateItem } from '../../domain/my-activities/my-activities.types'
 import { listPlanningSyncIssues } from '../../domain/operational-planning/planningSyncIssues'
-import type { OperationalPlanningBacklogItem } from '../../domain/operational-planning/operational-planning.types'
+import type { OperationalPlanningBacklogItem, OperationalPlanningWeekPayload } from '../../domain/operational-planning/operational-planning.types'
 import { ApiError } from '../../lib/api/apiErrors'
 import { reportClientError } from '../../lib/errors'
 import { useAuth } from '../../lib/use-auth'
@@ -26,7 +26,6 @@ import {
 } from '../../services/conveyors/conveyorsApiService'
 import { listTimeEntryCandidates } from '../../services/my-activities/myActivitiesApiService'
 import {
-  patchOperationalPlanningWeek,
   publishOperationalPlanningWeek,
   saveOperationalPlanningWeek,
 } from '../../services/operational-planning/operationalPlanningApiService'
@@ -343,6 +342,18 @@ export function WeeklyAgendaPage() {
     await reloadBacklog()
   }
 
+  async function applyPlanningWeekFromServer(out: OperationalPlanningWeekPayload) {
+    setWeekPayload(out)
+    if (out.plan?.items?.length) {
+      const d = out.plan.items.map(planItemToDraft)
+      setDraftItems(d)
+      savedDraftJsonRef.current = JSON.stringify(d)
+    } else {
+      setDraftItems([])
+      savedDraftJsonRef.current = '[]'
+    }
+  }
+
   async function handleSaveDraft() {
     if (!weekPayload) return
     const { weekStartDate, weekEndDate } = resolvePlanningSaveWeekDates(weekPayload)
@@ -351,20 +362,9 @@ export function WeeklyAgendaPage() {
     setErrorMsg(null)
     setSuccessMsg(null)
     try {
-      const out =
-        weekPayload.hasPlan && weekPayload.plan
-          ? await patchOperationalPlanningWeek(weekPayload.plan.id, body)
-          : await saveOperationalPlanningWeek(body)
-      setWeekPayload(out)
-      if (out.plan?.items?.length) {
-        const d = out.plan.items.map(planItemToDraft)
-        setDraftItems(d)
-        savedDraftJsonRef.current = JSON.stringify(d)
-      } else {
-        setDraftItems([])
-        savedDraftJsonRef.current = '[]'
-      }
-      setSuccessMsg(resolvePlanningSaveSuccessMessage(resolvePlanningRevisionContext(weekPayload)))
+      const out = await saveOperationalPlanningWeek(body)
+      await applyPlanningWeekFromServer(out)
+      setSuccessMsg(resolvePlanningSaveSuccessMessage(resolvePlanningRevisionContext(out)))
       await reloadBacklog()
     } catch (e) {
       reportClientError(e, { module: 'weekly-agenda', action: 'save_week' })
@@ -389,11 +389,8 @@ export function WeeklyAgendaPage() {
     setBusy(true)
     setErrorMsg(null)
     try {
-      const out = await patchOperationalPlanningWeek(weekPayload.plan.id, body)
-      setWeekPayload(out)
-      const d = out.plan?.items?.length ? out.plan.items.map(planItemToDraft) : []
-      setDraftItems(d)
-      savedDraftJsonRef.current = JSON.stringify(d)
+      const out = await saveOperationalPlanningWeek(body)
+      await applyPlanningWeekFromServer(out)
       setSuccessMsg(SAVE_REVISION_SUCCESS_MESSAGE)
       await reloadBacklog()
     } catch (e) {
@@ -416,8 +413,8 @@ export function WeeklyAgendaPage() {
     setErrorMsg(null)
     setSuccessMsg(null)
     try {
-      await publishOperationalPlanningWeek(weekPayload.plan.id)
-      await reload()
+      const out = await publishOperationalPlanningWeek(weekPayload.plan.id)
+      await applyPlanningWeekFromServer(out)
       await reloadBacklog()
       setSuccessMsg(PUBLISH_SUCCESS_MESSAGE)
     } catch (e) {
