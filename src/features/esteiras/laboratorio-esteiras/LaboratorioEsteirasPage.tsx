@@ -22,7 +22,6 @@ import { MatrixCatalog } from './MatrixCatalog'
 import { MountedStructureReview } from './MountedStructureReview'
 import type { AppliedMatrixBlock, LabBasicDataDraft, LabPhase } from './laboratorioEsteiras.types'
 import {
-  buildAppliedMatrixBlock,
   mergeBlocksToAllocations,
   mergeBlocksToManualRoots,
   summarizeAppliedBlocks,

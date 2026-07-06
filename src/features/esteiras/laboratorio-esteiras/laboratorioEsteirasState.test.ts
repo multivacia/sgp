@@ -67,6 +67,8 @@ const sampleTree = node(
   ],
 )
 
+const blockId = '00000000-0000-0000-0000-000000000001' as const
+
 describe('laboratorioEsteirasState', () => {
   it('lista atividades e setores da matriz', () => {
     expect(countActivitiesInTree(sampleTree)).toBe(3)
@@ -81,7 +83,7 @@ describe('laboratorioEsteirasState', () => {
       'item-1',
       'Sofá 3 lugares',
       selected,
-      'block-1',
+      blockId,
     )
     expect(block).not.toBeNull()
     expect(block!.selectedActivityIds).toEqual(['act-1', 'act-3'])
@@ -98,7 +100,7 @@ describe('laboratorioEsteirasState', () => {
       'item-1',
       'Sofá 3 lugares',
       selected,
-      'block-1',
+      blockId,
       { 'act-1': { name: 'Desmontagem extra', plannedMinutes: 90 } },
     )
     const step = block!.options[0]!.areas[0]!.steps[0]!
@@ -112,7 +114,7 @@ describe('laboratorioEsteirasState', () => {
       'item-1',
       'Sofá 3 lugares',
       defaultSelectedActivityIds(sampleTree),
-      'block-1',
+      blockId,
     )!
     const summary = summarizeAppliedBlocks([block])
     expect(summary.matrixCount).toBe(1)

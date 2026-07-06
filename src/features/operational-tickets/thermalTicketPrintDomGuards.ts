@@ -37,6 +37,7 @@ export function getThermalPrintDomReadiness(
       hostCount,
       hostInBody: false,
       ticketCountInHost: 0,
+      hostTextMatchesTicket: false,
     }
   }
 
@@ -48,6 +49,7 @@ export function getThermalPrintDomReadiness(
       hostCount,
       hostInBody: false,
       ticketCountInHost: 0,
+      hostTextMatchesTicket: false,
     }
   }
 
@@ -62,6 +64,7 @@ export function getThermalPrintDomReadiness(
       hostCount,
       hostInBody,
       ticketCountInHost: 0,
+      hostTextMatchesTicket: false,
     }
   }
 
