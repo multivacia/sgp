@@ -20,3 +20,9 @@ describe('pageTitleForPath — chamados', () => {
     expect(pageTitleForPath('/app/chamados')).toBe('Chamados')
   })
 })
+
+describe('pageTitleForPath — jornada colaborador', () => {
+  it('usa título Minha jornada', () => {
+    expect(pageTitleForPath('/app/jornada')).toBe('Minha jornada')
+  })
+})

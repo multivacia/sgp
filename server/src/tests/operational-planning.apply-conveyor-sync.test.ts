@@ -73,7 +73,8 @@ describe('serviceApplyConveyorPlanValuesToWeekItem', () => {
     vi.spyOn(repo, 'touchOperationalWorkPlanUpdatedAt').mockResolvedValue()
     vi.spyOn(refreshSync, 'refreshConveyorOperationalPlanSyncStatusByItemIds').mockResolvedValue()
     vi.mocked(pool.connect).mockResolvedValue(mockClient() as never)
-    vi.spyOn(repo, 'findOperationalWorkPlanByWeekStart').mockResolvedValue(null)
+    vi.spyOn(repo, 'findDraftOperationalWorkPlanByWeekStart').mockResolvedValue(null)
+    vi.spyOn(repo, 'findPublishedOperationalWorkPlanByWeekStart').mockResolvedValue(null)
 
     const out = await planningService.serviceApplyConveyorPlanValuesToWeekItem(pool, workItemId, {})
     expect(out.hasPlan).toBe(false)
@@ -139,7 +140,7 @@ describe('serviceApplyConveyorPlanValuesToWeekItem', () => {
     vi.spyOn(refreshSync, 'refreshConveyorOperationalPlanSyncStatusByItemIds').mockResolvedValue()
     vi.mocked(pool.connect).mockResolvedValue(mockClient() as never)
 
-    vi.spyOn(repo, 'findOperationalWorkPlanByWeekStart').mockResolvedValue({
+    vi.spyOn(repo, 'findDraftOperationalWorkPlanByWeekStart').mockResolvedValue({
       id: planId,
       week_start_date: '2026-05-11',
       week_end_date: '2026-05-15',
@@ -150,6 +151,7 @@ describe('serviceApplyConveyorPlanValuesToWeekItem', () => {
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     })
+    vi.spyOn(repo, 'findPublishedOperationalWorkPlanByWeekStart').mockResolvedValue(null)
     vi.spyOn(repo, 'listEnrichedItemsForWorkPlan').mockResolvedValue([])
 
     const out = await planningService.serviceApplyConveyorPlanValuesToWeekItem(

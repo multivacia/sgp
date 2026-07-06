@@ -8,6 +8,7 @@ import {
 /** Títulos exibidos no shell conforme a rota autenticada */
 export function pageTitleForPath(pathname: string): string {
   if (pathname.startsWith('/app/backlog')) return 'Backlog Operacional'
+  if (pathname.startsWith('/app/gestao/esteiras/laboratorio')) return 'Laboratório de Esteiras'
   if (pathname.startsWith('/app/nova-esteira')) return 'Nova Esteira'
   if (/\/app\/esteiras\/[^/]+\/alterar/.test(pathname)) return 'Alterar esta esteira'
   if (pathname.startsWith('/app/esteiras/')) return 'Detalhe da Esteira'
@@ -32,7 +33,7 @@ export function pageTitleForPath(pathname: string): string {
   if (pathname.startsWith('/app/meu-trabalho')) return 'Meu Trabalho'
   if (pathname.startsWith('/app/minhas-atividades')) return 'Minhas Atividades'
   if (pathname.startsWith('/app/chamados')) return 'Chamados'
-  if (pathname.startsWith('/app/jornada')) return 'Jornada do colaborador'
+  if (pathname.startsWith('/app/jornada')) return 'Minha jornada'
   if (pathname.startsWith('/app/apontamento')) return 'Apontamento'
   if (pathname.startsWith('/app/conta/alterar-senha')) return 'Alterar senha'
   if (pathname === '/app' || pathname === '/app/') return 'Início'

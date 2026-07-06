@@ -60,4 +60,22 @@ describe('AppSidebar', () => {
     expect(html).toContain('aria-label="Novo"')
     expect(html).toContain('>Novo<')
   })
+
+  it('menu colaborador exibe Minha fila e Minha jornada sem itens redundantes', () => {
+    const html = renderToStaticMarkup(
+      createElement(AppSidebar, {
+        open: true,
+        onClose: () => {},
+        collapsed: false,
+        onToggleCollapsed: () => {},
+      }),
+    )
+
+    expect(html).toContain('Minha fila')
+    expect(html).toContain('Minha jornada')
+    expect(html).not.toContain('Meu Trabalho')
+    expect(html).not.toContain('Minhas atividades')
+    expect(html).not.toContain('href="/app/meu-trabalho"')
+    expect(html).not.toContain('href="/app/minhas-atividades"')
+  })
 })

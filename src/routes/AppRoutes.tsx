@@ -3,6 +3,7 @@ import { AppShellLayout } from '../layouts/AppShellLayout'
 import { LoginPage } from '../pages/LoginPage'
 import { BacklogPage } from '../pages/BacklogPage'
 import { NovaEsteiraPage } from '../features/esteiras/NovaEsteiraPage'
+import { LaboratorioEsteirasPage } from '../features/esteiras/laboratorio-esteiras/LaboratorioEsteirasPage'
 import { AlterarEsteiraPage } from '../features/esteiras/AlterarEsteiraPage'
 import { EsteiraDetalhePage } from '../features/esteiras/EsteiraDetalhePage'
 import { ImportarOsPage } from '../features/documentos/ImportarOsPage'
@@ -59,6 +60,14 @@ export function AppRoutes() {
           <Route path="/app" element={<AppShellLayout />}>
             <Route index element={<Navigate to="/app/backlog" replace />} />
             <Route path="backlog" element={<BacklogPage />} />
+            <Route
+              path="gestao/esteiras/laboratorio"
+              element={
+                <RequirePermission permission="conveyors.create">
+                  <LaboratorioEsteirasPage />
+                </RequirePermission>
+              }
+            />
             <Route
               path="nova-esteira"
               element={

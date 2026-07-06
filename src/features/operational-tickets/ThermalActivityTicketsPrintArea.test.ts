@@ -1,42 +1,41 @@
+import { createElement } from 'react'
+import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
+import { ThermalActivityTicketsPrintArea } from './ThermalActivityTicketsPrintArea'
 import { buildActivityTicketPrintModel } from './activityTicketPrintModel'
-import { groupPrintItemsIntoSheets } from './thermalTicketPrintSheets'
+import type { ThermalTicketPrintSheet } from './thermalTicketPrintSheets'
 
-describe('groupPrintItemsIntoSheets', () => {
-  const ticket = (id: string) =>
-    buildActivityTicketPrintModel(
-      {
-        conveyorId: 'c1',
-        conveyorTitle: 'OS 1',
-        activityNodeId: id,
-        activityTitle: `Atividade ${id}`,
-      },
-      { printedAt: '2026-06-14T12:00:00.000Z' },
-    )
+describe('ThermalActivityTicketsPrintArea', () => {
+  it('renderiza 1 host e 1 ticket no modo SSR (document indefinido)', () => {
+    const model = buildActivityTicketPrintModel({
+      conveyorId: 'c1',
+      conveyorTitle: 'OS 100',
+      activityNodeId: 'step-1',
+      activityTitle: 'Costurar',
+      taskTitle: 'Bancos',
+      sectorTitle: 'Costura',
+      plannedOrder: 0,
+      plannedMinutes: 60,
+      realizedMinutes: 0,
+      activityOperationalStatus: 'IN_PROGRESS',
+      planItemStatus: 'PLANNED',
+      responsibleName: 'Marcio',
+      teamName: undefined,
+    })
 
-  it('cria uma folha por ticket sem cabeçalho', () => {
-    const sheets = groupPrintItemsIntoSheets([
-      { kind: 'ticket', model: ticket('a') },
-      { kind: 'ticket', model: ticket('b') },
-    ])
+    const sheet: ThermalTicketPrintSheet = {
+      groupHeaderLabel: 'RESP.: MARCIO',
+      model,
+    }
 
-    expect(sheets).toHaveLength(2)
-    expect(sheets[0]?.groupHeaderLabel).toBeUndefined()
-    expect(sheets[1]?.model.activityNodeId).toBe('b')
-  })
+    const html = renderToStaticMarkup(createElement(ThermalActivityTicketsPrintArea, { sheet }))
 
-  it('associa cabeçalho de grupo ao primeiro ticket do bloco', () => {
-    const sheets = groupPrintItemsIntoSheets([
-      { kind: 'header', label: 'Tarefa: Bancos' },
-      { kind: 'ticket', model: ticket('a') },
-      { kind: 'ticket', model: ticket('b') },
-      { kind: 'header', label: 'Resp.: Maria' },
-      { kind: 'ticket', model: ticket('c') },
-    ])
+    const hostMatches = html.match(/thermal-ticket-print-host/g) ?? []
+    expect(hostMatches).toHaveLength(1)
 
-    expect(sheets).toHaveLength(3)
-    expect(sheets[0]?.groupHeaderLabel).toBe('Tarefa: Bancos')
-    expect(sheets[1]?.groupHeaderLabel).toBeUndefined()
-    expect(sheets[2]?.groupHeaderLabel).toBe('Resp.: Maria')
+    const ticketMatches = html.match(/data-testid="thermal-activity-ticket"/g) ?? []
+    expect(ticketMatches).toHaveLength(1)
+
+    expect(html).toContain('Costurar')
   })
 })

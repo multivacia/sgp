@@ -1,11 +1,12 @@
 import {
   PLAN_PUBLISHED_HELPER_TEXT,
-  PLAN_STATUS_DRAFT_LABEL,
-  PLAN_STATUS_PUBLISHED_LABEL,
+  PLAN_UNPUBLISHED_CHANGES_BADGE,
   PUBLISH_BUTTON_LABEL,
   resolvePlanningPublishButtonTitle,
+  resolvePlanningRevisionContext,
   resolvePlanningSaveButtonLabel,
   resolvePlanningSaveWeekDates,
+  resolvePlanningStatusBadgeLabel,
 } from '../../operational-planning/operationalPlanningPlanStatusCopy'
 import {
   fridayAfterMonday,
@@ -40,6 +41,7 @@ export function WeeklyAgendaHeader(props: WeeklyAgendaHeaderProps) {
   })()
 
   const planStatus = props.weekPayload?.plan?.status
+  const revisionContext = resolvePlanningRevisionContext(props.weekPayload)
   const publishDisabled = isWeeklyAgendaPublishDisabled({
     busy: props.busy,
     dirty: props.dirty,
@@ -88,11 +90,18 @@ export function WeeklyAgendaHeader(props: WeeklyAgendaHeaderProps) {
             'inline-flex shrink-0 rounded-full border px-3 py-1 text-[12px]',
             planStatus === 'PUBLISHED'
               ? 'border-emerald-400/25 bg-emerald-500/10 text-emerald-100'
-              : 'border-white/[0.08] bg-white/[0.04] text-slate-300',
+              : revisionContext.hasUnpublishedRevision
+                ? 'border-amber-400/25 bg-amber-500/10 text-amber-100'
+                : 'border-white/[0.08] bg-white/[0.04] text-slate-300',
           ].join(' ')}
         >
-          {planStatus === 'PUBLISHED' ? PLAN_STATUS_PUBLISHED_LABEL : PLAN_STATUS_DRAFT_LABEL}
+          {resolvePlanningStatusBadgeLabel(revisionContext)}
         </span>
+        {revisionContext.hasUnpublishedRevision ? (
+          <span className="inline-flex shrink-0 rounded-full border border-amber-400/20 bg-amber-500/5 px-3 py-1 text-[12px] text-amber-100/90">
+            {PLAN_UNPUBLISHED_CHANGES_BADGE}
+          </span>
+        ) : null}
 
         {!props.weekPayload?.hasPlan ? (
           <span className="text-[12px] text-slate-500">Nenhum plano salvo nesta semana ainda.</span>
@@ -124,7 +133,8 @@ export function WeeklyAgendaHeader(props: WeeklyAgendaHeaderProps) {
         </div>
       </div>
 
-      {!props.suppressSecondaryHints && planStatus === 'PUBLISHED' ? (
+      {!props.suppressSecondaryHints &&
+      (revisionContext.hasActivePublished || planStatus === 'PUBLISHED') ? (
         <p className="max-w-3xl text-[13px] leading-relaxed text-slate-400">{PLAN_PUBLISHED_HELPER_TEXT}</p>
       ) : null}
 

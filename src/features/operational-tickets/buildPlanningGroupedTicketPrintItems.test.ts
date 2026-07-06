@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { ActivityTicketPlanningSource } from './activityTicketPlanningSource'
 import { buildPlanningGroupedTicketPrintItems } from './buildPlanningGroupedTicketPrintItems'
+import { groupPrintItemsIntoSheets } from './thermalTicketPrintSheets'
 
 function item(
   partial: Partial<ActivityTicketPlanningSource> & Pick<ActivityTicketPlanningSource, 'activityNodeId'>,
@@ -92,5 +93,28 @@ describe('buildPlanningGroupedTicketPrintItems', () => {
     })
     expect(ticket.model).not.toHaveProperty('reprint')
     expect(ticket.model).not.toHaveProperty('secondCopy')
+  })
+
+  it('no agrupamento por responsável, insere cabeçalho e preserva N tickets (N sheets)', () => {
+    const items = buildPlanningGroupedTicketPrintItems(
+      [
+        item({ activityNodeId: 'step-marcio', assignedCollaboratorName: 'Marcio', plannedOrder: 0 }),
+        item({ activityNodeId: 'step-ana', assignedCollaboratorName: 'Ana', plannedOrder: 1 }),
+      ],
+      { grouping: 'responsible', printedAt: '2026-05-18T16:00:00.000Z' },
+    )
+
+    const sheets = groupPrintItemsIntoSheets(items as any)
+    const ticketIds = items
+      .filter((i) => i.kind === 'ticket')
+      .map((t) => (t.kind === 'ticket' ? t.model.activityNodeId : null))
+      .filter(Boolean)
+
+    expect(ticketIds).toHaveLength(2)
+    expect(sheets).toHaveLength(2)
+
+    const headerLabels = sheets.map((s) => s.groupHeaderLabel).filter(Boolean)
+    expect(headerLabels).toHaveLength(2)
+    expect(headerLabels.join('|')).toContain('RESP.:')
   })
 })

@@ -14,6 +14,7 @@ import {
   ticketModelsToPrintItems,
   type ThermalTicketPrintSheet,
 } from './thermalTicketPrintSheets'
+import { tryPrintThermalTicketIfDomReady } from './thermalTicketPrintDomGuards'
 import type { PrintAgentUiStatus } from './ThermalPrintAgentControls'
 import {
   checkPrintAgentHealth,
@@ -24,7 +25,6 @@ import {
 export type { ThermalActivityPrintItem }
 
 const PRINT_BODY_CLASS = 'thermal-ticket-print-active'
-const PRINT_LAYOUT_DELAY_MS = 150
 const AGENT_HEALTH_POLL_MS = 30_000
 
 function normalizePrintPayload(
@@ -216,16 +216,43 @@ export function useActivityTicketPrint() {
 
     document.body.classList.add(PRINT_BODY_CLASS)
 
-    const timeoutId = window.setTimeout(() => {
-      if (!cancelledRef.current && queueRef.current) {
-        window.print()
+    const startedAt = typeof performance !== 'undefined' ? performance.now() : Date.now()
+    const TIMEOUT_MS = 2000
+
+    let rafA: number | null = null
+    let rafB: number | null = null
+
+    const attemptPrint = () => {
+      if (cancelledRef.current) return
+
+      const result = tryPrintThermalTicketIfDomReady({
+        currentSheet,
+        document,
+        window,
+        bodyClassName: PRINT_BODY_CLASS,
+      })
+
+      if (result.printed) return
+
+      const now = typeof performance !== 'undefined' ? performance.now() : Date.now()
+      if (now - startedAt >= TIMEOUT_MS) {
+        cancelPrint()
+        return
       }
-    }, PRINT_LAYOUT_DELAY_MS)
+
+      rafA = window.requestAnimationFrame(attemptPrint)
+    }
+
+    // Duas trocas de frame reduzem race portal/host antes do print.
+    rafA = window.requestAnimationFrame(() => {
+      rafB = window.requestAnimationFrame(attemptPrint)
+    })
 
     return () => {
-      window.clearTimeout(timeoutId)
+      if (rafA != null) window.cancelAnimationFrame(rafA)
+      if (rafB != null) window.cancelAnimationFrame(rafB)
     }
-  }, [currentSheet])
+  }, [currentSheet, cancelPrint])
 
   useEffect(() => {
     const onAfterPrint = () => {

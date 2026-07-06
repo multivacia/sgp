@@ -10,6 +10,7 @@ type PlanningItemQuickActionsProps = {
   item: PlanningCardActionItem
   canAlterConveyor: boolean
   actionBusy: boolean
+  isPrinting?: boolean
   onPointTime: () => void
   onComplete: () => void
   onReopen: () => void
@@ -91,7 +92,7 @@ export function PlanningItemQuickActions(props: PlanningItemQuickActionsProps) {
           type="button"
           className="rounded border border-white/[0.08] px-1.5 py-0.5 text-[9px] font-medium text-slate-300 hover:bg-white/[0.06] disabled:opacity-50"
           title="Imprimir ticket térmico desta atividade"
-          disabled={props.actionBusy}
+          disabled={props.actionBusy || props.isPrinting}
           onClick={(e) => {
             e.stopPropagation()
             props.onPrintTicket?.()

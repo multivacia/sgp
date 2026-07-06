@@ -55,6 +55,7 @@ export function ApontamentoPage() {
     searchParams.get('conveyorId') ?? searchParams.get('esteiraId') ?? undefined
   const from = searchParams.get('from')
   const fromEsteira = from === 'esteira'
+  const fromJornada = from === 'jornada'
 
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -83,7 +84,7 @@ export function ApontamentoPage() {
       )
       if (!found) {
         setError(
-          'Esta atividade não consta nas suas alocações atuais. Volte a Minhas atividades ou abra a partir do painel.',
+          'Esta atividade não consta nas suas alocações atuais. Volte a Minha fila ou abra a partir do painel.',
         )
         setActivity(null)
         return
@@ -161,9 +162,10 @@ export function ApontamentoPage() {
         entryMode: 'manual',
       })
       setObservacao('')
-      navigate('/app/minhas-atividades', {
+      const returnTo = fromJornada ? '/app/jornada' : '/app/minha-fila'
+      navigate(returnTo, {
         replace: false,
-        state: { refreshMyActivities: true },
+        state: fromJornada ? undefined : { refreshMyActivities: true },
       })
     } catch (e) {
       const n = reportClientError(e, {
@@ -212,10 +214,10 @@ export function ApontamentoPage() {
             {transversalUxCopy.collaboratorLinkMissingBody}
           </p>
           <Link
-            to="/app/minhas-atividades"
+            to="/app/minha-fila"
             className="sgp-cta-primary mt-6 inline-flex text-center"
           >
-            Voltar a Minhas atividades
+            Voltar a Minha fila
           </Link>
         </div>
       </PageCanvas>
@@ -228,14 +230,14 @@ export function ApontamentoPage() {
         <div className="sgp-panel max-w-lg rounded-2xl border border-white/[0.08] p-8">
           <p className="font-heading text-lg text-slate-200">URL incompleta</p>
           <p className="mt-2 text-sm text-slate-500">
-            Abra o apontamento a partir de Minhas atividades ou do detalhe da
+            Abra o apontamento a partir de Minha fila, da jornada ou do detalhe da
             esteira (parâmetros conveyorId e passo).
           </p>
           <Link
-            to="/app/minhas-atividades"
+            to="/app/minha-fila"
             className="sgp-cta-primary mt-6 inline-flex text-center"
           >
-            Minhas atividades
+            Minha fila
           </Link>
         </div>
       </PageCanvas>
@@ -260,10 +262,10 @@ export function ApontamentoPage() {
           <p className="mt-2 text-sm text-slate-400">{error}</p>
           <div className="mt-6 flex flex-col gap-3 sm:flex-row">
             <Link
-              to="/app/minhas-atividades"
+              to="/app/minha-fila"
               className="sgp-cta-primary inline-flex text-center"
             >
-              Minhas atividades
+              Minha fila
             </Link>
             <Link
               to="/app/backlog"
@@ -279,7 +281,9 @@ export function ApontamentoPage() {
 
   const backTo = fromEsteira
     ? { to: `/app/esteiras/${conveyorId}`, label: 'Detalhe da esteira' }
-    : { to: '/app/minhas-atividades', label: 'Minhas atividades' }
+    : fromJornada
+      ? { to: '/app/jornada', label: 'Minha jornada' }
+      : { to: '/app/minha-fila', label: 'Minha fila' }
 
   return (
     <PageCanvas>
@@ -317,7 +321,7 @@ export function ApontamentoPage() {
 
       <header className="relative mt-6 overflow-hidden rounded-2xl border border-white/[0.08] bg-gradient-to-br from-sgp-navy/90 via-sgp-app-panel-deep/95 to-sgp-app-panel/90 p-6 shadow-[var(--sgp-shadow-card-dark)] ring-1 ring-white/[0.06] md:p-8">
         <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-sgp-gold">
-          {fromEsteira ? 'Origem · esteira' : 'Origem · minhas atividades'}
+          {fromEsteira ? 'Origem · esteira' : fromJornada ? 'Origem · jornada' : 'Origem · minha fila'}
         </p>
         <p className="relative mt-3 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">
           Etapa (STEP)

@@ -18,6 +18,20 @@ import type {
 /** Carga no backlog/plano semanal: total planejado (min/un. × qtd), não só unitário. */
 const STEP_PLANNED_TOTAL_MINUTES_SQL = sqlConveyorStepPlannedTotalMinutes('step')
 
+/** Encaixe ativo na fábrica: somente itens vinculados a plano semanal PUBLISHED. */
+export const SQL_FACTORY_LINKED_TO_PUBLISHED_PLAN = `
+  EXISTS (
+    SELECT 1
+    FROM operational_work_plan_items owpi
+    INNER JOIN operational_work_plans owp
+      ON owp.id = owpi.work_plan_id
+      AND owp.deleted_at IS NULL
+      AND owp.status = 'PUBLISHED'
+    WHERE owpi.conveyor_operational_plan_item_id = i.id
+      AND owpi.deleted_at IS NULL
+  )
+`
+
 export type OperationalWorkPlanRow = {
   id: string
   week_start_date: string
@@ -52,9 +66,34 @@ export type WorkPlanItemLinkRow = {
   conveyorOperationalPlanItemId: string
 }
 
-export async function findOperationalWorkPlanByWeekStart(
+function mapOperationalWorkPlanRow(row: {
+  id: string
+  week_start_date: string
+  week_end_date: string
+  status: 'DRAFT' | 'PUBLISHED'
+  created_by: string
+  published_at: Date | null
+  published_by: string | null
+  created_at: Date
+  updated_at: Date
+}): OperationalWorkPlanRow {
+  return {
+    id: row.id,
+    week_start_date: row.week_start_date.trim(),
+    week_end_date: row.week_end_date.trim(),
+    status: row.status,
+    created_by: row.created_by,
+    published_at: row.published_at ? row.published_at.toISOString() : null,
+    published_by: row.published_by,
+    created_at: row.created_at.toISOString(),
+    updated_at: row.updated_at.toISOString(),
+  }
+}
+
+async function queryOperationalWorkPlanByWeekStartAndStatus(
   pool: pg.Pool | pg.PoolClient,
   weekStartDate: string,
+  status: 'DRAFT' | 'PUBLISHED',
 ): Promise<OperationalWorkPlanRow | null> {
   const r = await pool.query<{
     id: string
@@ -80,24 +119,47 @@ export async function findOperationalWorkPlanByWeekStart(
       updated_at
     FROM operational_work_plans
     WHERE week_start_date = $1::date
+      AND status = $2::varchar
       AND deleted_at IS NULL
     LIMIT 1
     `,
-    [weekStartDate],
+    [weekStartDate, status],
   )
   const row = r.rows[0]
   if (!row) return null
-  return {
-    id: row.id,
-    week_start_date: row.week_start_date.trim(),
-    week_end_date: row.week_end_date.trim(),
-    status: row.status,
-    created_by: row.created_by,
-    published_at: row.published_at ? row.published_at.toISOString() : null,
-    published_by: row.published_by,
-    created_at: row.created_at.toISOString(),
-    updated_at: row.updated_at.toISOString(),
-  }
+  return mapOperationalWorkPlanRow(row)
+}
+
+export async function findDraftOperationalWorkPlanByWeekStart(
+  pool: pg.Pool | pg.PoolClient,
+  weekStartDate: string,
+): Promise<OperationalWorkPlanRow | null> {
+  return queryOperationalWorkPlanByWeekStartAndStatus(pool, weekStartDate, 'DRAFT')
+}
+
+export async function findPublishedOperationalWorkPlanByWeekStart(
+  pool: pg.Pool | pg.PoolClient,
+  weekStartDate: string,
+): Promise<OperationalWorkPlanRow | null> {
+  return queryOperationalWorkPlanByWeekStartAndStatus(pool, weekStartDate, 'PUBLISHED')
+}
+
+/** Plano editável na semana: revisão DRAFT se existir; senão PUBLISHED vigente. */
+export async function findEditableOperationalWorkPlanForWeek(
+  pool: pg.Pool | pg.PoolClient,
+  weekStartDate: string,
+): Promise<OperationalWorkPlanRow | null> {
+  const draft = await findDraftOperationalWorkPlanByWeekStart(pool, weekStartDate)
+  if (draft) return draft
+  return findPublishedOperationalWorkPlanByWeekStart(pool, weekStartDate)
+}
+
+/** @deprecated Prefer findEditableOperationalWorkPlanForWeek or status-specific finders. */
+export async function findOperationalWorkPlanByWeekStart(
+  pool: pg.Pool | pg.PoolClient,
+  weekStartDate: string,
+): Promise<OperationalWorkPlanRow | null> {
+  return findEditableOperationalWorkPlanForWeek(pool, weekStartDate)
 }
 
 export async function findOperationalWorkPlanById(
@@ -135,17 +197,31 @@ export async function findOperationalWorkPlanById(
   )
   const row = r.rows[0]
   if (!row) return null
-  return {
-    id: row.id,
-    week_start_date: row.week_start_date.trim(),
-    week_end_date: row.week_end_date.trim(),
-    status: row.status,
-    created_by: row.created_by,
-    published_at: row.published_at ? row.published_at.toISOString() : null,
-    published_by: row.published_by,
-    created_at: row.created_at.toISOString(),
-    updated_at: row.updated_at.toISOString(),
-  }
+  return mapOperationalWorkPlanRow(row)
+}
+
+export async function softDeleteOperationalWorkPlanWithItems(
+  client: pg.PoolClient,
+  planId: string,
+): Promise<void> {
+  await client.query(
+    `
+    UPDATE operational_work_plan_items
+    SET deleted_at = now(), updated_at = now()
+    WHERE work_plan_id = $1::uuid
+      AND deleted_at IS NULL
+    `,
+    [planId],
+  )
+  await client.query(
+    `
+    UPDATE operational_work_plans
+    SET deleted_at = now(), updated_at = now()
+    WHERE id = $1::uuid
+      AND deleted_at IS NULL
+    `,
+    [planId],
+  )
 }
 
 export async function insertOperationalWorkPlan(
@@ -411,6 +487,10 @@ export async function listFactoryIntakeItems(
           WHERE EXISTS (
             SELECT 1
             FROM operational_work_plan_items owpi
+            INNER JOIN operational_work_plans owp
+              ON owp.id = owpi.work_plan_id
+              AND owp.deleted_at IS NULL
+              AND owp.status = 'PUBLISHED'
             WHERE owpi.conveyor_operational_plan_item_id = ci.id
               AND owpi.deleted_at IS NULL
           )
@@ -419,6 +499,10 @@ export async function listFactoryIntakeItems(
           WHERE NOT EXISTS (
             SELECT 1
             FROM operational_work_plan_items owpi
+            INNER JOIN operational_work_plans owp
+              ON owp.id = owpi.work_plan_id
+              AND owp.deleted_at IS NULL
+              AND owp.status = 'PUBLISHED'
             WHERE owpi.conveyor_operational_plan_item_id = ci.id
               AND owpi.deleted_at IS NULL
           )
@@ -441,6 +525,10 @@ export async function listFactoryIntakeItems(
       AND NOT EXISTS (
         SELECT 1
         FROM operational_work_plan_items owpi
+        INNER JOIN operational_work_plans owp
+          ON owp.id = owpi.work_plan_id
+          AND owp.deleted_at IS NULL
+          AND owp.status = 'PUBLISHED'
         WHERE owpi.conveyor_operational_plan_item_id = i.id
           AND owpi.deleted_at IS NULL
       )
@@ -534,19 +622,30 @@ export async function loadConveyorPlanItemForFactoryLink(
 export async function isConveyorPlanItemLinkedElsewhere(
   pool: pg.Pool | pg.PoolClient,
   conveyorPlanItemId: string,
-  excludeWorkPlanId?: string,
+  excludeWorkPlanIds?: string | readonly string[],
 ): Promise<boolean> {
+  const excludes = excludeWorkPlanIds
+    ? Array.isArray(excludeWorkPlanIds)
+      ? [...excludeWorkPlanIds]
+      : [excludeWorkPlanIds]
+    : []
   const r = await pool.query<{ id: string }>(
     `
     SELECT owpi.id::text
     FROM operational_work_plan_items owpi
-    INNER JOIN operational_work_plans owp ON owp.id = owpi.work_plan_id AND owp.deleted_at IS NULL
+    INNER JOIN operational_work_plans owp
+      ON owp.id = owpi.work_plan_id
+      AND owp.deleted_at IS NULL
+      AND owp.status = 'PUBLISHED'
     WHERE owpi.conveyor_operational_plan_item_id = $1::uuid
       AND owpi.deleted_at IS NULL
-      AND ($2::uuid IS NULL OR owpi.work_plan_id <> $2::uuid)
+      AND (
+        cardinality($2::uuid[]) = 0
+        OR owpi.work_plan_id <> ALL($2::uuid[])
+      )
     LIMIT 1
     `,
-    [conveyorPlanItemId, excludeWorkPlanId ?? null],
+    [conveyorPlanItemId, excludes],
   )
   return Boolean(r.rows[0])
 }

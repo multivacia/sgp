@@ -136,7 +136,7 @@ describe('mergeWeekActivityItems', () => {
 
 describe('serviceGetOperationalPlanningWeekActivity', () => {
   beforeEach(() => {
-    vi.spyOn(repo, 'findOperationalWorkPlanByWeekStart').mockResolvedValue({
+    vi.spyOn(repo, 'findEditableOperationalWorkPlanForWeek').mockResolvedValue({
       id: 'plan-1',
       week_start_date: '2026-05-11',
       week_end_date: '2026-05-15',
@@ -147,6 +147,7 @@ describe('serviceGetOperationalPlanningWeekActivity', () => {
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     })
+    vi.spyOn(repo, 'findPublishedOperationalWorkPlanByWeekStart').mockResolvedValue(null)
   })
 
   afterEach(() => {
@@ -188,7 +189,8 @@ describe('serviceGetOperationalPlanningWeekActivity', () => {
 
   it('passes workPlanId null when no plan exists', async () => {
     const pool = {} as pg.Pool
-    vi.spyOn(repo, 'findOperationalWorkPlanByWeekStart').mockResolvedValue(null)
+    vi.spyOn(repo, 'findEditableOperationalWorkPlanForWeek').mockResolvedValue(null)
+    vi.spyOn(repo, 'findPublishedOperationalWorkPlanByWeekStart').mockResolvedValue(null)
     const listTe = vi.spyOn(repo, 'listWeekActivityTimeEntriesForWeek').mockResolvedValue([])
     vi.spyOn(repo, 'listWeekActivityStepEventsForWeek').mockResolvedValue([])
 

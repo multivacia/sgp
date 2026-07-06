@@ -283,7 +283,7 @@ describe.skipIf(!hasDb)('production work queue (integração)', () => {
       }
     }
 
-    it('não retorna item removido do plano publicado após patch', async () => {
+    it('não retorna item removido do plano publicado até nova publicação da revisão', async () => {
       const conv = await serviceCreateConveyor(
         pool,
         twoStepConveyorBody(`WQ-Vigente-${Date.now()}`),
@@ -333,7 +333,7 @@ describe.skipIf(!hasDb)('production work queue (integração)', () => {
 
       await servicePublishOperationalWeekPlan(pool, planId, WQ_ADMIN_USER_ID)
 
-      await servicePatchOperationalWeekPlan(pool, planId, WQ_ADMIN_USER_ID, {
+      const patched = await servicePatchOperationalWeekPlan(pool, planId, WQ_ADMIN_USER_ID, {
         weekStartDate: weekStart,
         weekEndDate: weekEnd,
         items: [
@@ -350,8 +350,20 @@ describe.skipIf(!hasDb)('production work queue (integração)', () => {
           },
         ],
       })
+      const draftPlanId = patched.plan?.id
+      if (!draftPlanId) throw new Error('revisão não criada')
 
       const cookie = productionSessionCookie(WQ_TEST_COLLAB_ID)
+      const resBeforePublish = await request(app)
+        .get(`/api/v1/production/me/work-queue?date=${plannedDate}`)
+        .set('Cookie', cookie)
+      expect(resBeforePublish.status).toBe(200)
+      const itemsBefore = (resBeforePublish.body.data as { items: Array<{ activityTitle: string }> }).items
+      expect(itemsBefore.some((i) => i.activityTitle === 'Atividade Z')).toBe(true)
+      expect(itemsBefore.some((i) => i.activityTitle === 'Limpar e inspecionar')).toBe(true)
+
+      await servicePublishOperationalWeekPlan(pool, draftPlanId, WQ_ADMIN_USER_ID)
+
       const res = await request(app)
         .get(`/api/v1/production/me/work-queue?date=${plannedDate}`)
         .set('Cookie', cookie)

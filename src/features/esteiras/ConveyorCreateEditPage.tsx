@@ -2,7 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { DragEvent } from 'react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { PageCanvas } from '../../components/ui/PageCanvas'
-import { SgpInlineBanner } from '../../components/ui/SgpToast'
+import { SgpInlineBanner, SgpToast } from '../../components/ui/SgpToast'
+import { StatusBadge } from '../../components/backlog/StatusBadge'
 import type {
   ConveyorDetail,
   CreateConveyorDados,
@@ -14,10 +15,14 @@ import type { Team } from '../../domain/teams/team.types'
 import type { MatrixNodeApi, MatrixNodeTreeApi } from '../../domain/operation-matrix/operation-matrix.types'
 import { formatUserError, isBlockingSeverity, reportClientError } from '../../lib/errors'
 import { useSgpErrorSurface } from '../../lib/errors/SgpErrorPresentation'
+import { useAuth } from '../../lib/use-auth'
+import { mapOperationalStatusToUi } from '../../lib/backlog/mapConveyorListToBacklog'
 import { useRegisterTransientContext } from '../../lib/shell/transient-context'
 import {
   createConveyor,
   getConveyorById,
+  getConveyorOperationalEvents,
+  patchConveyorStatus,
   patchConveyorDados,
   patchConveyorStructure,
 } from '../../services/conveyors/conveyorsApiService'
@@ -71,6 +76,9 @@ import {
   type WizardExtras,
 } from './conveyorBasicDataExtras'
 import type { ConveyorOperationalStatus } from '../../domain/conveyors/conveyor.types'
+import { CONVEYOR_STATUS_TRANSITION_ACTIONS } from '../../domain/conveyors/conveyorOperationalStatus'
+import { ConveyorLifecycleReturnPanel } from './ConveyorLifecycleReturnPanel'
+import type { ConveyorOperationalEvent } from '../../domain/conveyors/conveyorOperationalEvents.types'
 
 type Mode = 'create' | 'edit'
 type Aba = 'dados' | 'estrutura' | 'revisao'
@@ -153,9 +161,11 @@ function buildPatchDados(baseline: CreateConveyorDados, draft: CreateConveyorDad
 
 export function ConveyorCreateEditPage({ mode }: { mode: Mode }) {
   const navigate = useNavigate()
-  const { pathname } = useLocation()
+  const location = useLocation()
+  const { pathname } = location
   const { id } = useParams()
   const { presentBlocking } = useSgpErrorSurface()
+  const { can } = useAuth()
 
   const [loadingEdit, setLoadingEdit] = useState(mode === 'edit')
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -167,7 +177,14 @@ export function ConveyorCreateEditPage({ mode }: { mode: Mode }) {
   /** Recorte de planeamento inicial (início/fim/tempo) para detetar alterações — `dados` sozinho não reflete `extras`. */
   const [baselineExtras, setBaselineExtras] = useState<WizardExtras>(extrasVazio)
   const [detailId, setDetailId] = useState<string | null>(null)
+  const [detail, setDetail] = useState<ConveyorDetail | null>(null)
   const [operationalStatus, setOperationalStatus] = useState<ConveyorOperationalStatus | null>(null)
+  const [patchStatusLoading, setPatchStatusLoading] = useState(false)
+  const [patchError, setPatchError] = useState<string | null>(null)
+  const [routeToast, setRouteToast] = useState<string | null>(null)
+  const [, setOperationalEvents] = useState<ConveyorOperationalEvent[]>([])
+  const [, setOperationalEventsLoading] = useState(false)
+  const [operationalEventsLimit] = useState(50)
 
   const [matrizes, setMatrizes] = useState<MatrixNodeApi[]>([])
   const [matrizesLoading, setMatrizesLoading] = useState(true)
@@ -209,6 +226,28 @@ export function ConveyorCreateEditPage({ mode }: { mode: Mode }) {
     return responsaveis.options.find((o) => o.label === name)?.value ?? ''
   }, [responsaveis, dados.colaboradorId, dados.responsavel])
 
+  const canChangePipelineStatus = can('conveyors.edit_status')
+
+  const applyLoadedDetail = useCallback((loadedDetail: ConveyorDetail) => {
+    const dd = detailToDados(loadedDetail)
+    const ex0 = parseWizardExtrasFromPersisted(dd)
+    const cleanedDados = {
+      ...dd,
+      observacoes: stripWizardPlanningFromObservacoes(dd.observacoes ?? ''),
+    }
+    setDetail(loadedDetail)
+    setDados(cleanedDados)
+    setBaselineDados(cleanedDados)
+    setExtras(ex0)
+    setBaselineExtras(ex0)
+    setDetailId(loadedDetail.id)
+    setOperationalStatus(loadedDetail.operationalStatus)
+    const structureBaseline = buildStructureBaselineFromApiDetail(loadedDetail.structure)
+    setManualRoots(structureBaseline.roots)
+    setManualAloc(structureBaseline.manualAloc)
+    setBaselineStructureSig(structureBaseline.baselineStructureSig)
+  }, [])
+
   useEffect(() => {
     if (mode !== 'edit') return
     if (!id?.trim()) {
@@ -221,24 +260,9 @@ export function ConveyorCreateEditPage({ mode }: { mode: Mode }) {
       setLoadingEdit(true)
       setLoadError(null)
       try {
-        const detail = await getConveyorById(id.trim())
+        const loadedDetail = await getConveyorById(id.trim())
         if (cancelled) return
-        const dd = detailToDados(detail)
-        const ex0 = parseWizardExtrasFromPersisted(dd)
-        const cleanedDados = {
-          ...dd,
-          observacoes: stripWizardPlanningFromObservacoes(dd.observacoes ?? ''),
-        }
-        setDados(cleanedDados)
-        setBaselineDados(cleanedDados)
-        setExtras(ex0)
-        setBaselineExtras(ex0)
-        setDetailId(detail.id)
-        setOperationalStatus(detail.operationalStatus)
-        const structureBaseline = buildStructureBaselineFromApiDetail(detail.structure)
-        setManualRoots(structureBaseline.roots)
-        setManualAloc(structureBaseline.manualAloc)
-        setBaselineStructureSig(structureBaseline.baselineStructureSig)
+        applyLoadedDetail(loadedDetail)
       } catch (e) {
         const n = reportClientError(e, {
           module: 'esteiras',
@@ -255,7 +279,7 @@ export function ConveyorCreateEditPage({ mode }: { mode: Mode }) {
     return () => {
       cancelled = true
     }
-  }, [id, mode, pathname, presentBlocking])
+  }, [id, mode, pathname, presentBlocking, applyLoadedDetail])
 
   useRegisterTransientContext({
     id: mode === 'create' ? 'nova-esteira-wizard' : 'alterar-esteira-wizard',
@@ -513,6 +537,58 @@ export function ConveyorCreateEditPage({ mode }: { mode: Mode }) {
     canReplaceStructure,
   })
 
+  const handlePatchStatus = useCallback(
+    async (target: ConveyorOperationalStatus) => {
+      if (!detailId?.trim()) return
+      if (canSaveChanges) {
+        setPatchError(
+          'Existem alterações não salvas. Salve ou descarte as alterações antes de mudar o status da esteira.',
+        )
+        return
+      }
+
+      setPatchStatusLoading(true)
+      setPatchError(null)
+      try {
+        const updated = await patchConveyorStatus(detailId.trim(), {
+          operationalStatus: target,
+        })
+        applyLoadedDetail(updated)
+        setRouteToast('Status da esteira atualizado.')
+        setOperationalEventsLoading(true)
+        try {
+          const ev = await getConveyorOperationalEvents(detailId.trim(), {
+            limit: operationalEventsLimit,
+          })
+          setOperationalEvents(ev.data)
+        } catch {
+          setOperationalEvents([])
+        } finally {
+          setOperationalEventsLoading(false)
+        }
+      } catch (e) {
+        const n = reportClientError(e, {
+          module: 'esteiras',
+          action: 'alterar_esteira_patch_status',
+          route: pathname,
+          entityId: detailId,
+        })
+        if (isBlockingSeverity(n.severity)) presentBlocking(n)
+        else setPatchError(formatUserError(n))
+      } finally {
+        setPatchStatusLoading(false)
+      }
+    },
+    [
+      applyLoadedDetail,
+      canSaveChanges,
+      detailId,
+      operationalEventsLimit,
+      pathname,
+      presentBlocking,
+    ],
+  )
+
   async function handleSubmit() {
     if (shouldValidateStructureOnSubmit({ mode, hasStructureChanges })) {
       const s = validateManualStructure(manualRoots)
@@ -640,6 +716,14 @@ export function ConveyorCreateEditPage({ mode }: { mode: Mode }) {
 
   return (
     <PageCanvas>
+      {routeToast ? (
+        <SgpToast
+          fixed
+          variant="neutral"
+          message={routeToast}
+          onDismiss={() => setRouteToast(null)}
+        />
+      ) : null}
       <div className="mx-auto max-w-[1600px] pb-12">
       <header className="rounded-2xl border border-white/[0.08] bg-gradient-to-r from-sgp-void via-sgp-navy-deep/80 to-sgp-void px-4 py-4 shadow-inner ring-1 ring-white/[0.04] sm:px-5">
         <p className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-sgp-gold">
@@ -711,6 +795,63 @@ export function ConveyorCreateEditPage({ mode }: { mode: Mode }) {
             <span className={pendenciasCount ? 'text-amber-200' : 'text-emerald-200'}>{pendenciasCount}</span>
           </Chip>
         </div>
+        {mode === 'edit' && detail ? (
+          <div className="mt-4 rounded-xl border border-white/[0.08] bg-black/20 p-3">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-xs font-semibold text-slate-400">Status atual:</span>
+                <StatusBadge status={mapOperationalStatusToUi(detail.operationalStatus)} />
+              </div>
+              {canChangePipelineStatus ? (
+                <div className="flex flex-wrap gap-2">
+                  {CONVEYOR_STATUS_TRANSITION_ACTIONS[detail.operationalStatus].map((action) => (
+                    <button
+                      key={action.target}
+                      type="button"
+                      disabled={patchStatusLoading || canSaveChanges}
+                      onClick={() => void handlePatchStatus(action.target)}
+                      className="rounded-lg border border-sgp-gold/40 bg-sgp-gold/12 px-3 py-2 text-xs font-bold text-sgp-gold-warm shadow-sm transition hover:bg-sgp-gold/20 disabled:cursor-not-allowed disabled:opacity-50"
+                      title={
+                        canSaveChanges
+                          ? 'Salve ou descarte as alterações antes de mudar o status.'
+                          : undefined
+                      }
+                    >
+                      {action.label}
+                    </button>
+                  ))}
+                  <ConveyorLifecycleReturnPanel
+                    conveyorId={detail.id}
+                    operationalStatus={detail.operationalStatus}
+                    operationalEventsLimit={operationalEventsLimit}
+                    routePath={pathname}
+                    onDetailUpdated={(updated) => {
+                      applyLoadedDetail(updated)
+                    }}
+                    onOperationalEventsUpdated={setOperationalEvents}
+                    onOperationalEventsLoading={setOperationalEventsLoading}
+                    onSuccessToast={setRouteToast}
+                    presentBlocking={presentBlocking}
+                    disabled={canSaveChanges}
+                    disabledTitle="Salve ou descarte as alterações antes de mudar o status."
+                  />
+                </div>
+              ) : (
+                <p className="text-xs text-slate-500">
+                  Transições de status exigem a permissão conveyors.edit_status.
+                </p>
+              )}
+            </div>
+            {canSaveChanges ? (
+              <p className="mt-2 text-xs text-amber-200/90">
+                Existem alterações não salvas. Salve ou descarte antes de mudar o status da esteira.
+              </p>
+            ) : null}
+            {patchError ? (
+              <SgpInlineBanner variant="error" message={patchError} className="mt-3" />
+            ) : null}
+          </div>
+        ) : null}
       </header>
 
       {submitError && <SgpInlineBanner variant="error" message={submitError} className="mt-4" />}

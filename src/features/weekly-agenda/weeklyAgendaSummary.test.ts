@@ -16,6 +16,12 @@ describe('buildWeeklyAgendaSummaryStrip', () => {
   it('aggregates planned, realized, team and attention counts', () => {
     const model = buildWeeklyAgendaSummaryStrip({
       hasPlan: true,
+      revision: {
+        hasActivePublished: false,
+        activePublishedPlanId: null,
+        activePublishedAt: null,
+        hasUnpublishedRevision: false,
+      },
       week: {
         weekStartDate: '2026-02-17',
         weekEndDate: '2026-02-21',

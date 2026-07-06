@@ -5,22 +5,32 @@ import {
   resolveOperationalWeekRange,
 } from './operationalPlanningWeekRange'
 
-/** Rótulos e mensagens do plano semanal (rascunho vs publicado ativo). */
+/** Rótulos e mensagens do plano semanal (rascunho, publicado vigente, revisão). */
 
 export const PLAN_STATUS_DRAFT_LABEL = 'Rascunho'
 
-export const PLAN_STATUS_PUBLISHED_LABEL = 'Publicado e ativo'
+export const PLAN_STATUS_PUBLISHED_LABEL = 'Publicado vigente'
+
+export const PLAN_STATUS_REVISION_LABEL = 'Revisão em planejamento'
+
+export const PLAN_UNPUBLISHED_CHANGES_BADGE = 'Alterações não publicadas'
 
 export const PLAN_PUBLISHED_HELPER_TEXT =
-  'Este plano já está ativo na produção. Alterações salvas aqui atualizam a fila dos colaboradores.'
+  'Este plano possui uma versão publicada ativa. Alterações salvas ficam em revisão e só entram na fila dos colaboradores após nova publicação.'
 
 export const SAVE_DRAFT_SUCCESS_MESSAGE = 'Rascunho salvo.'
 
-export const SAVE_PUBLISHED_SUCCESS_MESSAGE =
-  'Alterações salvas no plano ativo. A fila de produção foi atualizada.'
+export const SAVE_REVISION_SUCCESS_MESSAGE =
+  'Revisão salva. A fila dos colaboradores continua usando a última versão publicada.'
 
-export const SAVE_PUBLISHED_AUTO_SUCCESS_MESSAGE =
-  'Alteração salva no plano publicado. A fila de produção foi atualizada.'
+/** @deprecated Use SAVE_REVISION_SUCCESS_MESSAGE */
+export const SAVE_PUBLISHED_SUCCESS_MESSAGE = SAVE_REVISION_SUCCESS_MESSAGE
+
+/** @deprecated Use SAVE_REVISION_SUCCESS_MESSAGE */
+export const SAVE_PUBLISHED_AUTO_SUCCESS_MESSAGE = SAVE_REVISION_SUCCESS_MESSAGE
+
+export const PUBLISH_SUCCESS_MESSAGE =
+  'Plano publicado. A fila dos colaboradores foi atualizada.'
 
 export const SAVE_BUTTON_DRAFT_LABEL = 'Salvar rascunho'
 
@@ -49,6 +59,29 @@ const PLANNING_WEEK_END_NOT_FRIDAY_TECHNICAL = 'week_end_date deve ser uma sexta
 export type PlanningSaveWeekDates = {
   weekStartDate: string
   weekEndDate: string
+}
+
+export type PlanningRevisionContext = {
+  planStatus: 'DRAFT' | 'PUBLISHED' | null | undefined
+  hasActivePublished: boolean
+  hasUnpublishedRevision: boolean
+}
+
+export function resolvePlanningRevisionContext(
+  weekPayload: OperationalPlanningWeekPayload | null | undefined,
+): PlanningRevisionContext {
+  return {
+    planStatus: weekPayload?.plan?.status,
+    hasActivePublished: weekPayload?.revision?.hasActivePublished ?? false,
+    hasUnpublishedRevision: weekPayload?.revision?.hasUnpublishedRevision ?? false,
+  }
+}
+
+export function shouldAutoPersistPlanChanges(
+  weekPayload: OperationalPlanningWeekPayload | null | undefined,
+): boolean {
+  const ctx = resolvePlanningRevisionContext(weekPayload)
+  return ctx.hasActivePublished || ctx.planStatus === 'PUBLISHED'
 }
 
 /**
@@ -88,6 +121,18 @@ export function resolvePlanningSaveErrorMessage(e: unknown, fallback: string): s
   return fallback
 }
 
+export function resolvePlanningStatusBadgeLabel(
+  ctx: PlanningRevisionContext,
+): string {
+  if (ctx.planStatus === 'DRAFT' && ctx.hasActivePublished) {
+    return PLAN_STATUS_REVISION_LABEL
+  }
+  if (ctx.planStatus === 'PUBLISHED') {
+    return PLAN_STATUS_PUBLISHED_LABEL
+  }
+  return PLAN_STATUS_DRAFT_LABEL
+}
+
 export function resolvePlanningSaveButtonLabel(
   planStatus: 'DRAFT' | 'PUBLISHED' | null | undefined,
 ): string {
@@ -95,14 +140,18 @@ export function resolvePlanningSaveButtonLabel(
 }
 
 export function resolvePlanningSaveSuccessMessage(
-  planStatus: 'DRAFT' | 'PUBLISHED' | null | undefined,
+  ctx: PlanningRevisionContext,
 ): string {
-  return planStatus === 'PUBLISHED' ? SAVE_PUBLISHED_SUCCESS_MESSAGE : SAVE_DRAFT_SUCCESS_MESSAGE
+  if (ctx.hasActivePublished || ctx.planStatus === 'PUBLISHED') {
+    return SAVE_REVISION_SUCCESS_MESSAGE
+  }
+  return SAVE_DRAFT_SUCCESS_MESSAGE
 }
 
 export function resolvePlanningPublishButtonTitle(input: {
   planStatus: 'DRAFT' | 'PUBLISHED' | null | undefined
   draftItemsCount: number
+  hasActivePublished?: boolean
 }): string | undefined {
   if (input.planStatus === 'PUBLISHED') {
     return PUBLISH_DISABLED_ALREADY_PUBLISHED_TITLE
@@ -111,4 +160,20 @@ export function resolvePlanningPublishButtonTitle(input: {
     return PUBLISH_DISABLED_EMPTY_TITLE
   }
   return undefined
+}
+
+export function isPlanningPublishDisabled(input: {
+  busy: boolean
+  dirty: boolean
+  draftItemsCount: number
+  hasPlan: boolean
+  planStatus: 'DRAFT' | 'PUBLISHED' | null | undefined
+}): boolean {
+  return (
+    input.busy ||
+    input.dirty ||
+    input.draftItemsCount === 0 ||
+    !input.hasPlan ||
+    input.planStatus !== 'DRAFT'
+  )
 }

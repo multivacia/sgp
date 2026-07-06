@@ -126,7 +126,7 @@ describe('serviceGetOperationalPlanningWeek — execution fields', () => {
 
   it('exposes realizedMinutes per planned item from enriched rows', async () => {
     const pool = {} as pg.Pool
-    vi.spyOn(repo, 'findOperationalWorkPlanByWeekStart').mockResolvedValue({
+    vi.spyOn(repo, 'findDraftOperationalWorkPlanByWeekStart').mockResolvedValue({
       id: 'plan-1',
       week_start_date: '2026-05-11',
       week_end_date: '2026-05-15',
@@ -137,6 +137,7 @@ describe('serviceGetOperationalPlanningWeek — execution fields', () => {
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     })
+    vi.spyOn(repo, 'findPublishedOperationalWorkPlanByWeekStart').mockResolvedValue(null)
     vi.spyOn(repo, 'listEnrichedItemsForWorkPlan').mockResolvedValue([
       sampleRow({
         id: 'item-a',
@@ -165,7 +166,7 @@ describe('serviceGetOperationalPlanningWeek — execution fields', () => {
 
   it('includes execution outside plan summary and entries', async () => {
     const pool = {} as pg.Pool
-    vi.spyOn(repo, 'findOperationalWorkPlanByWeekStart').mockResolvedValue({
+    vi.spyOn(repo, 'findDraftOperationalWorkPlanByWeekStart').mockResolvedValue({
       id: 'plan-1',
       week_start_date: '2026-05-11',
       week_end_date: '2026-05-15',
@@ -176,6 +177,7 @@ describe('serviceGetOperationalPlanningWeek — execution fields', () => {
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     })
+    vi.spyOn(repo, 'findPublishedOperationalWorkPlanByWeekStart').mockResolvedValue(null)
     vi.spyOn(repo, 'listEnrichedItemsForWorkPlan').mockResolvedValue([])
     vi.spyOn(repo, 'listExecutionOutsidePlanEntriesForWeek').mockResolvedValue([
       {
@@ -210,7 +212,7 @@ describe('serviceGetOperationalPlanningWeek — execution fields', () => {
   it('exposes syncStatus and syncDifferences for linked conveyor plan items', async () => {
     const pool = {} as pg.Pool
     const copId = 'cop-item-1'
-    vi.spyOn(repo, 'findOperationalWorkPlanByWeekStart').mockResolvedValue({
+    vi.spyOn(repo, 'findDraftOperationalWorkPlanByWeekStart').mockResolvedValue({
       id: 'plan-1',
       week_start_date: '2026-05-11',
       week_end_date: '2026-05-15',
@@ -221,6 +223,7 @@ describe('serviceGetOperationalPlanningWeek — execution fields', () => {
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     })
+    vi.spyOn(repo, 'findPublishedOperationalWorkPlanByWeekStart').mockResolvedValue(null)
     vi.spyOn(repo, 'listEnrichedItemsForWorkPlan').mockResolvedValue([
       sampleRow({
         id: 'item-linked',

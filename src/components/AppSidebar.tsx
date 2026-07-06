@@ -243,9 +243,9 @@ function NavItemLink({
     </span>
   )
 
-  if (item.to === '/app/minhas-atividades') {
+  if (item.to === '/app/minha-fila') {
     const active =
-      location.pathname.startsWith('/app/minhas-atividades') ||
+      location.pathname.startsWith('/app/minha-fila') ||
       location.pathname.startsWith('/app/apontamento')
     return (
       <NavLink

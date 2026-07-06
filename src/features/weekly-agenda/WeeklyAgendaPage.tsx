@@ -46,10 +46,13 @@ import {
 } from '../operational-planning/planningCardActions'
 import { buildPlanningBacklogExecutionLookup } from '../operational-planning/planningExecutionHelpers'
 import {
+  PUBLISH_SUCCESS_MESSAGE,
+  resolvePlanningRevisionContext,
   resolvePlanningSaveErrorMessage,
   resolvePlanningSaveSuccessMessage,
   resolvePlanningSaveWeekDates,
-  SAVE_PUBLISHED_AUTO_SUCCESS_MESSAGE,
+  SAVE_REVISION_SUCCESS_MESSAGE,
+  shouldAutoPersistPlanChanges,
 } from '../operational-planning/operationalPlanningPlanStatusCopy'
 import {
   isIsoDateInWeekdays,
@@ -361,7 +364,7 @@ export function WeeklyAgendaPage() {
         setDraftItems([])
         savedDraftJsonRef.current = '[]'
       }
-      setSuccessMsg(resolvePlanningSaveSuccessMessage(weekPayload.plan?.status))
+      setSuccessMsg(resolvePlanningSaveSuccessMessage(resolvePlanningRevisionContext(weekPayload)))
       await reloadBacklog()
     } catch (e) {
       reportClientError(e, { module: 'weekly-agenda', action: 'save_week' })
@@ -380,7 +383,7 @@ export function WeeklyAgendaPage() {
   }
 
   async function persistPublishedPlanItems(items: DraftPlanItem[]) {
-    if (!weekPayload?.plan || weekPayload.plan.status !== 'PUBLISHED') return
+    if (!weekPayload?.plan || !shouldAutoPersistPlanChanges(weekPayload)) return
     const { weekStartDate, weekEndDate } = resolvePlanningSaveWeekDates(weekPayload)
     const body = buildSavePayload(weekStartDate, weekEndDate, items)
     setBusy(true)
@@ -391,14 +394,14 @@ export function WeeklyAgendaPage() {
       const d = out.plan?.items?.length ? out.plan.items.map(planItemToDraft) : []
       setDraftItems(d)
       savedDraftJsonRef.current = JSON.stringify(d)
-      setSuccessMsg(SAVE_PUBLISHED_AUTO_SUCCESS_MESSAGE)
+      setSuccessMsg(SAVE_REVISION_SUCCESS_MESSAGE)
       await reloadBacklog()
     } catch (e) {
       reportClientError(e, { module: 'weekly-agenda', action: 'save_published_remove' })
       setErrorMsg(
         resolvePlanningSaveErrorMessage(
           e,
-          'Não foi possível salvar as alterações no plano ativo.',
+          'Não foi possível salvar a revisão do plano.',
         ),
       )
       await reload()
@@ -416,7 +419,7 @@ export function WeeklyAgendaPage() {
       await publishOperationalPlanningWeek(weekPayload.plan.id)
       await reload()
       await reloadBacklog()
-      setSuccessMsg('Plano publicado.')
+      setSuccessMsg(PUBLISH_SUCCESS_MESSAGE)
     } catch (e) {
       reportClientError(e, { module: 'weekly-agenda', action: 'publish_week' })
       const detail = e instanceof ApiError ? e.message : null
@@ -561,7 +564,7 @@ export function WeeklyAgendaPage() {
   function handleRemoveFromPlan(item: DraftPlanItem) {
     const next = removeDraftPlanItem(draftItems, item.localKey)
     setDraftItems(next)
-    if (weekPayload?.plan?.status === 'PUBLISHED') {
+    if (shouldAutoPersistPlanChanges(weekPayload)) {
       void persistPublishedPlanItems(next)
     }
   }

@@ -360,11 +360,10 @@ export function JornadaPage() {
                 Colaborador
               </p>
               <h1 className="sgp-page-title mt-2">
-                Jornada do colaborador
+                Minha jornada
               </h1>
               <p className="mt-1 max-w-2xl text-sm text-slate-300">
-                O que tem para fazer, o que está em curso e o que já concluiu — com apontamento a um clique.{' '}
-                {transversalUxCopy.navHintMinhasAtividades}
+                Acompanhe suas atividades em aberto, pendências, concluídas e apontamentos recentes.
               </p>
               {journey?.collaborator.fullName ? (
                 <p className="mt-2 text-xs text-slate-500">{journey.collaborator.fullName}</p>

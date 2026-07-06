@@ -58,15 +58,19 @@ import {
 import { buildVisiblePlanningBacklogItems } from './buildVisiblePlanningBacklogItems'
 import {
   PLAN_PUBLISHED_HELPER_TEXT,
-  PLAN_STATUS_DRAFT_LABEL,
-  PLAN_STATUS_PUBLISHED_LABEL,
+  PLAN_UNPUBLISHED_CHANGES_BADGE,
   PUBLISH_BUTTON_LABEL,
-  SAVE_PUBLISHED_AUTO_SUCCESS_MESSAGE,
+  PUBLISH_SUCCESS_MESSAGE,
+  SAVE_REVISION_SUCCESS_MESSAGE,
+  isPlanningPublishDisabled,
   resolvePlanningPublishButtonTitle,
+  resolvePlanningRevisionContext,
   resolvePlanningSaveButtonLabel,
   resolvePlanningSaveErrorMessage,
   resolvePlanningSaveSuccessMessage,
   resolvePlanningSaveWeekDates,
+  resolvePlanningStatusBadgeLabel,
+  shouldAutoPersistPlanChanges,
   hasLegacyPlanWeekEndDate,
   LEGACY_PLAN_WEEK_END_NOTICE,
 } from './operationalPlanningPlanStatusCopy'
@@ -125,13 +129,12 @@ import {
   type PlanningWeekActivityFilters,
 } from './planningWeekActivity'
 import {
-  buildActivityTicketInputFromPlanningSource,
   buildActivityTicketInputsFromPlanningSources,
 } from '../operational-tickets/activityTicketPlanningSource'
 import {
-  buildActivityTicketPrintModel,
   buildActivityTicketPrintModelsFromPlanningInputs,
 } from '../operational-tickets/activityTicketPrintModel'
+import { buildSinglePlanningTicketPrintItems } from '../operational-tickets/buildSinglePlanningTicketPrintItems'
 import { resolvePlanningItemsForTicketBatchPrint, resolveWeekPlanningItemsForTicketPrint } from '../operational-tickets/resolvePlanningItemsForTicketBatch'
 import { ACTIVITY_TICKET_PRINT_SUPPORT_MESSAGE, ACTIVITY_TICKET_SILENT_PRINT_HINT } from '../operational-tickets/activityTicketPrintCopy'
 import { ThermalActivityTicketsPrintArea } from '../operational-tickets/ThermalActivityTicketsPrintArea'
@@ -345,6 +348,7 @@ function PlanScheduledCard(props: {
   backlogExecutionLookup: ReadonlyMap<string, number>
   canAlterConveyor: boolean
   actionBusy: boolean
+  isPrinting: boolean
   onMoveUp: () => void
   onMoveDown: () => void
   onRemove: () => void
@@ -422,6 +426,7 @@ function PlanScheduledCard(props: {
         item={item}
         canAlterConveyor={props.canAlterConveyor}
         actionBusy={props.actionBusy}
+        isPrinting={props.isPrinting}
         onPointTime={props.onPointTime}
         onComplete={props.onComplete}
         onReopen={props.onReopen}
@@ -447,6 +452,7 @@ type PlanningBoardRowProps = {
   onRemove: (localKey: string) => void
   canAlterConveyor: boolean
   cardActionBusyKey: string | null
+  isPrinting: boolean
   onCardPointTime: (item: DraftPlanItem) => void
   onCardComplete: (item: DraftPlanItem) => void
   onCardReopen: (item: DraftPlanItem) => void
@@ -469,6 +475,7 @@ function PlanningBoardRow(props: PlanningBoardRowProps) {
     onRemove,
     canAlterConveyor,
     cardActionBusyKey,
+    isPrinting,
     onCardPointTime,
     onCardComplete,
     onCardReopen,
@@ -531,6 +538,7 @@ function PlanningBoardRow(props: PlanningBoardRowProps) {
                       backlogExecutionLookup={backlogExecutionLookup}
                       canAlterConveyor={canAlterConveyor}
                       actionBusy={cardActionBusyKey === it.localKey}
+                      isPrinting={isPrinting}
                       onMoveUp={() => onMoveUp(it.localKey)}
                       onMoveDown={() => onMoveDown(it.localKey)}
                       onRemove={() => onRemove(it.localKey)}
@@ -632,6 +640,7 @@ export function OperationalPlanningPage() {
   const {
     currentSheet,
     printProgress,
+    isPrinting,
     agentStatus,
     agentFallbackNotice,
     testPrintLoading,
@@ -991,7 +1000,7 @@ export function OperationalPlanningPage() {
 
   const persistPublishedPlanItems = useCallback(
     async (items: DraftPlanItem[]) => {
-      if (!weekPayload?.plan || weekPayload.plan.status !== 'PUBLISHED') return
+      if (!weekPayload?.plan || !shouldAutoPersistPlanChanges(weekPayload)) return
       const { weekStartDate, weekEndDate } = resolvePlanningSaveWeekDates(weekPayload)
       const body = buildSavePayload(weekStartDate, weekEndDate, items)
       setBusy(true)
@@ -1002,7 +1011,7 @@ export function OperationalPlanningPage() {
         const d = out.plan?.items?.length ? out.plan.items.map(planItemToDraft) : []
         setDraftItems(d)
         savedDraftJsonRef.current = JSON.stringify(d)
-        setSuccessMsg(SAVE_PUBLISHED_AUTO_SUCCESS_MESSAGE)
+        setSuccessMsg(SAVE_REVISION_SUCCESS_MESSAGE)
         void loadBacklog()
         void loadFactoryIntake()
       } catch (e) {
@@ -1010,7 +1019,7 @@ export function OperationalPlanningPage() {
         setErrorMsg(
           resolvePlanningSaveErrorMessage(
             e,
-            'Não foi possível salvar as alterações no plano ativo.',
+            'Não foi possível salvar a revisão do plano.',
           ),
         )
         void loadWeek()
@@ -1024,7 +1033,7 @@ export function OperationalPlanningPage() {
   function removeDraft(localKey: string) {
     setDraftItems((prev) => {
       const next = prev.filter((p) => p.localKey !== localKey)
-      if (weekPayload?.plan?.status === 'PUBLISHED') {
+      if (shouldAutoPersistPlanChanges(weekPayload)) {
         void persistPublishedPlanItems(next)
       }
       return next
@@ -1077,7 +1086,7 @@ export function OperationalPlanningPage() {
         setDraftItems([])
         savedDraftJsonRef.current = JSON.stringify([])
       }
-      setSuccessMsg(resolvePlanningSaveSuccessMessage(weekPayload.plan?.status))
+      setSuccessMsg(resolvePlanningSaveSuccessMessage(resolvePlanningRevisionContext(weekPayload)))
       void loadBacklog()
       void loadFactoryIntake()
     } catch (e) {
@@ -1106,7 +1115,7 @@ export function OperationalPlanningPage() {
       await loadWeek()
       void loadBacklog()
       void loadFactoryIntake()
-      setSuccessMsg('Plano publicado.')
+      setSuccessMsg(PUBLISH_SUCCESS_MESSAGE)
     } catch (e) {
       reportClientError(e, { module: 'operational-planning', action: 'publish_week' })
       const detail = e instanceof ApiError ? e.message : null
@@ -1344,8 +1353,7 @@ export function OperationalPlanningPage() {
 
   const handleCardPrintTicket = useCallback(
     (item: DraftPlanItem) => {
-      const input = buildActivityTicketInputFromPlanningSource(item, backlogExecutionLookup)
-      requestTicketPrint([buildActivityTicketPrintModel(input)])
+      requestTicketPrint(buildSinglePlanningTicketPrintItems(item, backlogExecutionLookup))
     },
     [backlogExecutionLookup, requestTicketPrint],
   )
@@ -1438,13 +1446,18 @@ export function OperationalPlanningPage() {
                 'inline-flex shrink-0 rounded-full border px-3 py-1 text-[12px]',
                 weekPayload?.plan?.status === 'PUBLISHED'
                   ? 'border-emerald-400/25 bg-emerald-500/10 text-emerald-100'
-                  : 'border-white/[0.08] bg-white/[0.04] text-slate-300',
+                  : weekPayload?.revision?.hasUnpublishedRevision
+                    ? 'border-amber-400/25 bg-amber-500/10 text-amber-100'
+                    : 'border-white/[0.08] bg-white/[0.04] text-slate-300',
               ].join(' ')}
             >
-              {weekPayload?.plan?.status === 'PUBLISHED'
-                ? PLAN_STATUS_PUBLISHED_LABEL
-                : PLAN_STATUS_DRAFT_LABEL}
+              {resolvePlanningStatusBadgeLabel(resolvePlanningRevisionContext(weekPayload))}
             </span>
+            {weekPayload?.revision?.hasUnpublishedRevision ? (
+              <span className="inline-flex shrink-0 rounded-full border border-amber-400/20 bg-amber-500/5 px-3 py-1 text-[12px] text-amber-100/90">
+                {PLAN_UNPUBLISHED_CHANGES_BADGE}
+              </span>
+            ) : null}
           </div>
 
           <div className="flex flex-wrap items-center gap-2 sm:gap-3">
@@ -1456,7 +1469,7 @@ export function OperationalPlanningPage() {
                   ? 'Nenhuma atividade planejada nesta semana'
                   : 'Imprimir tickets de todas as atividades planejadas na semana'
               }
-              disabled={busy || weekTicketSources.length === 0}
+              disabled={busy || isPrinting || weekTicketSources.length === 0}
               onClick={() => setWeekTicketsPrintOpen(true)}
             >
               Imprimir tickets da semana
@@ -1476,21 +1489,22 @@ export function OperationalPlanningPage() {
               title={resolvePlanningPublishButtonTitle({
                 planStatus: weekPayload?.plan?.status,
                 draftItemsCount: draftItems.length,
+                hasActivePublished: weekPayload?.revision?.hasActivePublished,
               })}
               onClick={() => void handlePublish()}
-              disabled={
-                busy ||
-                dirty ||
-                draftItems.length === 0 ||
-                !weekPayload?.plan ||
-                weekPayload.plan.status === 'PUBLISHED'
-              }
+              disabled={isPlanningPublishDisabled({
+                busy,
+                dirty,
+                draftItemsCount: draftItems.length,
+                hasPlan: Boolean(weekPayload?.plan),
+                planStatus: weekPayload?.plan?.status,
+              })}
             >
               {PUBLISH_BUTTON_LABEL}
             </button>
           </div>
 
-          {weekPayload?.plan?.status === 'PUBLISHED' ? (
+          {weekPayload?.revision?.hasActivePublished || weekPayload?.plan?.status === 'PUBLISHED' ? (
             <p className="max-w-3xl text-[13px] leading-relaxed text-slate-400">
               {PLAN_PUBLISHED_HELPER_TEXT}
             </p>
@@ -1851,7 +1865,7 @@ export function OperationalPlanningPage() {
                       type="button"
                       className="rounded-lg border border-white/[0.10] bg-white/[0.05] px-2.5 py-1 text-[11px] font-medium text-slate-200 hover:bg-white/[0.08] disabled:opacity-50"
                       title="Imprimir tickets das atividades visíveis no quadro"
-                      disabled={ticketBatchSources.length === 0}
+                      disabled={busy || isPrinting || ticketBatchSources.length === 0}
                       onClick={handlePrintVisibleTickets}
                     >
                       Imprimir tickets visíveis
@@ -2030,6 +2044,7 @@ export function OperationalPlanningPage() {
                             todayIso={todayIso}
                             canAlterConveyor={canAlterConveyor}
                             cardActionBusyKey={cardActionBusyKey}
+                            isPrinting={isPrinting}
                             onCardPointTime={handleCardPointTime}
                             onCardComplete={handleCardComplete}
                             onCardReopen={handleCardReopen}
@@ -2053,6 +2068,7 @@ export function OperationalPlanningPage() {
                             todayIso={todayIso}
                             canAlterConveyor={canAlterConveyor}
                             cardActionBusyKey={cardActionBusyKey}
+                            isPrinting={isPrinting}
                             onCardPointTime={handleCardPointTime}
                             onCardComplete={handleCardComplete}
                             onCardReopen={handleCardReopen}

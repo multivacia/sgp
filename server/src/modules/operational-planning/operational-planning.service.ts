@@ -16,7 +16,6 @@ import {
   type ConveyorPlanFactorySyncStatus,
 } from '../conveyor-operational-plan/deriveConveyorPlanFactorySyncState.js'
 import {
-  clearConveyorPlanItemFactoryLink,
   clearConveyorPlanItemsByOriginWorkPlanItemIds,
   linkConveyorPlanItemToWorkPlanItem,
   loadConveyorPlanItemsForWeekSync,
@@ -25,8 +24,10 @@ import {
 import { refreshConveyorOperationalPlanSyncStatusByItemIds } from '../conveyor-operational-plan/refreshConveyorOperationalPlanSyncStatus.js'
 import {
   deleteItemsForWorkPlan,
+  findDraftOperationalWorkPlanByWeekStart,
+  findEditableOperationalWorkPlanForWeek,
   findOperationalWorkPlanById,
-  findOperationalWorkPlanByWeekStart,
+  findPublishedOperationalWorkPlanByWeekStart,
   insertOperationalWorkPlan,
   insertWorkPlanItems,
   isConveyorPlanItemLinkedElsewhere,
@@ -42,9 +43,11 @@ import {
   loadStepForPlanningValidation,
   updateWorkPlanItemFromConveyorPlan,
   publishOperationalWorkPlan,
+  softDeleteOperationalWorkPlanWithItems,
   touchOperationalWorkPlanUpdatedAt,
   type FactoryIntakeRawRow,
   type PlanItemEnrichedRow,
+  type OperationalWorkPlanRow,
 } from './operational-planning.repository.js'
 import {
   assertFriday,
@@ -89,6 +92,13 @@ function mapNodesForSequence(
   }))
 }
 
+export type OperationalPlanningWeekRevisionMeta = {
+  hasActivePublished: boolean
+  activePublishedPlanId: string | null
+  activePublishedAt: string | null
+  hasUnpublishedRevision: boolean
+}
+
 export type OperationalPlanningWeekResponse = {
   hasPlan: boolean
   week: {
@@ -96,6 +106,7 @@ export type OperationalPlanningWeekResponse = {
     weekEndDate: string
     weekdayDates: readonly string[]
   }
+  revision: OperationalPlanningWeekRevisionMeta
   plan: null | {
     id: string
     weekStartDate: string
@@ -292,36 +303,32 @@ async function buildCapacityByCollaboratorDay(
   return out
 }
 
-export async function serviceGetOperationalPlanningWeek(
-  pool: pg.Pool,
-  weekStartRaw: string,
-): Promise<OperationalPlanningWeekResponse> {
-  const weekStartDate = mondayOfWeekContaining(weekStartRaw)
-  const weekEndDate = fridayAfterMonday(weekStartDate)
-  const weekdayDates = weekDayStrings(weekStartDate)
-
-  const planRow = await findOperationalWorkPlanByWeekStart(pool, weekStartDate)
-  const executionOutsidePlanRows = await listExecutionOutsidePlanEntriesForWeek(pool, {
-    weekStartDate,
-    weekEndDate,
-    workPlanId: planRow?.id ?? null,
-  })
-  const executionOutsidePlanSummary = buildExecutionOutsidePlanSummary(executionOutsidePlanRows)
-  const executionOutsidePlanEntries = executionOutsidePlanRows.map(mapExecutionOutsidePlanEntryToApi)
-
-  if (!planRow) {
-    return {
-      hasPlan: false,
-      week: { weekStartDate, weekEndDate, weekdayDates },
-      plan: null,
-      summary: { plannedMinutes: 0, plannedItems: 0, collaboratorsCount: 0 },
-      capacityByCollaboratorDay: [],
-      executionOutsidePlanSummary,
-      executionOutsidePlanEntries,
-    }
+function buildWeekRevisionMeta(
+  draftRow: OperationalWorkPlanRow | null,
+  publishedRow: OperationalWorkPlanRow | null,
+): OperationalPlanningWeekRevisionMeta {
+  const hasActivePublished = Boolean(publishedRow)
+  const hasUnpublishedRevision = Boolean(draftRow && publishedRow)
+  return {
+    hasActivePublished,
+    activePublishedPlanId: publishedRow?.id ?? null,
+    activePublishedAt: publishedRow?.published_at ?? null,
+    hasUnpublishedRevision,
   }
+}
 
-  const items = await listEnrichedItemsForWorkPlan(pool, planRow.id)
+function mapPlanRowToWeekResponse(
+  planRow: OperationalWorkPlanRow,
+  items: PlanItemEnrichedRow[],
+  weekStartDate: string,
+  weekEndDate: string,
+  weekdayDates: readonly string[],
+  revision: OperationalPlanningWeekRevisionMeta,
+  capacityByCollaboratorDay: OperationalPlanningWeekResponse['capacityByCollaboratorDay'],
+  executionOutsidePlanSummary: OperationalPlanningWeekResponse['executionOutsidePlanSummary'],
+  executionOutsidePlanEntries: OperationalPlanningWeekResponse['executionOutsidePlanEntries'],
+  mappedItems: Awaited<ReturnType<typeof mapWeekPlanItemsToApi>>,
+): OperationalPlanningWeekResponse {
   const plannedMinutes = items.reduce(
     (s, i) => s + Math.max(0, Number(i.planned_minutes ?? 0) || 0),
     0,
@@ -329,19 +336,17 @@ export async function serviceGetOperationalPlanningWeek(
   const collabIds = new Set(
     items.map((i) => i.assigned_collaborator_id).filter((x): x is string => Boolean(x)),
   )
-
-  const capacityByCollaboratorDay = await buildCapacityByCollaboratorDay(pool, items)
-
   return {
     hasPlan: true,
     week: { weekStartDate, weekEndDate, weekdayDates },
+    revision,
     plan: {
       id: planRow.id,
       weekStartDate: planRow.week_start_date,
       weekEndDate: planRow.week_end_date,
       status: planRow.status,
       publishedAt: planRow.published_at,
-      items: await mapWeekPlanItemsToApi(pool, items),
+      items: mappedItems,
       createdAt: planRow.created_at,
       updatedAt: planRow.updated_at,
     },
@@ -354,6 +359,61 @@ export async function serviceGetOperationalPlanningWeek(
     executionOutsidePlanSummary,
     executionOutsidePlanEntries,
   }
+}
+
+export async function serviceGetOperationalPlanningWeek(
+  pool: pg.Pool,
+  weekStartRaw: string,
+): Promise<OperationalPlanningWeekResponse> {
+  const weekStartDate = mondayOfWeekContaining(weekStartRaw)
+  const weekEndDate = fridayAfterMonday(weekStartDate)
+  const weekdayDates = weekDayStrings(weekStartDate)
+
+  const [draftRow, publishedRow] = await Promise.all([
+    findDraftOperationalWorkPlanByWeekStart(pool, weekStartDate),
+    findPublishedOperationalWorkPlanByWeekStart(pool, weekStartDate),
+  ])
+  const editableRow = draftRow ?? publishedRow
+  const revision = buildWeekRevisionMeta(draftRow, publishedRow)
+  const workPlanIdForExecution = publishedRow?.id ?? editableRow?.id ?? null
+
+  const executionOutsidePlanRows = await listExecutionOutsidePlanEntriesForWeek(pool, {
+    weekStartDate,
+    weekEndDate,
+    workPlanId: workPlanIdForExecution,
+  })
+  const executionOutsidePlanSummary = buildExecutionOutsidePlanSummary(executionOutsidePlanRows)
+  const executionOutsidePlanEntries = executionOutsidePlanRows.map(mapExecutionOutsidePlanEntryToApi)
+
+  if (!editableRow) {
+    return {
+      hasPlan: false,
+      week: { weekStartDate, weekEndDate, weekdayDates },
+      revision,
+      plan: null,
+      summary: { plannedMinutes: 0, plannedItems: 0, collaboratorsCount: 0 },
+      capacityByCollaboratorDay: [],
+      executionOutsidePlanSummary,
+      executionOutsidePlanEntries,
+    }
+  }
+
+  const items = await listEnrichedItemsForWorkPlan(pool, editableRow.id)
+  const capacityByCollaboratorDay = await buildCapacityByCollaboratorDay(pool, items)
+  const mappedItems = await mapWeekPlanItemsToApi(pool, items)
+
+  return mapPlanRowToWeekResponse(
+    editableRow,
+    items,
+    weekStartDate,
+    weekEndDate,
+    weekdayDates,
+    revision,
+    capacityByCollaboratorDay,
+    executionOutsidePlanSummary,
+    executionOutsidePlanEntries,
+    mappedItems,
+  )
 }
 
 export type OperationalPlanningWeekActivityResponse = {
@@ -374,13 +434,15 @@ export async function serviceGetOperationalPlanningWeekActivity(
   const limit = Math.max(1, Math.min(200, Math.floor(limitRaw ?? 100) || 100))
   const fetchLimit = Math.min(200, limit + 1)
 
-  const planRow = await findOperationalWorkPlanByWeekStart(pool, weekStartDate)
+  const planRow = await findEditableOperationalWorkPlanForWeek(pool, weekStartDate)
+  const publishedRow = await findPublishedOperationalWorkPlanByWeekStart(pool, weekStartDate)
+  const workPlanIdForActivity = publishedRow?.id ?? planRow?.id ?? null
 
   const [timeEntries, stepEvents] = await Promise.all([
     listWeekActivityTimeEntriesForWeek(pool, {
       weekStartDate,
       weekEndDate,
-      workPlanId: planRow?.id ?? null,
+      workPlanId: workPlanIdForActivity,
       fetchLimit,
     }),
     listWeekActivityStepEventsForWeek(pool, {
@@ -425,7 +487,7 @@ function validateWeekShape(weekStartDate: string, weekEndDate: string): void {
 async function validatePlanItems(
   pool: pg.Pool,
   body: SaveOperationalWeekPlanBody,
-  excludeWorkPlanId?: string,
+  excludeWorkPlanIds?: string | readonly string[],
 ): Promise<void> {
   if (!body.items.length) return
 
@@ -517,7 +579,7 @@ async function validatePlanItems(
       const linkedElsewhere = await isConveyorPlanItemLinkedElsewhere(
         pool,
         it.conveyorOperationalPlanItemId,
-        excludeWorkPlanId,
+        excludeWorkPlanIds,
       )
       if (linkedElsewhere) {
         throw new AppError(
@@ -530,20 +592,13 @@ async function validatePlanItems(
   }
 }
 
-async function replaceWeekPlanItemsWithConveyorReconciliation(
+async function replaceWeekPlanItems(
   client: pg.PoolClient,
   planId: string,
   body: SaveOperationalWeekPlanBody,
 ): Promise<void> {
-  const oldLinks = await listWorkPlanItemLinks(client, planId)
-  const oldFactoryItemIds = oldLinks.map((l) => l.factoryItemId)
-
   await deleteItemsForWorkPlan(client, planId)
-  if (oldFactoryItemIds.length > 0) {
-    await clearConveyorPlanItemsByOriginWorkPlanItemIds(client, oldFactoryItemIds)
-  }
-
-  const inserted = await insertWorkPlanItems(
+  await insertWorkPlanItems(
     client,
     planId,
     body.items.map((it) => ({
@@ -558,42 +613,60 @@ async function replaceWeekPlanItemsWithConveyorReconciliation(
       conveyorOperationalPlanItemId: it.conveyorOperationalPlanItemId ?? null,
     })),
   )
+}
 
-  const newConveyorIds = new Set<string>()
+async function reconcileConveyorLinksForPublishedPlan(
+  client: pg.PoolClient,
+  planId: string,
+): Promise<void> {
+  const links = await listWorkPlanItemLinks(client, planId)
   const affectedPlanIds: string[] = []
 
-  for (const row of inserted) {
-    if (!row.conveyorOperationalPlanItemId) continue
-    newConveyorIds.add(row.conveyorOperationalPlanItemId)
+  for (const link of links) {
     const planIdLinked = await linkConveyorPlanItemToWorkPlanItem(
       client,
-      row.conveyorOperationalPlanItemId,
-      row.id,
+      link.conveyorOperationalPlanItemId,
+      link.factoryItemId,
     )
     if (planIdLinked) affectedPlanIds.push(planIdLinked)
   }
 
-  for (const old of oldLinks) {
-    if (!newConveyorIds.has(old.conveyorOperationalPlanItemId)) {
-      const planIdCleared = await clearConveyorPlanItemFactoryLink(
-        client,
-        old.conveyorOperationalPlanItemId,
-      )
-      if (planIdCleared) affectedPlanIds.push(planIdCleared)
-    }
-  }
-
-  const conveyorItemIdsToRefresh = [
-    ...oldLinks.map((l) => l.conveyorOperationalPlanItemId),
-    ...inserted
-      .map((r) => r.conveyorOperationalPlanItemId)
-      .filter((id): id is string => Boolean(id)),
-  ]
-  if (conveyorItemIdsToRefresh.length > 0) {
-    await refreshConveyorOperationalPlanSyncStatusByItemIds(client, conveyorItemIdsToRefresh)
+  const conveyorItemIds = links.map((l) => l.conveyorOperationalPlanItemId)
+  if (conveyorItemIds.length > 0) {
+    await refreshConveyorOperationalPlanSyncStatusByItemIds(client, conveyorItemIds)
   } else if (affectedPlanIds.length > 0) {
     await recalculateConveyorPlanFactoryStatuses(client, affectedPlanIds)
   }
+}
+
+async function workPlanIdsToExcludeForValidation(
+  pool: pg.Pool | pg.PoolClient,
+  weekStartDate: string,
+  targetPlanId?: string,
+): Promise<string[]> {
+  const [draft, published] = await Promise.all([
+    findDraftOperationalWorkPlanByWeekStart(pool, weekStartDate),
+    findPublishedOperationalWorkPlanByWeekStart(pool, weekStartDate),
+  ])
+  return [...new Set([targetPlanId, draft?.id, published?.id].filter((id): id is string => Boolean(id)))]
+}
+
+async function resolveOrCreateDraftPlanForSave(
+  client: pg.PoolClient,
+  existing: OperationalWorkPlanRow,
+  actorUserId: string,
+): Promise<string> {
+  if (existing.status === 'DRAFT') return existing.id
+
+  const draft = await findDraftOperationalWorkPlanByWeekStart(client, existing.week_start_date)
+  if (draft) return draft.id
+
+  return insertOperationalWorkPlan(client, {
+    weekStartDate: existing.week_start_date,
+    weekEndDate: existing.week_end_date,
+    createdByUserId: actorUserId,
+    status: 'DRAFT',
+  })
 }
 
 export async function serviceSaveOperationalWeekPlan(
@@ -603,68 +676,46 @@ export async function serviceSaveOperationalWeekPlan(
 ): Promise<OperationalPlanningWeekResponse> {
   validateWeekShape(body.weekStartDate, body.weekEndDate)
 
-  const existingPlan = await findOperationalWorkPlanByWeekStart(pool, body.weekStartDate)
-  await validatePlanItems(pool, body, existingPlan?.id)
+  const draftPlan = await findDraftOperationalWorkPlanByWeekStart(pool, body.weekStartDate)
+  const publishedPlan = await findPublishedOperationalWorkPlanByWeekStart(pool, body.weekStartDate)
+  const excludeIds = await workPlanIdsToExcludeForValidation(pool, body.weekStartDate, draftPlan?.id)
+  await validatePlanItems(pool, body, excludeIds)
 
   const client = await pool.connect()
   try {
     await client.query('BEGIN')
 
-    let planId = existingPlan?.id
-    if (!planId) {
+    let planId: string
+    if (draftPlan) {
+      planId = draftPlan.id
+    } else if (publishedPlan) {
       planId = await insertOperationalWorkPlan(client, {
         weekStartDate: body.weekStartDate,
         weekEndDate: body.weekEndDate,
         createdByUserId: actorUserId,
         status: 'DRAFT',
       })
-      const inserted = await insertWorkPlanItems(
-        client,
-        planId,
-        body.items.map((it) => ({
-          conveyorId: it.conveyorId,
-          activityNodeId: it.activityNodeId,
-          assignedCollaboratorId: it.assignedCollaboratorId,
-          assignedTeamId: it.assignedTeamId ?? null,
-          plannedDate: it.plannedDate,
-          plannedOrder: it.plannedOrder,
-          plannedMinutes: it.plannedMinutes ?? null,
-          notes: it.notes ?? null,
-          conveyorOperationalPlanItemId: it.conveyorOperationalPlanItemId ?? null,
-        })),
-      )
-      const affectedPlanIds: string[] = []
-      for (const row of inserted) {
-        if (!row.conveyorOperationalPlanItemId) continue
-        const planIdLinked = await linkConveyorPlanItemToWorkPlanItem(
-          client,
-          row.conveyorOperationalPlanItemId,
-          row.id,
-        )
-        if (planIdLinked) affectedPlanIds.push(planIdLinked)
-      }
-      const insertedConveyorIds = inserted
-        .map((r) => r.conveyorOperationalPlanItemId)
-        .filter((id): id is string => Boolean(id))
-      if (insertedConveyorIds.length > 0) {
-        await refreshConveyorOperationalPlanSyncStatusByItemIds(client, insertedConveyorIds)
-      } else if (affectedPlanIds.length > 0) {
-        await recalculateConveyorPlanFactoryStatuses(client, affectedPlanIds)
-      }
     } else {
-      await client.query(
-        `
-        UPDATE operational_work_plans
-        SET
-          week_end_date = $2::date,
-          updated_at = now()
-        WHERE id = $1::uuid
-          AND deleted_at IS NULL
-        `,
-        [planId, body.weekEndDate],
-      )
-      await replaceWeekPlanItemsWithConveyorReconciliation(client, planId, body)
+      planId = await insertOperationalWorkPlan(client, {
+        weekStartDate: body.weekStartDate,
+        weekEndDate: body.weekEndDate,
+        createdByUserId: actorUserId,
+        status: 'DRAFT',
+      })
     }
+
+    await client.query(
+      `
+      UPDATE operational_work_plans
+      SET
+        week_end_date = $2::date,
+        updated_at = now()
+      WHERE id = $1::uuid
+        AND deleted_at IS NULL
+      `,
+      [planId, body.weekEndDate],
+    )
+    await replaceWeekPlanItems(client, planId, body)
     await touchOperationalWorkPlanUpdatedAt(client, planId)
 
     await client.query('COMMIT')
@@ -681,7 +732,7 @@ export async function serviceSaveOperationalWeekPlan(
 export async function servicePatchOperationalWeekPlan(
   pool: pg.Pool,
   planId: string,
-  _actorUserId: string,
+  actorUserId: string,
   body: SaveOperationalWeekPlanBody,
 ): Promise<OperationalPlanningWeekResponse> {
   const existing = await findOperationalWorkPlanById(pool, planId)
@@ -696,12 +747,15 @@ export async function servicePatchOperationalWeekPlan(
     )
   }
   validateWeekShape(body.weekStartDate, body.weekEndDate)
-  await validatePlanItems(pool, body, planId)
+
+  const excludeIds = await workPlanIdsToExcludeForValidation(pool, body.weekStartDate)
+  await validatePlanItems(pool, body, excludeIds)
 
   const client = await pool.connect()
   try {
     await client.query('BEGIN')
-    if (body.weekEndDate !== existing.week_end_date) {
+    const targetPlanId = await resolveOrCreateDraftPlanForSave(client, existing, actorUserId)
+    if (body.weekEndDate !== existing.week_end_date || targetPlanId !== existing.id) {
       await client.query(
         `
         UPDATE operational_work_plans
@@ -711,11 +765,11 @@ export async function servicePatchOperationalWeekPlan(
         WHERE id = $1::uuid
           AND deleted_at IS NULL
         `,
-        [planId, body.weekEndDate],
+        [targetPlanId, body.weekEndDate],
       )
     }
-    await replaceWeekPlanItemsWithConveyorReconciliation(client, planId, body)
-    await touchOperationalWorkPlanUpdatedAt(client, planId)
+    await replaceWeekPlanItems(client, targetPlanId, body)
+    await touchOperationalWorkPlanUpdatedAt(client, targetPlanId)
     await client.query('COMMIT')
   } catch (e) {
     await client.query('ROLLBACK')
@@ -878,8 +932,23 @@ export async function servicePublishOperationalWeekPlan(
   const client = await pool.connect()
   try {
     await client.query('BEGIN')
+
+    const publishedPlan = await findPublishedOperationalWorkPlanByWeekStart(
+      client,
+      existing.week_start_date,
+    )
+    if (publishedPlan) {
+      const oldLinks = await listWorkPlanItemLinks(client, publishedPlan.id)
+      if (oldLinks.length > 0) {
+        await clearConveyorPlanItemsByOriginWorkPlanItemIds(
+          client,
+          oldLinks.map((l) => l.factoryItemId),
+        )
+      }
+      await softDeleteOperationalWorkPlanWithItems(client, publishedPlan.id)
+    }
+
     const okPub = await publishOperationalWorkPlan(client, planId, publisherUserId)
-    await client.query('COMMIT')
     if (!okPub) {
       throw new AppError(
         'Não foi possível publicar o plano.',
@@ -887,6 +956,10 @@ export async function servicePublishOperationalWeekPlan(
         ErrorCodes.INVALID_STATUS_TRANSITION,
       )
     }
+
+    await reconcileConveyorLinksForPublishedPlan(client, planId)
+
+    await client.query('COMMIT')
     return { published: true }
   } catch (e) {
     await client.query('ROLLBACK')

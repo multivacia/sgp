@@ -22,7 +22,7 @@ export const transversalUxCopy = {
   journeyEmptyFiltered:
     'Sem alocações ou apontamentos neste recorte. Experimente outro período ou remova o filtro de esteira.',
   journeyEmptyNoAssignments:
-    'Sem alocações em aberto neste período. Consulte Minhas atividades ou o backlog para encontrar trabalho.',
+    'Sem alocações em aberto neste período. Consulte Minha fila ou o backlog para encontrar trabalho.',
 
   gestorSelectCollaboratorTitle: 'Escolha um colaborador',
   gestorSelectCollaboratorBody:
@@ -31,7 +31,7 @@ export const transversalUxCopy = {
 
   /** Rodapé curto para CTAs que abrem outro contexto. */
   navHintBacklog: 'No backlog pode filtrar por situação e prioridade.',
-  navHintMinhasAtividades: 'Em Minhas atividades vê as suas alocações atuais.',
+  navHintMinhaFila: 'Em Minha fila você vê o trabalho planejado para hoje.',
 } as const
 
 /**

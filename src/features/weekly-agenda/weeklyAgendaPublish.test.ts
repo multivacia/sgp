@@ -34,7 +34,7 @@ describe('weeklyAgendaPublish', () => {
     expect(canPublishWeeklyAgendaPlan({ ...base, hasPlan: false })).toBe(false)
   })
 
-  it('blocks publish when already published', () => {
+  it('blocks publish when already published without draft revision', () => {
     expect(
       canPublishWeeklyAgendaPlan({ ...base, planStatus: 'PUBLISHED' }),
     ).toBe(false)

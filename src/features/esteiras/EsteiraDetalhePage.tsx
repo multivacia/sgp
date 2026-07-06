@@ -743,8 +743,8 @@ function EsteiraDetalheBasicoReal({ id }: { id: string | undefined }) {
           <Link to="/app/backlog" className="sgp-cta-primary inline-flex text-center">
             Voltar ao backlog
           </Link>
-          <Link to="/app/minhas-atividades" className="sgp-cta-secondary inline-flex text-center">
-            Minhas atividades
+          <Link to="/app/minha-fila" className="sgp-cta-secondary inline-flex text-center">
+            Minha fila
           </Link>
         </div>
       </div>
@@ -990,10 +990,10 @@ function EsteiraDetalheBasicoReal({ id }: { id: string | undefined }) {
                   Ver backlog
                 </Link>
                 <Link
-                  to="/app/minhas-atividades"
+                  to="/app/minha-fila"
                   className="text-emerald-200/95 hover:underline"
                 >
-                  Ir a Minhas atividades
+                  Ir a Minha fila
                 </Link>
               </div>
             </div>
@@ -1482,8 +1482,8 @@ export function EsteiraDetalheMockPage({ id }: { id: string | undefined }) {
             <Link to="/app/backlog" className="sgp-cta-primary inline-flex text-center">
               Voltar ao backlog
             </Link>
-            <Link to="/app/minhas-atividades" className="sgp-cta-secondary inline-flex text-center">
-              Minhas atividades
+            <Link to="/app/minha-fila" className="sgp-cta-secondary inline-flex text-center">
+              Minha fila
             </Link>
           </div>
         </div>

@@ -1,3 +1,5 @@
+import { isPlanningPublishDisabled } from '../operational-planning/operationalPlanningPlanStatusCopy'
+
 export type WeeklyAgendaPublishGateInput = {
   busy: boolean
   dirty: boolean
@@ -8,13 +10,7 @@ export type WeeklyAgendaPublishGateInput = {
 
 /** Espelha a regra de `disabled` do botão Publicar em OperationalPlanningPage. */
 export function isWeeklyAgendaPublishDisabled(input: WeeklyAgendaPublishGateInput): boolean {
-  return (
-    input.busy ||
-    input.dirty ||
-    input.draftItemsCount === 0 ||
-    !input.hasPlan ||
-    input.planStatus === 'PUBLISHED'
-  )
+  return isPlanningPublishDisabled(input)
 }
 
 export function canPublishWeeklyAgendaPlan(input: WeeklyAgendaPublishGateInput): boolean {

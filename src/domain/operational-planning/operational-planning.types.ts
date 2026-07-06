@@ -89,6 +89,12 @@ export type OperationalPlanningWeekPayload = {
   }>
   executionOutsidePlanSummary: OperationalPlanningExecutionOutsidePlanSummary
   executionOutsidePlanEntries: OperationalPlanningExecutionOutsidePlanEntry[]
+  revision: {
+    hasActivePublished: boolean
+    activePublishedPlanId: string | null
+    activePublishedAt: string | null
+    hasUnpublishedRevision: boolean
+  }
 }
 
 export type OperationalPlanningPlanSyncStatus = 'PENDING' | 'SYNCED' | 'DIVERGED'

@@ -28,6 +28,8 @@ type ConveyorLifecycleReturnPanelProps = {
   onOperationalEventsLoading: (loading: boolean) => void
   onSuccessToast: (message: string) => void
   presentBlocking: (normalized: ReturnType<typeof reportClientError>) => void
+  disabled?: boolean
+  disabledTitle?: string
 }
 
 export function ConveyorLifecycleReturnPanel({
@@ -40,6 +42,8 @@ export function ConveyorLifecycleReturnPanel({
   onOperationalEventsLoading,
   onSuccessToast,
   presentBlocking,
+  disabled = false,
+  disabledTitle,
 }: ConveyorLifecycleReturnPanelProps) {
   const returnActions = getConveyorLifecycleReturnActions(operationalStatus)
   const [loadingAction, setLoadingAction] = useState<ConveyorLifecycleReturnAction | null>(
@@ -147,8 +151,9 @@ export function ConveyorLifecycleReturnPanel({
         <button
           key={a.action}
           type="button"
-          disabled={Boolean(loadingAction)}
+          disabled={disabled || Boolean(loadingAction)}
           onClick={() => openDialog(a.action)}
+          title={disabled ? disabledTitle : undefined}
           className="rounded-lg border border-sky-400/35 bg-sky-500/12 px-3 py-2 text-xs font-bold text-sky-100 shadow-sm transition hover:bg-sky-500/20 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {a.label}

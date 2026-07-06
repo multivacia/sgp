@@ -177,11 +177,9 @@ export const GESTAO_NAV_ITEMS: ShellNavItem[] = [
 ]
 
 export const COLABORADOR_NAV_ITEMS: ShellNavItem[] = [
-  { to: '/app/minha-fila', label: 'Minha fila', section: 'colaborador', navGroup: 'colaborador' },
-  { to: '/app/meu-trabalho', label: 'Meu Trabalho', section: 'colaborador', navGroup: 'colaborador' },
   {
-    to: '/app/minhas-atividades',
-    label: 'Minhas atividades',
+    to: '/app/minha-fila',
+    label: 'Minha fila',
     section: 'colaborador',
     navGroup: 'colaborador',
   },
@@ -192,7 +190,12 @@ export const COLABORADOR_NAV_ITEMS: ShellNavItem[] = [
     navGroup: 'colaborador',
     requiresSupportTickets: true,
   },
-  { to: '/app/jornada', label: 'Jornada', section: 'colaborador', navGroup: 'colaborador' },
+  {
+    to: '/app/jornada',
+    label: 'Minha jornada',
+    section: 'colaborador',
+    navGroup: 'colaborador',
+  },
 ]
 
 export const CONTA_NAV_ITEMS: ShellNavItem[] = [

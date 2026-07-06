@@ -3,8 +3,16 @@ import { listPlanningSyncIssues } from '../../domain/operational-planning/planni
 import type { OperationalPlanningWeekPayload } from '../../domain/operational-planning/operational-planning.types'
 import { buildWeeklyAgendaSummaryStrip } from './weeklyAgendaSummary'
 
+const defaultRevision = {
+  hasActivePublished: false,
+  activePublishedPlanId: null,
+  activePublishedAt: null,
+  hasUnpublishedRevision: false,
+} as const
+
 const sampleWeekWithAttention: OperationalPlanningWeekPayload = {
   hasPlan: true,
+  revision: { ...defaultRevision },
   week: {
     weekStartDate: '2026-06-29',
     weekEndDate: '2026-07-03',

@@ -83,6 +83,34 @@ describe('serviceGetMyWorkQueue', () => {
     expect(result.data.items).toEqual([])
   })
 
+  it('findPublishedWorkPlanForWeek ignora revisão DRAFT da mesma semana', async () => {
+    vi.spyOn(authRepo, 'findCollaboratorIdByAppUserId').mockResolvedValue(COLLABORATOR_ID)
+    vi.spyOn(queueRepo, 'findPublishedWorkPlanForWeek').mockResolvedValue({
+      id: 'published-plan',
+      status: 'PUBLISHED',
+      weekStartDate: '2026-05-04',
+      weekEndDate: '2026-05-08',
+    })
+    vi.spyOn(queueRepo, 'listMyWorkQueueRows').mockResolvedValue([])
+    vi.spyOn(capacityService, 'serviceResolveCollaboratorDailyCapacity').mockResolvedValue({
+      collaboratorId: COLLABORATOR_ID,
+      date: '2026-05-04',
+      defaultDailyMinutes: null,
+      overrideDailyMinutes: null,
+      resolvedDailyMinutes: 480,
+      source: 'fallback',
+    })
+
+    const result = await serviceGetMyWorkQueue({} as pg.Pool, {
+      userId: USER_ID,
+      date: '2026-05-04',
+    })
+
+    expect(queueRepo.findPublishedWorkPlanForWeek).toHaveBeenCalledWith({}, '2026-05-04')
+    expect(result.data.planStatus).toBe('PUBLISHED')
+    expect(result.data.items).toEqual([])
+  })
+
   it('monta itens publicados com atrasadas, sequência, alocação e capacidade', async () => {
     vi.spyOn(authRepo, 'findCollaboratorIdByAppUserId').mockResolvedValue(COLLABORATOR_ID)
     vi.spyOn(queueRepo, 'findPublishedWorkPlanForWeek').mockResolvedValue({

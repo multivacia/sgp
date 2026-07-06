@@ -276,6 +276,10 @@ export async function countFactoryLinkedActivePlanItems(
         OR EXISTS (
           SELECT 1
           FROM operational_work_plan_items owpi
+          INNER JOIN operational_work_plans owp
+            ON owp.id = owpi.work_plan_id
+            AND owp.deleted_at IS NULL
+            AND owp.status = 'PUBLISHED'
           WHERE owpi.conveyor_operational_plan_item_id = i.id
             AND owpi.deleted_at IS NULL
         )
@@ -1103,6 +1107,10 @@ export async function recalculateConveyorPlanFactoryStatuses(
               OR EXISTS (
                 SELECT 1
                 FROM operational_work_plan_items owpi
+                INNER JOIN operational_work_plans owp
+                  ON owp.id = owpi.work_plan_id
+                  AND owp.deleted_at IS NULL
+                  AND owp.status = 'PUBLISHED'
                 WHERE owpi.conveyor_operational_plan_item_id = conveyor_operational_plan_items.id
                   AND owpi.deleted_at IS NULL
               )
