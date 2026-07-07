@@ -219,6 +219,8 @@ export async function patchConveyorStepCompletion(
       body.outOfSequenceJustification === undefined
         ? undefined
         : body.outOfSequenceJustification.trim(),
+    justificationId: body.justificationId,
+    justificationComplement: body.justificationComplement?.trim() || undefined,
   })
   res.status(200).json(ok(out.detail, { stepCompletionIdempotent: out.idempotent }))
 }

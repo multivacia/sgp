@@ -20,6 +20,9 @@ import {
 } from '../../domain/production/production.helpers'
 import { JustificationSelect } from '../../components/operational/JustificationSelect'
 import {
+  resolvePreferredJustificationCategory,
+} from '../../domain/operational/timeEntryJustificationField'
+import {
   emptyJustificationValue,
   type JustificationFieldValue,
 } from '../shell/quickTimeEntryDrawerLogic'
@@ -94,6 +97,8 @@ export function KioskActivityCard({ item, onSuccess }: Props) {
   const [markAsDone, setMarkAsDone] = useState(false)
   const [outOfSequenceJustification, setOutOfSequenceJustification] =
     useState<JustificationFieldValue>(emptyJustificationValue())
+  const [justificationUseFallback, setJustificationUseFallback] = useState(false)
+  const [justificationRequiresComplement, setJustificationRequiresComplement] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
@@ -114,10 +119,19 @@ export function KioskActivityCard({ item, onSuccess }: Props) {
 
   const minutesValid = Number.isInteger(minutes) && minutes > 0
 
+  const preferredCategory = needsOosJustification
+    ? resolvePreferredJustificationCategory({
+        hasPreviousPendingStep: item.hasPreviousPendingStep,
+        isOutOfSequence: item.isOutOfSequence,
+      })
+    : null
+
   const canSubmit = canSubmitKioskProductionTimeEntry({
     minutesValid,
     requiresOutOfSequenceJustification: item.requiresOutOfSequenceJustification,
-    outOfSequenceJustification: outOfSequenceJustification.legacyText,
+    justification: outOfSequenceJustification,
+    useFallback: justificationUseFallback,
+    requiresComplement: justificationRequiresComplement,
   })
 
   function selectPreset(p: number) {
@@ -183,9 +197,11 @@ export function KioskActivityCard({ item, onSuccess }: Props) {
 
   function handleRegister() {
     if (needsOosJustification) {
-      const oosErr = productionOutOfSequenceJustificationError(
-        outOfSequenceJustification.legacyText,
-      )
+      const oosErr = productionOutOfSequenceJustificationError({
+        justification: outOfSequenceJustification,
+        useFallback: justificationUseFallback,
+        requiresComplement: justificationRequiresComplement,
+      })
       if (oosErr) {
         setError(oosErr)
         return
@@ -427,7 +443,15 @@ export function KioskActivityCard({ item, onSuccess }: Props) {
                 value={outOfSequenceJustification.justificationId ?? ''}
                 complement={outOfSequenceJustification.justificationComplement}
                 legacyText={outOfSequenceJustification.legacyText}
+                preferredCategory={preferredCategory}
+                preferredLabelHint={
+                  item.hasPreviousPendingStep ? 'outro colaborador' : null
+                }
                 disabled={submitting}
+                onCatalogStateChange={({ useFallback, selectedRequiresComplement }) => {
+                  setJustificationUseFallback(useFallback)
+                  setJustificationRequiresComplement(selectedRequiresComplement)
+                }}
                 onChange={(next) => {
                   setOutOfSequenceJustification({
                     justificationId: next.justificationId,

@@ -3,6 +3,9 @@ import { AppError } from './errors/AppError.js'
 import { ErrorCodes } from './errors/errorCodes.js'
 import { findActiveTimeEntryJustificationById } from '../modules/operational-settings/time-entry-justifications.repository.js'
 
+export const TIME_ENTRY_JUSTIFICATION_REQUIRED_MESSAGE =
+  'Selecione uma justificativa operacional para este apontamento.'
+
 export type ResolvedStandardJustification = {
   legacyText: string
   standardJustificationId: string
@@ -79,7 +82,7 @@ export async function resolveTimeEntryJustification(
 
   if (input.required) {
     throw new AppError(
-      input.requiredErrorMessage ?? 'Selecione uma justificativa para continuar.',
+      input.requiredErrorMessage ?? TIME_ENTRY_JUSTIFICATION_REQUIRED_MESSAGE,
       422,
       input.requiredErrorCode ?? ErrorCodes.VALIDATION_ERROR,
     )

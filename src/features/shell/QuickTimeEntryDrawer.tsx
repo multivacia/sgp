@@ -43,6 +43,7 @@ import {
   type JustificationFieldValue,
 } from './quickTimeEntryDrawerLogic'
 import { JustificationSelect } from '../../components/operational/JustificationSelect'
+import { resolvePreferredJustificationCategory } from '../../domain/operational/timeEntryJustificationField'
 import { QuickTimeEntryCandidateActions } from './QuickTimeEntryCandidateActions'
 
 const SEARCH_DEBOUNCE_MS = 200
@@ -900,6 +901,9 @@ export function QuickTimeEntryDrawer({
                             value={exceptionJustification.justificationId ?? ''}
                             complement={exceptionJustification.justificationComplement}
                             legacyText={exceptionJustification.legacyText}
+                            preferredCategory={resolvePreferredJustificationCategory({
+                              requiresAllocationException: true,
+                            })}
                             disabled={submitting}
                             onChange={(next) =>
                               setExceptionJustification({
@@ -966,6 +970,13 @@ export function QuickTimeEntryDrawer({
                             value={outOfSequenceJustification.justificationId ?? ''}
                             complement={outOfSequenceJustification.justificationComplement}
                             legacyText={outOfSequenceJustification.legacyText}
+                            preferredCategory={resolvePreferredJustificationCategory({
+                              hasPreviousPendingStep: selected?.hasPreviousPendingStep,
+                              isOutOfSequence: selected?.isOutOfSequence,
+                            })}
+                            preferredLabelHint={
+                              selected?.hasPreviousPendingStep ? 'outro colaborador' : null
+                            }
                             disabled={submitting}
                             onChange={(next) =>
                               setOutOfSequenceJustification({
@@ -1189,6 +1200,15 @@ export function QuickTimeEntryDrawer({
                       value={completeJustification.justificationId ?? ''}
                       complement={completeJustification.justificationComplement}
                       legacyText={completeJustification.legacyText}
+                      preferredCategory={resolvePreferredJustificationCategory({
+                        hasPreviousPendingStep: completeConfirmCandidate?.hasPreviousPendingStep,
+                        isOutOfSequence: completeConfirmCandidate?.isOutOfSequence,
+                      })}
+                      preferredLabelHint={
+                        completeConfirmCandidate?.hasPreviousPendingStep
+                          ? 'outro colaborador'
+                          : null
+                      }
                       disabled={completing}
                       onChange={(next) =>
                         setCompleteJustification({

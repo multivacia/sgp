@@ -28,6 +28,7 @@ import { resolveProductionStepAssigneeId } from './production-plan-assignee.js'
 import {
   pickStandardJustificationSnapshot,
   resolveTimeEntryJustification,
+  TIME_ENTRY_JUSTIFICATION_REQUIRED_MESSAGE,
 } from '../../shared/timeEntryJustificationResolver.js'
 
 export type CreateProductionTimeEntryInput = {
@@ -132,8 +133,7 @@ export async function serviceCreateProductionTimeEntry(
       justificationComplement: input.justificationComplement,
       legacyText: input.outOfSequenceJustification,
       requiredErrorCode: ErrorCodes.TIME_ENTRY_OUT_OF_SEQUENCE_REQUIRES_JUSTIFICATION,
-      requiredErrorMessage:
-        'Informe uma justificativa para executar esta atividade fora da sequência recomendada.',
+      requiredErrorMessage: TIME_ENTRY_JUSTIFICATION_REQUIRED_MESSAGE,
     })
     oosJustDb = resolved.legacyText
     oosStandard = resolved.standard

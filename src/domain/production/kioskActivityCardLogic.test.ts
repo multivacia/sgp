@@ -7,6 +7,7 @@ import {
   productionTimePlannedCoveragePct,
 } from './kioskActivityCardLogic'
 import type { ProductionWorkQueueItem } from './production.types'
+import { emptyJustificationFieldValue } from '../operational/timeEntryJustificationField'
 
 const baseItem = (
   overrides: Partial<ProductionWorkQueueItem> = {},
@@ -33,7 +34,7 @@ const baseItem = (
   previousOpenActivities: [],
   allPreviousOpenActivities: [],
   awaitingPreviousActivities: [],
-    hasPreviousOpenActivitiesFromOtherCollaborators: false,
+  hasPreviousOpenActivitiesFromOtherCollaborators: false,
   previousOpenActivitiesFromOtherCollaborators: [],
   previousOpenActivitiesWarningMessage: null,
   group: 'today',
@@ -66,26 +67,42 @@ describe('kioskActivityCardLogic', () => {
       canSubmitKioskProductionTimeEntry({
         minutesValid: true,
         requiresOutOfSequenceJustification: true,
-        outOfSequenceJustification: '',
+        justification: emptyJustificationFieldValue(),
+        useFallback: false,
+        requiresComplement: false,
       }),
     ).toBe(false)
     expect(
       canSubmitKioskProductionTimeEntry({
         minutesValid: true,
         requiresOutOfSequenceJustification: true,
-        outOfSequenceJustification: 'Autorizado pelo gestor.',
+        justification: {
+          justificationId: 'seq-1',
+          justificationComplement: '',
+          legacyText: 'Atividade anterior pendente de outro colaborador',
+        },
+        useFallback: false,
+        requiresComplement: false,
       }),
     ).toBe(true)
     expect(
       canSubmitKioskProductionTimeEntry({
         minutesValid: true,
         requiresOutOfSequenceJustification: false,
-        outOfSequenceJustification: '',
+        justification: emptyJustificationFieldValue(),
+        useFallback: false,
+        requiresComplement: false,
       }),
     ).toBe(true)
   })
 
   it('productionOutOfSequenceJustificationError para vazio', () => {
-    expect(productionOutOfSequenceJustificationError('  ')).toMatch(/justificativa/i)
+    expect(
+      productionOutOfSequenceJustificationError({
+        justification: emptyJustificationFieldValue(),
+        useFallback: false,
+        requiresComplement: false,
+      }),
+    ).toMatch(/justificativa/i)
   })
 })

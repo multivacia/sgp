@@ -259,6 +259,8 @@ export type PatchConveyorStepCompletionBody = {
   note?: string
   /** Obrigatório quando a conclusão está fora da sequência recomendada (S3). */
   outOfSequenceJustification?: string
+  justificationId?: string
+  justificationComplement?: string
 }
 
 /** Item do GET /api/v1/conveyors */

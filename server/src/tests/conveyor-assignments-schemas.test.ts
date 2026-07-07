@@ -16,4 +16,18 @@ describe('patchConveyorStepCompletionBodySchema', () => {
       patchConveyorStepCompletionBodySchema.parse({ action: 'INVALID' }),
     ).toThrow()
   })
+
+  it('aceita COMPLETE com justificativa estruturada', () => {
+    expect(
+      patchConveyorStepCompletionBodySchema.parse({
+        action: 'COMPLETE',
+        outOfSequenceJustification: 'Atividade anterior pendente de outro colaborador',
+        justificationId: '11111111-1111-1111-1111-111111111111',
+        justificationComplement: 'Detalhe',
+      }),
+    ).toMatchObject({
+      action: 'COMPLETE',
+      justificationId: '11111111-1111-1111-1111-111111111111',
+    })
+  })
 })

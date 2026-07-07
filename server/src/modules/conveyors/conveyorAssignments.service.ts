@@ -49,6 +49,7 @@ import {
   pickStandardJustificationSnapshot,
   resolveTimeEntryJustification,
   type ResolvedStandardJustification,
+  TIME_ENTRY_JUSTIFICATION_REQUIRED_MESSAGE,
 } from '../../shared/timeEntryJustificationResolver.js'
 import { resolveProductionStepAssigneeId } from '../production/production-plan-assignee.js'
 
@@ -353,8 +354,7 @@ export async function serviceCreateConveyorTimeEntryForAppUser(
       justificationComplement: input.outOfSequenceJustificationComplement,
       legacyText: input.outOfSequenceJustification,
       requiredErrorCode: ErrorCodes.TIME_ENTRY_OUT_OF_SEQUENCE_REQUIRES_JUSTIFICATION,
-      requiredErrorMessage:
-        'Informe uma justificativa para executar esta atividade fora da sequência recomendada.',
+      requiredErrorMessage: TIME_ENTRY_JUSTIFICATION_REQUIRED_MESSAGE,
     })
     outSeqJust = resolved.legacyText
     oosStandard = resolved.standard
@@ -429,8 +429,7 @@ export async function serviceCreateConveyorTimeEntryForAppUser(
     justificationComplement: input.exceptionJustificationComplement,
     legacyText: input.exceptionJustification,
     requiredErrorCode: ErrorCodes.TIME_ENTRY_UNASSIGNED_REQUIRES_JUSTIFICATION,
-    requiredErrorMessage:
-      'Para apontar horas em uma atividade onde você não está alocado, informe uma justificativa.',
+    requiredErrorMessage: TIME_ENTRY_JUSTIFICATION_REQUIRED_MESSAGE,
   })
 
   return serviceCreateConveyorTimeEntry(pool, {
@@ -528,15 +527,14 @@ export async function serviceCreateConveyorTimeEntry(
         justificationComplement: input.exceptionJustificationComplement,
         legacyText: input.exceptionJustification,
         requiredErrorCode: ErrorCodes.TIME_ENTRY_UNASSIGNED_REQUIRES_JUSTIFICATION,
-        requiredErrorMessage:
-          'Para apontar horas em uma atividade onde você não está alocado, informe uma justificativa.',
+        requiredErrorMessage: TIME_ENTRY_JUSTIFICATION_REQUIRED_MESSAGE,
       })
       exceptionJustification = resolved.legacyText
       exceptionStandard = resolved.standard
     }
     if (!exceptionJustification?.length) {
       throw new AppError(
-        'Para apontar horas em uma atividade onde você não está alocado, informe uma justificativa.',
+        TIME_ENTRY_JUSTIFICATION_REQUIRED_MESSAGE,
         422,
         ErrorCodes.TIME_ENTRY_UNASSIGNED_REQUIRES_JUSTIFICATION,
       )
@@ -760,8 +758,7 @@ export async function serviceCreateConveyorTimeEntryOnBehalf(
       justificationComplement: input.outOfSequenceJustificationComplement,
       legacyText: input.outOfSequenceJustification,
       requiredErrorCode: ErrorCodes.TIME_ENTRY_OUT_OF_SEQUENCE_REQUIRES_JUSTIFICATION,
-      requiredErrorMessage:
-        'Informe uma justificativa para executar esta atividade fora da sequência recomendada.',
+      requiredErrorMessage: TIME_ENTRY_JUSTIFICATION_REQUIRED_MESSAGE,
     })
     outSeqJust = resolved.legacyText
     oosStandard = resolved.standard

@@ -1,5 +1,8 @@
 import type { PostConveyorStepTimeEntryBody } from '../../domain/conveyors/conveyor-step-assignments.types'
 import type { TimeEntryCandidateItem } from '../../domain/my-activities/my-activities.types'
+import { OPERATIONAL_JUSTIFICATION_MESSAGES } from '../../domain/operational/timeEntryJustificationField'
+import type { JustificationFieldValue } from '../../domain/operational/timeEntryJustificationField'
+import { emptyJustificationFieldValue } from '../../domain/operational/timeEntryJustificationField'
 
 export const QUICK_TIME_ENTRY_TOAST = {
   entrySaved: 'Apontamento registado com sucesso.',
@@ -10,7 +13,7 @@ export const QUICK_TIME_ENTRY_TOAST = {
 export const QUICK_TIME_ENTRY_ERRORS = {
   completeFailed: 'Não foi possível concluir esta atividade.',
   outOfSequenceJustificationRequired:
-    'Informe uma justificativa para concluir fora da sequência.',
+    OPERATIONAL_JUSTIFICATION_MESSAGES.missingSelection,
   alreadyCompleted: 'Esta atividade já está concluída.',
 } as const
 
@@ -39,17 +42,9 @@ export function canShowSaveAndCompleteButton(candidate: TimeEntryCandidateItem):
   return candidate.canCompleteStep !== false
 }
 
-export type JustificationFieldValue = {
-  justificationId: string | null
-  justificationComplement: string
-  legacyText: string
-}
+export type { JustificationFieldValue } from '../../domain/operational/timeEntryJustificationField'
 
-export const emptyJustificationValue = (): JustificationFieldValue => ({
-  justificationId: null,
-  justificationComplement: '',
-  legacyText: '',
-})
+export const emptyJustificationValue = emptyJustificationFieldValue
 
 export type BuildTimeEntryPayloadInput = {
   candidate: TimeEntryCandidateItem
@@ -123,12 +118,12 @@ export function validateTimeEntryForm(input: {
 }): string | null {
   if (candidateNeedsJustification(input.candidate)) {
     if (!input.exceptionJustification.legacyText.trim().length) {
-      return 'Selecione uma justificativa para continuar.'
+      return OPERATIONAL_JUSTIFICATION_MESSAGES.missingSelection
     }
   }
   if (candidateNeedsOutOfSequenceJustification(input.candidate)) {
     if (!input.outOfSequenceJustification.legacyText.trim().length) {
-      return 'Selecione uma justificativa para continuar.'
+      return OPERATIONAL_JUSTIFICATION_MESSAGES.missingSelection
     }
   }
   return null

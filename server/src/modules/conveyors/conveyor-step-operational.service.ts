@@ -20,6 +20,10 @@ import { findAssigneeIdForStepAndCollaborator } from './conveyorAssignments.repo
 import { findCollaboratorIdByAppUserId } from '../auth/auth.repository.js'
 import { appUserHasPermission } from '../permissions/permissions.repository.js'
 import { canConveyorAcceptTimeEntry } from './conveyorOperationalStatus.js'
+import {
+  resolveTimeEntryJustification,
+  TIME_ENTRY_JUSTIFICATION_REQUIRED_MESSAGE,
+} from '../../shared/timeEntryJustificationResolver.js'
 
 const NOTE_MAX = 2000
 
@@ -213,6 +217,8 @@ export async function servicePatchConveyorStepCompletion(
     note?: string | null
     /** Obrigatória em COMPLETE quando a atividade está fora da sequência recomendada. */
     outOfSequenceJustification?: string
+    justificationId?: string
+    justificationComplement?: string
   },
 ): Promise<{ detail: ConveyorDetailApi; idempotent: boolean }> {
   const conveyor = await findConveyorById(pool, input.conveyorId)
@@ -248,6 +254,8 @@ async function serviceCompleteStep(
     actorAppUserId: string
     note?: string | null
     outOfSequenceJustification?: string
+    justificationId?: string
+    justificationComplement?: string
   },
   conveyor: NonNullable<Awaited<ReturnType<typeof findConveyorById>>>,
   current: ConveyorNodeStepOperationalStatusDb,
@@ -287,15 +295,15 @@ async function serviceCompleteStep(
 
   let outOfSeqJustificationStored: string | null = null
   if (seq.isOutOfSequence) {
-    const j = (input.outOfSequenceJustification ?? '').trim()
-    if (!j.length) {
-      throw new AppError(
-        'Informe uma justificativa para executar esta atividade fora da sequência recomendada.',
-        422,
-        ErrorCodes.STEP_COMPLETION_OUT_OF_SEQUENCE_REQUIRES_JUSTIFICATION,
-      )
-    }
-    outOfSeqJustificationStored = j
+    const resolved = await resolveTimeEntryJustification(pool, {
+      required: true,
+      justificationId: input.justificationId,
+      justificationComplement: input.justificationComplement,
+      legacyText: input.outOfSequenceJustification,
+      requiredErrorCode: ErrorCodes.STEP_COMPLETION_OUT_OF_SEQUENCE_REQUIRES_JUSTIFICATION,
+      requiredErrorMessage: TIME_ENTRY_JUSTIFICATION_REQUIRED_MESSAGE,
+    })
+    outOfSeqJustificationStored = resolved.legacyText
   }
 
   const client = await pool.connect()

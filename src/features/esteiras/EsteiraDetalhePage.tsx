@@ -52,6 +52,12 @@ import {
 import { buildStepAnaliticoDetalheFromApi } from './step-analitico/buildStepAnaliticoDetalheFromApi'
 import { StepAnaliticoPanel } from './StepAnaliticoPanel'
 import { SgpToast } from '../../components/ui/SgpToast'
+import { JustificationSelect } from '../../components/operational/JustificationSelect'
+import {
+  emptyJustificationValue,
+  type JustificationFieldValue,
+} from '../shell/quickTimeEntryDrawerLogic'
+import { resolvePreferredJustificationCategory } from '../../domain/operational/timeEntryJustificationField'
 import { formatMinutosHumanos } from '../../lib/formatters'
 import {
   computeTarefaResumo,
@@ -286,7 +292,8 @@ function EsteiraDetalheBasicoReal({ id }: { id: string | undefined }) {
     previousOpenCount: number
     samples: { taskTitle: string; sectorTitle: string; activityTitle: string }[]
   } | null>(null)
-  const [completeOosJustification, setCompleteOosJustification] = useState('')
+  const [completeOosJustification, setCompleteOosJustification] =
+    useState<JustificationFieldValue>(emptyJustificationValue())
 
   const handleLoadMoreOperationalEvents = useCallback(() => {
     setOperationalEventsLimit((n) => Math.min(200, n + 25))
@@ -308,18 +315,27 @@ function EsteiraDetalheBasicoReal({ id }: { id: string | undefined }) {
   )
 
   const executeCompleteStep = useCallback(
-    async (stepId: string, outOfSequenceJustification?: string) => {
+    async (stepId: string, justification: JustificationFieldValue) => {
       if (!detail?.id) return
       setStepCompletingId(stepId)
       try {
         await patchConveyorStepCompletion(detail.id, stepId, {
           action: 'COMPLETE',
-          ...(outOfSequenceJustification?.trim()
-            ? { outOfSequenceJustification: outOfSequenceJustification.trim() }
+          ...(justification.legacyText.trim()
+            ? {
+                outOfSequenceJustification: justification.legacyText.trim(),
+                ...(justification.justificationId
+                  ? {
+                      justificationId: justification.justificationId,
+                      justificationComplement:
+                        justification.justificationComplement.trim() || undefined,
+                    }
+                  : {}),
+              }
             : {}),
         })
         setCompleteOosDialog(null)
-        setCompleteOosJustification('')
+        setCompleteOosJustification(emptyJustificationValue())
         const [dNext, evNext, wNext] = await Promise.all([
           getConveyorById(detail.id),
           getConveyorOperationalEvents(detail.id, { limit: operationalEventsLimit }),
@@ -336,7 +352,7 @@ function EsteiraDetalheBasicoReal({ id }: { id: string | undefined }) {
           entityId: detail.id,
         })
         if (n.code === 'STEP_COMPLETION_OUT_OF_SEQUENCE_REQUIRES_JUSTIFICATION') {
-          setCompleteOosJustification('')
+          setCompleteOosJustification(emptyJustificationValue())
           setCompleteOosDialog({
             stepId,
             stepName: resolveStepName(stepId),
@@ -380,7 +396,7 @@ function EsteiraDetalheBasicoReal({ id }: { id: string | undefined }) {
         return
       }
       if (prefetch?.isOutOfSequence) {
-        setCompleteOosJustification('')
+        setCompleteOosJustification(emptyJustificationValue())
         setCompleteOosDialog({
           stepId,
           stepName: resolveStepName(stepId),
@@ -394,7 +410,7 @@ function EsteiraDetalheBasicoReal({ id }: { id: string | undefined }) {
         return
       }
       if (!window.confirm('Confirmar conclusão desta atividade?')) return
-      await executeCompleteStep(stepId)
+      await executeCompleteStep(stepId, emptyJustificationValue())
     },
     [detail, executeCompleteStep, resolveStepName],
   )
@@ -871,7 +887,7 @@ function EsteiraDetalheBasicoReal({ id }: { id: string | undefined }) {
           onClick={() => {
             if (stepCompletingId) return
             setCompleteOosDialog(null)
-            setCompleteOosJustification('')
+            setCompleteOosJustification(emptyJustificationValue())
           }}
         >
           <div
@@ -921,25 +937,37 @@ function EsteiraDetalheBasicoReal({ id }: { id: string | undefined }) {
             <p className="mt-3 text-xs text-slate-500">
               Atividade: <span className="text-slate-300">{completeOosDialog.stepName}</span>
             </p>
-            <label className="mt-4 block text-xs font-semibold uppercase tracking-wide text-slate-500">
-              Justificativa para executar fora da sequência
-              <textarea
-                value={completeOosJustification}
-                onChange={(e) => setCompleteOosJustification(e.target.value)}
-                maxLength={4000}
-                rows={4}
+            <div className="mt-4">
+              <JustificationSelect
+                channel="app"
+                idPrefix={`esteira-complete-oos-${completeOosDialog.stepId}`}
+                value={completeOosJustification.justificationId ?? ''}
+                complement={completeOosJustification.justificationComplement}
+                legacyText={completeOosJustification.legacyText}
+                preferredCategory={resolvePreferredJustificationCategory({
+                  hasPreviousPendingStep: completeOosDialog.previousOpenCount > 0,
+                  isOutOfSequence: true,
+                })}
+                preferredLabelHint={
+                  completeOosDialog.previousOpenCount > 0 ? 'outro colaborador' : null
+                }
                 disabled={Boolean(stepCompletingId)}
-                className="mt-2 w-full resize-y rounded-xl border border-white/12 bg-white/[0.04] px-3 py-2 text-sm text-slate-100 placeholder:text-slate-600 focus:border-sgp-gold/35 focus:outline-none focus:ring-1 focus:ring-sgp-gold/25 disabled:opacity-50"
-                placeholder="Explique o motivo operacional…"
+                onChange={(next) =>
+                  setCompleteOosJustification({
+                    justificationId: next.justificationId,
+                    justificationComplement: next.justificationComplement,
+                    legacyText: next.legacyText,
+                  })
+                }
               />
-            </label>
+            </div>
             <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end sm:gap-3">
               <button
                 type="button"
                 disabled={Boolean(stepCompletingId)}
                 onClick={() => {
                   setCompleteOosDialog(null)
-                  setCompleteOosJustification('')
+                  setCompleteOosJustification(emptyJustificationValue())
                 }}
                 className="rounded-xl border border-white/12 bg-white/[0.04] px-4 py-2.5 text-sm font-semibold text-slate-200 transition hover:border-sgp-gold/30 hover:bg-white/[0.07] disabled:opacity-50"
               >
@@ -948,7 +976,8 @@ function EsteiraDetalheBasicoReal({ id }: { id: string | undefined }) {
               <button
                 type="button"
                 disabled={
-                  Boolean(stepCompletingId) || completeOosJustification.trim().length === 0
+                  Boolean(stepCompletingId) ||
+                  !completeOosJustification.legacyText.trim().length
                 }
                 onClick={() =>
                   void executeCompleteStep(

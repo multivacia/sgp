@@ -1,4 +1,6 @@
 import type { ProductionWorkQueueItem } from './production.types'
+import type { JustificationFieldValue } from '../../features/shell/quickTimeEntryDrawerLogic'
+import { validateJustificationFieldValue } from '../operational/timeEntryJustificationField'
 
 export const PRODUCTION_OUT_OF_SEQUENCE_JUSTIFICATION_MIN = 3
 export const PRODUCTION_OUT_OF_SEQUENCE_JUSTIFICATION_MAX = 500
@@ -17,11 +19,19 @@ export function isProductionOutOfSequenceJustificationValid(value: string): bool
   )
 }
 
-export function productionOutOfSequenceJustificationError(value: string): string | null {
-  const t = normalizeProductionOutOfSequenceJustification(value)
-  if (!t) {
-    return 'Informe uma justificativa para apontar fora da sequência.'
-  }
+export function productionOutOfSequenceJustificationError(input: {
+  justification: JustificationFieldValue
+  useFallback: boolean
+  requiresComplement: boolean
+}): string | null {
+  const catalogError = validateJustificationFieldValue({
+    value: input.justification,
+    useFallback: input.useFallback,
+    requiresComplement: input.requiresComplement,
+  })
+  if (catalogError) return catalogError
+
+  const t = normalizeProductionOutOfSequenceJustification(input.justification.legacyText)
   if (t.length < PRODUCTION_OUT_OF_SEQUENCE_JUSTIFICATION_MIN) {
     return `A justificativa deve ter pelo menos ${PRODUCTION_OUT_OF_SEQUENCE_JUSTIFICATION_MIN} caracteres.`
   }
@@ -59,11 +69,19 @@ export function productionPlannedTimeReachedHint(
 export function canSubmitKioskProductionTimeEntry(input: {
   minutesValid: boolean
   requiresOutOfSequenceJustification: boolean
-  outOfSequenceJustification: string
+  justification: JustificationFieldValue
+  useFallback: boolean
+  requiresComplement: boolean
 }): boolean {
   if (!input.minutesValid) return false
   if (input.requiresOutOfSequenceJustification) {
-    return isProductionOutOfSequenceJustificationValid(input.outOfSequenceJustification)
+    return (
+      productionOutOfSequenceJustificationError({
+        justification: input.justification,
+        useFallback: input.useFallback,
+        requiresComplement: input.requiresComplement,
+      }) === null
+    )
   }
   return true
 }

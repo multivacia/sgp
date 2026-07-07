@@ -6,6 +6,17 @@ import {
   createProductionTimeEntry,
   PRODUCTION_TIME_ENTRY_ERROR_MESSAGE,
 } from '../../services/production/productionApiService'
+import { JustificationSelect } from '../../components/operational/JustificationSelect'
+import {
+  emptyJustificationValue,
+  type JustificationFieldValue,
+} from '../shell/quickTimeEntryDrawerLogic'
+import {
+  buildProductionTimeEntryJustificationPayload,
+  productionTimeEntryNeedsJustification,
+  productionTimeEntryPreferredCategory,
+  validateProductionTimeEntryJustification,
+} from './productionTimeEntryDialogLogic'
 
 type DialogState =
   | { status: 'idle' }
@@ -23,12 +34,23 @@ export function ProductionTimeEntryDialog({ item, onClose, onSuccess }: Props) {
   const [minutes, setMinutes] = useState('')
   const [executedQuantity, setExecutedQuantity] = useState('1')
   const [note, setNote] = useState('')
+  const [justification, setJustification] =
+    useState<JustificationFieldValue>(emptyJustificationValue())
+  const [justificationRequiresComplement, setJustificationRequiresComplement] = useState(false)
+  const [justificationUseFallback, setJustificationUseFallback] = useState(false)
   const [state, setState] = useState<DialogState>({ status: 'idle' })
   const minutesRef = useRef<HTMLInputElement>(null)
+
+  const needsJustification = productionTimeEntryNeedsJustification(item)
+  const preferredCategory = productionTimeEntryPreferredCategory(item)
 
   useEffect(() => {
     minutesRef.current?.focus()
   }, [])
+
+  useEffect(() => {
+    setJustification(emptyJustificationValue())
+  }, [item.workPlanItemId])
 
   const minutesValue = parseInt(minutes, 10)
   const isMinutesValid = Number.isInteger(minutesValue) && minutesValue > 0
@@ -40,6 +62,18 @@ export function ProductionTimeEntryDialog({ item, onClose, onSuccess }: Props) {
     async (e: React.FormEvent) => {
       e.preventDefault()
       if (!isMinutesValid || !isExecutedQuantityValid) return
+
+      const justificationError = validateProductionTimeEntryJustification({
+        item,
+        justification,
+        useFallback: justificationUseFallback,
+        requiresComplement: justificationRequiresComplement,
+      })
+      if (justificationError) {
+        setState({ status: 'error', message: justificationError })
+        return
+      }
+
       setState({ status: 'submitting' })
       try {
         await createProductionTimeEntry({
@@ -48,6 +82,7 @@ export function ProductionTimeEntryDialog({ item, onClose, onSuccess }: Props) {
           minutes: minutesValue,
           executedQuantity: executedQuantityValue,
           note: note.trim() || null,
+          ...buildProductionTimeEntryJustificationPayload(item, justification),
         })
         setState({ status: 'success' })
         onSuccess()
@@ -57,7 +92,18 @@ export function ProductionTimeEntryDialog({ item, onClose, onSuccess }: Props) {
         setState({ status: 'error', message: msg })
       }
     },
-    [isMinutesValid, minutesValue, note, item, onSuccess],
+    [
+      isMinutesValid,
+      isExecutedQuantityValid,
+      minutesValue,
+      note,
+      item,
+      onSuccess,
+      executedQuantityValue,
+      justification,
+      justificationUseFallback,
+      justificationRequiresComplement,
+    ],
   )
 
   const isSubmitting = state.status === 'submitting'
@@ -69,14 +115,12 @@ export function ProductionTimeEntryDialog({ item, onClose, onSuccess }: Props) {
       aria-label="Registrar apontamento"
       className="fixed inset-0 z-50 flex items-end justify-center sm:items-center"
     >
-      {/* Overlay */}
       <div
         className="absolute inset-0 bg-black/60 backdrop-blur-sm"
         aria-hidden="true"
         onClick={onClose}
       />
 
-      {/* Painel */}
       <div className="relative z-10 w-full max-w-lg rounded-t-3xl border border-white/10 bg-sgp-night px-5 py-6 shadow-2xl sm:rounded-2xl sm:px-6">
         <div className="mb-5 flex items-start justify-between gap-3">
           <div className="min-w-0">
@@ -96,7 +140,6 @@ export function ProductionTimeEntryDialog({ item, onClose, onSuccess }: Props) {
           </button>
         </div>
 
-        {/* Resumo da atividade */}
         <dl className="mb-5 grid grid-cols-2 gap-x-4 gap-y-2 rounded-xl bg-white/5 px-4 py-3 text-sm sm:grid-cols-3">
           <div>
             <dt className="text-xs text-slate-500">Esteira/OS</dt>
@@ -182,6 +225,35 @@ export function ProductionTimeEntryDialog({ item, onClose, onSuccess }: Props) {
               Unidades concluídas neste apontamento.
             </p>
           </div>
+
+          {needsJustification ? (
+            <div className="mb-4">
+              <JustificationSelect
+                channel="production"
+                idPrefix={`production-oos-${item.activityNodeId}`}
+                value={justification.justificationId ?? ''}
+                complement={justification.justificationComplement}
+                legacyText={justification.legacyText}
+                preferredCategory={preferredCategory}
+                preferredLabelHint={
+                  item.hasPreviousPendingStep ? 'outro colaborador' : null
+                }
+                disabled={isSubmitting}
+                onCatalogStateChange={({ useFallback, selectedRequiresComplement }) => {
+                  setJustificationUseFallback(useFallback)
+                  setJustificationRequiresComplement(selectedRequiresComplement)
+                }}
+                onChange={(next) => {
+                  setState({ status: 'idle' })
+                  setJustification({
+                    justificationId: next.justificationId,
+                    justificationComplement: next.justificationComplement,
+                    legacyText: next.legacyText,
+                  })
+                }}
+              />
+            </div>
+          ) : null}
 
           <div className="mb-5">
             <label htmlFor="production-time-entry-note" className="mb-1.5 block text-sm font-medium text-slate-300">

@@ -169,6 +169,8 @@ export const patchConveyorStepCompletionBodySchema = z.object({
   action: z.enum(['COMPLETE', 'REOPEN']),
   note: z.string().max(2000).optional(),
   outOfSequenceJustification: z.union([z.string().max(4000), z.null()]).optional(),
+  justificationId: z.string().uuid().optional(),
+  justificationComplement: z.string().max(4000).optional(),
 })
 
 export type PatchConveyorStepCompletionBody = z.infer<
