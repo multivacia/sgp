@@ -76,18 +76,10 @@ export function JustificationSelect({
       setOptions(data)
       if (data.length === 0) {
         setCatalogEmpty(true)
-        console.warn(
-          '[JustificationSelect] Nenhuma justificativa operacional ativa encontrada.',
-          { channel },
-        )
       }
-    } catch (error) {
+    } catch {
       setOptions([])
       setLoadFailed(true)
-      console.warn(
-        '[JustificationSelect] Falha ao carregar justificativas operacionais; usando fallback.',
-        { channel, error },
-      )
     } finally {
       setLoading(false)
     }

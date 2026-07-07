@@ -2,22 +2,20 @@ import type { TimeEntryJustificationOption } from '../../domain/operational-sett
 import { requestJson } from '../../lib/api/client'
 import { productionRequestJson } from '../../lib/production/productionApiClient'
 
-type Envelope<T> = { data: T; meta?: unknown }
-
 export async function listMyTimeEntryJustifications(): Promise<TimeEntryJustificationOption[]> {
-  const res = await requestJson<Envelope<TimeEntryJustificationOption[]>>(
+  const data = await requestJson<TimeEntryJustificationOption[]>(
     'GET',
     '/api/v1/me/time-entry-justifications',
   )
-  return Array.isArray(res.data) ? res.data : []
+  return Array.isArray(data) ? data : []
 }
 
 export async function listProductionTimeEntryJustifications(): Promise<
   TimeEntryJustificationOption[]
 > {
-  const res = await productionRequestJson<Envelope<TimeEntryJustificationOption[]>>(
+  const data = await productionRequestJson<TimeEntryJustificationOption[]>(
     'GET',
     '/api/v1/production/time-entry-justifications',
   )
-  return Array.isArray(res.data) ? res.data : []
+  return Array.isArray(data) ? data : []
 }
