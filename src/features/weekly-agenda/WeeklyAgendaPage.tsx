@@ -31,10 +31,12 @@ import {
 } from '../../services/operational-planning/operationalPlanningApiService'
 import { buildActivityTicketPrintModel } from '../operational-tickets/activityTicketPrintModel'
 import { buildActivityTicketInputFromPlanningSource } from '../operational-tickets/activityTicketPlanningSource'
+import { PlanningWeekTicketsPrintDialog } from '../operational-tickets/PlanningWeekTicketsPrintDialog'
 import { ThermalActivityTicketsPrintArea } from '../operational-tickets/ThermalActivityTicketsPrintArea'
 import { ThermalTicketPrintProgressOverlay } from '../operational-tickets/ThermalTicketPrintProgressOverlay'
 import { isBatchThermalTicketPrint } from '../operational-tickets/thermalTicketPrintQueue'
 import { useActivityTicketPrint } from '../operational-tickets/useActivityTicketPrint'
+import { usePlanningWeekTicketsPrint } from '../operational-tickets/usePlanningWeekTicketsPrint'
 import { buildVisiblePlanningBacklogItems } from '../operational-planning/buildVisiblePlanningBacklogItems'
 import { buildPlanningDaySummaries } from '../operational-planning/planningBoardHelpers'
 import {
@@ -144,7 +146,13 @@ export function WeeklyAgendaPage() {
     requestPrint,
     currentSheet,
     printProgress,
+    isPrinting,
+    agentStatus,
+    agentFallbackNotice,
+    testPrintLoading,
     cancelPrint,
+    clearAgentFallbackNotice,
+    testThermalPrinter,
   } = useActivityTicketPrint()
 
   const weekdayDates = useMemo(
@@ -223,6 +231,19 @@ export function WeeklyAgendaPage() {
     () => buildPlanningBacklogExecutionLookup(backlogItems),
     [backlogItems],
   )
+
+  const {
+    weekTicketsPrintOpen,
+    weekTicketSources,
+    weekPrintableTicketCount,
+    openWeekTicketsPrintDialog,
+    closeWeekTicketsPrintDialog,
+    handleWeekTicketsPrint,
+  } = usePlanningWeekTicketsPrint({
+    draftItems,
+    backlogExecutionLookup,
+    requestPrint,
+  })
 
   const summaryStrip = useMemo(() => buildWeeklyAgendaSummaryStrip(weekPayload), [weekPayload])
 
@@ -703,6 +724,9 @@ export function WeeklyAgendaPage() {
             onWeekChange={setWeekMonday}
             onSaveDraft={() => void handleSaveDraft()}
             onPublish={() => void handlePublish()}
+            weekTicketPrintCount={weekTicketSources.length}
+            weekTicketPrintDisabled={busy || loading || isPrinting || weekTicketSources.length === 0}
+            onOpenWeekTicketPrint={openWeekTicketsPrintDialog}
             successMsg={successMsg}
             errorMsg={errorMsg}
             suppressSecondaryHints={isDragInProgress}
@@ -889,6 +913,21 @@ export function WeeklyAgendaPage() {
         current={printProgress?.current ?? 0}
         total={printProgress?.total ?? 0}
         onCancel={cancelPrint}
+      />
+
+      <PlanningWeekTicketsPrintDialog
+        open={weekTicketsPrintOpen}
+        totalCount={weekTicketSources.length}
+        printableCount={weekPrintableTicketCount}
+        agentStatus={agentStatus}
+        agentFallbackNotice={agentFallbackNotice}
+        testPrintLoading={testPrintLoading}
+        onClose={closeWeekTicketsPrintDialog}
+        onPrint={handleWeekTicketsPrint}
+        onDismissAgentNotice={clearAgentFallbackNotice}
+        onTestThermalPrinter={() => {
+          void testThermalPrinter()
+        }}
       />
     </PageCanvas>
   )

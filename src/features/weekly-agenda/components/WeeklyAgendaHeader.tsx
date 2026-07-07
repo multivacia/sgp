@@ -13,6 +13,7 @@ import {
   shiftWeek,
 } from '../../operational-planning/operationalPlanningWeekRange'
 import type { OperationalPlanningWeekPayload } from '../../../domain/operational-planning/operational-planning.types'
+import { PlanningWeekTicketsPrintButton } from '../../operational-tickets/PlanningWeekTicketsPrintButton'
 import { isWeeklyAgendaPublishDisabled } from '../weeklyAgendaPublish'
 
 type WeeklyAgendaHeaderProps = {
@@ -25,6 +26,9 @@ type WeeklyAgendaHeaderProps = {
   onWeekChange: (nextMonday: string) => void
   onSaveDraft: () => void
   onPublish: () => void
+  weekTicketPrintCount: number
+  weekTicketPrintDisabled: boolean
+  onOpenWeekTicketPrint: () => void
   successMsg?: string | null
   errorMsg?: string | null
   /** Durante arraste: oculta avisos secundários para não competir com o banner de colocação. */
@@ -106,6 +110,13 @@ export function WeeklyAgendaHeader(props: WeeklyAgendaHeaderProps) {
         {!props.weekPayload?.hasPlan ? (
           <span className="text-[12px] text-slate-500">Nenhum plano salvo nesta semana ainda.</span>
         ) : null}
+
+        <PlanningWeekTicketsPrintButton
+          testId="weekly-agenda-week-tickets-print"
+          count={props.weekTicketPrintCount}
+          disabled={props.weekTicketPrintDisabled}
+          onClick={props.onOpenWeekTicketPrint}
+        />
 
         <div className="flex flex-wrap gap-2 sm:ml-auto">
           <button
