@@ -34,6 +34,7 @@ import {
   canShowSaveAndCompleteButton,
   candidateNeedsJustification,
   candidateNeedsOutOfSequenceJustification,
+  candidateRequiresOperationalJustification,
   emptyJustificationValue,
   QUICK_TIME_ENTRY_ERRORS,
   QUICK_TIME_ENTRY_TOAST,
@@ -92,10 +93,10 @@ export function QuickTimeEntryDrawer({
   const [minutesStr, setMinutesStr] = useState('0')
   const [executedQuantityStr, setExecutedQuantityStr] = useState('1')
   const [description, setDescription] = useState('')
-  const [exceptionJustification, setExceptionJustification] =
+  const [operationalJustification, setOperationalJustification] =
     useState<JustificationFieldValue>(emptyJustificationValue())
-  const [outOfSequenceJustification, setOutOfSequenceJustification] =
-    useState<JustificationFieldValue>(emptyJustificationValue())
+  const [justificationUseFallback, setJustificationUseFallback] = useState(false)
+  const [justificationRequiresComplement, setJustificationRequiresComplement] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [toast, setToast] = useState<ToastState>(null)
@@ -142,8 +143,9 @@ export function QuickTimeEntryDrawer({
       setToast(null)
       setMinutesStr('0')
       setDescription('')
-      setExceptionJustification(emptyJustificationValue())
-      setOutOfSequenceJustification(emptyJustificationValue())
+      setOperationalJustification(emptyJustificationValue())
+      setJustificationUseFallback(false)
+      setJustificationRequiresComplement(false)
       setExtraDescriptions([])
       setExtraDescriptionsLoading(false)
       setExtraDescriptionsError(null)
@@ -298,11 +300,19 @@ export function QuickTimeEntryDrawer({
   const formNeedsOutOfSequence = selected
     ? candidateNeedsOutOfSequenceJustification(selected)
     : false
+  const formRequiresOperationalJustification = selected
+    ? candidateRequiresOperationalJustification(selected)
+    : false
+  const justificationValidationError = selected
+    ? validateTimeEntryForm({
+        candidate: selected,
+        operationalJustification,
+        useFallback: justificationUseFallback,
+        requiresComplement: justificationRequiresComplement,
+      })
+    : null
   const canSubmitForm =
-    minutesValid &&
-    executedQuantityValid &&
-    (!formNeedsJustification || exceptionJustification.legacyText.trim().length > 0) &&
-    (!formNeedsOutOfSequence || outOfSequenceJustification.legacyText.trim().length > 0)
+    minutesValid && executedQuantityValid && !justificationValidationError
   const showSaveAndComplete =
     selected != null && canShowSaveAndCompleteButton(selected)
   const extraMinutes = Number.parseInt(extraMinutesStr, 10)
@@ -314,8 +324,9 @@ export function QuickTimeEntryDrawer({
     setSubmitError(null)
     setMinutesStr('0')
     setDescription('')
-    setExceptionJustification(emptyJustificationValue())
-    setOutOfSequenceJustification(emptyJustificationValue())
+    setOperationalJustification(emptyJustificationValue())
+    setJustificationUseFallback(false)
+    setJustificationRequiresComplement(false)
   }, [])
 
   useEffect(() => {
@@ -342,8 +353,9 @@ export function QuickTimeEntryDrawer({
     }
     const validationError = validateTimeEntryForm({
       candidate: selected,
-      exceptionJustification,
-      outOfSequenceJustification,
+      operationalJustification,
+      useFallback: justificationUseFallback,
+      requiresComplement: justificationRequiresComplement,
     })
     if (validationError) {
       setSubmitError(validationError)
@@ -361,8 +373,7 @@ export function QuickTimeEntryDrawer({
           minutes,
           executedQuantity,
           description,
-          exceptionJustification,
-          outOfSequenceJustification,
+          operationalJustification,
           markAsDone,
         }),
       )
@@ -370,8 +381,9 @@ export function QuickTimeEntryDrawer({
       setPhase('list')
       setSelected(null)
       setDescription('')
-      setExceptionJustification(emptyJustificationValue())
-      setOutOfSequenceJustification(emptyJustificationValue())
+      setOperationalJustification(emptyJustificationValue())
+      setJustificationUseFallback(false)
+      setJustificationRequiresComplement(false)
       onTimeEntrySaved?.()
       void load()
     } catch (e) {
@@ -875,46 +887,13 @@ export function QuickTimeEntryDrawer({
                       </span>
                     </label>
 
-                    <label className="mt-4 block text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">
-                      Descrição (opcional)
-                      <textarea
-                        value={description}
-                        onChange={(e) => setDescription(e.target.value)}
-                        rows={3}
-                        placeholder="Notas sobre o trabalho realizado…"
-                        className="mt-1.5 w-full resize-none rounded-xl border border-[color:var(--semantic-border-glass-strong)] bg-sgp-app-panel-deep/90 px-3 py-2 text-sm text-slate-200 outline-none focus:ring-2 focus:ring-sgp-blue-bright/25"
-                      />
-                    </label>
-
                     {formNeedsJustification ? (
-                      <>
-                        <div className="mt-4 rounded-xl border border-amber-500/25 bg-amber-500/[0.07] px-3 py-2.5 text-xs text-amber-50/95">
-                          <p className="font-semibold text-amber-100">
-                            Você não está alocado nesta atividade. Para apontar horas, informe uma justificativa
-                            (apontamento por exceção).
-                          </p>
-                        </div>
-                        <div className="mt-4">
-                          <JustificationSelect
-                            channel="app"
-                            idPrefix="qte-exception"
-                            value={exceptionJustification.justificationId ?? ''}
-                            complement={exceptionJustification.justificationComplement}
-                            legacyText={exceptionJustification.legacyText}
-                            preferredCategory={resolvePreferredJustificationCategory({
-                              requiresAllocationException: true,
-                            })}
-                            disabled={submitting}
-                            onChange={(next) =>
-                              setExceptionJustification({
-                                justificationId: next.justificationId,
-                                justificationComplement: next.justificationComplement,
-                                legacyText: next.legacyText,
-                              })
-                            }
-                          />
-                        </div>
-                      </>
+                      <div className="mt-4 rounded-xl border border-amber-500/25 bg-amber-500/[0.07] px-3 py-2.5 text-xs text-amber-50/95">
+                        <p className="font-semibold text-amber-100">
+                          Você não está alocado nesta atividade. Para apontar horas, informe uma justificativa
+                          (apontamento por exceção).
+                        </p>
+                      </div>
                     ) : null}
 
                     {!formNeedsOutOfSequence &&
@@ -928,67 +907,93 @@ export function QuickTimeEntryDrawer({
                     ) : null}
 
                     {formNeedsOutOfSequence ? (
-                      <>
-                        <div className="mt-4 rounded-xl border border-sky-500/25 bg-sky-500/[0.07] px-3 py-2.5 text-xs text-sky-50/95">
-                          <p className="font-semibold text-sky-100">
-                            {resolveOutOfSequenceActionLabel()} — confirme o apontamento.
-                          </p>
-                          <p className="mt-1.5 leading-relaxed text-sky-100/90">
-                            Existem atividades anteriores ainda pendentes nesta esteira
-                            {selected && selected.previousOpenCount > 0 ? (
-                              <>
-                                {' '}
-                                — antes dela ainda existem{' '}
-                                <span className="font-semibold">{selected.previousOpenCount}</span>{' '}
-                                {selected.previousOpenCount === 1
-                                  ? 'atividade pendente'
-                                  : 'atividades pendentes'}
-                                .
-                              </>
-                            ) : (
-                              '.'
-                            )}
-                          </p>
-                          {selected && selected.previousOpenActivities.length > 0 ? (
-                            <ul className="mt-2 list-inside list-disc space-y-1 text-[11px] text-sky-100/85">
-                              {selected.previousOpenActivities.map((p, i) => (
-                                <li key={`${p.activityTitle}-${i}`}>
-                                  <span className="font-semibold">{p.taskTitle}</span>
-                                  {' › '}
-                                  <span className="font-semibold">{p.sectorTitle}</span>
-                                  {' › '}
-                                  {p.activityTitle}
-                                </li>
-                              ))}
-                            </ul>
-                          ) : null}
-                        </div>
-                        <div className="mt-4">
-                          <JustificationSelect
-                            channel="app"
-                            idPrefix="qte-oos"
-                            value={outOfSequenceJustification.justificationId ?? ''}
-                            complement={outOfSequenceJustification.justificationComplement}
-                            legacyText={outOfSequenceJustification.legacyText}
-                            preferredCategory={resolvePreferredJustificationCategory({
-                              hasPreviousPendingStep: selected?.hasPreviousPendingStep,
-                              isOutOfSequence: selected?.isOutOfSequence,
-                            })}
-                            preferredLabelHint={
-                              selected?.hasPreviousPendingStep ? 'outro colaborador' : null
-                            }
-                            disabled={submitting}
-                            onChange={(next) =>
-                              setOutOfSequenceJustification({
-                                justificationId: next.justificationId,
-                                justificationComplement: next.justificationComplement,
-                                legacyText: next.legacyText,
-                              })
-                            }
-                          />
-                        </div>
-                      </>
+                      <div className="mt-4 rounded-xl border border-sky-500/25 bg-sky-500/[0.07] px-3 py-2.5 text-xs text-sky-50/95">
+                        <p className="font-semibold text-sky-100">
+                          {resolveOutOfSequenceActionLabel()} — confirme o apontamento.
+                        </p>
+                        <p className="mt-1.5 leading-relaxed text-sky-100/90">
+                          Existem atividades anteriores ainda pendentes nesta esteira
+                          {selected && selected.previousOpenCount > 0 ? (
+                            <>
+                              {' '}
+                              — antes dela ainda existem{' '}
+                              <span className="font-semibold">{selected.previousOpenCount}</span>{' '}
+                              {selected.previousOpenCount === 1
+                                ? 'atividade pendente'
+                                : 'atividades pendentes'}
+                              .
+                            </>
+                          ) : (
+                            '.'
+                          )}
+                        </p>
+                        {selected && selected.previousOpenActivities.length > 0 ? (
+                          <ul className="mt-2 list-inside list-disc space-y-1 text-[11px] text-sky-100/85">
+                            {selected.previousOpenActivities.map((p, i) => (
+                              <li key={`${p.activityTitle}-${i}`}>
+                                <span className="font-semibold">{p.taskTitle}</span>
+                                {' › '}
+                                <span className="font-semibold">{p.sectorTitle}</span>
+                                {' › '}
+                                {p.activityTitle}
+                              </li>
+                            ))}
+                          </ul>
+                        ) : null}
+                      </div>
                     ) : null}
+
+                    <div className="mt-4">
+                      <JustificationSelect
+                        channel="app"
+                        idPrefix="qte-operational"
+                        value={operationalJustification.justificationId ?? ''}
+                        complement={operationalJustification.justificationComplement}
+                        legacyText={operationalJustification.legacyText}
+                        required={formRequiresOperationalJustification}
+                        preferredCategory={
+                          formNeedsJustification
+                            ? resolvePreferredJustificationCategory({
+                                requiresAllocationException: true,
+                              })
+                            : formNeedsOutOfSequence
+                              ? resolvePreferredJustificationCategory({
+                                  hasPreviousPendingStep: selected?.hasPreviousPendingStep,
+                                  isOutOfSequence: selected?.isOutOfSequence,
+                                })
+                              : null
+                        }
+                        preferredLabelHint={
+                          formNeedsOutOfSequence && selected?.hasPreviousPendingStep
+                            ? 'outro colaborador'
+                            : null
+                        }
+                        disabled={submitting}
+                        onCatalogStateChange={({ useFallback, selectedRequiresComplement }) => {
+                          setJustificationUseFallback(useFallback)
+                          setJustificationRequiresComplement(selectedRequiresComplement)
+                        }}
+                        onChange={(next) => {
+                          setOperationalJustification({
+                            justificationId: next.justificationId,
+                            justificationComplement: next.justificationComplement,
+                            legacyText: next.legacyText,
+                          })
+                          setSubmitError(null)
+                        }}
+                      />
+                    </div>
+
+                    <label className="mt-4 block text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">
+                      Descrição (opcional)
+                      <textarea
+                        value={description}
+                        onChange={(e) => setDescription(e.target.value)}
+                        rows={3}
+                        placeholder="Notas sobre o trabalho realizado…"
+                        className="mt-1.5 w-full resize-none rounded-xl border border-[color:var(--semantic-border-glass-strong)] bg-sgp-app-panel-deep/90 px-3 py-2 text-sm text-slate-200 outline-none focus:ring-2 focus:ring-sgp-blue-bright/25"
+                      />
+                    </label>
 
                     {submitError ? (
                       <p className="mt-3 text-sm text-rose-200">{submitError}</p>

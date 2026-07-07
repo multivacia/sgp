@@ -102,6 +102,8 @@ export async function postConveyorStepTimeEntry(
     outOfSequenceJustification: body.outOfSequenceJustification,
     outOfSequenceJustificationId: body.outOfSequenceJustificationId,
     outOfSequenceJustificationComplement: body.outOfSequenceJustificationComplement,
+    voluntaryJustificationId: body.voluntaryJustificationId,
+    voluntaryJustificationComplement: body.voluntaryJustificationComplement,
     markAsDone: body.markAsDone,
   })
   res.status(201).json(ok(created))

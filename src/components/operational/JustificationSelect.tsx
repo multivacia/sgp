@@ -30,6 +30,8 @@ export type JustificationSelectProps = {
   preferredCategory?: string | null
   /** Dica de label para refinar pré-seleção dentro da categoria. */
   preferredLabelHint?: string | null
+  /** Quando true, exibe indicador de obrigatoriedade (exceção/OOS). */
+  required?: boolean
   /** Estado do catálogo para validação externa. */
   onCatalogStateChange?: (state: {
     useFallback: boolean
@@ -52,6 +54,7 @@ export function JustificationSelect({
   idPrefix = 'justification',
   preferredCategory = null,
   preferredLabelHint = null,
+  required = false,
   onCatalogStateChange,
 }: JustificationSelectProps) {
   const [options, setOptions] = useState<TimeEntryJustificationOption[]>([])
@@ -109,7 +112,7 @@ export function JustificationSelect({
   }, [useFallback, selected, onCatalogStateChange])
 
   useEffect(() => {
-    if (loading || useFallback || preselectAppliedRef.current || value) return
+    if (loading || useFallback || preselectAppliedRef.current || value || !preferredCategory) return
     const preferredId = pickPreferredJustificationId(
       options,
       preferredCategory,
@@ -166,6 +169,12 @@ export function JustificationSelect({
     <div className="space-y-3">
       <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500">
         {JUSTIFICATION_SELECT_MESSAGES.label}
+        {required ? <span className="text-rose-300/90"> *</span> : null}
+        {!required ? (
+          <span className="ml-1 text-[10px] font-normal normal-case tracking-normal text-slate-500">
+            (opcional)
+          </span>
+        ) : null}
         <select
           id={`${idPrefix}-motivo`}
           value={value}

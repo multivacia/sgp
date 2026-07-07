@@ -125,15 +125,17 @@ export const postTimeEntryBodySchema = z
           ? undefined
           : b.exceptionJustificationComplement.trim() || undefined,
       outOfSequenceJustification: oosRaw && oosRaw.length > 0 ? oosRaw : undefined,
-      outOfSequenceJustificationId:
-        b.outOfSequenceJustificationId ?? b.justificationId,
+      outOfSequenceJustificationId: b.outOfSequenceJustificationId,
       outOfSequenceJustificationComplement:
         b.outOfSequenceJustificationComplement === null ||
         b.outOfSequenceJustificationComplement === undefined
-          ? b.justificationComplement === null || b.justificationComplement === undefined
-            ? undefined
-            : b.justificationComplement.trim() || undefined
+          ? undefined
           : b.outOfSequenceJustificationComplement.trim() || undefined,
+      voluntaryJustificationId: b.justificationId,
+      voluntaryJustificationComplement:
+        b.justificationComplement === null || b.justificationComplement === undefined
+          ? undefined
+          : b.justificationComplement.trim() || undefined,
       markAsDone: b.markAsDone === true,
     }
   })

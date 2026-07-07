@@ -48,6 +48,7 @@ import { serviceCreateConveyorOperationalEvent } from './operational-events/conv
 import {
   pickStandardJustificationSnapshot,
   resolveTimeEntryJustification,
+  standardJustificationRowFields,
   type ResolvedStandardJustification,
   TIME_ENTRY_JUSTIFICATION_REQUIRED_MESSAGE,
 } from '../../shared/timeEntryJustificationResolver.js'
@@ -259,6 +260,9 @@ export type CreateTimeEntryInput = {
   outOfSequenceJustification?: string | null
   outOfSequenceJustificationId?: string | null
   outOfSequenceJustificationComplement?: string | null
+  /** Justificativa voluntária em apontamento normal (sem exceção/OOS). */
+  voluntaryJustificationId?: string | null
+  voluntaryJustificationComplement?: string | null
   /** Para evento operacional opcional após insert. */
   actorAppUserId?: string | null
   /** Avaliação subjetiva do colaborador sobre o estado atual da atividade (0-100). Kiosk only. */
@@ -284,6 +288,8 @@ export type CreateTimeEntryForAppUserInput = {
   outOfSequenceJustification?: string
   outOfSequenceJustificationId?: string
   outOfSequenceJustificationComplement?: string
+  voluntaryJustificationId?: string
+  voluntaryJustificationComplement?: string
   entryAt?: Date
   entryMode?: 'manual' | 'guided' | 'imported'
   markAsDone?: boolean
@@ -387,9 +393,11 @@ export async function serviceCreateConveyorTimeEntryForAppUser(
       exceptionJustification: null,
       markAsDone: input.markAsDone,
       sequence: seq,
-      outOfSequenceJustificationId: input.outOfSequenceJustificationId,
-      outOfSequenceJustificationComplement: input.outOfSequenceJustificationComplement,
-      standardJustificationException: null,
+    outOfSequenceJustificationId: input.outOfSequenceJustificationId,
+    outOfSequenceJustificationComplement: input.outOfSequenceJustificationComplement,
+    voluntaryJustificationId: input.voluntaryJustificationId,
+    voluntaryJustificationComplement: input.voluntaryJustificationComplement,
+    standardJustificationException: null,
       standardJustificationOos: oosStandard,
       ...commonSeq,
     })
@@ -415,9 +423,11 @@ export async function serviceCreateConveyorTimeEntryForAppUser(
       exceptionJustification: null,
       markAsDone: input.markAsDone,
       sequence: seq,
-      outOfSequenceJustificationId: input.outOfSequenceJustificationId,
-      outOfSequenceJustificationComplement: input.outOfSequenceJustificationComplement,
-      standardJustificationException: null,
+    outOfSequenceJustificationId: input.outOfSequenceJustificationId,
+    outOfSequenceJustificationComplement: input.outOfSequenceJustificationComplement,
+    voluntaryJustificationId: input.voluntaryJustificationId,
+    voluntaryJustificationComplement: input.voluntaryJustificationComplement,
+    standardJustificationException: null,
       standardJustificationOos: oosStandard,
       ...commonSeq,
     })
@@ -448,6 +458,8 @@ export async function serviceCreateConveyorTimeEntryForAppUser(
     sequence: seq,
     outOfSequenceJustificationId: input.outOfSequenceJustificationId,
     outOfSequenceJustificationComplement: input.outOfSequenceJustificationComplement,
+    voluntaryJustificationId: input.voluntaryJustificationId,
+    voluntaryJustificationComplement: input.voluntaryJustificationComplement,
     standardJustificationException: exceptionResolved.standard,
     standardJustificationOos: oosStandard,
     ...commonSeq,
@@ -578,6 +590,27 @@ export async function serviceCreateConveyorTimeEntry(
 
   const standardFields = pickStandardJustificationSnapshot(exceptionStandard, oosStandard)
 
+  let voluntaryStandard: ResolvedStandardJustification | null = null
+  if (
+    input.voluntaryJustificationId &&
+    !exceptionStandard &&
+    !oosStandard &&
+    entryOrigin === 'ASSIGNED' &&
+    !isOos
+  ) {
+    const resolved = await resolveTimeEntryJustification(pool, {
+      required: false,
+      justificationId: input.voluntaryJustificationId,
+      justificationComplement: input.voluntaryJustificationComplement,
+    })
+    voluntaryStandard = resolved.standard
+  }
+
+  const mergedStandardFields =
+    voluntaryStandard != null
+      ? standardJustificationRowFields(voluntaryStandard)
+      : standardFields
+
   const row: InsertConveyorTimeEntryRow = {
     id: newAssignmentId(),
     conveyor_id: input.conveyorId,
@@ -596,7 +629,7 @@ export async function serviceCreateConveyorTimeEntry(
     out_of_sequence_justification: isOos ? oosJustDb : null,
     session_completion_pct: typeof input.sessionCompletionPct === 'number' ? input.sessionCompletionPct : null,
     mark_as_done: input.markAsDone ?? false,
-    ...standardFields,
+    ...mergedStandardFields,
   }
 
   const shouldAutoStart =

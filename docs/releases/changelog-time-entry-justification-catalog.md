@@ -6,7 +6,7 @@ Integração do catálogo de **Justificativas Operacionais** nos fluxos de apont
 
 ### Incluído
 
-- `JustificationSelect` com seleção do catálogo, pré-seleção por categoria e fallback controlado
+- `JustificationSelect` sempre visível no `QuickTimeEntryDrawer` (opcional em apontamento normal; obrigatório em exceção/OOS)
 - `QuickTimeEntryDrawer`, `KioskActivityCard`, `ProductionTimeEntryDialog`, `EsteiraDetalhePage` (conclusão OOS)
 - Backend: `justificationId` no PATCH de conclusão de step; mensagem 422 padronizada
 - Validação: `requiresComplement = true` exige complemento; `false` oculta o campo

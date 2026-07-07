@@ -5,6 +5,7 @@ import {
   canShowCompleteActivityButton,
   canShowSaveAndCompleteButton,
   candidateNeedsOutOfSequenceJustification,
+  candidateRequiresOperationalJustification,
   emptyJustificationValue,
   resolveTimeEntrySuccessToast,
   validateCompleteOutOfSequenceJustification,
@@ -41,9 +42,9 @@ function baseCandidate(
     pendingMinutes: 30,
     isAssignedToMe: true,
     requiresJustification: false,
-  isOutOfSequence: false,
-  hasPreviousPendingStep: false,
-  requiresOutOfSequenceJustification: false,
+    isOutOfSequence: false,
+    hasPreviousPendingStep: false,
+    requiresOutOfSequenceJustification: false,
     previousOpenCount: 0,
     previousOpenActivities: [],
     awaitingPreviousActivities: [],
@@ -86,25 +87,38 @@ describe('quickTimeEntryDrawerLogic', () => {
       minutes: 15,
       executedQuantity: 1,
       description: 'ok',
-      exceptionJustification: emptyJustificationValue(),
-      outOfSequenceJustification: emptyJustificationValue(),
+      operationalJustification: emptyJustificationValue(),
       markAsDone: true,
     })
     expect(payload.markAsDone).toBe(true)
     expect(payload.minutes).toBe(15)
   })
 
-  it('buildTimeEntryPayload normal não inclui markAsDone', () => {
+  it('buildTimeEntryPayload normal envia justificativa voluntária quando selecionada', () => {
+    const payload = buildTimeEntryPayload({
+      candidate: baseCandidate(),
+      minutes: 15,
+      executedQuantity: 1,
+      description: 'observação livre',
+      operationalJustification: jv('Repriorização autorizada', '33333333-3333-3333-3333-333333333333'),
+      markAsDone: false,
+    })
+    expect(payload.justificationId).toBe('33333333-3333-3333-3333-333333333333')
+    expect(payload.description).toBe('observação livre')
+    expect(payload.outOfSequenceJustification).toBeUndefined()
+  })
+
+  it('buildTimeEntryPayload normal sem seleção não envia justificativa', () => {
     const payload = buildTimeEntryPayload({
       candidate: baseCandidate(),
       minutes: 15,
       executedQuantity: 1,
       description: '',
-      exceptionJustification: emptyJustificationValue(),
-      outOfSequenceJustification: emptyJustificationValue(),
+      operationalJustification: emptyJustificationValue(),
       markAsDone: false,
     })
-    expect(payload.markAsDone).toBeUndefined()
+    expect(payload.justificationId).toBeUndefined()
+    expect(payload.exceptionJustification).toBeUndefined()
   })
 
   it('buildTimeEntryPayload fora de sequência inclui justificativa', () => {
@@ -113,8 +127,7 @@ describe('quickTimeEntryDrawerLogic', () => {
       minutes: 10,
       executedQuantity: 0,
       description: '',
-      exceptionJustification: emptyJustificationValue(),
-      outOfSequenceJustification: jv('urgente'),
+      operationalJustification: jv('urgente'),
       markAsDone: true,
     })
     expect(payload.outOfSequenceJustification).toBe('urgente')
@@ -132,36 +145,39 @@ describe('quickTimeEntryDrawerLogic', () => {
       minutes: 10,
       executedQuantity: 0,
       description: '',
-      exceptionJustification: emptyJustificationValue(),
-      outOfSequenceJustification: jv('Sequência liberada', '22222222-2222-2222-2222-222222222222'),
+      operationalJustification: jv('Sequência liberada', '22222222-2222-2222-2222-222222222222'),
       markAsDone: false,
     })
     expect(payload.outOfSequenceJustificationId).toBe('22222222-2222-2222-2222-222222222222')
     expect(payload.outOfSequenceJustification).toBe('Sequência liberada')
   })
 
-  it('validateTimeEntryForm exige justificativas', () => {
+  it('validateTimeEntryForm exige justificativas em exceção', () => {
     expect(
       validateTimeEntryForm({
         candidate: baseCandidate({ requiresJustification: true, isAssignedToMe: false }),
-        exceptionJustification: emptyJustificationValue(),
-        outOfSequenceJustification: emptyJustificationValue(),
+        operationalJustification: emptyJustificationValue(),
+        useFallback: false,
+        requiresComplement: false,
       }),
     ).toContain('justificativa')
     expect(
       validateTimeEntryForm({
         candidate: baseCandidate({ isOutOfSequence: true }),
-        exceptionJustification: emptyJustificationValue(),
-        outOfSequenceJustification: emptyJustificationValue(),
+        operationalJustification: emptyJustificationValue(),
+        useFallback: false,
+        requiresComplement: false,
       }),
     ).toContain('justificativa')
     expect(
       validateTimeEntryForm({
         candidate: baseCandidate(),
-        exceptionJustification: emptyJustificationValue(),
-        outOfSequenceJustification: emptyJustificationValue(),
+        operationalJustification: emptyJustificationValue(),
+        useFallback: false,
+        requiresComplement: false,
       }),
     ).toBeNull()
+    expect(candidateRequiresOperationalJustification(baseCandidate())).toBe(false)
   })
 
   it('validateCompleteOutOfSequenceJustification', () => {

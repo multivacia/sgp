@@ -53,8 +53,8 @@ export function pickPreferredJustificationId(
   labelHint?: string | null,
 ): string | null {
   if (!options.length) return null
+  if (!preferredCategory) return null
   const ordered = sortByOrder(options)
-  if (!preferredCategory) return ordered[0]?.id ?? null
 
   const inCategory = ordered.filter((o) => o.category === preferredCategory)
   if (!inCategory.length) return ordered[0]?.id ?? null

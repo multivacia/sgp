@@ -54,6 +54,10 @@ describe('timeEntryJustificationField', () => {
     ).toBe('seq-1')
   })
 
+  it('não pré-seleciona sem categoria preferida', () => {
+    expect(pickPreferredJustificationId(OPTIONS, null)).toBeNull()
+  })
+
   it('exige seleção quando catálogo está ativo', () => {
     expect(
       validateJustificationFieldValue({
