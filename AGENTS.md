@@ -1,68 +1,58 @@
-# AGENTS.md — SGP+ Web
+# AGENTS.md — SGP+ Web / ARGOS
 
-## Projeto
+## Propósito
 
-SGP+ Web é uma plataforma operacional para gestão de esteiras, matrizes, planejamento semanal, produção/kiosk, apontamentos, evolução operacional e impressão térmica.
+Este repositório usa uma camada operacional de IA para acelerar demandas do SGP+ Web sem perder rastreabilidade, segurança operacional e controle humano.
 
-O sistema está sendo implantado na Bravo Tapeçaria e faz parte do ecossistema ARGOS / Multivacia.
+A camada é **multi-ferramenta**: Claude, Cursor e Codex podem usar os mesmos papéis, mas cada ferramenta tem seu adaptador próprio.
 
-## Princípios
+## Regra soberana
 
-- Operação primeiro, visão depois.
-- O sistema deve se adaptar à operação, não engessar o time.
-- UX operacional deve exigir o mínimo possível de raciocínio extra do colaborador.
-- Mudanças devem preservar o fluxo operacional existente.
-- Separar análise, especificação, implementação e teste.
-- Não alterar código sem escopo claro.
-- Não misturar tickets operacionais com documentos que exigem preview.
-- Toda alteração relevante deve considerar impacto em admin, gestor, colaborador e kiosk.
+Somente o agente implementador pode alterar código-fonte:
 
-## Áreas principais
+- Claude/Cursor: `sgp-implementer`
+- Codex: `sgp_implementer`
 
-- Esteiras e matrizes;
-- Planejamento semanal;
-- Produção/kiosk;
-- Apontamentos;
-- Evolução das Esteiras;
-- Impressão térmica;
-- Permissões;
-- Dashboard e saúde operacional.
+Agentes de contexto, impacto, especificação e revisão são somente leitura para código-fonte. Eles podem ler arquivos, mapear riscos, escrever relatórios quando explicitamente solicitado e sugerir testes, mas não devem editar produção nem testes.
 
-## Camada neutra de IA
+## Fonte da verdade
 
-A camada neutra de instruções fica em:
+- `docs/ai/` é a documentação neutra.
+- `.claude/`, `.cursor/`, `.codex/` e `.agents/` são adaptadores de ferramenta.
+- Se houver conflito entre adaptador e `docs/ai/`, pare e peça decisão humana.
+- Se houver conflito entre IA e código real, o código real vence.
 
-`docs/ai/`
+## Fluxo recomendado para demandas médias/grandes
 
-Estrutura:
+1. `sgp-context-reader` / `sgp_context_reader`: mapear contexto real do código.
+2. `sgp-impact-analyst` / `sgp_impact_analyst`: avaliar impacto, risco e regressão.
+3. `sgp-feature-spec-writer` / `sgp_feature_spec_writer`: transformar a demanda em spec curta, testável e aprovada.
+4. `sgp-implementer` / `sgp_implementer`: implementar somente a spec aprovada.
+5. `sgp-test-reviewer` / `sgp_test_reviewer`: validar build, testes, regressão e critérios de aceite.
 
-- `agents/`: papéis especializados;
-- `skills/`: conhecimento por domínio;
-- `playbooks/`: fluxos de trabalho;
-- `templates/`: formatos de saída.
+Demandas pequenas podem pular o fluxo completo, desde que tenham escopo fechado e não alterem regra de negócio, banco, permissões, ciclo de vida, planejamento semanal, produção/kiosk ou impressão térmica.
 
-## Regra principal
+## Gates de segurança
 
-Somente o agente implementador pode alterar código, e apenas com escopo fechado.
+- Se o impacto for diferente de `SEGUIR`, parar e devolver para decisão humana.
+- Nenhum agente faz merge, deploy, alteração de secret ou migração em ambiente compartilhado sem aprovação humana.
+- Relatório em prosa não é prova. A prova é `git diff`, saída real de build/lint/testes e exit code.
+- Não maquiar falha de teste/build. Falhou = falhou.
+- Não fazer refatoração oportunista fora do escopo.
+- Não criar padrão novo quando já existir padrão equivalente no projeto.
 
-Agentes de contexto, impacto, especificação e teste devem trabalhar sem modificar arquivos, salvo instrução explícita em contrário.
+## Convenções essenciais do SGP+ Web
 
-## Antes de implementar demandas médias ou grandes
+- Backend é fonte da verdade para regra de negócio.
+- Preservar ciclo de vida oficial das esteiras.
+- Preservar regra de planejamento semanal publicado como fonte da fila operacional.
+- Preservar sequência estrutural da esteira e regras de apontamento fora de sequência.
+- Preservar isolamento do kiosk/produção.
+- UX Bravo: reduzir digitação; priorizar listas, botões, atalhos e justificativas padronizadas.
+- Impressão térmica: tickets operacionais podem imprimir direto via SGP Print Agent; demais documentos mantêm preview.
 
-1. Usar `sgp-context-reader` ou ler o contexto equivalente.
-2. Usar `sgp-impact-analyst`.
-3. Gerar especificação curta.
-4. Implementar com escopo fechado.
-5. Revisar testes e regressão.
-6. Entregar relatório.
+## Anti-zoológico
 
-## Proibições
+Todo Markdown nasce culpado até provar utilidade.
 
-- Não fazer refatoração estética fora do escopo.
-- Não alterar permissões sem análise.
-- Não alterar ciclo de vida de esteira sem revisar impacto.
-- Não alterar impressão global do navegador.
-- Não quebrar preview de documentos não relacionados a tickets.
-- Não criar novo padrão se já existir padrão equivalente no projeto.
-- Não executar migrações sem instrução explícita.
-- Não assumir comportamento sem indicar onde foi verificado.
+Um arquivo só deve existir se tiver objetivo claro, quando usar, quando não usar, entrada esperada, saída esperada e relação com demanda real do SGP+.

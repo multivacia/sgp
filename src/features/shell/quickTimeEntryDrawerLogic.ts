@@ -19,7 +19,11 @@ export function candidateNeedsJustification(c: TimeEntryCandidateItem): boolean 
 }
 
 export function candidateNeedsOutOfSequenceJustification(c: TimeEntryCandidateItem): boolean {
-  return c.requiresOutOfSequenceJustification === true || c.isOutOfSequence === true
+  return (
+    c.requiresOutOfSequenceJustification === true ||
+    c.hasPreviousPendingStep === true ||
+    c.isOutOfSequence === true
+  )
 }
 
 /** Botão «Concluir atividade» na lista — atividades apontáveis alocadas ao colaborador. */

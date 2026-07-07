@@ -24,8 +24,11 @@ function item(
     isOverdue: false,
     isOutOfSequence: false,
     isNextRecommended: false,
+    hasPreviousPendingStep: false,
     previousOpenCount: 0,
     previousOpenActivities: [],
+    allPreviousOpenActivities: [],
+    awaitingPreviousActivities: [],
     hasPreviousOpenActivitiesFromOtherCollaborators: false,
     previousOpenActivitiesFromOtherCollaborators: [],
     previousOpenActivitiesWarningMessage: null,
@@ -41,41 +44,45 @@ describe('kioskWorkQueueUi', () => {
   describe('findInitialKioskCarouselIndex', () => {
     it('abre no primeiro item isNextRecommended', () => {
       const items = [
-        item({ workPlanItemId: 'oos', isOutOfSequence: true, isNextRecommended: false }),
+        item({
+          workPlanItemId: 'warn',
+          hasPreviousPendingStep: true,
+          isNextRecommended: false,
+        }),
         item({ workPlanItemId: 'rec', isNextRecommended: true }),
       ]
       expect(findInitialKioskCarouselIndex(items)).toBe(1)
     })
 
-    it('não abre em fora de sequência quando existe recomendada antes na lista', () => {
+    it('não abre em pendência anterior quando existe recomendada antes na lista', () => {
       const items = [
         item({ workPlanItemId: 'rec', isNextRecommended: true }),
-        item({ workPlanItemId: 'oos', isOutOfSequence: true }),
+        item({ workPlanItemId: 'warn', hasPreviousPendingStep: true }),
       ]
       expect(findInitialKioskCarouselIndex(items)).toBe(0)
     })
 
     it('fallback seguro para 0 quando não há recomendada nem em sequência', () => {
-      const items = [item({ workPlanItemId: 'oos', isOutOfSequence: true })]
+      const items = [item({ workPlanItemId: 'warn', hasPreviousPendingStep: true })]
       expect(findInitialKioskCarouselIndex(items)).toBe(0)
     })
   })
 
   describe('partitionKioskWorkQueue', () => {
-    it('separa recomendadas e fora de sequência', () => {
+    it('separa recomendadas e alerta de sequência', () => {
       const items = [
         item({ workPlanItemId: 'rec', isNextRecommended: true }),
         item({
-          workPlanItemId: 'oos',
-          isOutOfSequence: true,
+          workPlanItemId: 'warn',
+          hasPreviousPendingStep: true,
           requiresOutOfSequenceJustification: true,
         }),
         item({ workPlanItemId: 'done', isActivityCompleted: true, group: 'completed' }),
       ]
       const sections = partitionKioskWorkQueue(items)
-      expect(sections.map((s) => s.id)).toEqual(['recommended', 'outOfSequence', 'other'])
+      expect(sections.map((s) => s.id)).toEqual(['recommended', 'sequenceWarning', 'other'])
       expect(sections[0]?.items.map((i) => i.workPlanItemId)).toEqual(['rec'])
-      expect(sections[1]?.items.map((i) => i.workPlanItemId)).toEqual(['oos'])
+      expect(sections[1]?.items.map((i) => i.workPlanItemId)).toEqual(['warn'])
       expect(sections[2]?.items.map((i) => i.workPlanItemId)).toEqual(['done'])
     })
   })

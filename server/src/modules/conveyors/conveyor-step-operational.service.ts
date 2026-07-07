@@ -266,10 +266,16 @@ async function serviceCompleteStep(
     )
   }
 
+  const isGestor = await appUserHasPermission(pool, input.actorAppUserId, 'conveyors.create')
+  const actorCollaboratorId = isGestor
+    ? undefined
+    : (await findCollaboratorIdByAppUserId(pool, input.actorAppUserId)) ?? undefined
+
   const seq = await serviceAnalyzeConveyorActivitySequence(
     pool,
     input.conveyorId,
     input.stepNodeId,
+    actorCollaboratorId,
   )
   if (!seq.targetFound) {
     throw new AppError(

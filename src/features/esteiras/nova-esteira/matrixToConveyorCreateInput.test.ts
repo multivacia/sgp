@@ -128,6 +128,7 @@ describe('matrixToConveyorCreateInput', () => {
     expect(opts[0]!.areas[0]!.steps[0]!.assignees?.[0]?.collaboratorId).toBe(
       cid,
     )
+    expect(opts[0]!.areas[0]!.steps[0]!.sourceKey).toBe(actId)
   })
 
   it('buildCreateConveyorFromMatrixInput inclui matrixRootItemId', () => {

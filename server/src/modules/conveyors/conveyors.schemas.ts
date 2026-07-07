@@ -64,6 +64,7 @@ export const postConveyorStepSchema = z
     plannedQuantity: z.number().int().min(1).optional().default(1),
     sourceOrigin: sourceOriginNodeSchema,
     required: z.boolean().optional().default(true),
+    sourceKey: z.string().max(100).nullable().optional(),
     assignees: z.array(postConveyorStepAssigneeSchema).optional().default([]),
   })
   .superRefine((step, ctx) => {

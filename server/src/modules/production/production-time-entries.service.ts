@@ -3,7 +3,7 @@ import { findAppUserIdByCollaboratorId } from '../auth/auth.repository.js'
 import { AppError } from '../../shared/errors/AppError.js'
 import { ErrorCodes } from '../../shared/errors/errorCodes.js'
 import { normalizeExecutedQuantityInput } from '../../shared/activityOperationalQuantity.js'
-import { serviceAnalyzeWorkQueueSequenceForCollaborator } from '../my-work-queue/work-queue-sequence.service.js'
+import { serviceAnalyzeConveyorActivitySequence } from '../conveyors/conveyorActivitySequence.service.js'
 import {
   assertNodeIsStepForConveyor,
   collaboratorActiveForOperations,
@@ -108,11 +108,12 @@ export async function serviceCreateProductionTimeEntry(
     )
   }
 
-  const seq = await serviceAnalyzeWorkQueueSequenceForCollaborator(pool, {
-    conveyorId: input.conveyorId,
-    activityNodeId: input.stepNodeId,
-    collaboratorId: input.collaboratorId,
-  })
+  const seq = await serviceAnalyzeConveyorActivitySequence(
+    pool,
+    input.conveyorId,
+    input.stepNodeId,
+    input.collaboratorId,
+  )
   if (seq.structuralSequenceIndex < 0) {
     throw new AppError(
       'Esta atividade não está incluída na sequência operacional da esteira.',
@@ -121,7 +122,7 @@ export async function serviceCreateProductionTimeEntry(
     )
   }
 
-  const isOos = seq.requiresOutOfSequenceJustification
+  const isOos = seq.isOutOfSequence
   let oosJustDb: string | null = null
   let oosStandard = null
   if (isOos) {

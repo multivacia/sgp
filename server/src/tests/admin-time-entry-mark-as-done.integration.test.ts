@@ -16,7 +16,7 @@ import {
 } from '../modules/conveyors/conveyorAssignments.service.js'
 import { sessionCookieForUser } from './sessionTestCookie.js'
 import { ensureMariaCollaboratorSeedForIntegration, linkAppUserToCollaborator, MARIA_APP_USER_EMAIL, MARIA_APP_USER_ID, MARIA_COLLABORATOR_ID } from './integrationSeedFixtures.js'
-import { setConveyorProductionStatusForIntegration } from './integrationConveyorFixtures.js'
+import { setConveyorProductionStatusForIntegration, seedOperationalWorkPlanItemsForSteps } from './integrationConveyorFixtures.js'
 
 loadDotenvFiles()
 
@@ -130,6 +130,15 @@ describe.skipIf(!hasDb)('POST admin time-entries markAsDone (integração)', () 
     for (let i = 0; i < stepIdsToAssign.length; i += 1) {
       await assignCollaborator(conveyorId, stepIdsToAssign[i]!, i === 0)
     }
+    await seedOperationalWorkPlanItemsForSteps(pool, {
+      createdByUserId: GOV_ADMIN_USER_ID,
+      conveyorId,
+      steps: stepIdsToAssign.map((activityNodeId, idx) => ({
+        activityNodeId,
+        collaboratorId: COLAB_SEED,
+        plannedOrder: idx + 1,
+      })),
+    })
   }
 
   async function mariaCookie() {

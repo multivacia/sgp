@@ -43,9 +43,18 @@ export type MyWorkQueueItemApi = {
   isOutOfSequence: boolean
   /** Próxima atividade recomendada na sequência estrutural para o colaborador atual. */
   isNextRecommended: boolean
+  /** Existe predecessora estrutural ainda não concluída. */
+  hasPreviousPendingStep: boolean
+  sequenceWarningType?: 'PREVIOUS_STEP_PENDING' | 'OUT_OF_SEQUENCE'
+  sequenceWarningLabel?: string
   requiresOutOfSequenceJustification: boolean
+  /** Apontamento permitido (bloqueios reais apenas). */
+  canPointTime: boolean
+  blockingReason?: string
   previousOpenCount: number
   previousOpenActivities: MyWorkQueuePreviousOpenActivityApi[]
+  allPreviousOpenActivities: MyWorkQueuePreviousOpenActivityApi[]
+  awaitingPreviousActivities: MyWorkQueuePreviousOpenActivityApi[]
   hasPreviousOpenActivitiesFromOtherCollaborators: boolean
   previousOpenActivitiesFromOtherCollaborators: MyWorkQueuePreviousOpenFromOtherCollaboratorApi[]
   previousOpenActivitiesWarningMessage: string | null

@@ -2,7 +2,7 @@ import type pg from 'pg'
 import { findCollaboratorIdByAppUserId } from '../auth/auth.repository.js'
 import { analyzeConveyorActivitySequence } from '../conveyors/conveyorActivitySequence.logic.js'
 import type { SequenceAnalysisNode } from '../conveyors/conveyorActivitySequence.logic.js'
-import { listConveyorNodesForSequenceAnalysis } from '../conveyors/conveyors.repository.js'
+import { listConveyorNodesForSequenceAnalysis, listPlannedCollaboratorsByActivityNode } from '../conveyors/conveyors.repository.js'
 import { serviceResolveCollaboratorDailyCapacity } from '../operational-settings/operational-settings.service.js'
 import { mondayOfWeekContaining } from '../operational-planning/operational-planning.week.js'
 import type { MyWorkQueueItemApi, MyWorkQueueResponseApi } from './my-work-queue.dto.js'
@@ -13,8 +13,8 @@ import {
   type MyWorkQueueRawRow,
 } from './my-work-queue.repository.js'
 import { applyWorkQueuePrioritization } from './work-queue-prioritization.js'
-import { buildConveyorStepOwnershipIndex } from './my-work-queue-step-assignees.repository.js'
-import { analyzeWorkQueueSequenceForCollaborator } from './work-queue-sequence-for-collaborator.js'
+import { mapWorkQueueSequenceForCollaborator } from './work-queue-sequence-for-collaborator.js'
+import { resolveIsNextRecommended } from './work-queue-sequence-presentation.js'
 
 function todayIsoLocal(): string {
   const t = new Date()
@@ -114,18 +114,15 @@ export async function serviceGetWorkQueueForCollaborator(
 
   const conveyorIds = [...new Set(raw.map((row) => row.conveyor_id))]
   const nodesByConveyor = new Map<string, SequenceAnalysisNode[]>()
-  const ownershipByConveyor = new Map<
-    string,
-    Awaited<ReturnType<typeof buildConveyorStepOwnershipIndex>>
-  >()
+  const plannedByConveyor = new Map<string, Map<string, Set<string>>>()
   await Promise.all(
     conveyorIds.map(async (cid) => {
-      const [nodes, ownership] = await Promise.all([
+      const [nodes, planned] = await Promise.all([
         listConveyorNodesForSequenceAnalysis(pool, cid),
-        buildConveyorStepOwnershipIndex(pool, cid),
+        listPlannedCollaboratorsByActivityNode(pool, cid),
       ])
       nodesByConveyor.set(cid, mapNodesForSequence(nodes))
-      ownershipByConveyor.set(cid, ownership)
+      plannedByConveyor.set(cid, planned)
     }),
   )
 
@@ -134,12 +131,18 @@ export async function serviceGetWorkQueueForCollaborator(
     const seq = analyzeConveyorActivitySequence(
       nodesByConveyor.get(row.conveyor_id) ?? [],
       row.activity_node_id,
+      {
+        currentCollaboratorId: collaboratorId,
+        plannedCollaboratorsByActivityNodeId:
+          plannedByConveyor.get(row.conveyor_id) ?? new Map(),
+      },
     )
-    const sequenceForCollaborator = analyzeWorkQueueSequenceForCollaborator(
+    const sequenceForCollaborator = mapWorkQueueSequenceForCollaborator({
       seq,
-      collaboratorId,
-      ownershipByConveyor.get(row.conveyor_id) ?? new Map(),
-    )
+      isActivityCompleted,
+      conveyorOperationalStatus: row.conveyor_operational_status,
+      planItemStatus: row.status,
+    })
     const isOutOfSequence = !isActivityCompleted && sequenceForCollaborator.isOutOfSequence
     return {
       workPlanId: row.work_plan_id,
@@ -163,17 +166,43 @@ export async function serviceGetWorkQueueForCollaborator(
       isActivityCompleted,
       isOverdue: row.planned_date < date,
       isOutOfSequence,
+      isNextRecommended:
+        !isActivityCompleted &&
+        resolveIsNextRecommended({
+          isActivityCompleted,
+          hasPreviousPendingStep: sequenceForCollaborator.hasPreviousPendingStep,
+          canPointTime: sequenceForCollaborator.canPointTime,
+        }),
+      hasPreviousPendingStep:
+        !isActivityCompleted && sequenceForCollaborator.hasPreviousPendingStep,
+      sequenceWarningType: !isActivityCompleted
+        ? sequenceForCollaborator.sequenceWarningType
+        : undefined,
+      sequenceWarningLabel: !isActivityCompleted
+        ? sequenceForCollaborator.sequenceWarningLabel
+        : undefined,
       requiresOutOfSequenceJustification:
         !isActivityCompleted && sequenceForCollaborator.requiresOutOfSequenceJustification,
-      previousOpenCount: isOutOfSequence ? sequenceForCollaborator.previousOpenCount : 0,
-      previousOpenActivities: isOutOfSequence
+      canPointTime: sequenceForCollaborator.canPointTime,
+      blockingReason: sequenceForCollaborator.blockingReason,
+      previousOpenCount: !isActivityCompleted ? sequenceForCollaborator.previousOpenCount : 0,
+      previousOpenActivities: !isActivityCompleted
         ? sequenceForCollaborator.previousOpenActivities
+        : [],
+      allPreviousOpenActivities: !isActivityCompleted
+        ? sequenceForCollaborator.allPreviousOpenActivities
+        : [],
+      awaitingPreviousActivities: !isActivityCompleted
+        ? sequenceForCollaborator.awaitingPreviousActivities
         : [],
       hasPreviousOpenActivitiesFromOtherCollaborators:
         !isActivityCompleted &&
         sequenceForCollaborator.hasPreviousOpenActivitiesFromOtherCollaborators,
       previousOpenActivitiesFromOtherCollaborators: !isActivityCompleted
-        ? sequenceForCollaborator.previousOpenActivitiesFromOtherCollaborators
+        ? sequenceForCollaborator.awaitingPreviousActivities.map((p) => ({
+            ...p,
+            collaboratorNames: [] as string[],
+          }))
         : [],
       previousOpenActivitiesWarningMessage: !isActivityCompleted
         ? sequenceForCollaborator.previousOpenActivitiesWarningMessage
@@ -182,7 +211,6 @@ export async function serviceGetWorkQueueForCollaborator(
       isAssignedToMe: row.is_assigned_to_me,
       requiresUnassignedJustification: !row.is_assigned_to_me,
       plannedVsCapacity,
-      isNextRecommended: false,
     }
   })
 
@@ -193,7 +221,7 @@ export async function serviceGetWorkQueueForCollaborator(
     plannedMinutesToday,
     overdueItems: items.filter((item) => item.group === 'overdue').length,
     completedItemsToday: items.filter((item) => item.group === 'completed').length,
-    outOfSequenceItems: items.filter((item) => item.isOutOfSequence).length,
+    outOfSequenceItems: items.filter((item) => item.hasPreviousPendingStep).length,
     unassignedExceptionItems: items.filter((item) => item.requiresUnassignedJustification).length,
     capacityMinutesToday: capacity.resolvedDailyMinutes,
     overload: plannedVsCapacity.overload,

@@ -12,7 +12,12 @@ import {
   productionTimePlannedCoverageLabel,
   productionTimePlannedCoveragePct,
 } from '../../domain/production/kioskActivityCardLogic'
-import { resolveProductionOperationalStatusDisplay } from '../../domain/production/production.helpers'
+import {
+  formatAwaitingPreviousActivitiesLabel,
+  resolveOutOfSequenceActionLabel,
+  resolveProductionOperationalStatusDisplay,
+  resolveSequenceListBadge,
+} from '../../domain/production/production.helpers'
 import { JustificationSelect } from '../../components/operational/JustificationSelect'
 import {
   emptyJustificationValue,
@@ -99,8 +104,10 @@ export function KioskActivityCard({ item, onSuccess }: Props) {
   const statusDisplay = resolveProductionOperationalStatusDisplay(item)
   const plannedTimeHint = productionPlannedTimeReachedHint(item)
   const needsOosJustification = item.requiresOutOfSequenceJustification
-  const showOtherCollaboratorWarning =
-    item.hasPreviousOpenActivitiesFromOtherCollaborators === true
+  const sequenceBadge = resolveSequenceListBadge(item)
+  const sequenceHint =
+    item.sequenceWarningLabel ??
+    formatAwaitingPreviousActivitiesLabel(item.awaitingPreviousActivities)
 
   const minutes =
     preset !== null ? preset : Number.parseInt(minutesCustom, 10) || 0
@@ -257,16 +264,16 @@ export function KioskActivityCard({ item, onSuccess }: Props) {
       )}
 
       <div className="border-b border-white/[0.07] p-5">
-        {(item.isNextRecommended || needsOosJustification || showOtherCollaboratorWarning) && (
+        {(item.isNextRecommended || sequenceBadge.kind !== 'none' || needsOosJustification) && (
           <div className="mb-3 flex flex-wrap gap-2">
-            {item.isNextRecommended ? (
+            {sequenceBadge.kind === 'recommended' ? (
               <span className="inline-flex items-center rounded-full border border-sgp-gold/40 bg-sgp-gold/15 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-sgp-gold">
-                Próxima atividade recomendada
+                {sequenceBadge.label}
               </span>
             ) : null}
-            {needsOosJustification ? (
-              <span className="inline-flex items-center rounded-full border border-amber-500/40 bg-amber-500/15 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-amber-300">
-                Fora de sequência — exceção
+            {sequenceBadge.kind === 'warning' && sequenceBadge.label ? (
+              <span className="inline-flex items-center rounded-full border border-slate-500/40 bg-slate-500/15 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-300">
+                {sequenceBadge.label}
               </span>
             ) : null}
           </div>
@@ -321,36 +328,17 @@ export function KioskActivityCard({ item, onSuccess }: Props) {
                   : 'Apontamento bloqueado para esta atividade'}
               </p>
             ) : null}
-            {showOtherCollaboratorWarning ? (
-              <div className="mt-2 rounded-xl border border-sky-500/30 bg-sky-500/10 px-3 py-2">
-                <p className="text-xs font-semibold text-sky-100">
-                  {item.previousOpenActivitiesWarningMessage ??
-                    'Atenção: existe atividade anterior pendente atribuída a outro colaborador. Você pode apontar esta atividade, mas a esteira ainda possui etapas anteriores abertas.'}
-                </p>
-                {item.previousOpenActivitiesFromOtherCollaborators.length > 0 ? (
-                  <ul className="mt-1.5 list-inside list-disc text-xs text-sky-100/90">
-                    {item.previousOpenActivitiesFromOtherCollaborators.map((prev) => (
-                      <li
-                        key={`${prev.taskTitle}-${prev.sectorTitle}-${prev.activityTitle}`}
-                      >
-                        {prev.taskTitle} · {prev.sectorTitle} · {prev.activityTitle}
-                        {prev.collaboratorNames.length > 0
-                          ? ` (${prev.collaboratorNames.join(', ')})`
-                          : ''}
-                      </li>
-                    ))}
-                  </ul>
-                ) : null}
-              </div>
+            {sequenceHint && !needsOosJustification ? (
+              <p className="mt-2 text-xs font-medium text-slate-400">{sequenceHint}</p>
             ) : null}
             {item.canTrackTime && needsOosJustification ? (
               <div className="mt-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2">
                 <p className="text-xs font-semibold text-amber-200">
-                  Esta atividade depende de etapas anteriores ainda pendentes.
+                  {resolveOutOfSequenceActionLabel()} — confirme o apontamento.
                 </p>
-                {item.previousOpenActivities.length > 0 ? (
+                {(item.allPreviousOpenActivities ?? item.previousOpenActivities).length > 0 ? (
                   <ul className="mt-1.5 list-inside list-disc text-xs text-amber-100/90">
-                    {item.previousOpenActivities.map((prev) => (
+                    {(item.allPreviousOpenActivities ?? item.previousOpenActivities).map((prev) => (
                       <li key={`${prev.taskTitle}-${prev.sectorTitle}-${prev.activityTitle}`}>
                         {prev.taskTitle} · {prev.sectorTitle} · {prev.activityTitle}
                       </li>
@@ -358,7 +346,7 @@ export function KioskActivityCard({ item, onSuccess }: Props) {
                   </ul>
                 ) : null}
                 <p className="mt-1.5 text-xs text-amber-100/80">
-                  O apontamento abaixo é uma exceção e exige justificativa.
+                  Existem etapas anteriores pendentes. Informe uma justificativa para apontar.
                 </p>
               </div>
             ) : null}

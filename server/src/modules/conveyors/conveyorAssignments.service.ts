@@ -321,10 +321,20 @@ export async function serviceCreateConveyorTimeEntryForAppUser(
     input.conveyorNodeId,
   )
 
+  const collaboratorId = await findCollaboratorIdByAppUserId(pool, input.appUserId)
+  if (!collaboratorId) {
+    throw new AppError(
+      'Conta sem colaborador operacional vinculado. Contacte o administrador para associar o seu utilizador a um colaborador.',
+      422,
+      ErrorCodes.VALIDATION_ERROR,
+    )
+  }
+
   const seq = await serviceAnalyzeConveyorActivitySequence(
     pool,
     input.conveyorId,
     input.conveyorNodeId,
+    collaboratorId,
   )
   if (!seq.targetFound) {
     throw new AppError(
@@ -348,15 +358,6 @@ export async function serviceCreateConveyorTimeEntryForAppUser(
     })
     outSeqJust = resolved.legacyText
     oosStandard = resolved.standard
-  }
-
-  const collaboratorId = await findCollaboratorIdByAppUserId(pool, input.appUserId)
-  if (!collaboratorId) {
-    throw new AppError(
-      'Conta sem colaborador operacional vinculado. Contacte o administrador para associar o seu utilizador a um colaborador.',
-      422,
-      ErrorCodes.VALIDATION_ERROR,
-    )
   }
 
   const commonSeq = {
@@ -611,6 +612,7 @@ export async function serviceCreateConveyorTimeEntry(
       pool,
       input.conveyorId,
       input.conveyorNodeId,
+      input.collaboratorId,
     ))
 
   const client = await pool.connect()
@@ -739,6 +741,7 @@ export async function serviceCreateConveyorTimeEntryOnBehalf(
     pool,
     input.conveyorId,
     input.conveyorNodeId,
+    input.targetCollaboratorId,
   )
   if (!seq.targetFound) {
     throw new AppError(

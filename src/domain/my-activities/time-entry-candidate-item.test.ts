@@ -24,9 +24,11 @@ describe('TimeEntryCandidateItem (shape)', () => {
       isAssignedToMe: true,
       requiresJustification: false,
       isOutOfSequence: false,
+      hasPreviousPendingStep: false,
       requiresOutOfSequenceJustification: false,
       previousOpenCount: 0,
       previousOpenActivities: [],
+      awaitingPreviousActivities: [],
     }
     expect(x.pendingMinutes).toBe(45)
     expect(x.realizedMinutes).toBe(15)

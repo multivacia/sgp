@@ -1,3 +1,5 @@
+import type { SequenceWarningType } from '../production/production.helpers'
+
 export type MyWorkQueuePreviousOpenActivity = {
   activityNodeId: string
   activityTitle: string
@@ -40,9 +42,16 @@ export type MyWorkQueueItem = {
   isOverdue: boolean
   isOutOfSequence: boolean
   isNextRecommended: boolean
+  hasPreviousPendingStep: boolean
+  sequenceWarningType?: SequenceWarningType
+  sequenceWarningLabel?: string
   requiresOutOfSequenceJustification: boolean
+  canPointTime: boolean
+  blockingReason?: string
   previousOpenCount: number
   previousOpenActivities: MyWorkQueuePreviousOpenActivity[]
+  allPreviousOpenActivities: MyWorkQueuePreviousOpenActivity[]
+  awaitingPreviousActivities: MyWorkQueuePreviousOpenActivity[]
   hasPreviousOpenActivitiesFromOtherCollaborators: boolean
   previousOpenActivitiesFromOtherCollaborators: MyWorkQueuePreviousOpenFromOtherCollaborator[]
   previousOpenActivitiesWarningMessage: string | null

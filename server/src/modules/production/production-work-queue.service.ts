@@ -9,6 +9,7 @@ import type {
 import {
   resolveProductionCanCompleteStep,
   resolveProductionCanTrackTime,
+  resolveProductionRequiresOutOfSequenceJustification,
 } from './production-work-queue.rules.js'
 
 function mapToProductionItem(
@@ -21,11 +22,14 @@ function mapToProductionItem(
 
   const trackInput = {
     isActivityCompleted: item.isActivityCompleted,
+    hasPreviousPendingStep: item.hasPreviousPendingStep,
     isOutOfSequence: item.isOutOfSequence,
     planItemStatus: item.status,
     conveyorOperationalStatus: item.conveyorOperationalStatus,
     isPlannedForCollaborator: true,
   }
+
+  const canTrackTime = resolveProductionCanTrackTime(trackInput)
 
   return {
     workPlanItemId: item.workPlanItemId,
@@ -44,8 +48,21 @@ function mapToProductionItem(
     isOverdue: item.isOverdue,
     isOutOfSequence: item.isOutOfSequence,
     isNextRecommended: item.isNextRecommended,
+    hasPreviousPendingStep: item.hasPreviousPendingStep,
+    sequenceWarningType: item.sequenceWarningType,
+    sequenceWarningLabel: item.sequenceWarningLabel,
     previousOpenCount: item.previousOpenCount,
     previousOpenActivities: item.previousOpenActivities.map((p) => ({
+      activityTitle: p.activityTitle,
+      sectorTitle: p.sectorTitle,
+      taskTitle: p.taskTitle,
+    })),
+    allPreviousOpenActivities: item.allPreviousOpenActivities.map((p) => ({
+      activityTitle: p.activityTitle,
+      sectorTitle: p.sectorTitle,
+      taskTitle: p.taskTitle,
+    })),
+    awaitingPreviousActivities: item.awaitingPreviousActivities.map((p) => ({
       activityTitle: p.activityTitle,
       sectorTitle: p.sectorTitle,
       taskTitle: p.taskTitle,
@@ -61,9 +78,13 @@ function mapToProductionItem(
       })),
     previousOpenActivitiesWarningMessage: item.previousOpenActivitiesWarningMessage,
     group: item.group,
-    canTrackTime: resolveProductionCanTrackTime(trackInput),
+    canTrackTime,
+    canPointTime: canTrackTime,
+    blockingReason: item.blockingReason,
     canCompleteStep: resolveProductionCanCompleteStep(trackInput),
-    requiresOutOfSequenceJustification: item.requiresOutOfSequenceJustification,
+    requiresOutOfSequenceJustification: resolveProductionRequiresOutOfSequenceJustification(
+      trackInput,
+    ),
   }
 }
 

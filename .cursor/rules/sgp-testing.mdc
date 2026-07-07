@@ -1,0 +1,43 @@
+---
+description: Comandos e expectativas de validação para alterações no SGP+ Web.
+globs: ["src/**/*", "server/src/**/*", "server/tests/**/*", "server/migrations/**/*"]
+alwaysApply: false
+---
+
+# Testes e validação — SGP+ Web
+
+## Evidência obrigatória
+
+Sempre que alterar código, registrar comandos executados, saída relevante e exit code.
+
+## Comandos usuais
+
+Na raiz:
+
+```bash
+npm run build
+npm test
+```
+
+No backend:
+
+```bash
+cd server
+npm run build
+npm run test -- operational-planning
+npm test -- src/tests/my-work-queue.service.test.ts
+npm run test -- --run src/tests/conveyorActivitySequence.logic.test.ts
+```
+
+Ajuste a suíte conforme o escopo, mas não declare sucesso sem comando real.
+
+## Critérios de aceite
+
+Cada critério da spec deve mapear para:
+
+- teste automatizado; ou
+- validação manual explícita quando automação não for viável, por exemplo kiosk em tablet real ou impressora térmica física.
+
+## Falhas
+
+Se build/teste falhar, reportar a falha. Não diga “passou” por aproximação.

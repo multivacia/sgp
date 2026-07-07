@@ -109,14 +109,22 @@ export type ProductionOperationalStatusDisplay = {
 export function resolveProductionOperationalStatusDisplay(
   item: Pick<
     ProductionWorkQueueItem,
-    'activityOperationalStatus' | 'isActivityCompleted' | 'isOverdue' | 'isOutOfSequence'
+    | 'activityOperationalStatus'
+    | 'isActivityCompleted'
+    | 'isOverdue'
+    | 'isNextRecommended'
+    | 'hasPreviousPendingStep'
+    | 'sequenceWarningLabel'
   >,
 ): ProductionOperationalStatusDisplay {
   if (item.isActivityCompleted) {
     return { label: 'Concluída', colorClass: 'text-emerald-400' }
   }
-  if (item.isOutOfSequence) {
-    return { label: 'Fora da sequência', colorClass: 'text-amber-400' }
+  if (item.isNextRecommended) {
+    return { label: 'Próxima recomendada', colorClass: 'text-sgp-gold' }
+  }
+  if (item.sequenceWarningLabel?.trim() || item.hasPreviousPendingStep) {
+    return { label: 'Atenção à sequência', colorClass: 'text-slate-300' }
   }
   if (item.isOverdue) {
     return { label: 'Em atraso', colorClass: 'text-red-400' }
@@ -167,4 +175,75 @@ export function formatProductionDate(isoDate: string): string {
   const parts = isoDate.split('-')
   if (parts.length !== 3) return isoDate
   return `${parts[2]}/${parts[1]}/${parts[0]}`
+}
+
+export type AwaitingPreviousActivityLabelInput = {
+  activityTitle: string
+}
+
+export type SequenceWarningType = 'PREVIOUS_STEP_PENDING' | 'OUT_OF_SEQUENCE'
+
+export type SequenceDisplayItem = {
+  isNextRecommended?: boolean
+  isActivityCompleted?: boolean
+  hasPreviousPendingStep?: boolean
+  sequenceWarningLabel?: string | null
+  sequenceWarningType?: SequenceWarningType | null
+  /** Legado — não usar para badge de listagem. */
+  isOutOfSequence?: boolean
+  awaitingPreviousActivities?: AwaitingPreviousActivityLabelInput[]
+}
+
+export type SequenceListBadge = {
+  kind: 'recommended' | 'warning' | 'none'
+  label?: string
+}
+
+/** Badge de listagem: nunca exibe "Fora de sequência" — apenas alerta neutro ou recomendada. */
+export function resolveSequenceListBadge(item: SequenceDisplayItem): SequenceListBadge {
+  if (item.isNextRecommended && !item.isActivityCompleted) {
+    return { kind: 'recommended', label: 'Próxima atividade recomendada' }
+  }
+  const explicit = item.sequenceWarningLabel?.trim()
+  if (explicit) {
+    return { kind: 'warning', label: explicit }
+  }
+  const legacyAwaiting = formatAwaitingPreviousActivitiesLabel(
+    item.awaitingPreviousActivities ?? [],
+  )
+  if (legacyAwaiting) {
+    return { kind: 'warning', label: legacyAwaiting }
+  }
+  if (item.hasPreviousPendingStep && !item.isActivityCompleted) {
+    return { kind: 'warning', label: 'Atenção à sequência' }
+  }
+  return { kind: 'none' }
+}
+
+/** Rótulo reservado para confirmação/ação de apontamento fora da ordem estrutural. */
+export function resolveOutOfSequenceActionLabel(): string {
+  return 'Fora de sequência'
+}
+
+export function shouldShowOutOfSequenceActionLabel(
+  requiresOutOfSequenceJustification: boolean,
+): boolean {
+  return requiresOutOfSequenceJustification
+}
+
+/** Rótulo informativo 🟡 para predecessoras abertas de outro colaborador. */
+export function formatAwaitingPreviousActivitiesLabel(
+  activities: AwaitingPreviousActivityLabelInput[],
+): string | null {
+  if (activities.length === 0) return null
+  if (activities.length === 1) {
+    return `Aguardando etapa ${activities[0]!.activityTitle}`
+  }
+  return `Aguardando ${activities.length} etapas anteriores`
+}
+
+export function isAwaitingOthers(
+  activities: AwaitingPreviousActivityLabelInput[],
+): boolean {
+  return activities.length > 0
 }

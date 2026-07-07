@@ -22,12 +22,29 @@ export type PreviousOpenActivitySummary = {
   orderPath: string
 }
 
+export type SequenceOwnershipContext = {
+  currentCollaboratorId: string
+  /** activity_node_id -> conjunto de collaborator_ids planejados (exclui NULL). Chave ausente = não planejada. */
+  plannedCollaboratorsByActivityNodeId: Map<string, Set<string>>
+}
+
 export type ConveyorActivitySequenceAnalysis = {
   targetFound: boolean
+  /** Existe predecessora estrutural ainda não concluída (fonte da verdade para sequência). */
+  hasPreviousPendingStep: boolean
+  /** Todas as predecessoras abertas na ordem estrutural. */
+  allPreviousOpenActivities: PreviousOpenActivitySummary[]
+  /**
+   * Compatibilidade / persistência: igual a `hasPreviousPendingStep`.
+   * Na UI de listagem, preferir `sequenceWarningLabel`; reservar "Fora de sequência" para a ação.
+   */
   isOutOfSequence: boolean
   previousOpenCount: number
-  /** Atividades anteriores ainda não concluídas (operational_status ≠ COMPLETED), na ordem estrutural. */
+  /** Predecessoras abertas planejadas para o colaborador atual (informativo). */
   previousOpenActivities: PreviousOpenActivitySummary[]
+  awaitingOthersCount: number
+  /** Predecessoras abertas planejadas para outro colaborador (informativo). */
+  awaitingOthersActivities: PreviousOpenActivitySummary[]
   /** Posição 0-based na linearização estrutural da esteira. */
   structuralSequenceIndex: number
 }
@@ -94,33 +111,46 @@ function childrenOf(
  * Lineariza atividades (STEP) ativas pela árvore ordenada por `order_index`.
  * Ignora OPTION/AREA inativos (subárvore não entra na sequência).
  */
+function toPreviousOpenSummary(e: LinearEntry): PreviousOpenActivitySummary {
+  return {
+    activityNodeId: e.step.id,
+    activityTitle: e.step.name,
+    sectorTitle: e.sectorTitle,
+    taskTitle: e.taskTitle,
+    orderPath: e.orderPath,
+  }
+}
+
+function emptySequenceAnalysis(structuralSequenceIndex: number): ConveyorActivitySequenceAnalysis {
+  return {
+    targetFound: false,
+    hasPreviousPendingStep: false,
+    allPreviousOpenActivities: [],
+    isOutOfSequence: false,
+    previousOpenCount: 0,
+    previousOpenActivities: [],
+    awaitingOthersCount: 0,
+    awaitingOthersActivities: [],
+    structuralSequenceIndex,
+  }
+}
+
 export function analyzeConveyorActivitySequence(
   nodes: SequenceAnalysisNode[],
   activityNodeId: string,
+  ownership?: SequenceOwnershipContext,
 ): ConveyorActivitySequenceAnalysis {
   const byId = new Map(nodes.map((n) => [n.id, n]))
   const targetNode = byId.get(activityNodeId)
   if (!targetNode || targetNode.node_type !== 'STEP') {
-    return {
-      targetFound: false,
-      isOutOfSequence: false,
-      previousOpenCount: 0,
-      previousOpenActivities: [],
-      structuralSequenceIndex: -1,
-    }
+    return emptySequenceAnalysis(-1)
   }
 
   const linear = linearizeConveyorActivities(nodes)
 
   const idx = linear.findIndex((e) => e.step.id === activityNodeId)
   if (idx === -1) {
-    return {
-      targetFound: false,
-      isOutOfSequence: false,
-      previousOpenCount: 0,
-      previousOpenActivities: [],
-      structuralSequenceIndex: -1,
-    }
+    return emptySequenceAnalysis(-1)
   }
 
   const before = linear.slice(0, idx)
@@ -128,19 +158,48 @@ export function analyzeConveyorActivitySequence(
     (e) => (e.step.operational_status ?? 'PENDING') !== 'COMPLETED',
   )
 
-  const summaries: PreviousOpenActivitySummary[] = openBefore.map((e) => ({
-    activityNodeId: e.step.id,
-    activityTitle: e.step.name,
-    sectorTitle: e.sectorTitle,
-    taskTitle: e.taskTitle,
-    orderPath: e.orderPath,
-  }))
+  const allPreviousOpenActivities = openBefore.map(toPreviousOpenSummary)
+  const hasPreviousPendingStep = openBefore.length > 0
+
+  if (!ownership) {
+    return {
+      targetFound: true,
+      hasPreviousPendingStep,
+      allPreviousOpenActivities,
+      isOutOfSequence: hasPreviousPendingStep,
+      previousOpenCount: openBefore.length,
+      previousOpenActivities: allPreviousOpenActivities,
+      awaitingOthersCount: 0,
+      awaitingOthersActivities: [],
+      structuralSequenceIndex: idx,
+    }
+  }
+
+  const previousOpenActivities: PreviousOpenActivitySummary[] = []
+  const awaitingOthersActivities: PreviousOpenActivitySummary[] = []
+
+  for (const entry of openBefore) {
+    const owners = ownership.plannedCollaboratorsByActivityNodeId.get(entry.step.id)
+    if (!owners || owners.size === 0) {
+      // TODO(definitivo): considerar assigned_team_id + team_members
+      continue
+    }
+    if (owners.has(ownership.currentCollaboratorId)) {
+      previousOpenActivities.push(toPreviousOpenSummary(entry))
+    } else {
+      awaitingOthersActivities.push(toPreviousOpenSummary(entry))
+    }
+  }
 
   return {
     targetFound: true,
-    isOutOfSequence: openBefore.length > 0,
+    hasPreviousPendingStep,
+    allPreviousOpenActivities,
+    isOutOfSequence: hasPreviousPendingStep,
     previousOpenCount: openBefore.length,
-    previousOpenActivities: summaries,
+    previousOpenActivities,
+    awaitingOthersCount: awaitingOthersActivities.length,
+    awaitingOthersActivities,
     structuralSequenceIndex: idx,
   }
 }

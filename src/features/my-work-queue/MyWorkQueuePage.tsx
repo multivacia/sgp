@@ -11,6 +11,10 @@ import type {
   MyWorkQueueItem,
   MyWorkQueueResponse,
 } from '../../domain/my-work-queue/my-work-queue.types'
+import {
+  formatAwaitingPreviousActivitiesLabel,
+  resolveSequenceListBadge,
+} from '../../domain/production/production.helpers'
 import { getMyWorkQueue } from '../../services/my-work-queue/myWorkQueueApiService'
 import { QuickTimeEntryDrawer } from '../shell/QuickTimeEntryDrawer'
 import { workQueueApontamentoCandidate } from './myWorkQueueUi'
@@ -107,11 +111,24 @@ function QueueCard(props: {
                 Concluída
               </span>
             ) : null}
-            {item.isOutOfSequence ? (
-              <span className={`rounded-md px-2 py-0.5 text-[11px] font-bold ${badgeClass('warning')}`}>
-                Fora de sequência
-              </span>
-            ) : null}
+            {(() => {
+              const seqBadge = resolveSequenceListBadge(item)
+              if (seqBadge.kind === 'recommended') {
+                return (
+                  <span className={`rounded-md px-2 py-0.5 text-[11px] font-bold ${badgeClass('neutral')}`}>
+                    {seqBadge.label}
+                  </span>
+                )
+              }
+              if (seqBadge.kind === 'warning' && seqBadge.label) {
+                return (
+                  <span className={`rounded-md px-2 py-0.5 text-[11px] font-bold ${badgeClass('neutral')}`}>
+                    {seqBadge.label}
+                  </span>
+                )
+              }
+              return null
+            })()}
             {item.requiresUnassignedJustification ? (
               <span className={`rounded-md px-2 py-0.5 text-[11px] font-bold ${badgeClass('warning')}`}>
                 Fora da sua alocação
@@ -158,9 +175,11 @@ function QueueCard(props: {
             </p>
           ) : null}
 
-          {item.isOutOfSequence ? (
-            <p className="text-xs text-slate-500">
-              {item.previousOpenCount} atividade(s) anterior(es) ainda em aberto.
+          {item.hasPreviousPendingStep && !item.isNextRecommended ? (
+            <p className="text-xs text-slate-400">
+              {item.sequenceWarningLabel ??
+                formatAwaitingPreviousActivitiesLabel(item.awaitingPreviousActivities) ??
+                'Atenção à sequência'}
             </p>
           ) : null}
         </div>
@@ -329,7 +348,7 @@ export function MyWorkQueuePage() {
         <div className="mt-6 grid max-w-5xl gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <KpiCard label="Atividades de hoje" value={String(queue.summary.plannedItemsToday)} />
           <KpiCard label="Minutos planejados" value={formatHumanMinutes(queue.summary.plannedMinutesToday)} />
-          <KpiCard label="Fora de sequência" value={String(queue.summary.outOfSequenceItems)} tone={queue.summary.outOfSequenceItems > 0 ? 'warning' : undefined} />
+          <KpiCard label="Atenção à sequência" value={String(queue.summary.outOfSequenceItems)} tone={queue.summary.outOfSequenceItems > 0 ? 'warning' : undefined} />
           <KpiCard label="Atrasadas" value={String(queue.summary.overdueItems)} tone={queue.summary.overdueItems > 0 ? 'danger' : undefined} />
         </div>
       ) : null}

@@ -25,9 +25,24 @@ export function workQueueApontamentoCandidate(
     isAssignedToMe: item.isAssignedToMe,
     requiresJustification: item.requiresUnassignedJustification,
     isOutOfSequence: item.isOutOfSequence,
+    hasPreviousPendingStep: item.hasPreviousPendingStep,
+    sequenceWarningType: item.sequenceWarningType,
+    sequenceWarningLabel: item.sequenceWarningLabel,
     requiresOutOfSequenceJustification: item.requiresOutOfSequenceJustification,
+    canPointTime: item.canPointTime,
+    blockingReason: item.blockingReason,
     previousOpenCount: item.previousOpenCount,
     previousOpenActivities: item.previousOpenActivities.map((prev) => ({
+      taskTitle: prev.taskTitle,
+      sectorTitle: prev.sectorTitle,
+      activityTitle: prev.activityTitle,
+    })),
+    allPreviousOpenActivities: item.allPreviousOpenActivities?.map((prev) => ({
+      taskTitle: prev.taskTitle,
+      sectorTitle: prev.sectorTitle,
+      activityTitle: prev.activityTitle,
+    })),
+    awaitingPreviousActivities: item.awaitingPreviousActivities.map((prev) => ({
       taskTitle: prev.taskTitle,
       sectorTitle: prev.sectorTitle,
       activityTitle: prev.activityTitle,
@@ -44,7 +59,7 @@ export function sortWorkQueueItems(items: MyWorkQueueItem[]): MyWorkQueueItem[] 
   return [...items].sort(
     (a, b) =>
       groupRank(a.group) - groupRank(b.group) ||
-      Number(a.isOutOfSequence) - Number(b.isOutOfSequence) ||
+      Number(a.hasPreviousPendingStep) - Number(b.hasPreviousPendingStep) ||
       a.plannedDate.localeCompare(b.plannedDate) ||
       a.conveyorId.localeCompare(b.conveyorId) ||
       a.structuralSequenceIndex - b.structuralSequenceIndex ||

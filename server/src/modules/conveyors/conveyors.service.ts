@@ -557,7 +557,7 @@ async function materializeConveyorOptions(
           planned_quantity: resolveInitialConveyorStepPlannedQuantity(),
           default_responsible_id: null,
           required: st.required ?? true,
-          source_key: null,
+          source_key: st.sourceKey?.trim() || null,
           metadata_json: null,
           operational_status: 'PENDING',
           operational_completed_at: null,

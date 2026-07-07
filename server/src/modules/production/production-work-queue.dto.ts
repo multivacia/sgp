@@ -37,10 +37,15 @@ export type ProductionWorkQueueItemApi = {
   isActivityCompleted: boolean
   isOverdue: boolean
   isOutOfSequence: boolean
-  /** Próxima atividade recomendada na sequência estrutural (nunca true se fora de sequência). */
+  /** Próxima atividade recomendada na sequência estrutural (nunca true se etapa anterior pendente). */
   isNextRecommended: boolean
+  hasPreviousPendingStep: boolean
+  sequenceWarningType?: 'PREVIOUS_STEP_PENDING' | 'OUT_OF_SEQUENCE'
+  sequenceWarningLabel?: string
   previousOpenCount: number
   previousOpenActivities: ProductionWorkQueuePreviousOpenActivityApi[]
+  allPreviousOpenActivities: ProductionWorkQueuePreviousOpenActivityApi[]
+  awaitingPreviousActivities: ProductionWorkQueuePreviousOpenActivityApi[]
   hasPreviousOpenActivitiesFromOtherCollaborators: boolean
   previousOpenActivitiesFromOtherCollaborators: ProductionWorkQueuePreviousOpenFromOtherCollaboratorApi[]
   previousOpenActivitiesWarningMessage: string | null
@@ -49,6 +54,9 @@ export type ProductionWorkQueueItemApi = {
 
   /** true quando o colaborador pode apontar (esteira liberada, item do plano, não concluída). */
   canTrackTime: boolean
+  /** Alias semântico de canTrackTime para consistência com demais DTOs. */
+  canPointTime: boolean
+  blockingReason?: string
   /** true quando pode concluir via markAsDone no POST de apontamento. */
   canCompleteStep: boolean
   /** Quando true, o POST exige outOfSequenceJustification. */

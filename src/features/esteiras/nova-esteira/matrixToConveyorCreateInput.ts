@@ -6,6 +6,7 @@ import type {
   CreateConveyorStepAssigneeInput,
 } from '../../../domain/conveyors/conveyor.types'
 import type { MatrixNodeTreeApi } from '../../../domain/operation-matrix/operation-matrix.types'
+import { resolveNodeSourceKey } from '../../../domain/operation-matrix/resolveNodeSourceKey'
 
 function sortByOrder(children: MatrixNodeTreeApi[]): MatrixNodeTreeApi[] {
   return [...children].sort((a, b) => a.order_index - b.order_index)
@@ -63,6 +64,7 @@ export function mapMatrixTreeToConveyorOptionsWithOrigin(
               Math.floor(Number(act.planned_minutes ?? 0)),
             ),
             plannedQuantity: 1,
+            sourceKey: resolveNodeSourceKey(act),
             sourceOrigin: nodeOrigin,
             required: act.required,
             assignees: assignmentsByMatrixActivityId[act.id] ?? [],
@@ -199,6 +201,8 @@ export type ManualStepDraft = {
   titulo: string
   plannedMinutes: number
   plannedQuantity?: number
+  /** Lineage de atividade — propagado até conveyor_nodes.source_key (STEP). */
+  sourceKey?: string | null
 }
 
 export function buildManualConveyorInput(
@@ -219,6 +223,7 @@ export function buildManualConveyorInput(
         orderIndex: si + 1,
         plannedMinutes: Math.max(0, Math.floor(st.plannedMinutes)),
         plannedQuantity: 1,
+        sourceKey: st.sourceKey ?? null,
         sourceOrigin: 'manual',
         required: true,
         assignees: assigneesByStepKey[st.key] ?? [],

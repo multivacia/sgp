@@ -3,11 +3,7 @@ import {
   analyzeConveyorActivitySequence,
   type SequenceAnalysisNode,
 } from '../modules/conveyors/conveyorActivitySequence.logic.js'
-import type { StepCollaboratorOwnership } from '../modules/my-work-queue/my-work-queue-step-assignees.repository.js'
-import {
-  analyzeWorkQueueSequenceForCollaborator,
-  PREVIOUS_OPEN_FROM_OTHER_COLLABORATOR_WARNING,
-} from '../modules/my-work-queue/work-queue-sequence-for-collaborator.js'
+import { mapWorkQueueSequenceForCollaborator } from '../modules/my-work-queue/work-queue-sequence-for-collaborator.js'
 
 const JOAO = '00000000-0000-0000-0000-000000000101'
 const MARIA = '00000000-0000-0000-0000-000000000102'
@@ -60,156 +56,108 @@ function abcNodes(
   ]
 }
 
-function ownershipIndex(
-  assignments: Record<string, { collaboratorId: string; name: string } | null>,
-): Map<string, StepCollaboratorOwnership> {
-  const index = new Map<string, StepCollaboratorOwnership>()
-  for (const [stepId, assignment] of Object.entries(assignments)) {
-    if (!assignment) {
-      index.set(stepId, {
-        collaboratorIds: new Set(),
-        collaboratorNames: [],
-        hasAssignee: false,
-      })
-      continue
-    }
-    index.set(stepId, {
-      collaboratorIds: new Set([assignment.collaboratorId]),
-      collaboratorNames: [assignment.name],
-      hasAssignee: true,
-    })
+function plannedMap(assignments: Record<string, string[]>): Map<string, Set<string>> {
+  const map = new Map<string, Set<string>>()
+  for (const [stepId, ids] of Object.entries(assignments)) {
+    map.set(stepId, new Set(ids))
   }
-  return index
+  return map
 }
 
-describe('analyzeWorkQueueSequenceForCollaborator', () => {
-  it('mesmo colaborador: B bloqueada por A pendente', () => {
-    const nodes = abcNodes()
-    const ownership = ownershipIndex({
-      [STEP_A]: { collaboratorId: MARIA, name: 'Maria' },
-      [STEP_B]: { collaboratorId: MARIA, name: 'Maria' },
-      [STEP_C]: { collaboratorId: MARIA, name: 'Maria' },
-    })
-
-    const a = analyzeWorkQueueSequenceForCollaborator(
-      analyzeConveyorActivitySequence(nodes, STEP_A),
-      MARIA,
-      ownership,
-    )
-    const b = analyzeWorkQueueSequenceForCollaborator(
-      analyzeConveyorActivitySequence(nodes, STEP_B),
-      MARIA,
-      ownership,
-    )
-
-    expect(a.isOutOfSequence).toBe(false)
-    expect(b.isOutOfSequence).toBe(true)
-    expect(b.requiresOutOfSequenceJustification).toBe(true)
-    expect(b.hasPreviousOpenActivitiesFromOtherCollaborators).toBe(false)
+function analyzeForCollaborator(
+  nodes: SequenceAnalysisNode[],
+  activityNodeId: string,
+  collaboratorId: string,
+  assignments: Record<string, string[]>,
+) {
+  const seq = analyzeConveyorActivitySequence(nodes, activityNodeId, {
+    currentCollaboratorId: collaboratorId,
+    plannedCollaboratorsByActivityNodeId: plannedMap(assignments),
   })
+  return mapWorkQueueSequenceForCollaborator({
+    seq,
+    isActivityCompleted: false,
+    conveyorOperationalStatus: 'EM_ANDAMENTO',
+  })
+}
 
-  it('colaboradores diferentes: Maria em B com A de João pendente não é bloqueada', () => {
-    const nodes = abcNodes()
-    const ownership = ownershipIndex({
-      [STEP_A]: { collaboratorId: JOAO, name: 'João' },
-      [STEP_B]: { collaboratorId: MARIA, name: 'Maria' },
-      [STEP_C]: { collaboratorId: MARIA, name: 'Maria' },
-    })
-
-    const b = analyzeWorkQueueSequenceForCollaborator(
-      analyzeConveyorActivitySequence(nodes, STEP_B),
-      MARIA,
-      ownership,
-    )
-
+describe('mapWorkQueueSequenceForCollaborator', () => {
+  it('CA-02 — Atividade 1 concluída e Atividade 2 pendente: próxima sem warning bloqueante', () => {
+    const nodes = abcNodes({ [STEP_A]: 'COMPLETED' })
+    const assignments = {
+      [STEP_A]: [MARIA],
+      [STEP_B]: [MARIA],
+    }
+    const b = analyzeForCollaborator(nodes, STEP_B, MARIA, assignments)
+    expect(b.hasPreviousPendingStep).toBe(false)
     expect(b.isOutOfSequence).toBe(false)
     expect(b.requiresOutOfSequenceJustification).toBe(false)
-    expect(b.hasPreviousOpenActivitiesFromOtherCollaborators).toBe(true)
-    expect(b.previousOpenActivitiesWarningMessage).toBe(
-      PREVIOUS_OPEN_FROM_OTHER_COLLABORATOR_WARNING,
-    )
-    expect(b.previousOpenActivitiesFromOtherCollaborators[0]?.activityTitle).toBe('Atividade A')
+    expect(b.sequenceWarningLabel).toBeUndefined()
+  })
+
+  it('CA-02 — Atividade 1 pendente e Atividade 2 pendente: alerta neutro, apontável com justificativa', () => {
+    const nodes = abcNodes()
+    const assignments = {
+      [STEP_A]: [MARIA],
+      [STEP_B]: [MARIA],
+    }
+    const b = analyzeForCollaborator(nodes, STEP_B, MARIA, assignments)
+    expect(b.hasPreviousPendingStep).toBe(true)
+    expect(b.isOutOfSequence).toBe(true)
+    expect(b.requiresOutOfSequenceJustification).toBe(true)
+    expect(b.canPointTime).toBe(true)
+    expect(b.sequenceWarningLabel).toContain('Atividade A')
+  })
+
+  it('CA-03 — Maria em B com A de João pendente: alerta e justificativa, sem bloqueio', () => {
+    const nodes = abcNodes()
+    const assignments = {
+      [STEP_A]: [JOAO],
+      [STEP_B]: [MARIA],
+    }
+    const b = analyzeForCollaborator(nodes, STEP_B, MARIA, assignments)
+    expect(b.hasPreviousPendingStep).toBe(true)
+    expect(b.requiresOutOfSequenceJustification).toBe(true)
+    expect(b.canPointTime).toBe(true)
+    expect(b.sequenceWarningLabel).toContain('Atividade A')
+    expect(b.awaitingPreviousActivities[0]?.activityTitle).toBe('Atividade A')
   })
 
   it('após João concluir A, alerta em B desaparece para Maria', () => {
     const nodes = abcNodes({ [STEP_A]: 'COMPLETED' })
-    const ownership = ownershipIndex({
-      [STEP_A]: { collaboratorId: JOAO, name: 'João' },
-      [STEP_B]: { collaboratorId: MARIA, name: 'Maria' },
-    })
-
-    const b = analyzeWorkQueueSequenceForCollaborator(
-      analyzeConveyorActivitySequence(nodes, STEP_B),
-      MARIA,
-      ownership,
-    )
-
-    expect(b.hasPreviousOpenActivitiesFromOtherCollaborators).toBe(false)
-    expect(b.previousOpenActivitiesWarningMessage).toBeNull()
+    const assignments = {
+      [STEP_A]: [JOAO],
+      [STEP_B]: [MARIA],
+    }
+    const b = analyzeForCollaborator(nodes, STEP_B, MARIA, assignments)
+    expect(b.hasPreviousPendingStep).toBe(false)
+    expect(b.awaitingPreviousActivities).toEqual([])
   })
 
-  it('Maria com B e C pendentes: B livre com alerta de A, C bloqueada por B', () => {
+  it('pendência anterior sem responsável ainda gera alerta estrutural', () => {
     const nodes = abcNodes()
-    const ownership = ownershipIndex({
-      [STEP_A]: { collaboratorId: JOAO, name: 'João' },
-      [STEP_B]: { collaboratorId: MARIA, name: 'Maria' },
-      [STEP_C]: { collaboratorId: MARIA, name: 'Maria' },
-    })
-
-    const b = analyzeWorkQueueSequenceForCollaborator(
-      analyzeConveyorActivitySequence(nodes, STEP_B),
-      MARIA,
-      ownership,
-    )
-    const c = analyzeWorkQueueSequenceForCollaborator(
-      analyzeConveyorActivitySequence(nodes, STEP_C),
-      MARIA,
-      ownership,
-    )
-
-    expect(b.isOutOfSequence).toBe(false)
-    expect(b.hasPreviousOpenActivitiesFromOtherCollaborators).toBe(true)
-    expect(c.isOutOfSequence).toBe(true)
-    expect(c.requiresOutOfSequenceJustification).toBe(true)
-    expect(c.hasPreviousOpenActivitiesFromOtherCollaborators).toBe(false)
-  })
-
-  it('pendência anterior sem responsável mantém bloqueio seguro', () => {
-    const nodes = abcNodes()
-    const ownership = ownershipIndex({
-      [STEP_A]: null,
-      [STEP_B]: { collaboratorId: MARIA, name: 'Maria' },
-    })
-
-    const b = analyzeWorkQueueSequenceForCollaborator(
-      analyzeConveyorActivitySequence(nodes, STEP_B),
-      MARIA,
-      ownership,
-    )
-
-    expect(b.isOutOfSequence).toBe(true)
+    const assignments = {
+      [STEP_B]: [MARIA],
+    }
+    const b = analyzeForCollaborator(nodes, STEP_B, MARIA, assignments)
+    expect(b.hasPreviousPendingStep).toBe(true)
     expect(b.requiresOutOfSequenceJustification).toBe(true)
-    expect(b.hasPreviousOpenActivitiesFromOtherCollaborators).toBe(false)
-    expect(b.previousOpenActivities[0]?.activityTitle).toBe('Atividade A')
+    expect(b.sequenceWarningLabel).toBeTruthy()
   })
 
   it('propaga targetFound da análise estrutural', () => {
     const nodes = abcNodes()
-    const ownership = ownershipIndex({
-      [STEP_B]: { collaboratorId: MARIA, name: 'Maria' },
+    const assignments = { [STEP_B]: [MARIA] }
+    const found = analyzeForCollaborator(nodes, STEP_B, MARIA, assignments)
+    const missingSeq = analyzeConveyorActivitySequence(nodes, 'step-inexistente', {
+      currentCollaboratorId: MARIA,
+      plannedCollaboratorsByActivityNodeId: plannedMap(assignments),
     })
-
-    const found = analyzeWorkQueueSequenceForCollaborator(
-      analyzeConveyorActivitySequence(nodes, STEP_B),
-      MARIA,
-      ownership,
-    )
-    const missing = analyzeWorkQueueSequenceForCollaborator(
-      analyzeConveyorActivitySequence(nodes, 'step-inexistente'),
-      MARIA,
-      ownership,
-    )
-
+    const missing = mapWorkQueueSequenceForCollaborator({
+      seq: missingSeq,
+      isActivityCompleted: false,
+      conveyorOperationalStatus: 'EM_ANDAMENTO',
+    })
     expect(found.targetFound).toBe(true)
     expect(missing.targetFound).toBe(false)
     expect(missing.structuralSequenceIndex).toBe(-1)

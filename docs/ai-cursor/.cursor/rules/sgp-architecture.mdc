@@ -1,0 +1,44 @@
+---
+description: Regras de domínio e arquitetura do SGP+ Web / Bravo.
+globs: ["src/**/*", "server/src/**/*", "server/migrations/**/*"]
+alwaysApply: false
+---
+
+# Arquitetura e domínio — SGP+ Web
+
+## Esteiras
+
+Status oficiais:
+
+`EM_ELABORACAO` -> `AGUARDANDO_PLANEJAMENTO` -> `EM_PLANEJAMENTO` -> `A_INICIAR` -> `EM_ANDAMENTO` -> `FINALIZADA` -> `CANCELADA`.
+
+Retrocessos operacionais preservam apontamentos e exigem motivo quando aplicável.
+
+## Quantidade e tempo
+
+- `planned_quantity` existe em matriz/esteira e nasce com default `1`.
+- `planned_minutes` permanece unitário.
+- Tempo total previsto não deve ser editável pelo usuário; deve ser calculado pela estrutura da esteira.
+
+## Planejamento semanal e produção
+
+- Fila operacional deve refletir plano semanal publicado (`PUBLISHED`).
+- Plano em rascunho não entra no apontamento operacional.
+- Colaborador planejado pode ser resolvido a partir do plano publicado quando não houver assignee estrutural.
+
+## Sequência operacional
+
+- Exibir lista sempre na sequência estrutural correta.
+- Nesta etapa, atividade fora de sequência pode emitir alerta/justificativa, mas não deve bloquear automaticamente se a regra vigente permitir.
+- Não usar a ordem visual/manual do planejamento como ordem operacional da esteira.
+
+## Kiosk / Bravo UX
+
+- Kiosk usa seleção por colaborador/avatar e PIN.
+- Bravo: reduzir digitação; priorizar listas, botões, atalhos e justificativas padronizadas.
+
+## Impressão térmica
+
+- Tickets operacionais podem imprimir direto via SGP Print Agent local.
+- Outros documentos devem manter preview.
+- Corte por atividade.

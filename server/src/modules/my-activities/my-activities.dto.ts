@@ -1,6 +1,7 @@
 import type { OperationalBucket } from '../../shared/operationalBucket.js'
 
 export type TimeEntryCandidatePreviousOpenApi = {
+  activityNodeId?: string
   taskTitle: string
   sectorTitle: string
   activityTitle: string
@@ -33,11 +34,18 @@ export type TimeEntryCandidateItemApi = {
   isAssignedToMe: boolean
   /** S2: exceção sem alocação. */
   requiresJustification: boolean
-  /** S3: execução fora da sequência recomendada. */
+  /** S3: execução fora da sequência recomendada (POST/persistência). */
   isOutOfSequence: boolean
+  hasPreviousPendingStep: boolean
+  sequenceWarningType?: 'PREVIOUS_STEP_PENDING' | 'OUT_OF_SEQUENCE'
+  sequenceWarningLabel?: string
   requiresOutOfSequenceJustification: boolean
+  canPointTime: boolean
+  blockingReason?: string
   previousOpenCount: number
   previousOpenActivities: TimeEntryCandidatePreviousOpenApi[]
+  allPreviousOpenActivities: TimeEntryCandidatePreviousOpenApi[]
+  awaitingPreviousActivities: TimeEntryCandidatePreviousOpenApi[]
   /** true quando o STEP pode ser concluído explicitamente (não está COMPLETED). */
   canCompleteStep: boolean
   /** Data planejada no plano semanal publicado, quando aplicável. */

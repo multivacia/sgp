@@ -1,5 +1,8 @@
 import type pg from 'pg'
-import { listConveyorNodesForSequenceAnalysis } from './conveyors.repository.js'
+import {
+  listConveyorNodesForSequenceAnalysis,
+  listPlannedCollaboratorsByActivityNode,
+} from './conveyors.repository.js'
 import {
   analyzeConveyorActivitySequence,
   type ConveyorActivitySequenceAnalysis,
@@ -15,7 +18,26 @@ export async function serviceAnalyzeConveyorActivitySequence(
   pool: pg.Pool,
   conveyorId: string,
   activityNodeId: string,
+  currentCollaboratorId?: string,
 ): Promise<ConveyorActivitySequenceAnalysis> {
-  const nodes = await listConveyorNodesForSequenceAnalysis(pool, conveyorId)
-  return analyzeConveyorActivitySequence(nodes as SequenceAnalysisNode[], activityNodeId)
+  const nodesPromise = listConveyorNodesForSequenceAnalysis(pool, conveyorId)
+  const plannedPromise = currentCollaboratorId
+    ? listPlannedCollaboratorsByActivityNode(pool, conveyorId)
+    : Promise.resolve(null)
+
+  const [nodes, plannedByNode] = await Promise.all([nodesPromise, plannedPromise])
+
+  const ownership =
+    currentCollaboratorId && plannedByNode
+      ? {
+          currentCollaboratorId,
+          plannedCollaboratorsByActivityNodeId: plannedByNode,
+        }
+      : undefined
+
+  return analyzeConveyorActivitySequence(
+    nodes as SequenceAnalysisNode[],
+    activityNodeId,
+    ownership,
+  )
 }

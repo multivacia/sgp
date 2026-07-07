@@ -280,6 +280,29 @@ export async function listConveyorNodesForSequenceAnalysis(
   return r.rows
 }
 
+// TODO(definitivo): considerar assigned_team_id + team_members
+export async function listPlannedCollaboratorsByActivityNode(
+  pool: pg.Pool | pg.PoolClient,
+  conveyorId: string,
+): Promise<Map<string, Set<string>>> {
+  const r = await pool.query<{ activity_node_id: string; assigned_collaborator_id: string }>(
+    `SELECT activity_node_id::text, assigned_collaborator_id::text
+       FROM operational_work_plan_items
+      WHERE conveyor_id = $1::uuid
+        AND deleted_at IS NULL
+        AND status <> 'CANCELLED'
+        AND assigned_collaborator_id IS NOT NULL`,
+    [conveyorId],
+  )
+  const map = new Map<string, Set<string>>()
+  for (const row of r.rows) {
+    const set = map.get(row.activity_node_id) ?? new Set<string>()
+    set.add(row.assigned_collaborator_id)
+    map.set(row.activity_node_id, set)
+  }
+  return map
+}
+
 export async function updateConveyorNodeStepOperationalFields(
   pool: pg.Pool | pg.PoolClient,
   conveyorId: string,

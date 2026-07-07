@@ -1,8 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type pg from 'pg'
 import * as authRepo from '../modules/auth/auth.repository.js'
-import * as assigneesRepo from '../modules/my-work-queue/my-work-queue-step-assignees.repository.js'
-import type { StepCollaboratorOwnership } from '../modules/my-work-queue/my-work-queue-step-assignees.repository.js'
 import * as seqRepo from '../modules/conveyors/conveyors.repository.js'
 import * as capacityService from '../modules/operational-settings/operational-settings.service.js'
 import * as queueRepo from '../modules/my-work-queue/my-work-queue.repository.js'
@@ -21,33 +19,18 @@ const TARGET_STEP_ID = '00000000-0000-0000-0000-000000000006'
 const JOAO_ID = '00000000-0000-0000-0000-000000000101'
 const MARIA_ID = '00000000-0000-0000-0000-000000000102'
 
-function buildOwnershipIndex(
-  assignments: Record<string, string | null>,
-): Map<string, StepCollaboratorOwnership> {
-  const index = new Map<string, StepCollaboratorOwnership>()
+function buildPlannedMap(assignments: Record<string, string | null>): Map<string, Set<string>> {
+  const index = new Map<string, Set<string>>()
   for (const [stepId, collaboratorId] of Object.entries(assignments)) {
-    if (!collaboratorId) {
-      index.set(stepId, {
-        collaboratorIds: new Set(),
-        collaboratorNames: [],
-        hasAssignee: false,
-      })
-      continue
-    }
-    index.set(stepId, {
-      collaboratorIds: new Set([collaboratorId]),
-      collaboratorNames: [
-        collaboratorId === JOAO_ID ? 'João' : collaboratorId === MARIA_ID ? 'Maria' : 'Colaborador',
-      ],
-      hasAssignee: true,
-    })
+    if (!collaboratorId) continue
+    index.set(stepId, new Set([collaboratorId]))
   }
   return index
 }
 
-function mockStepOwnership(assignments: Record<string, string | null>) {
-  vi.spyOn(assigneesRepo, 'buildConveyorStepOwnershipIndex').mockResolvedValue(
-    buildOwnershipIndex(assignments),
+function mockPlannedCollaborators(assignments: Record<string, string | null>) {
+  vi.spyOn(seqRepo, 'listPlannedCollaboratorsByActivityNode').mockResolvedValue(
+    buildPlannedMap(assignments),
   )
 }
 
@@ -210,7 +193,7 @@ describe('serviceGetMyWorkQueue', () => {
       },
     ]
     vi.spyOn(seqRepo, 'listConveyorNodesForSequenceAnalysis').mockResolvedValue(sequenceNodes)
-    mockStepOwnership({
+    mockPlannedCollaborators({
       [PREVIOUS_STEP_ID]: COLLABORATOR_ID,
       [TARGET_STEP_ID]: COLLABORATOR_ID,
     })
@@ -357,7 +340,7 @@ function mockAbcWorkQueue(
   vi.spyOn(seqRepo, 'listConveyorNodesForSequenceAnalysis').mockResolvedValue(
     nodes ?? abcSequenceNodes(),
   )
-  mockStepOwnership(
+  mockPlannedCollaborators(
     ownership ?? {
       [STEP_A]: COLLABORATOR_ID,
       [STEP_B]: COLLABORATOR_ID,
@@ -455,6 +438,31 @@ describe('serviceGetWorkQueueForCollaborator — priorização A/B/C', () => {
       isNextRecommended: false,
     })
   })
+
+  it('duas esteiras distintas: cada próxima estrutural é recomendada (não compete na fila)', async () => {
+    const CONVEYOR_ID_2 = '00000000-0000-0000-0000-000000000099'
+    mockAbcWorkQueue([
+      {
+        ...abcQueueRow(STEP_A, 'Atividade A', 99),
+        conveyor_id: CONVEYOR_ID,
+        conveyor_title: 'Esteira 1',
+      },
+      {
+        ...abcQueueRow(STEP_A, 'Atividade A', 0),
+        conveyor_id: CONVEYOR_ID_2,
+        conveyor_title: 'Esteira 2',
+        work_plan_item_id: 'item-A2',
+      },
+    ])
+
+    const result = await serviceGetWorkQueueForCollaborator({} as pg.Pool, {
+      collaboratorId: COLLABORATOR_ID,
+      date: '2026-05-04',
+    })
+
+    expect(result.items).toHaveLength(2)
+    expect(result.items.every((i) => i.isNextRecommended)).toBe(true)
+  })
 })
 
 describe('serviceGetWorkQueueForCollaborator — colaboradores diferentes', () => {
@@ -462,7 +470,7 @@ describe('serviceGetWorkQueueForCollaborator — colaboradores diferentes', () =
     vi.restoreAllMocks()
   })
 
-  it('Maria em B com A de João pendente: recomendada, alerta e sem justificativa', async () => {
+  it('Maria em B com A de João pendente: alerta estrutural e apontável com justificativa', async () => {
     mockAbcWorkQueue(
       [abcQueueRow(STEP_B, 'Atividade B', 99)],
       abcSequenceNodes(),
@@ -481,14 +489,15 @@ describe('serviceGetWorkQueueForCollaborator — colaboradores diferentes', () =
     expect(result.items).toHaveLength(1)
     expect(result.items[0]).toMatchObject({
       activityNodeId: STEP_B,
-      isNextRecommended: true,
-      isOutOfSequence: false,
-      requiresOutOfSequenceJustification: false,
+      isNextRecommended: false,
+      hasPreviousPendingStep: true,
+      isOutOfSequence: true,
+      requiresOutOfSequenceJustification: true,
+      canPointTime: true,
       hasPreviousOpenActivitiesFromOtherCollaborators: true,
     })
-    expect(result.items[0]?.previousOpenActivitiesWarningMessage).toContain(
-      'outro colaborador',
-    )
+    expect(result.items[0]?.awaitingPreviousActivities[0]?.activityTitle).toBe('Atividade A')
+    expect(result.items[0]?.sequenceWarningLabel).toContain('Atividade A')
   })
 
   it('após João concluir A, alerta em B desaparece para Maria', async () => {
@@ -513,7 +522,7 @@ describe('serviceGetWorkQueueForCollaborator — colaboradores diferentes', () =
     })
   })
 
-  it('Maria com B e C pendentes: B recomendada com alerta, C bloqueada por B', async () => {
+  it('Maria com B e C pendentes: ambas com alerta estrutural; C depende também de B', async () => {
     mockAbcWorkQueue(
       [
         abcQueueRow(STEP_C, 'Atividade C', 0),
@@ -535,8 +544,10 @@ describe('serviceGetWorkQueueForCollaborator — colaboradores diferentes', () =
     expect(result.items.map((i) => i.activityNodeId)).toEqual([STEP_B, STEP_C])
     const b = result.items.find((i) => i.activityNodeId === STEP_B)
     const c = result.items.find((i) => i.activityNodeId === STEP_C)
-    expect(b?.isNextRecommended).toBe(true)
+    expect(b?.isNextRecommended).toBe(false)
+    expect(b?.hasPreviousPendingStep).toBe(true)
     expect(b?.hasPreviousOpenActivitiesFromOtherCollaborators).toBe(true)
+    expect(c?.hasPreviousPendingStep).toBe(true)
     expect(c?.isOutOfSequence).toBe(true)
     expect(c?.isNextRecommended).toBe(false)
   })

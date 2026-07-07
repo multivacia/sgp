@@ -56,9 +56,16 @@ export type TimeEntryCandidateItem = {
   isAssignedToMe: boolean
   requiresJustification: boolean
   isOutOfSequence: boolean
+  hasPreviousPendingStep: boolean
+  sequenceWarningType?: 'PREVIOUS_STEP_PENDING' | 'OUT_OF_SEQUENCE'
+  sequenceWarningLabel?: string
   requiresOutOfSequenceJustification: boolean
+  canPointTime?: boolean
+  blockingReason?: string
   previousOpenCount: number
   previousOpenActivities: TimeEntryCandidatePreviousOpen[]
+  allPreviousOpenActivities?: TimeEntryCandidatePreviousOpen[]
+  awaitingPreviousActivities: TimeEntryCandidatePreviousOpen[]
   /** true quando o STEP pode ser concluído explicitamente. */
   canCompleteStep?: boolean
   /** Data planejada no plano semanal publicado, quando aplicável. */

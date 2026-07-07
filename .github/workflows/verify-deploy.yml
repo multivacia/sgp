@@ -1,0 +1,40 @@
+name: Verify deploy readiness
+
+# Quality gate: mesma receita manual de develop/homol, antes do merge em main e do deploy EC2.
+on:
+  push:
+    branches:
+      - develop
+      - homol
+      - main
+  pull_request:
+    branches:
+      - develop
+      - homol
+      - main
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            server/package-lock.json
+
+      - name: Install frontend deps
+        run: npm ci
+
+      - name: Install backend deps
+        run: npm ci --prefix server
+
+      - name: Run deploy verification
+        run: npm run verify:deploy

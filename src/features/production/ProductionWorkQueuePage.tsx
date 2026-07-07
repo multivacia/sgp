@@ -234,17 +234,17 @@ function WorkQueueCard({
           label="Pendente"
           value={item.pendingMinutes > 0 ? formatProductionMinutes(item.pendingMinutes) : '—'}
         />
-        {item.isOutOfSequence && item.requiresOutOfSequenceJustification && (
+        {item.hasPreviousPendingStep && item.requiresOutOfSequenceJustification ? (
           <div className="col-span-2 sm:col-span-3">
-            <p className="text-xs text-amber-400">
-              Esta atividade está fora da sequência planejada.
+            <p className="text-xs text-slate-300">
+              {item.sequenceWarningLabel ?? 'Atenção à sequência'}
               {item.previousOpenCount > 0
                 ? ` (${item.previousOpenCount} anterior${item.previousOpenCount > 1 ? 'es' : ''} pendente${item.previousOpenCount > 1 ? 's' : ''})`
-                : ''}{' '}
-              Apontamento permitido com justificativa.
+                : ''}
+              . Apontamento permitido com justificativa.
             </p>
           </div>
-        )}
+        ) : null}
       </dl>
 
       <div className="flex flex-wrap gap-3 pt-1">

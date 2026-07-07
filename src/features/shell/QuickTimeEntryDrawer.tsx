@@ -18,6 +18,11 @@ import {
 } from '../../lib/errors'
 import { useSgpErrorSurface } from '../../lib/errors/SgpErrorPresentation'
 import { transversalUxCopy } from '../../lib/transversalUxCopy'
+import {
+  formatAwaitingPreviousActivitiesLabel,
+  resolveOutOfSequenceActionLabel,
+  resolveSequenceListBadge,
+} from '../../domain/production/production.helpers'
 import { labelRoleInStep } from '../colaborador/minhasAtividadesLabels'
 import {
   createMyExtraTimeEntry,
@@ -681,6 +686,23 @@ export function QuickTimeEntryDrawer({
                                         </span>
                                       </div>
                                     ) : null}
+                                    {(() => {
+                                      const seqBadge = resolveSequenceListBadge(c)
+                                      if (seqBadge.kind === 'none') return null
+                                      return (
+                                        <div className="mt-2 flex flex-wrap gap-2">
+                                          <span
+                                            className={`rounded border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${
+                                              seqBadge.kind === 'recommended'
+                                                ? 'border-sgp-gold/35 bg-sgp-gold/15 text-sgp-gold'
+                                                : 'border-slate-500/35 bg-slate-500/15 text-slate-200'
+                                            }`}
+                                          >
+                                            {seqBadge.label}
+                                          </span>
+                                        </div>
+                                      )
+                                    })()}
                                     <p className="mt-3 text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500">
                                       Tarefa
                                     </p>
@@ -891,11 +913,21 @@ export function QuickTimeEntryDrawer({
                       </>
                     ) : null}
 
+                    {!formNeedsOutOfSequence &&
+                    selected &&
+                    (selected.sequenceWarningLabel ||
+                      selected.awaitingPreviousActivities.length > 0) ? (
+                      <p className="mt-4 text-xs text-slate-400">
+                        {selected.sequenceWarningLabel ??
+                          formatAwaitingPreviousActivitiesLabel(selected.awaitingPreviousActivities)}
+                      </p>
+                    ) : null}
+
                     {formNeedsOutOfSequence ? (
                       <>
                         <div className="mt-4 rounded-xl border border-sky-500/25 bg-sky-500/[0.07] px-3 py-2.5 text-xs text-sky-50/95">
                           <p className="font-semibold text-sky-100">
-                            Esta atividade está fora da sequência recomendada.
+                            {resolveOutOfSequenceActionLabel()} — confirme o apontamento.
                           </p>
                           <p className="mt-1.5 leading-relaxed text-sky-100/90">
                             Existem atividades anteriores ainda pendentes nesta esteira

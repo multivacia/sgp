@@ -19,9 +19,10 @@ import {
   type TimeEntryCandidateRawRow,
 } from './my-activities.repository.js'
 import { analyzeConveyorActivitySequence } from '../conveyors/conveyorActivitySequence.logic.js'
+import { mapWorkQueueSequenceForCollaborator } from '../my-work-queue/work-queue-sequence-for-collaborator.js'
 import { resolveActivityPlannedTotalMinutes } from '../../shared/activityOperationalQuantity.js'
 import type { SequenceAnalysisNode } from '../conveyors/conveyorActivitySequence.logic.js'
-import { listConveyorNodesForSequenceAnalysis } from '../conveyors/conveyors.repository.js'
+import { listConveyorNodesForSequenceAnalysis, listPlannedCollaboratorsByActivityNode } from '../conveyors/conveyors.repository.js'
 
 function todayIsoLocal(): string {
   const t = new Date()
@@ -149,8 +150,9 @@ export async function serviceListActivitiesForCollaborator(
 
 function mapCandidateRow(
   row: TimeEntryCandidateRawRow,
-  opts: { isAssignedToMe: boolean; referenceDate: string },
+  opts: { isAssignedToMe: boolean; referenceDate: string; collaboratorId: string },
   nodesByConveyor: Map<string, SequenceAnalysisNode[]>,
+  plannedByConveyor: Map<string, Map<string, Set<string>>>,
 ): TimeEntryCandidateItemApi {
   const planned =
     row.planned_minutes === null || row.planned_minutes === ''
@@ -163,8 +165,31 @@ function mapCandidateRow(
   const at =
     row.assignment_type === 'TEAM' ? ('TEAM' as const) : ('COLLABORATOR' as const)
   const nodes = nodesByConveyor.get(row.conveyor_id) ?? []
-  const seq = analyzeConveyorActivitySequence(nodes, row.step_node_id)
-  const prevSlice = seq.previousOpenActivities.slice(0, 3).map((p) => ({
+  const seq = analyzeConveyorActivitySequence(nodes, row.step_node_id, {
+    currentCollaboratorId: opts.collaboratorId,
+    plannedCollaboratorsByActivityNodeId:
+      plannedByConveyor.get(row.conveyor_id) ?? new Map(),
+  })
+  const sequenceForCollaborator = mapWorkQueueSequenceForCollaborator({
+    seq,
+    isActivityCompleted: false,
+    // Candidatos já vêm filtrados para esteiras A_INICIAR | EM_ANDAMENTO.
+    conveyorOperationalStatus: 'EM_ANDAMENTO',
+  })
+  const prevSlice = sequenceForCollaborator.previousOpenActivities.map((p) => ({
+    activityNodeId: p.activityNodeId,
+    taskTitle: p.taskTitle,
+    sectorTitle: p.sectorTitle,
+    activityTitle: p.activityTitle,
+  }))
+  const allPrevSlice = sequenceForCollaborator.allPreviousOpenActivities.map((p) => ({
+    activityNodeId: p.activityNodeId,
+    taskTitle: p.taskTitle,
+    sectorTitle: p.sectorTitle,
+    activityTitle: p.activityTitle,
+  }))
+  const awaitingSlice = sequenceForCollaborator.awaitingPreviousActivities.map((p) => ({
+    activityNodeId: p.activityNodeId,
     taskTitle: p.taskTitle,
     sectorTitle: p.sectorTitle,
     activityTitle: p.activityTitle,
@@ -194,10 +219,18 @@ function mapCandidateRow(
     pendingMinutes,
     isAssignedToMe: opts.isAssignedToMe,
     requiresJustification: !opts.isAssignedToMe,
-    isOutOfSequence: seq.isOutOfSequence,
-    requiresOutOfSequenceJustification: seq.isOutOfSequence,
-    previousOpenCount: seq.previousOpenCount,
+    isOutOfSequence: sequenceForCollaborator.isOutOfSequence,
+    hasPreviousPendingStep: sequenceForCollaborator.hasPreviousPendingStep,
+    sequenceWarningType: sequenceForCollaborator.sequenceWarningType,
+    sequenceWarningLabel: sequenceForCollaborator.sequenceWarningLabel,
+    requiresOutOfSequenceJustification:
+      sequenceForCollaborator.requiresOutOfSequenceJustification,
+    canPointTime: sequenceForCollaborator.canPointTime,
+    blockingReason: sequenceForCollaborator.blockingReason,
+    previousOpenCount: sequenceForCollaborator.previousOpenCount,
     previousOpenActivities: prevSlice,
+    allPreviousOpenActivities: allPrevSlice,
+    awaitingPreviousActivities: awaitingSlice,
     canCompleteStep: true,
     plannedDate,
     isOverdue,
@@ -273,15 +306,25 @@ export async function serviceListTimeEntryCandidates(
 
   const conveyorIds = [...new Set(tagged.map((t) => t.row.conveyor_id))]
   const nodesByConveyor = new Map<string, SequenceAnalysisNode[]>()
+  const plannedByConveyor = new Map<string, Map<string, Set<string>>>()
   await Promise.all(
     conveyorIds.map(async (cid) => {
-      const nodes = await listConveyorNodesForSequenceAnalysis(pool, cid)
+      const [nodes, planned] = await Promise.all([
+        listConveyorNodesForSequenceAnalysis(pool, cid),
+        listPlannedCollaboratorsByActivityNode(pool, cid),
+      ])
       nodesByConveyor.set(cid, nodes as SequenceAnalysisNode[])
+      plannedByConveyor.set(cid, planned)
     }),
   )
 
   const items = tagged.map(({ row, isAssignedToMe }) =>
-    mapCandidateRow(row, { isAssignedToMe, referenceDate }, nodesByConveyor),
+    mapCandidateRow(
+      row,
+      { isAssignedToMe, referenceDate, collaboratorId: input.collaboratorId! },
+      nodesByConveyor,
+      plannedByConveyor,
+    ),
   )
 
   return {

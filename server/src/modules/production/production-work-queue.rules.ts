@@ -6,6 +6,7 @@ import {
 
 export type ProductionCanTrackTimeInput = {
   isActivityCompleted: boolean
+  hasPreviousPendingStep: boolean
   isOutOfSequence: boolean
   planItemStatus: string
   conveyorOperationalStatus: string | null
@@ -38,9 +39,15 @@ export function resolveProductionCanTrackTime(input: ProductionCanTrackTimeInput
 }
 
 export function resolveProductionRequiresOutOfSequenceJustification(
-  input: Pick<ProductionCanTrackTimeInput, 'isActivityCompleted' | 'isOutOfSequence'>,
+  input: Pick<
+    ProductionCanTrackTimeInput,
+    'isActivityCompleted' | 'hasPreviousPendingStep' | 'isOutOfSequence'
+  >,
 ): boolean {
-  return !input.isActivityCompleted && input.isOutOfSequence
+  return (
+    !input.isActivityCompleted &&
+    (input.hasPreviousPendingStep || input.isOutOfSequence)
+  )
 }
 
 /** Colaborador pode marcar conclusão ao registrar apontamento (markAsDone). */

@@ -1,4 +1,5 @@
 import type { MatrixNodeTreeApi } from '../../../domain/operation-matrix/operation-matrix.types'
+import { resolveNodeSourceKey } from '../../../domain/operation-matrix/resolveNodeSourceKey'
 
 export function sortMatrixChildNodes(node: MatrixNodeTreeApi): MatrixNodeTreeApi[] {
   return [...node.children].sort((a, b) => a.order_index - b.order_index)
@@ -39,6 +40,7 @@ export function cloneTaskSubtreeWithNewIds(taskRoot: MatrixNodeTreeApi): MatrixN
       id: newId,
       parent_id: mappedParent,
       root_id: newTaskId,
+      source_key: resolveNodeSourceKey(node),
       children: sortChildren(node).map(rebuild),
     }
   }
