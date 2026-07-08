@@ -22,16 +22,51 @@ function pendingMinutes(plannedTotal: number, realized: number): number {
   return Math.max(0, plannedTotal - Math.max(0, realized))
 }
 
-function sortSteps<
-  T extends { pendingMinutes: number; plannedTotalMinutes?: number; plannedMinutes: number | null },
->(
-  rows: T[],
-): T[] {
+type StepRowInternal = {
+  optionId: string
+  optionName: string
+  optionOrder: number
+  areaId: string
+  areaName: string
+  areaOrder: number
+  stepId: string
+  stepName: string
+  stepOrder: number
+  operationalStatus: string
+  isOperationallyCompleted: boolean
+  plannedMinutes: number | null
+  plannedQuantity: number
+  plannedTotalMinutes: number
+  realizedMinutes: number
+  pendingMinutes: number
+}
+
+type AreaRowInternal = {
+  optionId: string
+  optionName: string
+  optionOrder: number
+  areaId: string
+  areaName: string
+  areaOrder: number
+  plannedMinutesSum: number
+  realizedMinutesSum: number
+  pendingMinutesSum: number
+}
+
+function sortStepsStructural(rows: StepRowInternal[]): StepRowInternal[] {
   return [...rows].sort((a, b) => {
-    if (b.pendingMinutes !== a.pendingMinutes) {
-      return b.pendingMinutes - a.pendingMinutes
-    }
-    return (b.plannedTotalMinutes ?? 0) - (a.plannedTotalMinutes ?? 0)
+    if (a.optionOrder !== b.optionOrder) return a.optionOrder - b.optionOrder
+    if (a.areaOrder !== b.areaOrder) return a.areaOrder - b.areaOrder
+    if (a.stepOrder !== b.stepOrder) return a.stepOrder - b.stepOrder
+    return a.stepId.localeCompare(b.stepId)
+  })
+}
+
+function sortAreasStructural(rows: AreaRowInternal[]): AreaRowInternal[] {
+  return [...rows].sort((a, b) => {
+    if (a.optionOrder !== b.optionOrder) return a.optionOrder - b.optionOrder
+    if (a.areaOrder !== b.areaOrder) return a.areaOrder - b.areaOrder
+    return a.areaId.localeCompare(b.areaId)
   })
 }
 
@@ -47,7 +82,7 @@ export async function serviceGetConveyorNodeWorkload(
     sumRealizedMinutesByStepForConveyor(pool, conveyorId),
   ])
 
-  const stepRowsRaw = hierarchy.map((h) => {
+  const stepRowsRaw: StepRowInternal[] = hierarchy.map((h) => {
     const realized = realizedByStep.get(h.step_id) ?? 0
     const plannedUnit = h.planned_minutes
     const plannedTotal = plannedTotalNum(plannedUnit, h.planned_quantity)
@@ -56,10 +91,13 @@ export async function serviceGetConveyorNodeWorkload(
     return {
       optionId: h.option_id,
       optionName: h.option_name,
+      optionOrder: h.option_order,
       areaId: h.area_id,
       areaName: h.area_name,
+      areaOrder: h.area_order,
       stepId: h.step_id,
       stepName: h.step_name,
+      stepOrder: h.step_order,
       operationalStatus: op,
       isOperationallyCompleted: isDone,
       plannedMinutes: plannedUnit,
@@ -70,21 +108,13 @@ export async function serviceGetConveyorNodeWorkload(
     }
   })
 
-  const steps = sortSteps(stepRowsRaw)
+  const steps = sortStepsStructural(stepRowsRaw).map(
+    ({ optionOrder: _optionOrder, areaOrder: _areaOrder, stepOrder: _stepOrder, ...step }) =>
+      step,
+  )
 
   /** Chave: optionId + areaId — rollup só entre STEPs da mesma área sob a mesma opção. */
-  const areaMap = new Map<
-    string,
-    {
-      optionId: string
-      optionName: string
-      areaId: string
-      areaName: string
-      plannedMinutesSum: number
-      realizedMinutesSum: number
-      pendingMinutesSum: number
-    }
-  >()
+  const areaMap = new Map<string, AreaRowInternal>()
 
   for (const s of stepRowsRaw) {
     const key = `${s.optionId}\0${s.areaId}`
@@ -96,8 +126,10 @@ export async function serviceGetConveyorNodeWorkload(
       areaMap.set(key, {
         optionId: s.optionId,
         optionName: s.optionName,
+        optionOrder: s.optionOrder,
         areaId: s.areaId,
         areaName: s.areaName,
+        areaOrder: s.areaOrder,
         plannedMinutesSum: p,
         realizedMinutesSum: r,
         pendingMinutesSum: pend,
@@ -109,8 +141,26 @@ export async function serviceGetConveyorNodeWorkload(
     }
   }
 
-  const areas = [...areaMap.values()].sort(
-    (a, b) => b.pendingMinutesSum - a.pendingMinutesSum,
+  const areas = sortAreasStructural([...areaMap.values()]).map(
+    ({
+      optionOrder: _optionOrder,
+      areaOrder: _areaOrder,
+      optionId,
+      optionName,
+      areaId,
+      areaName,
+      plannedMinutesSum,
+      realizedMinutesSum,
+      pendingMinutesSum,
+    }) => ({
+      optionId,
+      optionName,
+      areaId,
+      areaName,
+      plannedMinutesSum,
+      realizedMinutesSum,
+      pendingMinutesSum,
+    }),
   )
 
   const bucket = getOperationalBucketForConveyor(
