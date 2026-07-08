@@ -1,0 +1,136 @@
+name: Deploy HostGator VPS
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-hostgator-vps-main
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Deploy SGP+ to HostGator VPS
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    env:
+      DEPLOY_BRANCH: main
+      REMOTE_APP_DIR: /opt/sgp/sgp-main
+      REMOTE_WEB_DIR: /var/www/sgp-web
+      HEALTH_URL: https://sgp.multivacia.com/api/v1/health
+
+    steps:
+      - name: Validate required secrets
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          test -n "${{ secrets.VPS_HOST }}" || (echo "Missing secret VPS_HOST" && exit 1)
+          test -n "${{ secrets.VPS_PORT }}" || (echo "Missing secret VPS_PORT" && exit 1)
+          test -n "${{ secrets.VPS_USER }}" || (echo "Missing secret VPS_USER" && exit 1)
+          test -n "${{ secrets.VPS_SSH_KEY }}" || (echo "Missing secret VPS_SSH_KEY" && exit 1)
+          test -n "${{ secrets.VPS_KNOWN_HOSTS }}" || (echo "Missing secret VPS_KNOWN_HOSTS" && exit 1)
+
+      - name: Configure SSH
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+
+          printf '%s\n' "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/hostgator_vps_key
+          chmod 600 ~/.ssh/hostgator_vps_key
+
+          printf '%s\n' "${{ secrets.VPS_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
+          chmod 644 ~/.ssh/known_hosts
+
+      - name: Deploy on VPS
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          ssh \
+            -i ~/.ssh/hostgator_vps_key \
+            -p "${{ secrets.VPS_PORT }}" \
+            -o IdentitiesOnly=yes \
+            -o StrictHostKeyChecking=yes \
+            "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" \
+            "DEPLOY_BRANCH='${DEPLOY_BRANCH}' REMOTE_APP_DIR='${REMOTE_APP_DIR}' REMOTE_WEB_DIR='${REMOTE_WEB_DIR}' HEALTH_URL='${HEALTH_URL}' bash -s" <<'REMOTE_SCRIPT'
+          set -euo pipefail
+
+          echo "==> Host"
+          hostname
+          whoami
+
+          echo "==> Validating directories"
+          test -d "$REMOTE_APP_DIR"
+          test -d "$REMOTE_WEB_DIR"
+          test -w "$REMOTE_WEB_DIR"
+
+          cd "$REMOTE_APP_DIR"
+
+          echo "==> Git status before deploy"
+          git status --short
+
+          echo "==> Fetching branch: $DEPLOY_BRANCH"
+          git fetch origin "$DEPLOY_BRANCH"
+
+          echo "==> Resetting working tree to origin/$DEPLOY_BRANCH"
+          git checkout "$DEPLOY_BRANCH"
+          git reset --hard "origin/$DEPLOY_BRANCH"
+
+          echo "==> Guardrail: migrations are intentionally disabled"
+          echo "No migration command will be executed in this deploy."
+
+          echo "==> Installing root dependencies"
+          npm ci
+
+          echo "==> Installing server dependencies"
+          npm --prefix server ci
+
+          echo "==> Building backend"
+          npm --prefix server run build
+
+          echo "==> Building frontend"
+          npm run build
+
+          echo "==> Validating frontend build output"
+          test -d dist
+          test -f dist/index.html
+
+          echo "==> Backing up current frontend"
+          BACKUP_DIR="/opt/sgp/backups/frontend-before-deploy-$(date +%Y%m%d-%H%M%S)"
+          mkdir -p "$BACKUP_DIR"
+          rsync -a "$REMOTE_WEB_DIR"/ "$BACKUP_DIR"/
+
+          echo "==> Publishing frontend"
+          rsync -a --delete dist/ "$REMOTE_WEB_DIR"/
+
+          echo "==> Restarting PM2 process sgp-api"
+          pm2 restart sgp-api --update-env
+
+          echo "==> Saving PM2 process list"
+          pm2 save
+
+          echo "==> Waiting API warm-up"
+          sleep 5
+
+          echo "==> Health check"
+          curl --fail --silent --show-error --location "$HEALTH_URL"
+
+          echo ""
+          echo "==> Deploy finished successfully"
+          REMOTE_SCRIPT
+
+      - name: Cleanup SSH key
+        if: always()
+        shell: bash
+        run: |
+          rm -f ~/.ssh/hostgator_vps_key
