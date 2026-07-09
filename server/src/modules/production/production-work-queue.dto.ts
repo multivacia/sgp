@@ -61,6 +61,8 @@ export type ProductionWorkQueueItemApi = {
   canCompleteStep: boolean
   /** Quando true, o POST exige outOfSequenceJustification. */
   requiresOutOfSequenceJustification: boolean
+  /** Último session_completion_pct não nulo do colaborador neste STEP. */
+  lastSessionCompletionPct: number | null
 }
 
 export type ProductionWorkQueueResponseApi = {

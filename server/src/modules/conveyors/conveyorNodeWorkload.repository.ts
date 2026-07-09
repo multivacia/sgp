@@ -107,3 +107,40 @@ export async function sumRealizedMinutesByStepForConveyor(
   }
   return m
 }
+
+/** Último session_completion_pct não nulo do colaborador por STEP (kiosk evolução). */
+export async function getLatestSessionCompletionPctByStepForCollaborator(
+  pool: pg.Pool,
+  collaboratorId: string,
+  conveyorIds: string[],
+): Promise<Map<string, number>> {
+  if (conveyorIds.length === 0) return new Map()
+
+  const r = await pool.query<{ step_id: string; session_completion_pct: number }>(
+    `
+    SELECT step_id, session_completion_pct
+    FROM (
+      SELECT
+        cte.conveyor_node_id::text AS step_id,
+        cte.session_completion_pct,
+        ROW_NUMBER() OVER (
+          PARTITION BY cte.conveyor_node_id
+          ORDER BY cte.entry_at DESC, cte.created_at DESC, cte.id DESC
+        ) AS rn
+      FROM conveyor_time_entries cte
+      WHERE cte.collaborator_id = $1::uuid
+        AND cte.conveyor_id = ANY($2::uuid[])
+        AND cte.deleted_at IS NULL
+        AND cte.session_completion_pct IS NOT NULL
+    ) ranked
+    WHERE rn = 1
+    `,
+    [collaboratorId, conveyorIds],
+  )
+
+  const m = new Map<string, number>()
+  for (const row of r.rows) {
+    m.set(row.step_id, row.session_completion_pct)
+  }
+  return m
+}

@@ -72,6 +72,8 @@ export type ProductionWorkQueueItem = {
   blockingReason?: string
   canCompleteStep: boolean
   requiresOutOfSequenceJustification: boolean
+  /** Último session_completion_pct não nulo do colaborador neste STEP. */
+  lastSessionCompletionPct?: number | null
 }
 
 export type ProductionWorkQueuePreviousOpenActivity = {
