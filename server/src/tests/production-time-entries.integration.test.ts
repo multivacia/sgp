@@ -12,6 +12,10 @@ import { serviceCreateConveyor } from '../modules/conveyors/conveyors.service.js
 import type { PostConveyorBody } from '../modules/conveyors/conveyors.schemas.js'
 import { serviceCreateConveyorNodeAssignee } from '../modules/conveyors/conveyorAssignments.service.js'
 import {
+  insertConveyorTimeEntry,
+  newAssignmentId,
+} from '../modules/conveyors/conveyorAssignments.repository.js'
+import {
   productionSessionCookie,
   seedProductionPinForCollaborator,
   SEED_COLLABORATOR_MARIA_ID,
@@ -93,6 +97,95 @@ async function firstStepId(
   const row = r.rows[0]
   if (!row) throw new Error('STEP não encontrado')
   return row.id
+}
+
+async function setWorkPlanPlannedMinutesForStep(
+  pool: ReturnType<typeof getPool>,
+  conveyorId: string,
+  stepId: string,
+  collaboratorId: string,
+  plannedMinutes: number,
+): Promise<void> {
+  await pool.query(
+    `
+    UPDATE operational_work_plan_items i
+    SET planned_minutes = $4::int
+    FROM operational_work_plans p
+    WHERE i.work_plan_id = p.id
+      AND p.status = 'PUBLISHED'
+      AND p.deleted_at IS NULL
+      AND i.deleted_at IS NULL
+      AND i.conveyor_id = $1::uuid
+      AND i.activity_node_id = $2::uuid
+      AND i.assigned_collaborator_id = $3::uuid
+    `,
+    [conveyorId, stepId, collaboratorId, plannedMinutes],
+  )
+}
+
+async function planningJustificationId(pool: ReturnType<typeof getPool>): Promise<string> {
+  const r = await pool.query<{ id: string }>(
+    `SELECT id::text FROM operational_time_entry_justifications
+     WHERE category = 'PLANNING' AND is_active = true
+     ORDER BY sort_order
+     LIMIT 1`,
+  )
+  const id = r.rows[0]?.id
+  if (!id) throw new Error('justificativa PLANNING não encontrada')
+  return id
+}
+
+async function seedExcessTimeFixture(
+  pool: ReturnType<typeof getPool>,
+  suffix: string,
+  input: {
+    plannedMinutes: number
+    priorRealizedMinutes?: number
+  },
+): Promise<{ conv: { id: string }; stepId: string; assigneeId: string }> {
+  const conv = await serviceCreateConveyor(pool, minimalConveyorBody(`TE-EXCESS-${suffix}`))
+  await setConveyorProductionStatusForIntegration(pool, conv.id)
+  const stepId = await firstStepId(pool, conv.id)
+  const assignee = await serviceCreateConveyorNodeAssignee(pool, {
+    conveyorId: conv.id,
+    conveyorNodeId: stepId,
+    collaboratorId: SEED_COLLABORATOR_MARIA_ID,
+    isPrimary: true,
+  })
+  await seedOperationalWorkPlanItemsForSteps(pool, {
+    createdByUserId: TE_ADMIN_USER_ID,
+    conveyorId: conv.id,
+    steps: [{ activityNodeId: stepId, collaboratorId: SEED_COLLABORATOR_MARIA_ID }],
+  })
+  await setWorkPlanPlannedMinutesForStep(
+    pool,
+    conv.id,
+    stepId,
+    SEED_COLLABORATOR_MARIA_ID,
+    input.plannedMinutes,
+  )
+  if (input.priorRealizedMinutes && input.priorRealizedMinutes > 0) {
+    await insertConveyorTimeEntry(pool, {
+      id: newAssignmentId(),
+      conveyor_id: conv.id,
+      conveyor_node_id: stepId,
+      collaborator_id: SEED_COLLABORATOR_MARIA_ID,
+      conveyor_node_assignee_id: assignee.id,
+      entry_at: new Date(),
+      minutes: input.priorRealizedMinutes,
+      executed_quantity: null,
+      notes: null,
+      entry_mode: 'manual',
+      metadata_json: { accessChannel: 'PRODUCTION_AVATAR_PIN' },
+      entry_origin: 'ASSIGNED',
+      exception_justification: null,
+      is_out_of_sequence: false,
+      out_of_sequence_justification: null,
+      session_completion_pct: null,
+      mark_as_done: false,
+    })
+  }
+  return { conv, stepId, assigneeId: assignee.id }
 }
 
 describe.skipIf(!hasDb)('production time entries (integração)', () => {
@@ -304,13 +397,146 @@ describe.skipIf(!hasDb)('production time entries (integração)', () => {
       expect(row.rows[0]?.metadata_json?.accessChannel).toBe('PRODUCTION_AVATAR_PIN')
     })
 
-    it('não permite minutes <= 0', async () => {
+    it('não permite minutes=0 sem markAsDone', async () => {
       const cookie = productionSessionCookie(SEED_COLLABORATOR_MARIA_ID)
       const res = await request(app)
         .post('/api/v1/production/time-entries')
         .set('Cookie', cookie)
         .send({ conveyorId, stepNodeId: assignedStepId, minutes: 0 })
       expect(res.status).toBe(422)
+    })
+
+    it('não permite minutes negativo', async () => {
+      const cookie = productionSessionCookie(SEED_COLLABORATOR_MARIA_ID)
+      const res = await request(app)
+        .post('/api/v1/production/time-entries')
+        .set('Cookie', cookie)
+        .send({ conveyorId, stepNodeId: assignedStepId, minutes: -5 })
+      expect(res.status).toBe(422)
+    })
+
+    it('permite minutes=0 quando markAsDone=true e conclui STEP', async () => {
+      const conv = await serviceCreateConveyor(
+        pool,
+        minimalConveyorBody(`TE-ZERO-DONE-${Date.now()}`),
+      )
+      await setConveyorProductionStatusForIntegration(pool, conv.id)
+      const stepId = await firstStepId(pool, conv.id)
+      await serviceCreateConveyorNodeAssignee(pool, {
+        conveyorId: conv.id,
+        conveyorNodeId: stepId,
+        collaboratorId: SEED_COLLABORATOR_MARIA_ID,
+        isPrimary: true,
+      })
+      await seedOperationalWorkPlanItemsForSteps(pool, {
+        createdByUserId: TE_ADMIN_USER_ID,
+        conveyorId: conv.id,
+        steps: [{ activityNodeId: stepId, collaboratorId: SEED_COLLABORATOR_MARIA_ID }],
+      })
+
+      const cookie = productionSessionCookie(SEED_COLLABORATOR_MARIA_ID)
+      const res = await request(app)
+        .post('/api/v1/production/time-entries')
+        .set('Cookie', cookie)
+        .send({
+          conveyorId: conv.id,
+          stepNodeId: stepId,
+          minutes: 0,
+          markAsDone: true,
+        })
+      expect(res.status).toBe(201)
+      expect((res.body.data as { minutes: number }).minutes).toBe(0)
+
+      const st = await pool.query<{ operational_status: string | null }>(
+        `SELECT operational_status FROM conveyor_nodes WHERE id = $1::uuid`,
+        [stepId],
+      )
+      expect(st.rows[0]?.operational_status).toBe('COMPLETED')
+    })
+
+    it('completion-only audita conclusão em evento operacional sem conveyor_time_entries', async () => {
+      const conv = await serviceCreateConveyor(
+        pool,
+        minimalConveyorBody(`TE-COMPLETION-ONLY-AUDIT-${Date.now()}`),
+      )
+      await setConveyorProductionStatusForIntegration(pool, conv.id)
+      const stepId = await firstStepId(pool, conv.id)
+      await serviceCreateConveyorNodeAssignee(pool, {
+        conveyorId: conv.id,
+        conveyorNodeId: stepId,
+        collaboratorId: SEED_COLLABORATOR_MARIA_ID,
+        isPrimary: true,
+      })
+      await seedOperationalWorkPlanItemsForSteps(pool, {
+        createdByUserId: TE_ADMIN_USER_ID,
+        conveyorId: conv.id,
+        steps: [{ activityNodeId: stepId, collaboratorId: SEED_COLLABORATOR_MARIA_ID }],
+      })
+
+      const beforeCount = await pool.query<{ count: string }>(
+        `SELECT COUNT(*)::text AS count FROM conveyor_time_entries
+         WHERE conveyor_node_id = $1::uuid AND deleted_at IS NULL`,
+        [stepId],
+      )
+      const beforeEntries = Number(beforeCount.rows[0]?.count ?? 0)
+
+      const cookie = productionSessionCookie(SEED_COLLABORATOR_MARIA_ID)
+      const res = await request(app)
+        .post('/api/v1/production/time-entries')
+        .set('Cookie', cookie)
+        .send({
+          conveyorId: conv.id,
+          stepNodeId: stepId,
+          minutes: 0,
+          markAsDone: true,
+        })
+      expect(res.status).toBe(201)
+
+      const syntheticId = (res.body.data as { id: string }).id
+      const stepStatus = await pool.query<{ operational_status: string | null }>(
+        `SELECT operational_status FROM conveyor_nodes WHERE id = $1::uuid`,
+        [stepId],
+      )
+      expect(stepStatus.rows[0]?.operational_status).toBe('COMPLETED')
+
+      const persistedEntry = await pool.query<{ id: string }>(
+        `SELECT id::text FROM conveyor_time_entries WHERE id = $1::uuid`,
+        [syntheticId],
+      )
+      expect(persistedEntry.rows).toHaveLength(0)
+
+      const afterCount = await pool.query<{ count: string }>(
+        `SELECT COUNT(*)::text AS count FROM conveyor_time_entries
+         WHERE conveyor_node_id = $1::uuid AND deleted_at IS NULL`,
+        [stepId],
+      )
+      expect(Number(afterCount.rows[0]?.count ?? 0)).toBe(beforeEntries)
+
+      const event = await pool.query<{
+        event_type: string
+        metadata_json: {
+          productionCollaboratorId?: string
+          accessChannel?: string
+          trigger?: string
+        }
+      }>(
+        `
+        SELECT event_type, metadata_json
+        FROM conveyor_operational_events
+        WHERE conveyor_id = $1::uuid
+          AND node_id = $2::uuid
+          AND event_type = 'CONVEYOR_STEP_COMPLETED'
+        ORDER BY occurred_at DESC
+        LIMIT 1
+        `,
+        [conv.id, stepId],
+      )
+      expect(event.rows[0]?.event_type).toBe('CONVEYOR_STEP_COMPLETED')
+      expect(event.rows[0]?.metadata_json?.productionCollaboratorId).toBe(
+        SEED_COLLABORATOR_MARIA_ID,
+      )
+      expect(event.rows[0]?.metadata_json?.accessChannel).toBe('PRODUCTION_AVATAR_PIN')
+      expect(event.rows[0]?.metadata_json?.trigger).toBe('PRODUCTION_MARK_AS_DONE')
     })
 
     it('não permite colaborador não alocado nesta sprint', async () => {
@@ -848,6 +1074,351 @@ describe.skipIf(!hasDb)('production time entries (integração)', () => {
         .set('Cookie', cookie)
         .send({ conveyorId: conv.id, stepNodeId: stepId, minutes: 30 })
       expect(res.status).toBe(422)
+    })
+  })
+
+  describe('GET /api/v1/production/me/work-queue — lastSessionCompletionPct', () => {
+    async function workQueueItemForStep(cookie: string, stepId: string) {
+      const res = await request(app)
+        .get('/api/v1/production/me/work-queue')
+        .set('Cookie', cookie)
+      expect(res.status).toBe(200)
+      const items = (res.body.data as { items: Array<Record<string, unknown>> }).items
+      return items.find((i) => i.activityNodeId === stepId)
+    }
+
+    async function seedKioskWorkQueueFixture(suffix: string) {
+      const conv = await serviceCreateConveyor(pool, minimalConveyorBody(`TE-PCT-${suffix}`))
+      await setConveyorProductionStatusForIntegration(pool, conv.id)
+      const stepId = await firstStepId(pool, conv.id)
+      await serviceCreateConveyorNodeAssignee(pool, {
+        conveyorId: conv.id,
+        conveyorNodeId: stepId,
+        collaboratorId: SEED_COLLABORATOR_MARIA_ID,
+        isPrimary: true,
+      })
+      await seedOperationalWorkPlanItemsForSteps(pool, {
+        createdByUserId: TE_ADMIN_USER_ID,
+        conveyorId: conv.id,
+        steps: [{ activityNodeId: stepId, collaboratorId: SEED_COLLABORATOR_MARIA_ID }],
+      })
+      return { conv, stepId }
+    }
+
+    it('retorna lastSessionCompletionPct após apontamento com evolução', async () => {
+      const { conv, stepId } = await seedKioskWorkQueueFixture(`${Date.now()}-50`)
+      const cookie = productionSessionCookie(SEED_COLLABORATOR_MARIA_ID)
+
+      const post = await request(app)
+        .post('/api/v1/production/time-entries')
+        .set('Cookie', cookie)
+        .send({
+          conveyorId: conv.id,
+          stepNodeId: stepId,
+          minutes: 15,
+          sessionCompletionPct: 50,
+          markAsDone: false,
+        })
+      expect(post.status).toBe(201)
+
+      const item = await workQueueItemForStep(cookie, stepId)
+      expect(item?.lastSessionCompletionPct).toBe(50)
+    })
+
+    it('atualiza lastSessionCompletionPct para o último valor registrado', async () => {
+      const { conv, stepId } = await seedKioskWorkQueueFixture(`${Date.now()}-70`)
+      const cookie = productionSessionCookie(SEED_COLLABORATOR_MARIA_ID)
+
+      await request(app)
+        .post('/api/v1/production/time-entries')
+        .set('Cookie', cookie)
+        .send({
+          conveyorId: conv.id,
+          stepNodeId: stepId,
+          minutes: 10,
+          sessionCompletionPct: 50,
+        })
+        .expect(201)
+
+      await request(app)
+        .post('/api/v1/production/time-entries')
+        .set('Cookie', cookie)
+        .send({
+          conveyorId: conv.id,
+          stepNodeId: stepId,
+          minutes: 5,
+          sessionCompletionPct: 70,
+        })
+        .expect(201)
+
+      const item = await workQueueItemForStep(cookie, stepId)
+      expect(item?.lastSessionCompletionPct).toBe(70)
+    })
+
+    it('apontamento posterior sem sessionCompletionPct não apaga o último percentual', async () => {
+      const { conv, stepId } = await seedKioskWorkQueueFixture(`${Date.now()}-null`)
+      const cookie = productionSessionCookie(SEED_COLLABORATOR_MARIA_ID)
+
+      await request(app)
+        .post('/api/v1/production/time-entries')
+        .set('Cookie', cookie)
+        .send({
+          conveyorId: conv.id,
+          stepNodeId: stepId,
+          minutes: 10,
+          sessionCompletionPct: 50,
+        })
+        .expect(201)
+
+      await request(app)
+        .post('/api/v1/production/time-entries')
+        .set('Cookie', cookie)
+        .send({
+          conveyorId: conv.id,
+          stepNodeId: stepId,
+          minutes: 5,
+        })
+        .expect(201)
+
+      const item = await workQueueItemForStep(cookie, stepId)
+      expect(item?.lastSessionCompletionPct).toBe(50)
+    })
+
+    it('não contamina com sessionCompletionPct de outro colaborador', async () => {
+      const { conv, stepId } = await seedKioskWorkQueueFixture(`OTHER-${Date.now()}`)
+      const mariaCookie = productionSessionCookie(SEED_COLLABORATOR_MARIA_ID)
+
+      await request(app)
+        .post('/api/v1/production/time-entries')
+        .set('Cookie', mariaCookie)
+        .send({
+          conveyorId: conv.id,
+          stepNodeId: stepId,
+          minutes: 10,
+          sessionCompletionPct: 50,
+        })
+        .expect(201)
+
+      const otherAssignee = await serviceCreateConveyorNodeAssignee(pool, {
+        conveyorId: conv.id,
+        conveyorNodeId: stepId,
+        collaboratorId: TE_PLANNED_COLLAB_ID,
+        isPrimary: false,
+      })
+
+      await insertConveyorTimeEntry(pool, {
+        id: newAssignmentId(),
+        conveyor_id: conv.id,
+        conveyor_node_id: stepId,
+        collaborator_id: TE_PLANNED_COLLAB_ID,
+        conveyor_node_assignee_id: otherAssignee.id,
+        entry_at: new Date(),
+        minutes: 10,
+        executed_quantity: null,
+        notes: null,
+        entry_mode: 'manual',
+        metadata_json: { accessChannel: 'PRODUCTION_AVATAR_PIN' },
+        entry_origin: 'ASSIGNED',
+        exception_justification: null,
+        is_out_of_sequence: false,
+        out_of_sequence_justification: null,
+        session_completion_pct: 80,
+        mark_as_done: false,
+      })
+
+      const mariaItem = await workQueueItemForStep(mariaCookie, stepId)
+      expect(mariaItem?.lastSessionCompletionPct).toBe(50)
+    })
+  })
+
+  describe('POST /api/v1/production/time-entries — excesso de tempo previsto', () => {
+    it('POST com realized + minutes > planned sem justificativa retorna 422', async () => {
+      const { conv, stepId } = await seedExcessTimeFixture(pool, `${Date.now()}-422`, {
+        plannedMinutes: 30,
+        priorRealizedMinutes: 20,
+      })
+      const cookie = productionSessionCookie(SEED_COLLABORATOR_MARIA_ID)
+      const res = await request(app)
+        .post('/api/v1/production/time-entries')
+        .set('Cookie', cookie)
+        .send({ conveyorId: conv.id, stepNodeId: stepId, minutes: 15 })
+      expect(res.status).toBe(422)
+      expect(res.body.error?.code).toBe(
+        ErrorCodes.TIME_ENTRY_EXCEEDED_PLANNED_REQUIRES_JUSTIFICATION,
+      )
+    })
+
+    it('mesmo POST com justificationId válido retorna 201', async () => {
+      const { conv, stepId } = await seedExcessTimeFixture(pool, `${Date.now()}-201`, {
+        plannedMinutes: 30,
+        priorRealizedMinutes: 20,
+      })
+      const planningId = await planningJustificationId(pool)
+      const cookie = productionSessionCookie(SEED_COLLABORATOR_MARIA_ID)
+      const res = await request(app)
+        .post('/api/v1/production/time-entries')
+        .set('Cookie', cookie)
+        .send({
+          conveyorId: conv.id,
+          stepNodeId: stepId,
+          minutes: 15,
+          justificationId: planningId,
+        })
+      expect(res.status).toBe(201)
+    })
+
+    it('justificativa é persistida em standard_justification_*', async () => {
+      const { conv, stepId } = await seedExcessTimeFixture(pool, `${Date.now()}-snap`, {
+        plannedMinutes: 30,
+        priorRealizedMinutes: 20,
+      })
+      const planningId = await planningJustificationId(pool)
+      const cookie = productionSessionCookie(SEED_COLLABORATOR_MARIA_ID)
+      const res = await request(app)
+        .post('/api/v1/production/time-entries')
+        .set('Cookie', cookie)
+        .send({
+          conveyorId: conv.id,
+          stepNodeId: stepId,
+          minutes: 15,
+          justificationId: planningId,
+        })
+      expect(res.status).toBe(201)
+
+      const entryId = (res.body.data as Record<string, unknown>).id as string
+      const row = await pool.query<{
+        standard_justification_id: string | null
+        standard_justification_label_snapshot: string | null
+        standard_justification_category_snapshot: string | null
+        out_of_sequence_justification: string | null
+        is_out_of_sequence: boolean
+      }>(
+        `SELECT standard_justification_id::text,
+                standard_justification_label_snapshot,
+                standard_justification_category_snapshot,
+                out_of_sequence_justification,
+                is_out_of_sequence
+         FROM conveyor_time_entries WHERE id = $1::uuid`,
+        [entryId],
+      )
+      expect(row.rows[0]?.standard_justification_id).toBe(planningId)
+      expect(row.rows[0]?.standard_justification_label_snapshot).toBeTruthy()
+      expect(row.rows[0]?.standard_justification_category_snapshot).toBe('PLANNING')
+      expect(row.rows[0]?.is_out_of_sequence).toBe(false)
+      expect(row.rows[0]?.out_of_sequence_justification).toBeNull()
+    })
+
+    it('minutes=0 + markAsDone=true acima do previsto retorna 201 sem exigir justificativa de excesso', async () => {
+      const { conv, stepId } = await seedExcessTimeFixture(pool, `${Date.now()}-done`, {
+        plannedMinutes: 30,
+        priorRealizedMinutes: 45,
+      })
+      const cookie = productionSessionCookie(SEED_COLLABORATOR_MARIA_ID)
+      const res = await request(app)
+        .post('/api/v1/production/time-entries')
+        .set('Cookie', cookie)
+        .send({
+          conveyorId: conv.id,
+          stepNodeId: stepId,
+          minutes: 0,
+          markAsDone: true,
+        })
+      expect(res.status).toBe(201)
+    })
+
+    it('exatamente no previsto não exige justificativa', async () => {
+      const { conv, stepId } = await seedExcessTimeFixture(pool, `${Date.now()}-exact`, {
+        plannedMinutes: 30,
+        priorRealizedMinutes: 20,
+      })
+      const cookie = productionSessionCookie(SEED_COLLABORATOR_MARIA_ID)
+      const res = await request(app)
+        .post('/api/v1/production/time-entries')
+        .set('Cookie', cookie)
+        .send({ conveyorId: conv.id, stepNodeId: stepId, minutes: 10 })
+      expect(res.status).toBe(201)
+    })
+
+    it('OOS continua exigindo justificativa como antes', async () => {
+      const conv = await serviceCreateConveyor(pool, {
+        ...minimalConveyorBody(`TE-OOS-EXCESS-${Date.now()}`),
+        options: [
+          {
+            titulo: 'Opção OOS',
+            orderIndex: 1,
+            sourceOrigin: 'manual',
+            areas: [
+              {
+                titulo: 'Área OOS',
+                orderIndex: 1,
+                sourceOrigin: 'manual',
+                steps: [
+                  {
+                    titulo: 'Primeira',
+                    orderIndex: 1,
+                    plannedMinutes: 30,
+                    sourceOrigin: 'manual',
+                    required: true,
+                  },
+                  {
+                    titulo: 'Segunda',
+                    orderIndex: 2,
+                    plannedMinutes: 30,
+                    sourceOrigin: 'manual',
+                    required: true,
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      })
+      await setConveyorProductionStatusForIntegration(pool, conv.id)
+      const steps = await pool.query<{ id: string }>(
+        `SELECT id FROM conveyor_nodes
+         WHERE conveyor_id = $1::uuid AND node_type = 'STEP' AND deleted_at IS NULL
+         ORDER BY order_index`,
+        [conv.id],
+      )
+      const secondStep = steps.rows[1]!.id
+
+      await serviceCreateConveyorNodeAssignee(pool, {
+        conveyorId: conv.id,
+        conveyorNodeId: steps.rows[0]!.id,
+        collaboratorId: SEED_COLLABORATOR_MARIA_ID,
+        isPrimary: true,
+      })
+      await serviceCreateConveyorNodeAssignee(pool, {
+        conveyorId: conv.id,
+        conveyorNodeId: secondStep,
+        collaboratorId: SEED_COLLABORATOR_MARIA_ID,
+        isPrimary: true,
+      })
+      await seedOperationalWorkPlanItemsForSteps(pool, {
+        createdByUserId: TE_ADMIN_USER_ID,
+        conveyorId: conv.id,
+        steps: [
+          { activityNodeId: steps.rows[0]!.id, collaboratorId: SEED_COLLABORATOR_MARIA_ID },
+          { activityNodeId: secondStep, collaboratorId: SEED_COLLABORATOR_MARIA_ID },
+        ],
+      })
+      await setWorkPlanPlannedMinutesForStep(
+        pool,
+        conv.id,
+        secondStep,
+        SEED_COLLABORATOR_MARIA_ID,
+        30,
+      )
+
+      const cookie = productionSessionCookie(SEED_COLLABORATOR_MARIA_ID)
+      const res = await request(app)
+        .post('/api/v1/production/time-entries')
+        .set('Cookie', cookie)
+        .send({ conveyorId: conv.id, stepNodeId: secondStep, minutes: 10 })
+      expect(res.status).toBe(422)
+      expect(res.body.error?.code).toBe(
+        ErrorCodes.TIME_ENTRY_OUT_OF_SEQUENCE_REQUIRES_JUSTIFICATION,
+      )
     })
   })
 })

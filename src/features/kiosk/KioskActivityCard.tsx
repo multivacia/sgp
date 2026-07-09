@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import type { ProductionWorkQueueItem } from '../../domain/production/production.types'
 import {
   createProductionTimeEntry,
@@ -7,10 +7,13 @@ import {
 import { ApiError } from '../../lib/api/apiErrors'
 import {
   canSubmitKioskProductionTimeEntry,
+  kioskRequiresExcessTimeJustification,
+  kioskRequiresOperationalJustification,
   productionOutOfSequenceJustificationError,
   productionPlannedTimeReachedHint,
   productionTimePlannedCoverageLabel,
   productionTimePlannedCoveragePct,
+  resolveKioskInitialSessionCompletionPct,
 } from '../../domain/production/kioskActivityCardLogic'
 import {
   formatAwaitingPreviousActivitiesLabel,
@@ -78,7 +81,10 @@ function ProgressRing({ pct, label }: { pct: number; label: string }) {
       <div className="absolute inset-0 flex flex-col items-center justify-center px-1 text-center">
         <span className="text-sm font-bold leading-tight text-white">{pct}%</span>
         <span className="text-[8px] uppercase leading-tight tracking-wide text-slate-500">
-          do tempo previsto
+          tempo apontado
+        </span>
+        <span className="text-[7px] uppercase leading-tight tracking-wide text-slate-600">
+          do previsto
         </span>
       </div>
     </div>
@@ -90,10 +96,18 @@ type Props = {
   onSuccess: () => void
 }
 
+const INITIAL_KIOSK_TIME_ENTRY_FORM = {
+  preset: null as number | null,
+  minutesCustom: '',
+  markAsDone: false,
+}
+
 export function KioskActivityCard({ item, onSuccess }: Props) {
-  const [preset, setPreset] = useState<number | null>(30)
-  const [minutesCustom, setMinutesCustom] = useState('30')
-  const [sessionPct, setSessionPct] = useState(50)
+  const [preset, setPreset] = useState<number | null>(INITIAL_KIOSK_TIME_ENTRY_FORM.preset)
+  const [minutesCustom, setMinutesCustom] = useState(INITIAL_KIOSK_TIME_ENTRY_FORM.minutesCustom)
+  const [sessionPct, setSessionPct] = useState(() =>
+    resolveKioskInitialSessionCompletionPct(item),
+  )
   const [markAsDone, setMarkAsDone] = useState(false)
   const [outOfSequenceJustification, setOutOfSequenceJustification] =
     useState<JustificationFieldValue>(emptyJustificationValue())
@@ -104,11 +118,14 @@ export function KioskActivityCard({ item, onSuccess }: Props) {
   const [success, setSuccess] = useState(false)
   const [confirmLowPct, setConfirmLowPct] = useState(false)
 
+  useEffect(() => {
+    setSessionPct(resolveKioskInitialSessionCompletionPct(item))
+  }, [item.activityNodeId, item.lastSessionCompletionPct])
+
   const timeCoveragePct = productionTimePlannedCoveragePct(item)
   const timeCoverageLabel = productionTimePlannedCoverageLabel(timeCoveragePct)
   const statusDisplay = resolveProductionOperationalStatusDisplay(item)
   const plannedTimeHint = productionPlannedTimeReachedHint(item)
-  const needsOosJustification = item.requiresOutOfSequenceJustification
   const sequenceBadge = resolveSequenceListBadge(item)
   const sequenceHint =
     item.sequenceWarningLabel ??
@@ -117,22 +134,36 @@ export function KioskActivityCard({ item, onSuccess }: Props) {
   const minutes =
     preset !== null ? preset : Number.parseInt(minutesCustom, 10) || 0
 
-  const minutesValid = Number.isInteger(minutes) && minutes > 0
+  const needsOosJustification = item.requiresOutOfSequenceJustification
+  const needsExcessTimeJustification = kioskRequiresExcessTimeJustification(item, minutes)
+  const needsOperationalJustification = kioskRequiresOperationalJustification(item, minutes)
 
   const preferredCategory = needsOosJustification
     ? resolvePreferredJustificationCategory({
         hasPreviousPendingStep: item.hasPreviousPendingStep,
         isOutOfSequence: item.isOutOfSequence,
       })
-    : null
+    : needsExcessTimeJustification
+      ? resolvePreferredJustificationCategory({ requiresExcessTime: true })
+      : null
 
   const canSubmit = canSubmitKioskProductionTimeEntry({
-    minutesValid,
-    requiresOutOfSequenceJustification: item.requiresOutOfSequenceJustification,
+    markAsDone,
+    minutes,
+    sessionPct,
+    requiresOperationalJustification: needsOperationalJustification,
     justification: outOfSequenceJustification,
     useFallback: justificationUseFallback,
     requiresComplement: justificationRequiresComplement,
   })
+
+  function resetTimeEntryFields() {
+    setPreset(INITIAL_KIOSK_TIME_ENTRY_FORM.preset)
+    setMinutesCustom(INITIAL_KIOSK_TIME_ENTRY_FORM.minutesCustom)
+    setMarkAsDone(INITIAL_KIOSK_TIME_ENTRY_FORM.markAsDone)
+    setError(null)
+    setConfirmLowPct(false)
+  }
 
   function selectPreset(p: number) {
     setPreset(p)
@@ -158,7 +189,7 @@ export function KioskActivityCard({ item, onSuccess }: Props) {
         minutes,
         sessionCompletionPct: sessionPct,
         markAsDone,
-        ...(needsOosJustification && oos
+        ...(needsOperationalJustification && oos
           ? {
               outOfSequenceJustification: oos,
               ...(outOfSequenceJustification.justificationId
@@ -174,6 +205,7 @@ export function KioskActivityCard({ item, onSuccess }: Props) {
       })
       setSuccess(true)
       setTimeout(() => {
+        resetTimeEntryFields()
         setSuccess(false)
         onSuccess()
       }, 3000)
@@ -191,19 +223,19 @@ export function KioskActivityCard({ item, onSuccess }: Props) {
     markAsDone,
     item,
     onSuccess,
-    needsOosJustification,
+    needsOperationalJustification,
     outOfSequenceJustification,
   ])
 
   function handleRegister() {
-    if (needsOosJustification) {
-      const oosErr = productionOutOfSequenceJustificationError({
+    if (needsOperationalJustification) {
+      const justificationErr = productionOutOfSequenceJustificationError({
         justification: outOfSequenceJustification,
         useFallback: justificationUseFallback,
         requiresComplement: justificationRequiresComplement,
       })
-      if (oosErr) {
-        setError(oosErr)
+      if (justificationErr) {
+        setError(justificationErr)
         return
       }
     }
@@ -347,6 +379,17 @@ export function KioskActivityCard({ item, onSuccess }: Props) {
             {sequenceHint && !needsOosJustification ? (
               <p className="mt-2 text-xs font-medium text-slate-400">{sequenceHint}</p>
             ) : null}
+            {item.canTrackTime && needsExcessTimeJustification && !needsOosJustification ? (
+              <div className="mt-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2">
+                <p className="text-xs font-semibold text-amber-200">
+                  Tempo acima do previsto — confirme o apontamento.
+                </p>
+                <p className="mt-1.5 text-xs text-amber-100/80">
+                  Este apontamento ultrapassa o tempo planejado da atividade. Informe uma
+                  justificativa para registrar.
+                </p>
+              </div>
+            ) : null}
             {item.canTrackTime && needsOosJustification ? (
               <div className="mt-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2">
                 <p className="text-xs font-semibold text-amber-200">
@@ -414,7 +457,7 @@ export function KioskActivityCard({ item, onSuccess }: Props) {
           <div>
             <div className="mb-2 flex items-center justify-between">
               <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">
-                Como está a atividade agora?
+                Evolução da atividade (nesta sessão)
               </p>
               <span className="text-sm font-bold text-sgp-gold">{sessionPct}%</span>
             </div>
@@ -428,21 +471,22 @@ export function KioskActivityCard({ item, onSuccess }: Props) {
               disabled={submitting}
               className="w-full cursor-pointer disabled:cursor-not-allowed"
               style={{ accentColor: 'var(--color-sgp-gold, #c9a227)' }}
-              aria-label="Estado atual da atividade nesta sessão"
+              aria-label="Evolução da atividade nesta sessão, independente do tempo trabalhado"
             />
             <p className="mt-1.5 text-center text-sm font-medium text-slate-300">
               {sliderPhrase(sessionPct)}
             </p>
           </div>
 
-          {needsOosJustification ? (
+          {needsOperationalJustification ? (
             <div>
               <JustificationSelect
                 channel="production"
-                idPrefix={`kiosk-oos-${item.activityNodeId}`}
+                idPrefix={`kiosk-operational-${item.activityNodeId}`}
                 value={outOfSequenceJustification.justificationId ?? ''}
                 complement={outOfSequenceJustification.justificationComplement}
                 legacyText={outOfSequenceJustification.legacyText}
+                required
                 preferredCategory={preferredCategory}
                 preferredLabelHint={
                   item.hasPreviousPendingStep ? 'outro colaborador' : null
@@ -462,7 +506,11 @@ export function KioskActivityCard({ item, onSuccess }: Props) {
                 }}
               />
               <p className="mt-1.5 text-xs text-slate-500">
-                Para apontar mesmo assim, informe o motivo.
+                {needsExcessTimeJustification && needsOosJustification
+                  ? 'Para apontar fora de sequência e acima do tempo previsto, informe o motivo.'
+                  : needsExcessTimeJustification
+                    ? 'Para apontar acima do tempo previsto, informe o motivo.'
+                    : 'Para apontar mesmo assim, informe o motivo.'}
               </p>
             </div>
           ) : null}
@@ -500,12 +548,12 @@ export function KioskActivityCard({ item, onSuccess }: Props) {
             disabled={submitting || !canSubmit}
             className={[
               'min-h-14 w-full text-base disabled:cursor-not-allowed disabled:opacity-50',
-              needsOosJustification ? 'sgp-cta-secondary' : 'sgp-cta-primary',
+              needsOperationalJustification ? 'sgp-cta-secondary' : 'sgp-cta-primary',
             ].join(' ')}
           >
             {submitting
               ? 'Registrando…'
-              : needsOosJustification
+              : needsOperationalJustification
                 ? 'Registrar apontamento (exceção)'
                 : 'Registrar apontamento'}
           </button>

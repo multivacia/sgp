@@ -1,7 +1,10 @@
 import type pg from 'pg'
 import type { MyWorkQueueItemApi } from '../my-work-queue/my-work-queue.dto.js'
 import { serviceGetWorkQueueForCollaborator } from '../my-work-queue/my-work-queue.service.js'
-import { sumRealizedMinutesByStepForConveyor } from '../conveyors/conveyorNodeWorkload.repository.js'
+import {
+  getLatestSessionCompletionPctByStepForCollaborator,
+  sumRealizedMinutesByStepForConveyor,
+} from '../conveyors/conveyorNodeWorkload.repository.js'
 import type {
   ProductionWorkQueueItemApi,
   ProductionWorkQueueResponseApi,
@@ -15,6 +18,7 @@ import {
 function mapToProductionItem(
   item: MyWorkQueueItemApi,
   realizedMinutes: number,
+  lastSessionCompletionPct: number | null,
 ): ProductionWorkQueueItemApi {
   const pending = item.isActivityCompleted
     ? 0
@@ -85,6 +89,7 @@ function mapToProductionItem(
     requiresOutOfSequenceJustification: resolveProductionRequiresOutOfSequenceJustification(
       trackInput,
     ),
+    lastSessionCompletionPct,
   }
 }
 
@@ -116,6 +121,13 @@ export async function serviceGetProductionWorkQueue(
     }),
   )
 
+  const lastSessionCompletionPctByStep =
+    await getLatestSessionCompletionPctByStepForCollaborator(
+      pool,
+      input.collaboratorId,
+      uniqueConveyorIds,
+    )
+
   return {
     date: result.date,
     planStatus: result.planStatus,
@@ -125,7 +137,11 @@ export async function serviceGetProductionWorkQueue(
       completedItemsToday: result.summary.completedItemsToday,
     },
     items: result.items.map((item) =>
-      mapToProductionItem(item, realizedByStep.get(item.activityNodeId) ?? 0),
+      mapToProductionItem(
+        item,
+        realizedByStep.get(item.activityNodeId) ?? 0,
+        lastSessionCompletionPctByStep.get(item.activityNodeId) ?? null,
+      ),
     ),
   }
 }

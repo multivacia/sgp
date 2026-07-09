@@ -66,15 +66,56 @@ export function productionPlannedTimeReachedHint(
   return 'Tempo previsto atingido. Marque como concluída para liberar a próxima atividade.'
 }
 
+/** Evolução operacional conhecida da atividade (último % registrado na fila). */
+export function resolveKioskInitialSessionCompletionPct(
+  item: Pick<ProductionWorkQueueItem, 'lastSessionCompletionPct'>,
+): number {
+  const pct = item.lastSessionCompletionPct
+  if (typeof pct !== 'number' || !Number.isFinite(pct)) return 0
+  return Math.max(0, Math.min(100, Math.round(pct)))
+}
+
+/** Exige justificativa quando o novo apontamento ultrapassa o tempo previsto. */
+export function kioskRequiresExcessTimeJustification(
+  item: Pick<ProductionWorkQueueItem, 'plannedMinutes' | 'realizedMinutes'>,
+  minutesNovo: number,
+): boolean {
+  if (!Number.isInteger(minutesNovo) || minutesNovo <= 0) return false
+  const planned = item.plannedMinutes
+  if (planned == null || !Number.isFinite(planned) || planned <= 0) return false
+  return item.realizedMinutes + minutesNovo > planned
+}
+
+export function kioskRequiresOperationalJustification(
+  item: Pick<
+    ProductionWorkQueueItem,
+    'plannedMinutes' | 'realizedMinutes' | 'requiresOutOfSequenceJustification'
+  >,
+  minutesNovo: number,
+): boolean {
+  return (
+    item.requiresOutOfSequenceJustification ||
+    kioskRequiresExcessTimeJustification(item, minutesNovo)
+  )
+}
+
 export function canSubmitKioskProductionTimeEntry(input: {
-  minutesValid: boolean
-  requiresOutOfSequenceJustification: boolean
+  markAsDone: boolean
+  minutes: number
+  sessionPct: number
+  requiresOperationalJustification: boolean
   justification: JustificationFieldValue
   useFallback: boolean
   requiresComplement: boolean
 }): boolean {
-  if (!input.minutesValid) return false
-  if (input.requiresOutOfSequenceJustification) {
+  if (!Number.isInteger(input.minutes) || input.minutes < 0) return false
+  if (input.sessionPct < 0 || input.sessionPct > 100) return false
+
+  const isEmptySubmit =
+    !input.markAsDone && input.minutes === 0 && input.sessionPct === 0
+  if (isEmptySubmit) return false
+
+  if (input.requiresOperationalJustification) {
     return (
       productionOutOfSequenceJustificationError({
         justification: input.justification,

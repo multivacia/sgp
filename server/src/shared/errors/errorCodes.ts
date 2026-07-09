@@ -40,6 +40,9 @@ export const ErrorCodes = {
   /** Apontamento com atividades anteriores ainda pendentes na esteira. */
   TIME_ENTRY_OUT_OF_SEQUENCE_REQUIRES_JUSTIFICATION:
     'TIME_ENTRY_OUT_OF_SEQUENCE_REQUIRES_JUSTIFICATION',
+  /** Apontamento que ultrapassa o tempo previsto da atividade. */
+  TIME_ENTRY_EXCEEDED_PLANNED_REQUIRES_JUSTIFICATION:
+    'TIME_ENTRY_EXCEEDED_PLANNED_REQUIRES_JUSTIFICATION',
   /** Conclusão explícita com atividades anteriores ainda pendentes. */
   STEP_COMPLETION_OUT_OF_SEQUENCE_REQUIRES_JUSTIFICATION:
     'STEP_COMPLETION_OUT_OF_SEQUENCE_REQUIRES_JUSTIFICATION',
