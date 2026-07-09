@@ -1,9 +1,15 @@
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it, vi } from 'vitest'
-import { computeConveyorProgressSummary } from '../../domain/conveyor-progress/conveyorProgressDisplay'
-import type { ConveyorProgressItem } from '../../domain/conveyor-progress/conveyorProgress.types'
-import { filterSelectedConveyors } from './ConveyorProgressTable'
+import {
+  computeConveyorProgressSummary,
+  filterSelectedConveyors,
+} from '../../domain/conveyor-progress/conveyorProgressDisplay'
+import type {
+  ActivityTimeEfficiency,
+  AggregateTimeEfficiency,
+  ConveyorProgressItem,
+} from '../../domain/conveyor-progress/conveyorProgress.types'
 
 vi.mock('../../domain/conveyors/conveyorOperationalStatus', () => ({
   labelConveyorOperationalStatus: (s: string) => s,
@@ -19,6 +25,28 @@ function sampleItem(
   name: string,
   overrides?: Partial<ConveyorProgressItem>,
 ): ConveyorProgressItem {
+  const aggregateTimeEfficiency: AggregateTimeEfficiency = {
+    status: 'CRITICO',
+    efficiencyPct: 66.7,
+    deviationMinutes: 15,
+    deviationPct: 50,
+    classification: 'CRITICO',
+    notStartedCount: 0,
+    withoutPlannedTimeCount: 0,
+    completedWithoutTimeCount: 0,
+    partialCount: 1,
+    includedInCalculationCount: 1,
+  }
+  const activityTimeEfficiency: ActivityTimeEfficiency = {
+    status: 'CRITICO',
+    isPartial: true,
+    includedInCalculation: true,
+    efficiencyPct: 66.7,
+    deviationMinutes: 15,
+    deviationPct: 50,
+    classification: 'CRITICO',
+  }
+
   return {
     conveyorId: id,
     conveyorName: name,
@@ -28,6 +56,7 @@ function sampleItem(
     remainingMinutes: 0,
     exceededMinutes: 41,
     progressPercent: 264,
+    timeEfficiency: aggregateTimeEfficiency,
     tasks: [
       {
         taskId: 't1',
@@ -37,6 +66,7 @@ function sampleItem(
         remainingMinutes: 0,
         exceededMinutes: 41,
         progressPercent: 264,
+        timeEfficiency: aggregateTimeEfficiency,
         sectors: [
           {
             sectorId: 's1',
@@ -46,6 +76,7 @@ function sampleItem(
             remainingMinutes: 0,
             exceededMinutes: 41,
             progressPercent: 264,
+            timeEfficiency: aggregateTimeEfficiency,
             activities: [
               {
                 activityId: 'a1',
@@ -56,6 +87,7 @@ function sampleItem(
                 remainingMinutes: 0,
                 exceededMinutes: 41,
                 progressPercent: 264,
+                timeEfficiency: activityTimeEfficiency,
                 timeEntries: [
                   {
                     timeEntryId: 'te1',
@@ -73,6 +105,40 @@ function sampleItem(
     ],
     ...overrides,
   }
+}
+
+function aggregateTimeEfficiency(
+  overrides: Partial<AggregateTimeEfficiency> = {},
+): AggregateTimeEfficiency {
+  return {
+    status: 'DENTRO_DO_PREVISTO',
+    efficiencyPct: 100,
+    deviationMinutes: 0,
+    deviationPct: 0,
+    classification: 'DENTRO_DO_PREVISTO',
+    notStartedCount: 0,
+    withoutPlannedTimeCount: 0,
+    completedWithoutTimeCount: 0,
+    partialCount: 0,
+    includedInCalculationCount: 1,
+    ...overrides,
+  }
+}
+
+function summaryRowItem(
+  id: string,
+  name: string,
+  timeEfficiency: AggregateTimeEfficiency,
+): ConveyorProgressItem {
+  return sampleItem(id, name, {
+    plannedMinutes: 60,
+    realizedMinutes: 60,
+    remainingMinutes: 0,
+    exceededMinutes: 0,
+    progressPercent: 100,
+    timeEfficiency,
+    tasks: [],
+  })
 }
 
 describe('computeConveyorProgressSummary', () => {
@@ -102,6 +168,7 @@ describe('ConveyorProgressTable render', () => {
     expect(html).toContain('Falta')
     expect(html).toContain('Excedente')
     expect(html).toContain('Evolução')
+    expect(html).toContain('Eficiência')
     expect(html).toContain('Seleção')
     expect(html).toContain('Esteira Teste')
   })
@@ -120,6 +187,97 @@ describe('ConveyorProgressTable render', () => {
     const checkboxCount = (html.match(/type="checkbox"/g) ?? []).length
     expect(checkboxCount).toBe(2)
   })
+
+  it('renderiza os principais estados visuais de eficiência sem depender das linhas internas', async () => {
+    const { ConveyorProgressTable } = await import('./ConveyorProgressTable')
+    const html = renderToStaticMarkup(
+      createElement(ConveyorProgressTable, {
+        items: [
+          summaryRowItem(
+            'c-fast',
+            'Esteira rápida',
+            aggregateTimeEfficiency({
+              status: 'MAIS_RAPIDO',
+              efficiencyPct: 150,
+              deviationMinutes: -20,
+              deviationPct: -33.3,
+              classification: 'MAIS_RAPIDO',
+            }),
+          ),
+          summaryRowItem(
+            'c-on-plan',
+            'Esteira dentro do previsto',
+            aggregateTimeEfficiency(),
+          ),
+          summaryRowItem(
+            'c-partial',
+            'Esteira parcial',
+            aggregateTimeEfficiency({
+              status: 'LEVE_DESVIO',
+              efficiencyPct: 90.9,
+              deviationMinutes: 10,
+              deviationPct: 10,
+              classification: 'LEVE_DESVIO',
+              partialCount: 1,
+              includedInCalculationCount: 2,
+            }),
+          ),
+          summaryRowItem(
+            'c-no-plan',
+            'Esteira sem tempo previsto',
+            aggregateTimeEfficiency({
+              status: null,
+              efficiencyPct: null,
+              deviationMinutes: null,
+              deviationPct: null,
+              classification: null,
+              withoutPlannedTimeCount: 1,
+              includedInCalculationCount: 0,
+            }),
+          ),
+          summaryRowItem(
+            'c-not-started',
+            'Esteira não iniciada',
+            aggregateTimeEfficiency({
+              status: null,
+              efficiencyPct: null,
+              deviationMinutes: null,
+              deviationPct: null,
+              classification: null,
+              notStartedCount: 1,
+              includedInCalculationCount: 0,
+            }),
+          ),
+          summaryRowItem(
+            'c-no-entry',
+            'Esteira concluída sem apontamento',
+            aggregateTimeEfficiency({
+              status: null,
+              efficiencyPct: null,
+              deviationMinutes: null,
+              deviationPct: null,
+              classification: null,
+              completedWithoutTimeCount: 1,
+              includedInCalculationCount: 0,
+            }),
+          ),
+        ],
+        selectedIds: new Set<string>(),
+        onToggleSelect: () => {},
+        onSelectAll: () => {},
+        onClearSelection: () => {},
+      }),
+    )
+
+    expect(html).toContain('Mais rápido que previsto')
+    expect(html).toContain('Dentro do previsto')
+    expect(html).toContain('2 no cálculo · 1 parcial')
+    expect(html).toContain('1 sem tempo previsto')
+    expect(html).toContain('1 não iniciada')
+    expect(html).toContain('1 concluída sem apontamento')
+    expect(html).toContain('Sem base calculável')
+    expect(html).not.toContain('>Mais rápido<')
+  })
 })
 
 describe('ConveyorProgressSummary render', () => {
@@ -133,6 +291,7 @@ describe('ConveyorProgressSummary render', () => {
     expect(html).toContain('Resumo geral')
     expect(html).toContain('Excedente')
     expect(html).toContain('Evolução média')
+    expect(html).toContain('Eficiência ponderada')
   })
 })
 

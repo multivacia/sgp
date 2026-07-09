@@ -8,6 +8,46 @@ export type TimeEntryAnalyticalItem = {
   entryMode?: string | null
 }
 
+export type TimeEfficiencyStatus =
+  | 'SEM_TEMPO_PREVISTO'
+  | 'NAO_INICIADA'
+  | 'CONCLUIDA_SEM_APONTAMENTO'
+  | 'MAIS_RAPIDO'
+  | 'DENTRO_DO_PREVISTO'
+  | 'LEVE_DESVIO'
+  | 'ATENCAO'
+  | 'CRITICO'
+
+export type TimeEfficiencyClassification =
+  | 'MAIS_RAPIDO'
+  | 'DENTRO_DO_PREVISTO'
+  | 'LEVE_DESVIO'
+  | 'ATENCAO'
+  | 'CRITICO'
+
+export type ActivityTimeEfficiency = {
+  status: TimeEfficiencyStatus
+  isPartial: boolean
+  includedInCalculation: boolean
+  efficiencyPct: number | null
+  deviationMinutes: number | null
+  deviationPct: number | null
+  classification: TimeEfficiencyClassification | null
+}
+
+export type AggregateTimeEfficiency = {
+  status: TimeEfficiencyStatus | null
+  efficiencyPct: number | null
+  deviationMinutes: number | null
+  deviationPct: number | null
+  classification: TimeEfficiencyClassification | null
+  notStartedCount: number
+  withoutPlannedTimeCount: number
+  completedWithoutTimeCount: number
+  partialCount: number
+  includedInCalculationCount: number
+}
+
 export type ActivityProgressItem = {
   activityId: string
   activityName: string
@@ -18,6 +58,7 @@ export type ActivityProgressItem = {
   remainingMinutes: number
   exceededMinutes: number
   progressPercent: number
+  timeEfficiency: ActivityTimeEfficiency
   timeEntries: TimeEntryAnalyticalItem[]
 }
 
@@ -29,6 +70,7 @@ export type SectorProgressItem = {
   remainingMinutes: number
   exceededMinutes: number
   progressPercent: number
+  timeEfficiency: AggregateTimeEfficiency
   activities: ActivityProgressItem[]
 }
 
@@ -40,6 +82,7 @@ export type TaskProgressItem = {
   remainingMinutes: number
   exceededMinutes: number
   progressPercent: number
+  timeEfficiency: AggregateTimeEfficiency
   sectors: SectorProgressItem[]
 }
 
@@ -53,11 +96,15 @@ export type ConveyorProgressItem = {
   remainingMinutes: number
   exceededMinutes: number
   progressPercent: number
+  timeEfficiency: AggregateTimeEfficiency
   tasks: TaskProgressItem[]
 }
 
 export type ConveyorProgressResponse = {
   items: ConveyorProgressItem[]
+  summary: {
+    timeEfficiency: AggregateTimeEfficiency
+  }
 }
 
 export type ConveyorProgressFetchFilters = {

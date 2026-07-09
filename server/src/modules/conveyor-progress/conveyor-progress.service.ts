@@ -1,6 +1,8 @@
 import type pg from 'pg'
 import {
+  computeTimeEfficiencyMetrics,
   computeConveyorProgressMetrics,
+  consolidateWeightedTimeEfficiency,
   sumMinutes,
 } from '../../shared/conveyorProgressMetrics.js'
 import type {
@@ -22,6 +24,28 @@ import {
 
 function metricsFromTotals(planned: number, realized: number) {
   return computeConveyorProgressMetrics(planned, realized)
+}
+
+function isCompletedStepStatus(status: string | null | undefined): boolean {
+  return (status ?? '').trim().toUpperCase() === 'COMPLETED'
+}
+
+function buildActivityEfficiencyInput(activity: Pick<ActivityProgressItemDto, 'plannedMinutes' | 'realizedMinutes' | 'status'>) {
+  return {
+    plannedMinutes: activity.plannedMinutes,
+    realizedMinutes: activity.realizedMinutes,
+    isCompleted: isCompletedStepStatus(activity.status),
+  }
+}
+
+function collectActivitiesFromSectors(
+  sectors: readonly Pick<SectorProgressItemDto, 'activities'>[],
+): ActivityProgressItemDto[] {
+  return sectors.flatMap((sector) => sector.activities)
+}
+
+function collectActivitiesFromTasks(tasks: readonly TaskProgressItemDto[]): ActivityProgressItemDto[] {
+  return tasks.flatMap((task) => collectActivitiesFromSectors(task.sectors))
 }
 
 function buildProgressTree(
@@ -87,6 +111,11 @@ function buildProgressTree(
       const planned = step.planned_minutes ?? 0
       const realized = realizedByStep.get(step.step_id) ?? 0
       const activityMetrics = metricsFromTotals(planned, realized)
+      const timeEfficiency = computeTimeEfficiencyMetrics({
+        plannedMinutes: step.planned_minutes,
+        realizedMinutes: realized,
+        isCompleted: isCompletedStepStatus(step.operational_status),
+      })
 
       const activity: ActivityProgressItemDto = {
         activityId: step.step_id,
@@ -94,6 +123,7 @@ function buildProgressTree(
         status: step.operational_status ?? 'PENDING',
         collaboratorName: assigneeByStep.get(step.step_id) ?? null,
         ...activityMetrics,
+        timeEfficiency,
         timeEntries: entriesByStep.get(step.step_id) ?? [],
       }
 
@@ -133,22 +163,30 @@ function buildProgressTree(
               sectorId: sector.sectorId,
               sectorName: sector.sectorName,
               ...metricsFromTotals(planned, realized),
+              timeEfficiency: consolidateWeightedTimeEfficiency(
+                sector.activities.map(buildActivityEfficiencyInput),
+              ),
               activities: sector.activities,
             }
           })
 
         const planned = sumMinutes(sectors.map((s) => s.plannedMinutes))
         const realized = sumMinutes(sectors.map((s) => s.realizedMinutes))
+        const activities = collectActivitiesFromSectors(sectors)
         return {
           taskId: task.taskId,
           taskName: task.taskName,
           ...metricsFromTotals(planned, realized),
+          timeEfficiency: consolidateWeightedTimeEfficiency(
+            activities.map(buildActivityEfficiencyInput),
+          ),
           sectors,
         }
       })
 
     const planned = sumMinutes(tasks.map((t) => t.plannedMinutes))
     const realized = sumMinutes(tasks.map((t) => t.realizedMinutes))
+    const activities = collectActivitiesFromTasks(tasks)
 
     return {
       conveyorId: conveyor.id,
@@ -156,6 +194,9 @@ function buildProgressTree(
       conveyorName: conveyor.name,
       operationalStatus: conveyor.operational_status,
       ...metricsFromTotals(planned, realized),
+      timeEfficiency: consolidateWeightedTimeEfficiency(
+        activities.map(buildActivityEfficiencyInput),
+      ),
       tasks,
     }
   })
@@ -165,6 +206,9 @@ export async function serviceConveyorProgress(
   pool: pg.Pool,
   query: ConveyorProgressQuery,
 ): Promise<ConveyorProgressResponseDto> {
+  const emptySummary = {
+    timeEfficiency: consolidateWeightedTimeEfficiency([]),
+  }
   const filters = {
     search: query.search,
     operationalStatus: query.operationalStatus,
@@ -175,7 +219,7 @@ export async function serviceConveyorProgress(
 
   let conveyors = await listConveyorsForProgress(pool, filters)
   if (conveyors.length === 0) {
-    return { items: [] }
+    return { items: [], summary: emptySummary }
   }
 
   let conveyorIds = conveyors.map((c) => c.id)
@@ -189,7 +233,7 @@ export async function serviceConveyorProgress(
     conveyors = conveyors.filter((c) => allowed.has(c.id))
     conveyorIds = conveyors.map((c) => c.id)
     if (conveyorIds.length === 0) {
-      return { items: [] }
+      return { items: [], summary: emptySummary }
     }
   }
 
@@ -205,5 +249,12 @@ export async function serviceConveyorProgress(
     items = items.filter((item) => item.exceededMinutes > 0)
   }
 
-  return { items }
+  return {
+    items,
+    summary: {
+      timeEfficiency: consolidateWeightedTimeEfficiency(
+        items.flatMap((item) => collectActivitiesFromTasks(item.tasks)).map(buildActivityEfficiencyInput),
+      ),
+    },
+  }
 }

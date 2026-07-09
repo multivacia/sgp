@@ -1,3 +1,9 @@
+import type {
+  TimeEfficiencyClassification,
+  TimeEfficiencyStatus,
+  WeightedTimeEfficiencySummary,
+} from '../../shared/conveyorProgressMetrics.js'
+
 export type TimeEntryAnalyticalItemDto = {
   timeEntryId: string
   entryDate: string
@@ -7,6 +13,18 @@ export type TimeEntryAnalyticalItemDto = {
   notes?: string | null
   entryMode?: string | null
 }
+
+export type ActivityTimeEfficiencyDto = {
+  status: TimeEfficiencyStatus
+  isPartial: boolean
+  includedInCalculation: boolean
+  efficiencyPct: number | null
+  deviationMinutes: number | null
+  deviationPct: number | null
+  classification: TimeEfficiencyClassification | null
+}
+
+export type AggregateTimeEfficiencyDto = WeightedTimeEfficiencySummary
 
 export type ActivityProgressItemDto = {
   activityId: string
@@ -18,6 +36,7 @@ export type ActivityProgressItemDto = {
   remainingMinutes: number
   exceededMinutes: number
   progressPercent: number
+  timeEfficiency: ActivityTimeEfficiencyDto
   timeEntries: TimeEntryAnalyticalItemDto[]
 }
 
@@ -29,6 +48,7 @@ export type SectorProgressItemDto = {
   remainingMinutes: number
   exceededMinutes: number
   progressPercent: number
+  timeEfficiency: AggregateTimeEfficiencyDto
   activities: ActivityProgressItemDto[]
 }
 
@@ -40,6 +60,7 @@ export type TaskProgressItemDto = {
   remainingMinutes: number
   exceededMinutes: number
   progressPercent: number
+  timeEfficiency: AggregateTimeEfficiencyDto
   sectors: SectorProgressItemDto[]
 }
 
@@ -53,9 +74,13 @@ export type ConveyorProgressItemDto = {
   remainingMinutes: number
   exceededMinutes: number
   progressPercent: number
+  timeEfficiency: AggregateTimeEfficiencyDto
   tasks: TaskProgressItemDto[]
 }
 
 export type ConveyorProgressResponseDto = {
   items: ConveyorProgressItemDto[]
+  summary: {
+    timeEfficiency: AggregateTimeEfficiencyDto
+  }
 }
