@@ -4,7 +4,11 @@
 */
 
 :root {
-  /* ——— Paleta mapeada para @theme (--color-sgp-*) ——— */
+  /* ——— Paleta mapeada para @theme (--color-sgp-*) ———
+  Rampa de escuros (5 passos, do mais claro ao mais escuro): navy > navy-mid > navy-deep > night > void.
+  navy = superfícies/painéis · night = header (glass) · void = fundo base do app.
+  Dourados (3 papéis): gold = CTA primário · gold-muted = hover/pressed · gold-warm = texto/ícone de destaque.
+  "amber" foi unificado a "gold-warm" quando visualmente equivalente, mantendo compatibilidade com usos legados. */
   --semantic-sgp-navy: #101824;
   --semantic-sgp-navy-deep: #0a1018;
   --semantic-sgp-navy-mid: #152a3d;
@@ -15,7 +19,7 @@
   --semantic-sgp-gold: #c9a227;
   --semantic-sgp-gold-muted: #a88620;
   --semantic-sgp-gold-warm: #c99c5c;
-  --semantic-sgp-amber: #d4a84b;
+  --semantic-sgp-amber: var(--semantic-sgp-gold-warm);
 
   --semantic-sgp-canvas: #dce4ef;
   --semantic-sgp-surface: #e8edf5;
@@ -147,7 +151,7 @@ html[data-theme="slate-dark"] {
   --semantic-sgp-gold: #c9a227;
   --semantic-sgp-gold-muted: #a88620;
   --semantic-sgp-gold-warm: #c99c5c;
-  --semantic-sgp-amber: #d4a84b;
+  --semantic-sgp-amber: var(--semantic-sgp-gold-warm);
 
   --semantic-sgp-canvas: #dce4ef;
   --semantic-sgp-surface: #e8edf5;
@@ -213,18 +217,20 @@ html[data-theme="light-executive"] {
   --color-surface-secondary: #f8fafc;
   --color-surface-elevated: #ffffff;
   --color-card-bg: #ffffff;
-  --color-card-border: #d8e0ea;
-  --color-sidebar-bg: #eaf0f7;
+  --color-card-border: #b4c3d7;
+  --color-sidebar-bg: #d3ddec;
   --color-sidebar-panel: #f8fafc;
   --color-topbar-bg: rgba(255, 255, 255, 0.88);
-  --color-shell-border: #d8e0ea;
+  --color-shell-border: #9db0c8;
   --color-text-primary: #0f172a;
   --color-text-secondary: #334155;
   --color-text-muted: #64748b;
   --color-text-soft: #94a3b8;
-  --color-border-subtle: #d8e0ea;
-  --color-border-default: #d8e0ea;
-  --color-border-strong: #b8c6d8;
+  /* Bordas revisadas para contraste real no tema claro.
+  Antes: #d8e0ea, contraste muito baixo sobre branco, quase invisível. */
+  --color-border-subtle: #b4c3d7;
+  --color-border-default: #9db0c8;
+  --color-border-strong: #7f93ae;
   --color-accent-gold: #d97706;
   --color-accent-gold-hover: #b45309;
   --color-accent-gold-text: #92400e;
@@ -249,7 +255,7 @@ html[data-theme="light-executive"] {
   --semantic-sgp-gold: var(--color-accent-gold);
   --semantic-sgp-gold-muted: var(--color-accent-gold-hover);
   --semantic-sgp-gold-warm: #c99c5c;
-  --semantic-sgp-amber: #d4a84b;
+  --semantic-sgp-amber: var(--semantic-sgp-gold-warm);
 
   --semantic-sgp-canvas: var(--color-bg-page);
   --semantic-sgp-surface: var(--color-surface);
