@@ -1,0 +1,297 @@
+name: Deploy HostGator VPS Homologacao
+
+on:
+  push:
+    branches:
+      - homol
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-hostgator-vps-homol
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Deploy SGP+ HML to HostGator VPS
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    env:
+      DEPLOY_BRANCH: homol
+      REMOTE_APP_DIR: /opt/sgp/sgp-homol
+      REMOTE_WEB_DIR: /var/www/sgp-homol
+      HEALTH_URL: https://sgp-homol.multivacia.com/api/v1/health
+      APP_ENV: homologation
+      EXPECTED_PM2_PROCESS: sgp-api-homol
+      EXPECTED_PORT: "4001"
+      EXPECTED_PGDATABASE: sgp_homol
+      EXPECTED_CORS_ORIGIN: https://sgp-homol.multivacia.com
+
+    steps:
+      - name: Validate trigger, secrets and HML guardrails
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          test "${GITHUB_REF_NAME}" = "${DEPLOY_BRANCH}" || (
+            echo "This workflow only deploys the homol branch." && exit 1
+          )
+
+          test -n "${{ secrets.HML_VPS_HOST }}" || (echo "Missing secret HML_VPS_HOST" && exit 1)
+          test -n "${{ secrets.HML_VPS_PORT }}" || (echo "Missing secret HML_VPS_PORT" && exit 1)
+          test -n "${{ secrets.HML_VPS_USER }}" || (echo "Missing secret HML_VPS_USER" && exit 1)
+          test -n "${{ secrets.HML_VPS_SSH_KEY }}" || (echo "Missing secret HML_VPS_SSH_KEY" && exit 1)
+          test -n "${{ secrets.HML_VPS_KNOWN_HOSTS }}" || (
+            echo "Missing secret HML_VPS_KNOWN_HOSTS" && exit 1
+          )
+
+          test "${DEPLOY_BRANCH}" = "homol" || (echo "DEPLOY_BRANCH must be homol" && exit 1)
+          test "${APP_ENV}" = "homologation" || (echo "APP_ENV must be homologation" && exit 1)
+          test "${REMOTE_APP_DIR}" = "/opt/sgp/sgp-homol" || (
+            echo "REMOTE_APP_DIR must be /opt/sgp/sgp-homol" && exit 1
+          )
+          test "${REMOTE_WEB_DIR}" = "/var/www/sgp-homol" || (
+            echo "REMOTE_WEB_DIR must be /var/www/sgp-homol" && exit 1
+          )
+          test "${HEALTH_URL}" = "https://sgp-homol.multivacia.com/api/v1/health" || (
+            echo "HEALTH_URL must be the homologation URL" && exit 1
+          )
+          test "${EXPECTED_PM2_PROCESS}" = "sgp-api-homol" || (
+            echo "EXPECTED_PM2_PROCESS must be sgp-api-homol" && exit 1
+          )
+          test "${EXPECTED_PORT}" = "4001" || (echo "EXPECTED_PORT must be 4001" && exit 1)
+          test "${EXPECTED_PGDATABASE}" = "sgp_homol" || (
+            echo "EXPECTED_PGDATABASE must be sgp_homol" && exit 1
+          )
+          test "${EXPECTED_CORS_ORIGIN}" = "https://sgp-homol.multivacia.com" || (
+            echo "EXPECTED_CORS_ORIGIN must be the homologation origin" && exit 1
+          )
+
+          test "${REMOTE_APP_DIR}" != "/opt/sgp/sgp-main" || (
+            echo "HML must never use /opt/sgp/sgp-main" && exit 1
+          )
+          test "${REMOTE_WEB_DIR}" != "/var/www/sgp-web" || (
+            echo "HML must never publish to /var/www/sgp-web" && exit 1
+          )
+          test "${EXPECTED_PM2_PROCESS}" != "sgp-api" || (
+            echo "HML must never restart PM2 sgp-api" && exit 1
+          )
+          test "${EXPECTED_PORT}" != "4000" || (echo "HML must never use port 4000" && exit 1)
+          test "${EXPECTED_PGDATABASE}" != "sgp_prod" || (
+            echo "HML must never use PGDATABASE=sgp_prod" && exit 1
+          )
+          test "${EXPECTED_CORS_ORIGIN}" != "https://sgp.multivacia.com" || (
+            echo "HML must never use production CORS origin" && exit 1
+          )
+
+      - name: Configure SSH
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+
+          printf '%s\n' "${{ secrets.HML_VPS_SSH_KEY }}" > ~/.ssh/hostgator_hml_vps_key
+          chmod 600 ~/.ssh/hostgator_hml_vps_key
+
+          printf '%s\n' "${{ secrets.HML_VPS_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
+          chmod 644 ~/.ssh/known_hosts
+
+      - name: Deploy on VPS
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          ssh \
+            -i ~/.ssh/hostgator_hml_vps_key \
+            -p "${{ secrets.HML_VPS_PORT }}" \
+            -o IdentitiesOnly=yes \
+            -o StrictHostKeyChecking=yes \
+            "${{ secrets.HML_VPS_USER }}@${{ secrets.HML_VPS_HOST }}" \
+            "DEPLOY_BRANCH='${DEPLOY_BRANCH}' REMOTE_APP_DIR='${REMOTE_APP_DIR}' REMOTE_WEB_DIR='${REMOTE_WEB_DIR}' HEALTH_URL='${HEALTH_URL}' APP_ENV='${APP_ENV}' EXPECTED_PM2_PROCESS='${EXPECTED_PM2_PROCESS}' EXPECTED_PORT='${EXPECTED_PORT}' EXPECTED_PGDATABASE='${EXPECTED_PGDATABASE}' EXPECTED_CORS_ORIGIN='${EXPECTED_CORS_ORIGIN}' EXPECTED_REMOTE_USER='${{ secrets.HML_VPS_USER }}' bash -s" <<'REMOTE_SCRIPT'
+          set -euo pipefail
+
+          fail() {
+            echo "ERROR: $*" >&2
+            exit 1
+          }
+
+          echo "==> Host"
+          hostname
+          ACTUAL_USER="$(whoami)"
+          echo "$ACTUAL_USER"
+
+          test "$ACTUAL_USER" = "$EXPECTED_REMOTE_USER" || fail \
+            "SSH connected with unexpected user: $ACTUAL_USER"
+
+          test "$DEPLOY_BRANCH" = "homol" || fail "DEPLOY_BRANCH must be homol"
+          test "$APP_ENV" = "homologation" || fail "APP_ENV must be homologation"
+          test "$REMOTE_APP_DIR" = "/opt/sgp/sgp-homol" || fail \
+            "REMOTE_APP_DIR must be /opt/sgp/sgp-homol"
+          test "$REMOTE_WEB_DIR" = "/var/www/sgp-homol" || fail \
+            "REMOTE_WEB_DIR must be /var/www/sgp-homol"
+          test "$EXPECTED_PM2_PROCESS" = "sgp-api-homol" || fail \
+            "EXPECTED_PM2_PROCESS must be sgp-api-homol"
+          test "$EXPECTED_PORT" = "4001" || fail "EXPECTED_PORT must be 4001"
+          test "$EXPECTED_PGDATABASE" = "sgp_homol" || fail \
+            "EXPECTED_PGDATABASE must be sgp_homol"
+          test "$EXPECTED_CORS_ORIGIN" = "https://sgp-homol.multivacia.com" || fail \
+            "EXPECTED_CORS_ORIGIN must be the homologation origin"
+          test "$HEALTH_URL" = "https://sgp-homol.multivacia.com/api/v1/health" || fail \
+            "HEALTH_URL must be the homologation URL"
+
+          test "$REMOTE_APP_DIR" != "/opt/sgp/sgp-main" || fail \
+            "HML must never use /opt/sgp/sgp-main"
+          test "$REMOTE_WEB_DIR" != "/var/www/sgp-web" || fail \
+            "HML must never publish to /var/www/sgp-web"
+          test "$EXPECTED_PM2_PROCESS" != "sgp-api" || fail \
+            "HML must never restart PM2 sgp-api"
+          test "$EXPECTED_PORT" != "4000" || fail "HML must never use port 4000"
+          test "$EXPECTED_PGDATABASE" != "sgp_prod" || fail \
+            "HML must never use PGDATABASE=sgp_prod"
+
+          echo "==> Validating directories"
+          test -d "$REMOTE_APP_DIR" || fail "Missing app directory: $REMOTE_APP_DIR"
+          test -d "$REMOTE_WEB_DIR" || fail "Missing web directory: $REMOTE_WEB_DIR"
+          test -w "$REMOTE_WEB_DIR" || fail "Web directory is not writable: $REMOTE_WEB_DIR"
+
+          APP_REALPATH="$(realpath "$REMOTE_APP_DIR")"
+          WEB_REALPATH="$(realpath "$REMOTE_WEB_DIR")"
+
+          test "$APP_REALPATH" = "/opt/sgp/sgp-homol" || fail \
+            "App realpath must stay in /opt/sgp/sgp-homol"
+          test "$WEB_REALPATH" = "/var/www/sgp-homol" || fail \
+            "Web realpath must stay in /var/www/sgp-homol"
+          test "$APP_REALPATH" != "/opt/sgp/sgp-main" || fail \
+            "App realpath resolved to production path"
+          test "$WEB_REALPATH" != "/var/www/sgp-web" || fail \
+            "Web realpath resolved to production path"
+
+          cd "$REMOTE_APP_DIR"
+
+          git rev-parse --is-inside-work-tree >/dev/null 2>&1 || fail \
+            "REMOTE_APP_DIR is not a git repository"
+
+          echo "==> Validating HML environment files"
+          test -f server/.env || fail "Missing file server/.env"
+          test -f .env || fail "Missing file .env"
+
+          grep -Eq '^NODE_ENV=production$' server/.env || fail \
+            "server/.env must contain NODE_ENV=production"
+          grep -Eq '^APP_ENV=homologation$' server/.env || fail \
+            "server/.env must contain APP_ENV=homologation"
+          grep -Eq '^PORT=4001$' server/.env || fail \
+            "server/.env must contain PORT=4001"
+          grep -Eq '^PGDATABASE=sgp_homol$' server/.env || fail \
+            "server/.env must contain PGDATABASE=sgp_homol"
+          grep -Eq '^CORS_ORIGIN=https://sgp-homol\.multivacia\.com$' server/.env || fail \
+            "server/.env must contain the homologation CORS origin"
+
+          ! grep -Eq '^PGDATABASE=sgp_prod$' server/.env || fail \
+            "server/.env must never contain PGDATABASE=sgp_prod"
+          ! grep -Eq '^PORT=4000$' server/.env || fail \
+            "server/.env must never contain PORT=4000"
+          ! grep -Eq '^CORS_ORIGIN=https://sgp\.multivacia\.com$' server/.env || fail \
+            "server/.env must never contain the production CORS origin"
+          ! grep -Eq '^AUTH_COOKIE_NAME=sgp_auth$' server/.env || fail \
+            "AUTH_COOKIE_NAME must be dedicated to HML"
+          ! grep -Eq '^PRODUCTION_AUTH_COOKIE_NAME=sgp_production_auth$' server/.env || fail \
+            "PRODUCTION_AUTH_COOKIE_NAME must be dedicated to HML"
+
+          grep -Eq '^AUTH_COOKIE_NAME=.+$' server/.env || fail \
+            "server/.env must define AUTH_COOKIE_NAME"
+          grep -Eq '^PRODUCTION_AUTH_COOKIE_NAME=.+$' server/.env || fail \
+            "server/.env must define PRODUCTION_AUTH_COOKIE_NAME"
+          grep -Eq '^JWT_SECRET=.{16,}$' server/.env || fail \
+            "server/.env must define JWT_SECRET with at least 16 chars"
+          grep -Eq '^PRODUCTION_JWT_SECRET=.{16,}$' server/.env || fail \
+            "server/.env must define PRODUCTION_JWT_SECRET with at least 16 chars"
+          grep -Eq '^PRODUCTION_KIOSK_TOKEN=.+$' server/.env || fail \
+            "server/.env must define PRODUCTION_KIOSK_TOKEN"
+
+          if grep -Eq '^DATABASE_URL=' server/.env; then
+            ! grep -Eq '^DATABASE_URL=.*sgp_prod' server/.env || fail \
+              "DATABASE_URL must never point to sgp_prod"
+          fi
+
+          if grep -Eq '^VITE_API_BASE_URL=' .env; then
+            ! grep -Eq '^VITE_API_BASE_URL=https://sgp\.multivacia\.com(/api)?$' .env || fail \
+              ".env must never point VITE_API_BASE_URL to production"
+          fi
+
+          echo "==> Git status before deploy"
+          git status --short
+
+          echo "==> Fetching branch: $DEPLOY_BRANCH"
+          git fetch origin "$DEPLOY_BRANCH"
+
+          echo "==> Resetting working tree to origin/$DEPLOY_BRANCH"
+          git checkout "$DEPLOY_BRANCH"
+          git reset --hard "origin/$DEPLOY_BRANCH"
+
+          echo "==> Guardrail: migrations are intentionally disabled"
+          echo "No migration command will be executed in this deploy."
+
+          echo "==> Installing root dependencies"
+          npm ci
+
+          echo "==> Installing server dependencies"
+          npm --prefix server ci
+
+          echo "==> Building backend"
+          npm --prefix server run build
+
+          echo "==> Building frontend"
+          npm run build
+
+          echo "==> Validating frontend build output"
+          test -d dist || fail "Missing dist directory after frontend build"
+          test -f dist/index.html || fail "Missing dist/index.html after frontend build"
+
+          echo "==> Backing up current frontend"
+          BACKUP_DIR="/opt/sgp/backups/frontend-homol-before-deploy-$(date +%Y%m%d-%H%M%S)"
+          mkdir -p "$BACKUP_DIR"
+          rsync -a "$REMOTE_WEB_DIR"/ "$BACKUP_DIR"/
+
+          echo "==> Publishing frontend"
+          rsync -a --delete dist/ "$REMOTE_WEB_DIR"/
+
+          echo "==> Updating PM2 process"
+          if pm2 describe "$EXPECTED_PM2_PROCESS" >/dev/null 2>&1; then
+            pm2 restart "$EXPECTED_PM2_PROCESS" --update-env
+          else
+            pm2 start npm --name "$EXPECTED_PM2_PROCESS" --cwd "$REMOTE_APP_DIR/server" -- start
+          fi
+
+          echo "==> Saving PM2 process list"
+          pm2 save
+
+          echo "==> Final health check"
+          for attempt in 1 2 3 4 5 6; do
+            if curl --fail --silent --show-error --location "$HEALTH_URL"; then
+              echo ""
+              echo "==> Health check succeeded on attempt $attempt"
+              break
+            fi
+
+            if [ "$attempt" -eq 6 ]; then
+              fail "Health check failed after 6 attempts: $HEALTH_URL"
+            fi
+
+            echo "Health check attempt $attempt failed; retrying in 5 seconds..."
+            sleep 5
+          done
+
+          echo ""
+          echo "==> Homologation deploy finished successfully"
+          REMOTE_SCRIPT
+
+      - name: Cleanup SSH key
+        if: always()
+        shell: bash
+        run: |
+          rm -f ~/.ssh/hostgator_hml_vps_key
