@@ -403,6 +403,14 @@ npm ci
 npm --prefix server ci
 npm --prefix server run migrate
 npm --prefix server run seed
+```
+
+### Comando opcional
+
+Executar **somente depois de revisar o script** e confirmar que ele e seguro para HML:
+
+```bash
+cd /opt/sgp/sgp-homol
 npm --prefix server run seed:production-pins
 ```
 
@@ -415,9 +423,58 @@ So seguir para o bootstrap final se:
 
 ---
 
-## 6) Nginx [ESCRITA CONTROLADA]
+## 6) Build backend/frontend e bootstrap PM2 [ESCRITA CONTROLADA]
 
-### 6.1 Backup antes de qualquer alteracao
+### 6.1 Instalar dependencias e gerar build no checkout da HML
+
+```bash
+cd /opt/sgp/sgp-homol
+npm ci
+npm --prefix server ci
+npm --prefix server run build
+npm run build
+```
+
+### 6.2 Bootstrap do PM2 da HML
+
+```bash
+pm2 start npm --name sgp-api-homol --cwd /opt/sgp/sgp-homol/server -- start
+pm2 save
+```
+
+Nao reiniciar `sgp-api`.
+
+### 6.3 Validar PM2
+
+```bash
+pm2 status
+pm2 describe sgp-api
+pm2 describe sgp-api-homol
+pm2 logs sgp-api-homol --lines 120
+```
+
+### 6.4 Validar porta local e health interno da HML
+
+```bash
+ss -ltnp | rg ':4001 '
+curl -fsS http://127.0.0.1:4001/api/v1/health
+```
+
+### Checkpoint 6
+
+So seguir se:
+
+- `sgp-api` continua online
+- `sgp-api-homol` sobe online
+- a porta `4001` responde
+- o health local `http://127.0.0.1:4001/api/v1/health` responde
+- a producao nao foi reiniciada
+
+---
+
+## 7) Nginx [ESCRITA CONTROLADA]
+
+### 7.1 Backup antes de qualquer alteracao
 
 ```bash
 sudo cp /etc/nginx/nginx.conf /etc/nginx/nginx.conf.bak-$(date +%Y%m%d-%H%M%S)
@@ -426,27 +483,29 @@ sudo cp /etc/nginx/conf.d/sgp-homol.conf /etc/nginx/conf.d/sgp-homol.conf.bak-$(
 
 Nao mexer no server block de producao.
 
-### 6.2 Criar server block da HML
+### 7.2 Criar server block da HML
 
 ```bash
 sudo cp /opt/sgp/sgp-homol/deploy/nginx/sgp-homol.conf.example /etc/nginx/conf.d/sgp-homol.conf
 ```
 
-### 6.3 Validar e recarregar
+### 7.3 Validar e recarregar
 
 ```bash
 sudo nginx -t
 sudo systemctl reload nginx
 ```
 
-### 6.4 Validar HTTP da HML
+### 7.4 Validar HTTP publico
+
+Depois do PM2 da HML estar online, validar:
 
 ```bash
 curl -I http://sgp-homol.multivacia.com/
 curl -I http://sgp-homol.multivacia.com/api/v1/health
 ```
 
-### Checkpoint 6
+### Checkpoint 7
 
 So seguir se:
 
@@ -457,15 +516,15 @@ So seguir se:
 
 ---
 
-## 7) Certbot [ESCRITA CONTROLADA]
+## 8) Certbot [ESCRITA CONTROLADA]
 
-### 7.1 Emitir certificado
+### 8.1 Emitir certificado
 
 ```bash
 sudo certbot --nginx -d sgp-homol.multivacia.com
 ```
 
-### 7.2 Validar HTTPS
+### 8.2 Validar HTTPS
 
 ```bash
 curl -I https://sgp-homol.multivacia.com/
@@ -473,60 +532,12 @@ curl -fsS https://sgp-homol.multivacia.com/api/v1/health
 sudo certbot renew --dry-run
 ```
 
-### Checkpoint 7
+### Checkpoint 8
 
 So seguir se:
 
 - HML responde em HTTPS
 - Certbot concluiu sem afetar producao
-
----
-
-## 8) PM2 [ESCRITA CONTROLADA]
-
-### 8.1 Instalar dependencias e build no checkout da HML
-
-```bash
-cd /opt/sgp/sgp-homol
-npm ci
-npm --prefix server ci
-npm --prefix server run build
-npm run build
-```
-
-### 8.2 Bootstrap do PM2 da HML
-
-```bash
-pm2 start npm --name sgp-api-homol --cwd /opt/sgp/sgp-homol/server -- start
-pm2 save
-```
-
-Nao reiniciar `sgp-api`.
-
-### 8.3 Validar PM2
-
-```bash
-pm2 status
-pm2 describe sgp-api
-pm2 describe sgp-api-homol
-pm2 logs sgp-api-homol --lines 120
-```
-
-### 8.4 Validar porta local da HML
-
-```bash
-ss -ltnp | rg ':4001 '
-curl -fsS http://127.0.0.1:4001/api/v1/health
-```
-
-### Checkpoint 8
-
-So seguir se:
-
-- `sgp-api` continua online
-- `sgp-api-homol` sobe online
-- a porta `4001` responde
-- a producao nao foi reiniciada
 
 ---
 
@@ -662,10 +673,15 @@ A HML so pode ser considerada "subida com seguranca" se:
 2. DNS
 3. Banco `sgp_homol`
 4. Diretorios HML
-5. `.env` e `server/.env` dedicados
-6. Schema manual fora do workflow
-7. Nginx com backup e novo server block HML
-8. Certbot
-9. PM2 `sgp-api-homol`
-10. Secrets `HML_*` + branch `homol` + workflow HML
-11. Validacoes finais em HML e producao
+5. Checkout isolado
+6. `.env` e `server/.env` dedicados
+7. Schema manual fora do workflow
+8. Build backend/frontend
+9. Bootstrap PM2 `sgp-api-homol`
+10. Validar `http://127.0.0.1:4001/api/v1/health`
+11. Nginx com backup e novo server block HML
+12. Validar HTTP publico
+13. Certbot
+14. Validar HTTPS
+15. Secrets `HML_*` + branch `homol` + workflow HML
+16. Validacoes finais em HML e producao
