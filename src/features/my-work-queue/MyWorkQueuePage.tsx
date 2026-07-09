@@ -283,114 +283,116 @@ export function MyWorkQueuePage() {
 
   return (
     <PageCanvas>
-      <header className="sgp-header-card max-w-5xl">
-        <p className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-sgp-gold">
-          <span className="h-px w-8 bg-gradient-to-r from-sgp-gold to-transparent" />
-          Colaborador
-        </p>
-        <div className="mt-3 flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <h1 className="sgp-page-title">Minha fila</h1>
-            <p className="sgp-page-lead mt-1">
-              Atividades planejadas para hoje, em ordem de execução.
-            </p>
-            <p className="mt-2 text-xs text-slate-500">
-              {queue?.planStatus === 'PUBLISHED'
-                ? 'Exibindo plano publicado.'
-                : 'A fila mostra apenas planos publicados.'}
-            </p>
+      <div data-sgp-surface="pointing">
+        <header className="sgp-header-card max-w-5xl">
+          <p className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-sgp-gold">
+            <span className="h-px w-8 bg-gradient-to-r from-sgp-gold to-transparent" />
+            Colaborador
+          </p>
+          <div className="mt-3 flex flex-wrap items-end justify-between gap-4">
+            <div>
+              <h1 className="sgp-page-title">Minha fila</h1>
+              <p className="sgp-page-lead mt-1">
+                Atividades planejadas para hoje, em ordem de execução.
+              </p>
+              <p className="mt-2 text-xs text-slate-500">
+                {queue?.planStatus === 'PUBLISHED'
+                  ? 'Exibindo plano publicado.'
+                  : 'A fila mostra apenas planos publicados.'}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => void load()}
+              disabled={loading}
+              className="sgp-cta-secondary shrink-0 !py-2 text-sm disabled:opacity-40"
+            >
+              {loading ? 'Atualizando...' : 'Atualizar'}
+            </button>
           </div>
+        </header>
+
+        <div className="mt-6 flex max-w-5xl flex-wrap items-center gap-3 rounded-2xl border border-white/[0.08] bg-white/[0.03] p-3 ring-1 ring-white/[0.04]">
           <button
             type="button"
-            onClick={() => void load()}
-            disabled={loading}
-            className="sgp-cta-secondary shrink-0 !py-2 text-sm disabled:opacity-40"
+            className="sgp-cta-secondary !px-3 !py-2 text-sm"
+            onClick={() => setDate(shiftDateIso(selectedDate, -1))}
           >
-            {loading ? 'Atualizando...' : 'Atualizar'}
+            Dia anterior
           </button>
+          <input
+            type="date"
+            value={selectedDate}
+            onChange={(e) => setDate(e.target.value || todayIsoLocal())}
+            className="sgp-input-app px-3 py-2 text-sm text-slate-200"
+          />
+          <button
+            type="button"
+            className="sgp-cta-secondary !px-3 !py-2 text-sm"
+            onClick={() => setDate(shiftDateIso(selectedDate, 1))}
+          >
+            Próximo dia
+          </button>
+          <button
+            type="button"
+            className="sgp-cta-primary !px-3 !py-2 text-sm"
+            onClick={() => setDate(todayIsoLocal())}
+          >
+            Hoje
+          </button>
+          <span className="ml-auto text-sm font-medium text-slate-400">
+            {formatDatePt(selectedDate)}
+          </span>
         </div>
-      </header>
 
-      <div className="mt-6 flex max-w-5xl flex-wrap items-center gap-3 rounded-2xl border border-white/[0.08] bg-white/[0.03] p-3 ring-1 ring-white/[0.04]">
-        <button
-          type="button"
-          className="sgp-cta-secondary !px-3 !py-2 text-sm"
-          onClick={() => setDate(shiftDateIso(selectedDate, -1))}
-        >
-          Dia anterior
-        </button>
-        <input
-          type="date"
-          value={selectedDate}
-          onChange={(e) => setDate(e.target.value || todayIsoLocal())}
-          className="sgp-input-app px-3 py-2 text-sm text-slate-200"
-        />
-        <button
-          type="button"
-          className="sgp-cta-secondary !px-3 !py-2 text-sm"
-          onClick={() => setDate(shiftDateIso(selectedDate, 1))}
-        >
-          Próximo dia
-        </button>
-        <button
-          type="button"
-          className="sgp-cta-primary !px-3 !py-2 text-sm"
-          onClick={() => setDate(todayIsoLocal())}
-        >
-          Hoje
-        </button>
-        <span className="ml-auto text-sm font-medium text-slate-400">
-          {formatDatePt(selectedDate)}
-        </span>
+        {queue ? (
+          <div className="mt-6 grid max-w-5xl gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <KpiCard label="Atividades de hoje" value={String(queue.summary.plannedItemsToday)} />
+            <KpiCard label="Minutos planejados" value={formatHumanMinutes(queue.summary.plannedMinutesToday)} />
+            <KpiCard label="Atenção à sequência" value={String(queue.summary.outOfSequenceItems)} tone={queue.summary.outOfSequenceItems > 0 ? 'warning' : undefined} />
+            <KpiCard label="Atrasadas" value={String(queue.summary.overdueItems)} tone={queue.summary.overdueItems > 0 ? 'danger' : undefined} />
+          </div>
+        ) : null}
+
+        {queue?.summary.overload ? (
+          <div className="mt-4 max-w-5xl rounded-2xl border border-amber-400/20 bg-amber-500/[0.06] px-4 py-3 text-sm text-amber-100/90">
+            Planejamento acima da capacidade do dia: {formatHumanMinutes(queue.summary.plannedMinutesToday)} planejados para {formatHumanMinutes(queue.summary.capacityMinutesToday)} de capacidade.
+          </div>
+        ) : null}
+
+        {unavailableReason ? (
+          <div className="mt-4 max-w-5xl rounded-2xl border border-amber-400/20 bg-amber-500/[0.06] px-4 py-3 text-sm text-amber-100/90">
+            {unavailableReason}
+          </div>
+        ) : null}
+
+        {error ? (
+          <div className="mt-6 max-w-5xl rounded-2xl border border-rose-500/30 bg-rose-500/[0.08] px-5 py-4 text-sm text-rose-100/95" role="alert">
+            {error}
+          </div>
+        ) : null}
+
+        {loading ? <p className="mt-8 text-sm text-slate-500">Carregando Minha fila...</p> : null}
+
+        {!loading && !error && queue && queue.items.length > 0 ? (
+          <>
+            <QueueSection title="Atrasadas" items={groups.overdue} onPointHours={setEntryItem} />
+            <QueueSection title="Hoje" items={groups.today} onPointHours={setEntryItem} />
+            <QueueSection title="Concluídas" items={groups.completed} onPointHours={setEntryItem} />
+          </>
+        ) : null}
+
+        {!loading && !error && queue && queue.items.length === 0 ? (
+          <div className="mt-8 max-w-5xl rounded-2xl border border-dashed border-white/[0.12] bg-white/[0.02] px-6 py-14 text-center">
+            <p className="font-heading text-base font-semibold text-slate-300">
+              {emptyTitle}
+            </p>
+            <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-slate-500">
+              Quando um plano semanal for publicado, suas atividades aparecerão aqui.
+            </p>
+          </div>
+        ) : null}
       </div>
-
-      {queue ? (
-        <div className="mt-6 grid max-w-5xl gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <KpiCard label="Atividades de hoje" value={String(queue.summary.plannedItemsToday)} />
-          <KpiCard label="Minutos planejados" value={formatHumanMinutes(queue.summary.plannedMinutesToday)} />
-          <KpiCard label="Atenção à sequência" value={String(queue.summary.outOfSequenceItems)} tone={queue.summary.outOfSequenceItems > 0 ? 'warning' : undefined} />
-          <KpiCard label="Atrasadas" value={String(queue.summary.overdueItems)} tone={queue.summary.overdueItems > 0 ? 'danger' : undefined} />
-        </div>
-      ) : null}
-
-      {queue?.summary.overload ? (
-        <div className="mt-4 max-w-5xl rounded-2xl border border-amber-400/20 bg-amber-500/[0.06] px-4 py-3 text-sm text-amber-100/90">
-          Planejamento acima da capacidade do dia: {formatHumanMinutes(queue.summary.plannedMinutesToday)} planejados para {formatHumanMinutes(queue.summary.capacityMinutesToday)} de capacidade.
-        </div>
-      ) : null}
-
-      {unavailableReason ? (
-        <div className="mt-4 max-w-5xl rounded-2xl border border-amber-400/20 bg-amber-500/[0.06] px-4 py-3 text-sm text-amber-100/90">
-          {unavailableReason}
-        </div>
-      ) : null}
-
-      {error ? (
-        <div className="mt-6 max-w-5xl rounded-2xl border border-rose-500/30 bg-rose-500/[0.08] px-5 py-4 text-sm text-rose-100/95" role="alert">
-          {error}
-        </div>
-      ) : null}
-
-      {loading ? <p className="mt-8 text-sm text-slate-500">Carregando Minha fila...</p> : null}
-
-      {!loading && !error && queue && queue.items.length > 0 ? (
-        <>
-          <QueueSection title="Atrasadas" items={groups.overdue} onPointHours={setEntryItem} />
-          <QueueSection title="Hoje" items={groups.today} onPointHours={setEntryItem} />
-          <QueueSection title="Concluídas" items={groups.completed} onPointHours={setEntryItem} />
-        </>
-      ) : null}
-
-      {!loading && !error && queue && queue.items.length === 0 ? (
-        <div className="mt-8 max-w-5xl rounded-2xl border border-dashed border-white/[0.12] bg-white/[0.02] px-6 py-14 text-center">
-          <p className="font-heading text-base font-semibold text-slate-300">
-            {emptyTitle}
-          </p>
-          <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-slate-500">
-            Quando um plano semanal for publicado, suas atividades aparecerão aqui.
-          </p>
-        </div>
-      ) : null}
 
       <QuickTimeEntryDrawer
         open={entryItem != null}
