@@ -43,6 +43,9 @@ jobs:
           test -n "${{ secrets.HML_VPS_HOST }}" || (echo "Missing secret HML_VPS_HOST" && exit 1)
           test -n "${{ secrets.HML_VPS_PORT }}" || (echo "Missing secret HML_VPS_PORT" && exit 1)
           test -n "${{ secrets.HML_VPS_USER }}" || (echo "Missing secret HML_VPS_USER" && exit 1)
+          test "${{ secrets.HML_VPS_USER }}" = "deploy" || (
+            echo "HML_VPS_USER must be exactly deploy" && exit 1
+          )
           test -n "${{ secrets.HML_VPS_SSH_KEY }}" || (echo "Missing secret HML_VPS_SSH_KEY" && exit 1)
           test -n "${{ secrets.HML_VPS_KNOWN_HOSTS }}" || (
             echo "Missing secret HML_VPS_KNOWN_HOSTS" && exit 1
@@ -111,8 +114,8 @@ jobs:
             -p "${{ secrets.HML_VPS_PORT }}" \
             -o IdentitiesOnly=yes \
             -o StrictHostKeyChecking=yes \
-            "${{ secrets.HML_VPS_USER }}@${{ secrets.HML_VPS_HOST }}" \
-            "DEPLOY_BRANCH='${DEPLOY_BRANCH}' REMOTE_APP_DIR='${REMOTE_APP_DIR}' REMOTE_WEB_DIR='${REMOTE_WEB_DIR}' HEALTH_URL='${HEALTH_URL}' APP_ENV='${APP_ENV}' EXPECTED_PM2_PROCESS='${EXPECTED_PM2_PROCESS}' EXPECTED_PORT='${EXPECTED_PORT}' EXPECTED_PGDATABASE='${EXPECTED_PGDATABASE}' EXPECTED_CORS_ORIGIN='${EXPECTED_CORS_ORIGIN}' EXPECTED_REMOTE_USER='${{ secrets.HML_VPS_USER }}' bash -s" <<'REMOTE_SCRIPT'
+            "deploy@${{ secrets.HML_VPS_HOST }}" \
+            "DEPLOY_BRANCH='${DEPLOY_BRANCH}' REMOTE_APP_DIR='${REMOTE_APP_DIR}' REMOTE_WEB_DIR='${REMOTE_WEB_DIR}' HEALTH_URL='${HEALTH_URL}' APP_ENV='${APP_ENV}' EXPECTED_PM2_PROCESS='${EXPECTED_PM2_PROCESS}' EXPECTED_PORT='${EXPECTED_PORT}' EXPECTED_PGDATABASE='${EXPECTED_PGDATABASE}' EXPECTED_CORS_ORIGIN='${EXPECTED_CORS_ORIGIN}' bash -s" <<'REMOTE_SCRIPT'
           set -euo pipefail
 
           fail() {
@@ -125,8 +128,8 @@ jobs:
           ACTUAL_USER="$(whoami)"
           echo "$ACTUAL_USER"
 
-          test "$ACTUAL_USER" = "$EXPECTED_REMOTE_USER" || fail \
-            "SSH connected with unexpected user: $ACTUAL_USER"
+          test "$ACTUAL_USER" = "deploy" || fail \
+            "SSH must run as deploy, got: $ACTUAL_USER"
 
           test "$DEPLOY_BRANCH" = "homol" || fail "DEPLOY_BRANCH must be homol"
           test "$APP_ENV" = "homologation" || fail "APP_ENV must be homologation"
@@ -218,10 +221,34 @@ jobs:
               "DATABASE_URL must never point to sgp_prod"
           fi
 
-          if grep -Eq '^VITE_API_BASE_URL=' .env; then
-            ! grep -Eq '^VITE_API_BASE_URL=https://sgp\.multivacia\.com(/api)?$' .env || fail \
-              ".env must never point VITE_API_BASE_URL to production"
-          fi
+          grep -Eq '^VITE_API_BASE_URL=.*$' .env || fail \
+            ".env must define VITE_API_BASE_URL"
+
+          VITE_API_BASE_URL_COUNT="$(grep -Ec '^VITE_API_BASE_URL=' .env)"
+          test "$VITE_API_BASE_URL_COUNT" = "1" || fail \
+            ".env must define exactly one VITE_API_BASE_URL entry"
+
+          VITE_API_BASE_URL_VALUE="$(grep -E '^VITE_API_BASE_URL=' .env | cut -d= -f2-)"
+
+          case "$VITE_API_BASE_URL_VALUE" in
+            "")
+              ;;
+            "https://sgp-homol.multivacia.com")
+              ;;
+            *"/api"*)
+              fail ".env VITE_API_BASE_URL must not contain /api"
+              ;;
+            "https://sgp.multivacia.com"|\
+            "https://sgp.multivacia.com/"*)
+              fail ".env must never point VITE_API_BASE_URL to production"
+              ;;
+            http://*|https://*)
+              fail ".env VITE_API_BASE_URL must use only https://sgp-homol.multivacia.com"
+              ;;
+            *)
+              fail ".env VITE_API_BASE_URL must be empty or https://sgp-homol.multivacia.com"
+              ;;
+          esac
 
           echo "==> Git status before deploy"
           git status --short

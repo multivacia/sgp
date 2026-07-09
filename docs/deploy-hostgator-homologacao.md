@@ -55,7 +55,7 @@ Secrets obrigatorios no GitHub Actions:
 
 - `HML_VPS_HOST`
 - `HML_VPS_PORT`
-- `HML_VPS_USER`
+- `HML_VPS_USER` (deve ser exatamente `deploy`)
 - `HML_VPS_SSH_KEY`
 - `HML_VPS_KNOWN_HOSTS`
 
@@ -75,7 +75,7 @@ O workflow nao roda migrations automaticamente.
 
 ## Preparacao da VPS
 
-Substitua `<deploy-user>` pelo usuario real de deploy e ajuste apenas o que for necessario para o host.
+O usuario operacional correto na VPS e exatamente `deploy`.
 
 ### 1) Banco de homologacao
 
@@ -109,13 +109,13 @@ Criar diretorios oficiais:
 sudo mkdir -p /opt/sgp/sgp-homol
 sudo mkdir -p /var/www/sgp-homol
 sudo mkdir -p /opt/sgp/backups
-sudo chown -R <deploy-user>:<deploy-user> /opt/sgp/sgp-homol /var/www/sgp-homol /opt/sgp/backups
+sudo chown -R deploy:deploy /opt/sgp/sgp-homol /var/www/sgp-homol /opt/sgp/backups
 ```
 
 Se o clone ainda nao existir:
 
 ```bash
-sudo -u <deploy-user> git clone <repo-url> /opt/sgp/sgp-homol
+sudo -u deploy git clone <repo-url> /opt/sgp/sgp-homol
 cd /opt/sgp/sgp-homol
 git checkout homol
 ```
@@ -148,15 +148,16 @@ VITE_SUPPORT_TICKETS_ENABLED=0
 VITE_PRODUCTION_KIOSK_TOKEN=CHANGE_ME_HML_KIOSK_TOKEN
 ```
 
-Se optar por preencher `VITE_API_BASE_URL`, use somente:
+Se optar por preencher `VITE_API_BASE_URL`, use somente o host da HML, sem `/api`:
 
 ```dotenv
-VITE_API_BASE_URL=https://sgp-homol.multivacia.com/api
+VITE_API_BASE_URL=https://sgp-homol.multivacia.com
 ```
 
 Nunca usar:
 
 ```dotenv
+VITE_API_BASE_URL=https://sgp-homol.multivacia.com/api
 VITE_API_BASE_URL=https://sgp.multivacia.com/api
 ```
 
