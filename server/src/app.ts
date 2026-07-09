@@ -27,6 +27,7 @@ import { supportRouter } from './modules/support/support.routes.js'
 import { systemSettingsRouter } from './modules/system-settings/system-settings.routes.js'
 import { productionRouter } from './modules/production/production.routes.js'
 import { teamsRouter } from './modules/teams/teams.routes.js'
+import { versionRouter } from './modules/version/version.routes.js'
 import { errorHandler } from './shared/errors/errorHandler.js'
 import { notFoundHandler } from './shared/http/notFound.js'
 
@@ -41,6 +42,7 @@ export function createApp(pool: pg.Pool, logger: Logger, env: Env): Express {
   app.use(express.json({ limit: '1mb' }))
 
   app.use('/api/v1', healthRouter())
+  app.use('/api/v1', versionRouter())
   app.use('/api/v1', authRouter())
   app.use('/api/v1', productionRouter())
   app.use('/api/v1', adminAuditRouter())
