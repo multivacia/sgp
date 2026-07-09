@@ -102,11 +102,10 @@ function SummaryCard({
   )
 }
 
-const matrixPreviewInfoRowClass =
-  'border-amber-300/90 bg-[#FFFBEB] text-amber-950 dark:border-amber-500/35 dark:bg-amber-500/10 dark:text-amber-200/95'
+const matrixPreviewInfoRowClass = 'sgp-info-warning-banner'
 
 const matrixPreviewInfoBadgeClass =
-  'max-w-full whitespace-normal break-words rounded border border-amber-300/80 bg-amber-100/80 px-1.5 py-0.5 text-left text-[9px] font-medium leading-snug text-amber-950 dark:border-amber-400/25 dark:bg-amber-500/15 dark:text-amber-100/90'
+  'sgp-info-warning-banner max-w-full whitespace-normal break-words rounded px-1.5 py-0.5 text-left text-[9px] font-medium leading-snug'
 
 const macroPreviewExpandButtonClass =
   'shrink-0 rounded-lg border border-white/12 bg-white/[0.02] px-2.5 py-1 text-[11px] font-medium text-slate-300 outline-none transition hover:border-white/18 hover:bg-white/[0.05] focus-visible:border-sgp-gold/35 focus-visible:ring-2 focus-visible:ring-sgp-gold/30'

@@ -17,7 +17,7 @@ export function EditBasicDataModal({ open, data, onChange, onClose, onSave }: Pr
         role="dialog"
         aria-modal="true"
         aria-labelledby="edit-basic-data-title"
-        className="w-full max-w-md rounded-2xl border border-white/[0.08] bg-[#0f1623] p-5"
+        className="w-full max-w-md rounded-2xl border border-white/[0.08] bg-semantic-surface-panel-raised p-5"
       >
         <h2 id="edit-basic-data-title" className="font-heading text-lg font-bold text-white">
           Dados básicos

@@ -290,6 +290,23 @@
     @apply mt-1 font-mono tabular-nums;
     color: var(--semantic-base-fg);
   }
+
+  /** Texto secundário/muted — papel semântico (substitui text-slate-500/600 em conteúdo) */
+  .text-semantic-muted {
+    color: var(--semantic-text-muted);
+  }
+  .text-semantic-soft {
+    color: var(--semantic-text-soft);
+  }
+
+  /** Banner informativo de aviso (matriz, preview) */
+  .sgp-info-warning-banner {
+    border-width: 1px;
+    border-color: var(--semantic-accent-warning-border);
+    background-color: var(--semantic-accent-warning-surface);
+    color: var(--semantic-accent-warning-text);
+  }
+
   html[data-theme="light-executive"] .sgp-chart-tooltip-inner .sgp-chart-tooltip-value {
     color: #0f172a;
   }
@@ -301,6 +318,18 @@
   }
   html[data-theme="light-executive"] #sgp-color-theme:focus {
     --tw-ring-color: var(--semantic-focus-ring);
+  }
+
+  /*
+   * Temas escuros — contraste WCAG AA para texto de conteúdo.
+   * text-slate-500 (#64748b) e text-slate-600 (#475569) falham em painéis ~#121a26;
+   * remapeados para --semantic-text-muted (slate-400, ~5.8:1).
+   */
+  html[data-theme="argos-dark"] .text-slate-500,
+  html[data-theme="slate-dark"] .text-slate-500,
+  html[data-theme="argos-dark"] .text-slate-600,
+  html[data-theme="slate-dark"] .text-slate-600 {
+    color: var(--semantic-text-muted) !important;
   }
 
   /* Shell: tipografia base e área principal */
@@ -388,6 +417,16 @@
     color: #64748b !important;
   }
   html[data-theme="light-executive"] .text-slate-600 {
+    color: #475569 !important;
+  }
+  html[data-theme="light-executive"] .text-neutral-400,
+  html[data-theme="light-executive"] .text-neutral-500,
+  html[data-theme="light-executive"] .text-zinc-400,
+  html[data-theme="light-executive"] .text-zinc-500 {
+    color: #64748b !important;
+  }
+  html[data-theme="light-executive"] .text-neutral-600,
+  html[data-theme="light-executive"] .text-zinc-600 {
     color: #475569 !important;
   }
   html[data-theme="light-executive"] .text-slate-700 {

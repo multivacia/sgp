@@ -107,7 +107,7 @@ export function OperationMatrixPreviewPage() {
       {showPreviewInformativeTip ? (
         <div
           role="status"
-          className="mt-3 rounded-lg border border-amber-300/80 bg-[#FFFBEB] px-3 py-2 text-xs leading-snug text-amber-950 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100/90"
+          className="sgp-info-warning-banner mt-3 rounded-lg px-3 py-2 text-xs leading-snug"
         >
           Algumas atividades estão sem tempo previsto ou sem equipe padrão. Você pode salvar assim e
           completar depois.

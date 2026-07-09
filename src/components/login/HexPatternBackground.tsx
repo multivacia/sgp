@@ -35,8 +35,8 @@ export function HexPatternBackground({ className = '' }: Props) {
             />
           </pattern>
           <radialGradient id="sgp-vignette" cx="50%" cy="40%" r="75%">
-            <stop offset="0%" stopColor="#101824" stopOpacity="0.15" />
-            <stop offset="100%" stopColor="#0a1018" stopOpacity="0.92" />
+            <stop offset="0%" stopColor="var(--semantic-sgp-navy)" stopOpacity="0.15" />
+            <stop offset="100%" stopColor="var(--semantic-sgp-navy-deep)" stopOpacity="0.92" />
           </radialGradient>
         </defs>
         <rect width="100%" height="100%" fill="url(#sgp-hex)" />

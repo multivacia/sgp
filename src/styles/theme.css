@@ -30,4 +30,15 @@
   --color-sgp-app-panel-deep: var(--semantic-sgp-app-panel-deep);
   --color-sgp-ink: var(--semantic-sgp-ink);
   --color-sgp-ink-elevated: var(--semantic-sgp-ink-elevated);
+
+  --color-semantic-text-muted: var(--semantic-text-muted);
+  --color-semantic-text-soft: var(--semantic-text-soft);
+  --color-semantic-surface-panel-raised: var(--semantic-surface-panel-raised);
+  --color-semantic-surface-panel-hover: var(--semantic-surface-panel-hover);
+  --color-semantic-surface-modal-deep: var(--semantic-surface-modal-deep);
+  --color-semantic-surface-gradient-mid: var(--semantic-surface-gradient-mid);
+  --color-semantic-surface-drawer-mid: var(--semantic-surface-drawer-mid);
+  --color-semantic-accent-warning-surface: var(--semantic-accent-warning-surface);
+  --color-semantic-accent-warning-border: var(--semantic-accent-warning-border);
+  --color-semantic-accent-warning-text: var(--semantic-accent-warning-text);
 }

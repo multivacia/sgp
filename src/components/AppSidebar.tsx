@@ -336,7 +336,7 @@ export function AppSidebar({ open, onClose, collapsed, onToggleCollapsed }: Prop
       />
 
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex min-h-0 w-[18rem] max-w-[85vw] shrink-0 flex-col overflow-x-hidden overflow-y-hidden border-r border-white/[0.06] bg-gradient-to-b from-sgp-void via-[#060b14] to-sgp-navy-deep shadow-[10px_0_48px_-12px_rgba(0,0,0,0.6)] transition-[transform,width] duration-200 ease-out md:static md:z-0 md:h-full md:max-w-none md:translate-x-0 md:self-stretch md:shadow-none ${
+        className={`fixed inset-y-0 left-0 z-50 flex min-h-0 w-[18rem] max-w-[85vw] shrink-0 flex-col overflow-x-hidden overflow-y-hidden border-r border-white/[0.06] bg-gradient-to-b from-sgp-void via-semantic-surface-gradient-mid to-sgp-navy-deep shadow-[10px_0_48px_-12px_rgba(0,0,0,0.6)] transition-[transform,width] duration-200 ease-out md:static md:z-0 md:h-full md:max-w-none md:translate-x-0 md:self-stretch md:shadow-none ${
           rail ? 'md:w-16' : 'md:w-[18rem]'
         } ${open ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}
       >

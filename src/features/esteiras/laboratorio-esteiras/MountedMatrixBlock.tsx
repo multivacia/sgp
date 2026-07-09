@@ -13,7 +13,7 @@ export function MountedMatrixBlock({ block, onEdit, onRemove }: Props) {
   const totalMinutes = sumMinutesInBlock(block)
 
   return (
-    <article className="rounded-2xl border border-white/[0.08] bg-[#0f1623] p-4">
+    <article className="rounded-2xl border border-white/[0.08] bg-semantic-surface-panel-raised p-4">
       <div className="flex items-start gap-3">
         <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-black/30 text-xl" aria-hidden>
           🧩

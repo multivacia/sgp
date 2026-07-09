@@ -114,7 +114,7 @@ export function ConfigureMatrixModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby="configure-matrix-title"
-        className="flex max-h-[92dvh] w-full max-w-lg flex-col rounded-t-3xl border border-white/[0.08] bg-[#0b1018] shadow-2xl sm:rounded-3xl"
+        className="flex max-h-[92dvh] w-full max-w-lg flex-col rounded-t-3xl border border-white/[0.08] bg-semantic-surface-modal-deep shadow-2xl sm:rounded-3xl"
       >
         <div className="flex items-start gap-3 border-b border-white/[0.06] p-4">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-sgp-gold/15 text-sgp-gold">
@@ -189,7 +189,7 @@ export function ConfigureMatrixModal({
 
       {editingActivity ? (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 p-4">
-          <div className="w-full max-w-sm rounded-2xl border border-white/[0.08] bg-[#0f1623] p-5">
+          <div className="w-full max-w-sm rounded-2xl border border-white/[0.08] bg-semantic-surface-panel-raised p-5">
             <h3 className="font-heading text-base font-bold text-white">Editar atividade</h3>
             <div className="mt-4 space-y-3">
               <div>

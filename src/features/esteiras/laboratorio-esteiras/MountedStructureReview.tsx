@@ -30,7 +30,7 @@ export function MountedStructureReview({
         </div>
       ) : null}
 
-      <section className="rounded-2xl border border-white/[0.08] bg-[#0f1623] p-4">
+      <section className="rounded-2xl border border-white/[0.08] bg-semantic-surface-panel-raised p-4">
         <div className="flex items-center justify-between gap-2">
           <h2 className="font-heading text-sm font-bold text-white">Dados básicos</h2>
           <button

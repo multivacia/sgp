@@ -33,6 +33,20 @@
 
   /* ——— Texto base (html) ——— */
   --semantic-base-fg: rgb(226 232 240);
+  --semantic-text-muted: rgb(148 163 184);
+  --semantic-text-soft: rgb(100 116 139);
+
+  /* ——— Superfícies elevadas (painéis, modais, gradientes) ——— */
+  --semantic-surface-panel-raised: #0f1623;
+  --semantic-surface-panel-hover: #121b2a;
+  --semantic-surface-modal-deep: #0b1018;
+  --semantic-surface-gradient-mid: #060b14;
+  --semantic-surface-drawer-mid: #070d16;
+
+  /* ——— Banners informativos (aviso / dica) ——— */
+  --semantic-accent-warning-surface: rgba(245, 158, 11, 0.1);
+  --semantic-accent-warning-border: rgba(245, 158, 11, 0.35);
+  --semantic-accent-warning-text: rgba(254, 243, 199, 0.95);
 
   /* ——— Superfície / bordas “glass” (header, cartões escuros) ——— */
   --semantic-border-glass: rgba(255, 255, 255, 0.08);
@@ -119,6 +133,7 @@
   --semantic-chart-exec-concl: #34d399;
   --semantic-chart-exec-atraso: #fb7185;
   --semantic-chart-bar-period: #7dd3fc;
+  --semantic-chart-pie-cell-stroke: rgba(15, 23, 42, 0.9);
 
   /* ——— Grid técnico (overlay) ——— */
   --semantic-grid-opacity: 0.38;
@@ -164,6 +179,14 @@ html[data-theme="slate-dark"] {
   --semantic-sgp-ink-elevated: #182132;
 
   --semantic-base-fg: rgb(226 232 240);
+  --semantic-text-muted: rgb(148 163 184);
+  --semantic-text-soft: rgb(100 116 139);
+
+  --semantic-surface-panel-raised: #111a28;
+  --semantic-surface-panel-hover: #152030;
+  --semantic-surface-modal-deep: #0c121c;
+  --semantic-surface-gradient-mid: #0a1018;
+  --semantic-surface-drawer-mid: #0b1220;
 
   --semantic-border-glass: rgba(255, 255, 255, 0.08);
   --semantic-border-glass-strong: rgba(255, 255, 255, 0.12);
@@ -199,6 +222,7 @@ html[data-theme="slate-dark"] {
   --semantic-chart-axis-stroke: #64748b;
   --semantic-chart-tick-fill: #94a3b8;
   --semantic-chart-axis-line: rgba(255, 255, 255, 0.08);
+  --semantic-chart-pie-cell-stroke: rgba(15, 23, 42, 0.9);
 
   --semantic-grid-opacity: 0.36;
 }
@@ -266,6 +290,18 @@ html[data-theme="light-executive"] {
   --semantic-sgp-ink-elevated: var(--color-surface-secondary);
 
   --semantic-base-fg: var(--color-text-primary);
+  --semantic-text-muted: var(--color-text-muted);
+  --semantic-text-soft: var(--color-text-soft);
+
+  --semantic-surface-panel-raised: var(--color-surface);
+  --semantic-surface-panel-hover: var(--color-hover-surface);
+  --semantic-surface-modal-deep: var(--color-surface);
+  --semantic-surface-gradient-mid: var(--color-bg-page);
+  --semantic-surface-drawer-mid: var(--color-bg-page);
+
+  --semantic-accent-warning-surface: #fffbeb;
+  --semantic-accent-warning-border: rgba(217, 119, 6, 0.45);
+  --semantic-accent-warning-text: #78350f;
 
   --semantic-border-glass: var(--color-card-border);
   --semantic-border-glass-strong: var(--color-border-strong);
@@ -345,6 +381,7 @@ html[data-theme="light-executive"] {
   --semantic-chart-exec-concl: #059669;
   --semantic-chart-exec-atraso: #e11d48;
   --semantic-chart-bar-period: #5b9bd5;
+  --semantic-chart-pie-cell-stroke: rgba(255, 255, 255, 0.92);
 
   --semantic-grid-opacity: 0.14;
   --semantic-grid-stroke: %2394a3b8;

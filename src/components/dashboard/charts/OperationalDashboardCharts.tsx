@@ -159,7 +159,7 @@ export function OperationalDashboardCharts({ data }: Props) {
                           fill={row.fill}
                           fillOpacity={row.value === 0 ? 0.25 : 1}
                           className="cursor-pointer outline-none transition-opacity hover:opacity-90"
-                          stroke="rgba(15,23,42,0.9)"
+                          stroke={chart.pieCellStroke}
                           strokeWidth={1}
                         />
                       ),

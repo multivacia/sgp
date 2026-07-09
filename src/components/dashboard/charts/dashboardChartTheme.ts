@@ -44,6 +44,7 @@ export function resolveDashboardChartTheme(): {
   barMetric: { planned: string; total: string; realized: string }
   periodBar: string
   cartesianGridStroke: string
+  pieCellStroke: string
 } {
   if (typeof document === 'undefined') {
     return {
@@ -62,6 +63,7 @@ export function resolveDashboardChartTheme(): {
       },
       periodBar: '#7dd3fc',
       cartesianGridStroke: 'rgba(255,255,255,0.06)',
+      pieCellStroke: 'rgba(15, 23, 42, 0.9)',
     }
   }
 
@@ -116,6 +118,12 @@ export function resolveDashboardChartTheme(): {
     'rgba(255,255,255,0.06)',
   )
 
+  const pieCellStroke = pickVar(
+    cs,
+    '--semantic-chart-pie-cell-stroke',
+    'rgba(15, 23, 42, 0.9)',
+  )
+
   return {
     tooltipStyle,
     axisProps,
@@ -124,5 +132,6 @@ export function resolveDashboardChartTheme(): {
     barMetric,
     periodBar,
     cartesianGridStroke,
+    pieCellStroke,
   }
 }

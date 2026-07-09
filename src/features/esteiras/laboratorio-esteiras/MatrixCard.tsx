@@ -12,7 +12,7 @@ export function MatrixCard({ name, activityCount, totalMinutes, onSelect }: Prop
     <button
       type="button"
       onClick={onSelect}
-      className="flex w-full items-center gap-3 rounded-2xl border border-white/[0.08] bg-[#0f1623] p-3.5 text-left transition hover:border-sgp-gold/35 hover:bg-[#121b2a] active:scale-[0.99]"
+      className="flex w-full items-center gap-3 rounded-2xl border border-white/[0.08] bg-semantic-surface-panel-raised p-3.5 text-left transition hover:border-sgp-gold/35 hover:bg-semantic-surface-panel-hover active:scale-[0.99]"
     >
       <div
         className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl border border-white/[0.06] bg-black/30 text-2xl"

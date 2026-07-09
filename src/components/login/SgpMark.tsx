@@ -19,13 +19,13 @@ export function SgpMark({ className = 'size-12' }: { className?: string }) {
     >
       <defs>
         <linearGradient id={strokeId} x1="8" y1="8" x2="48" y2="48">
-          <stop stopColor="#d4b366" />
-          <stop offset="0.45" stopColor="#c99c5c" />
-          <stop offset="1" stopColor="#8b6914" />
+          <stop stopColor="var(--semantic-sgp-amber)" />
+          <stop offset="0.45" stopColor="var(--semantic-sgp-gold-warm)" />
+          <stop offset="1" stopColor="var(--semantic-sgp-gold-muted)" />
         </linearGradient>
         <linearGradient id={fillId} x1="28" y1="12" x2="28" y2="44">
-          <stop stopColor="#152030" />
-          <stop offset="1" stopColor="#0a1018" />
+          <stop stopColor="var(--semantic-sgp-navy-mid)" />
+          <stop offset="1" stopColor="var(--semantic-sgp-navy-deep)" />
         </linearGradient>
       </defs>
       <path

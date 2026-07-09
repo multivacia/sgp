@@ -36,7 +36,7 @@ export function CollaboratorHealthSnapshotPanel({ open, loading, error, snapshot
         onClick={onClose}
       />
       <aside
-        className="fixed inset-y-0 right-0 z-[70] flex w-full max-w-lg flex-col border-l border-white/[0.08] bg-gradient-to-b from-sgp-void via-[#070d16] to-sgp-navy-deep shadow-[-12px_0_48px_-12px_rgba(0,0,0,0.55)]"
+        className="fixed inset-y-0 right-0 z-[70] flex w-full max-w-lg flex-col border-l border-white/[0.08] bg-gradient-to-b from-sgp-void via-semantic-surface-drawer-mid to-sgp-navy-deep shadow-[-12px_0_48px_-12px_rgba(0,0,0,0.55)]"
         role="dialog"
         aria-modal="true"
       >
