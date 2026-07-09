@@ -46,6 +46,8 @@ describe.skipIf(!hasDb)('GET /api/v1/management/conveyor-progress (integração)
     expect(res.status).toBe(200)
     expect(res.body).toHaveProperty('data')
     expect(Array.isArray(res.body.data.items)).toBe(true)
+    expect(res.body.data).toHaveProperty('summary.timeEfficiency')
+    expect(res.body.data.summary.timeEfficiency).toHaveProperty('includedInCalculationCount')
 
     if (res.body.data.items.length > 0) {
       const first = res.body.data.items[0]
@@ -55,7 +57,16 @@ describe.skipIf(!hasDb)('GET /api/v1/management/conveyor-progress (integração)
       expect(first).toHaveProperty('remainingMinutes')
       expect(first).toHaveProperty('exceededMinutes')
       expect(first).toHaveProperty('progressPercent')
+      expect(first).toHaveProperty('timeEfficiency')
+      expect(first.timeEfficiency).toHaveProperty('includedInCalculationCount')
       expect(Array.isArray(first.tasks)).toBe(true)
+
+      const firstActivity = first.tasks[0]?.sectors[0]?.activities[0]
+      if (firstActivity) {
+        expect(firstActivity).toHaveProperty('timeEfficiency')
+        expect(firstActivity.timeEfficiency).toHaveProperty('status')
+        expect(firstActivity.timeEfficiency).toHaveProperty('includedInCalculation')
+      }
     }
   })
 
