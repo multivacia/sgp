@@ -39,7 +39,7 @@
   }
   html[data-theme="light-executive"] .sgp-cta-primary:hover {
     background-image: none;
-    background-color: #b45309;
+    background-color: #c46f14;
     filter: none;
   }
 
@@ -480,11 +480,77 @@
 
   html[data-theme="light-executive"] [class*="border-white/"],
   html[data-theme="light-executive"] [class*="border-white\\/\["] {
-    border-color: #d8e0ea !important;
+    border-color: var(--color-border-subtle) !important;
   }
 
   html[data-theme="light-executive"] [class*="shadow-inner"] {
     box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.05) !important;
+  }
+
+  /* ——— Badges/cards de sequência e status — recalibrados para fundo claro ———
+  As classes originais com baixa opacidade foram desenhadas para fundo escuro;
+  em fundo branco ficam quase invisíveis. Este bloco é um guardrail localizado
+  do tema light-executive para preservar componentes existentes sem alterar TSX.
+
+   Cobre:
+   - badge "Próxima atividade recomendada"
+   - badge "Atenção à sequência"
+   - card "Fora de sequência — confirme o apontamento"
+   - badges "Atrasada", "Concluída" e "Fora da alocação" */
+
+  html[data-theme="light-executive"] [class*="border-sgp-gold/35"] {
+    border-color: var(--color-accent-gold) !important;
+  }
+
+  html[data-theme="light-executive"] [class*="bg-sgp-gold/15"],
+  html[data-theme="light-executive"] [class*="bg-sgp-gold/10"] {
+    background-color: var(--color-accent-soft) !important;
+  }
+
+  html[data-theme="light-executive"] [class*="text-sgp-gold"] {
+    color: var(--color-accent-gold-text) !important;
+  }
+
+  html[data-theme="light-executive"] [class*="border-slate-500/35"] {
+    border-color: #94a3b8 !important;
+  }
+
+  html[data-theme="light-executive"] [class*="bg-slate-500/15"] {
+    background-color: #eef2f6 !important;
+  }
+
+  html[data-theme="light-executive"] [class*="border-sky-500/25"] {
+    border-color: var(--color-accent-blue) !important;
+  }
+
+  html[data-theme="light-executive"] [class*="bg-sky-500/["] {
+    background-color: var(--color-accent-blue-soft) !important;
+  }
+
+  html[data-theme="light-executive"] [class*="border-amber-400/25"],
+  html[data-theme="light-executive"] [class*="border-amber-500/25"] {
+    border-color: #f59e0b !important;
+  }
+
+  html[data-theme="light-executive"] [class*="bg-amber-500/10"],
+  html[data-theme="light-executive"] [class*="bg-amber-500/["] {
+    background-color: var(--color-accent-soft) !important;
+  }
+
+  html[data-theme="light-executive"] [class*="border-rose-400/25"] {
+    border-color: #e11d48 !important;
+  }
+
+  html[data-theme="light-executive"] [class*="bg-rose-500/10"] {
+    background-color: #fef2f2 !important;
+  }
+
+  html[data-theme="light-executive"] [class*="border-emerald-400/25"] {
+    border-color: #059669 !important;
+  }
+
+  html[data-theme="light-executive"] [class*="bg-emerald-500/10"] {
+    background-color: #ecfdf5 !important;
   }
 
   /* Matriz: cards/linhas precisam permanecer brancos, com borda visível e estados sutis. */
