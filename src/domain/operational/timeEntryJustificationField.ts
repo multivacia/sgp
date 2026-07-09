@@ -31,6 +31,7 @@ export type JustificationPreferredContext = {
   hasPreviousPendingStep?: boolean
   isOutOfSequence?: boolean
   requiresAllocationException?: boolean
+  requiresExcessTime?: boolean
 }
 
 /** Categoria sugerida para pré-seleção conforme o contexto do apontamento. */
@@ -39,6 +40,7 @@ export function resolvePreferredJustificationCategory(
 ): string | null {
   if (context.requiresAllocationException) return 'SUBSTITUTION'
   if (context.hasPreviousPendingStep || context.isOutOfSequence) return 'SEQUENCE'
+  if (context.requiresExcessTime) return 'PLANNING'
   return null
 }
 

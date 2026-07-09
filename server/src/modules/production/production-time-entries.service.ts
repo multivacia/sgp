@@ -29,7 +29,54 @@ import {
   pickStandardJustificationSnapshot,
   resolveTimeEntryJustification,
   TIME_ENTRY_JUSTIFICATION_REQUIRED_MESSAGE,
+  type ResolvedStandardJustification,
 } from '../../shared/timeEntryJustificationResolver.js'
+import { sumRealizedMinutesByStepForConveyor } from '../conveyors/conveyorNodeWorkload.repository.js'
+
+export const TIME_ENTRY_EXCEEDED_PLANNED_JUSTIFICATION_MESSAGE =
+  'Informe uma justificativa para apontar acima do tempo previsto da atividade.'
+
+async function resolveProductionExcessCheckPlannedMinutes(
+  pool: pg.Pool,
+  input: {
+    conveyorId: string
+    stepNodeId: string
+    collaboratorId: string
+  },
+): Promise<number | null> {
+  const r = await pool.query<{ planned_minutes: number | null }>(
+    `
+    SELECT i.planned_minutes
+    FROM operational_work_plan_items i
+    INNER JOIN operational_work_plans p
+      ON p.id = i.work_plan_id
+      AND p.deleted_at IS NULL
+      AND p.status = 'PUBLISHED'
+    WHERE i.deleted_at IS NULL
+      AND i.status = 'PLANNED'
+      AND i.conveyor_id = $1::uuid
+      AND i.activity_node_id = $2::uuid
+      AND i.assigned_collaborator_id = $3::uuid
+    ORDER BY i.planned_date DESC, i.planned_order ASC
+    LIMIT 1
+    `,
+    [input.conveyorId, input.stepNodeId, input.collaboratorId],
+  )
+  const raw = r.rows[0]?.planned_minutes
+  if (raw == null || !Number.isFinite(raw) || raw <= 0) return null
+  return Math.floor(raw)
+}
+
+export function productionRequiresExcessTimeJustification(input: {
+  plannedMinutes: number | null
+  realizedMinutes: number
+  minutesNovo: number
+}): boolean {
+  if (!Number.isInteger(input.minutesNovo) || input.minutesNovo <= 0) return false
+  const planned = input.plannedMinutes
+  if (planned == null || !Number.isFinite(planned) || planned <= 0) return false
+  return input.realizedMinutes + input.minutesNovo > planned
+}
 
 export type CreateProductionTimeEntryInput = {
   collaboratorId: string
@@ -52,12 +99,36 @@ export type CreateProductionTimeEntryInput = {
  * - Fora de sequência exige `outOfSequenceJustification` (3–500 chars).
  * - `markAsDone=true` conclui operacionalmente o STEP na mesma transação.
  * - Tempo ou sessionCompletionPct isolados nunca concluem o STEP.
+ *
+ * Fluxo completion-only (`minutes=0` + `markAsDone=true`):
+ * - Representa conclusão sem novo tempo trabalhado (ex.: tempo já apontado antes).
+ * - Não insere em `conveyor_time_entries`: a constraint atual
+ *   `chk_conveyor_time_entries_minutes_positive` exige `minutes > 0`.
+ * - A rastreabilidade fica em `conveyor_nodes` (status/timestamp de conclusão) e
+ *   `conveyor_operational_events` (`CONVEYOR_STEP_COMPLETED`, com colaborador/canal no metadata).
+ * - A resposta HTTP usa DTO sintético (id gerado, sem linha persistida em time entries).
+ * - Uma migration futura poderia permitir evento de apontamento com `minutes=0`, se necessário.
  */
 export async function serviceCreateProductionTimeEntry(
   pool: pg.Pool,
   input: CreateProductionTimeEntryInput,
 ): Promise<TimeEntryCreatedDto> {
-  if (input.minutes <= 0) {
+  const markAsDoneEarly = input.markAsDone === true
+  if (!Number.isInteger(input.minutes)) {
+    throw new AppError(
+      'minutes deve ser um número inteiro.',
+      422,
+      ErrorCodes.VALIDATION_ERROR,
+    )
+  }
+  if (input.minutes < 0) {
+    throw new AppError(
+      'minutes não pode ser negativo.',
+      422,
+      ErrorCodes.VALIDATION_ERROR,
+    )
+  }
+  if (input.minutes === 0 && !markAsDoneEarly) {
     throw new AppError(
       'minutes deve ser maior que zero.',
       422,
@@ -125,7 +196,7 @@ export async function serviceCreateProductionTimeEntry(
 
   const isOos = seq.isOutOfSequence
   let oosJustDb: string | null = null
-  let oosStandard = null
+  let oosStandard: ResolvedStandardJustification | null = null
   if (isOos) {
     const resolved = await resolveTimeEntryJustification(pool, {
       required: true,
@@ -146,7 +217,45 @@ export async function serviceCreateProductionTimeEntry(
     }
   }
 
-  const standardFields = pickStandardJustificationSnapshot(null, oosStandard)
+  const markAsDone = input.markAsDone === true
+  /** Conclusão kiosk sem novo tempo: ver JSDoc de `serviceCreateProductionTimeEntry`. */
+  const isCompletionOnly = markAsDone && input.minutes === 0
+
+  let excessStandard: ResolvedStandardJustification | null = null
+  if (!isCompletionOnly && input.minutes > 0) {
+    const plannedMinutes = await resolveProductionExcessCheckPlannedMinutes(pool, {
+      conveyorId: input.conveyorId,
+      stepNodeId: input.stepNodeId,
+      collaboratorId: input.collaboratorId,
+    })
+    const realizedByStep = await sumRealizedMinutesByStepForConveyor(pool, input.conveyorId)
+    const realizedMinutes = realizedByStep.get(input.stepNodeId) ?? 0
+    const requiresExcessJustification = productionRequiresExcessTimeJustification({
+      plannedMinutes,
+      realizedMinutes,
+      minutesNovo: input.minutes,
+    })
+    if (requiresExcessJustification && !oosStandard) {
+      const resolved = await resolveTimeEntryJustification(pool, {
+        required: true,
+        justificationId: input.justificationId,
+        justificationComplement: input.justificationComplement,
+        legacyText: input.outOfSequenceJustification,
+        requiredErrorCode: ErrorCodes.TIME_ENTRY_EXCEEDED_PLANNED_REQUIRES_JUSTIFICATION,
+        requiredErrorMessage: TIME_ENTRY_EXCEEDED_PLANNED_JUSTIFICATION_MESSAGE,
+      })
+      excessStandard = resolved.standard
+      if (!resolved.legacyText || resolved.legacyText.length < 3) {
+        throw new AppError(
+          'A justificativa deve ter pelo menos 3 caracteres.',
+          422,
+          ErrorCodes.TIME_ENTRY_EXCEEDED_PLANNED_REQUIRES_JUSTIFICATION,
+        )
+      }
+    }
+  }
+
+  const standardFields = pickStandardJustificationSnapshot(null, oosStandard ?? excessStandard)
 
   const assigneeId = await resolveProductionStepAssigneeId(pool, {
     conveyorId: input.conveyorId,
@@ -162,35 +271,37 @@ export async function serviceCreateProductionTimeEntry(
   }
 
   const actorAppUserId = await findAppUserIdByCollaboratorId(pool, input.collaboratorId)
-  const markAsDone = input.markAsDone === true
   const shouldAutoStart = conveyor.operational_status === 'A_INICIAR'
-
-  const row: InsertConveyorTimeEntryRow = {
-    id: newAssignmentId(),
-    conveyor_id: input.conveyorId,
-    conveyor_node_id: input.stepNodeId,
-    collaborator_id: input.collaboratorId,
-    conveyor_node_assignee_id: assigneeId,
-    entry_at: new Date(),
-    minutes: input.minutes,
-    executed_quantity: executedQuantityDb,
-    notes: input.note ?? null,
-    entry_mode: 'manual',
-    metadata_json: { accessChannel: 'PRODUCTION_AVATAR_PIN' },
-    entry_origin: 'ASSIGNED',
-    exception_justification: null,
-    is_out_of_sequence: isOos,
-    out_of_sequence_justification: isOos ? oosJustDb : null,
-    session_completion_pct:
-      typeof input.sessionCompletionPct === 'number' ? input.sessionCompletionPct : null,
-    mark_as_done: markAsDone,
-    ...standardFields,
-  }
+  const completionRefId = newAssignmentId()
 
   const client = await pool.connect()
   try {
     await client.query('BEGIN')
-    await insertConveyorTimeEntry(client, row)
+
+    if (!isCompletionOnly) {
+      const row: InsertConveyorTimeEntryRow = {
+        id: completionRefId,
+        conveyor_id: input.conveyorId,
+        conveyor_node_id: input.stepNodeId,
+        collaborator_id: input.collaboratorId,
+        conveyor_node_assignee_id: assigneeId,
+        entry_at: new Date(),
+        minutes: input.minutes,
+        executed_quantity: executedQuantityDb,
+        notes: input.note ?? null,
+        entry_mode: 'manual',
+        metadata_json: { accessChannel: 'PRODUCTION_AVATAR_PIN' },
+        entry_origin: 'ASSIGNED',
+        exception_justification: null,
+        is_out_of_sequence: isOos,
+        out_of_sequence_justification: isOos ? oosJustDb : null,
+        session_completion_pct:
+          typeof input.sessionCompletionPct === 'number' ? input.sessionCompletionPct : null,
+        mark_as_done: markAsDone,
+        ...standardFields,
+      }
+      await insertConveyorTimeEntry(client, row)
+    }
 
     if (shouldAutoStart) {
       await updateConveyorOperationalStatus(
@@ -214,14 +325,15 @@ export async function serviceCreateProductionTimeEntry(
         createdBy: actorAppUserId,
         metadataJson: {
           activityNodeId: input.stepNodeId,
-          timeEntryId: row.id,
+          timeEntryId: completionRefId,
           justification: oosJustDb,
-          trigger: 'TIME_ENTRY',
+          trigger: isCompletionOnly ? 'PRODUCTION_MARK_AS_DONE' : 'TIME_ENTRY',
           productionCollaboratorId: input.collaboratorId,
           accessChannel: 'PRODUCTION_AVATAR_PIN',
           markAsDone,
+          completionOnly: isCompletionOnly,
         },
-        idempotencyKey: `oos_te:${row.id}`,
+        idempotencyKey: `oos_te:${completionRefId}`,
       })
     }
 
@@ -250,7 +362,32 @@ export async function serviceCreateProductionTimeEntry(
     client.release()
   }
 
-  const created = await findConveyorTimeEntryById(pool, row.id)
+  if (isCompletionOnly) {
+    const now = new Date().toISOString()
+    return {
+      id: completionRefId,
+      conveyorId: input.conveyorId,
+      stepNodeId: input.stepNodeId,
+      collaboratorId: input.collaboratorId,
+      conveyorNodeAssigneeId: assigneeId,
+      minutes: 0,
+      executedQuantity: executedQuantityDb,
+      notes: input.note ?? null,
+      entryMode: 'manual',
+      entryOrigin: 'ASSIGNED',
+      exceptionJustification: null,
+      isOutOfSequence: isOos,
+      outOfSequenceJustification: isOos ? oosJustDb : null,
+      entryAt: now,
+      createdAt: now,
+      isDelegated: false,
+      recordedByAppUserId: actorAppUserId,
+      recordedByUserEmail: null,
+      delegationReason: null,
+    }
+  }
+
+  const created = await findConveyorTimeEntryById(pool, completionRefId)
   if (!created) {
     throw new AppError('Apontamento não encontrado após criação.', 500, ErrorCodes.INTERNAL)
   }
