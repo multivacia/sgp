@@ -1,8 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import { PageCanvas } from '../../components/ui/PageCanvas'
-import type { ConveyorProgressItem } from '../../domain/conveyor-progress/conveyorProgress.types'
-import { computeConveyorProgressSummary } from '../../domain/conveyor-progress/conveyorProgressDisplay'
+import type {
+  AggregateTimeEfficiency,
+  ConveyorProgressItem,
+} from '../../domain/conveyor-progress/conveyorProgress.types'
+import {
+  computeConveyorProgressSummary,
+  filterSelectedConveyors,
+} from '../../domain/conveyor-progress/conveyorProgressDisplay'
 import { isBlockingSeverity, reportClientError } from '../../lib/errors'
 import { useSgpErrorSurface } from '../../lib/errors/SgpErrorPresentation'
 import { useRegisterTransientContext } from '../../lib/shell/transient-context'
@@ -16,10 +22,7 @@ import {
 } from './ConveyorProgressFilters'
 import { ConveyorProgressPrintView } from './ConveyorProgressPrintView'
 import { ConveyorProgressSummary } from './ConveyorProgressSummary'
-import {
-  ConveyorProgressTable,
-  filterSelectedConveyors,
-} from './ConveyorProgressTable'
+import { ConveyorProgressTable } from './ConveyorProgressTable'
 import { useConveyorProgressPrint } from './useConveyorProgressPrint'
 import {
   buildActivityTicketInputFromProgressContext,
@@ -35,6 +38,19 @@ const LOAD_BLOCKING_TITLE = 'Não foi possível carregar a evolução das esteir
 const LOAD_BLOCKING_MESSAGE =
   'Ocorreu um problema ao obter os dados. Tente novamente em instantes ou confirme a sua sessão.'
 
+const EMPTY_AGGREGATE_TIME_EFFICIENCY: AggregateTimeEfficiency = {
+  status: null,
+  efficiencyPct: null,
+  deviationMinutes: null,
+  deviationPct: null,
+  classification: null,
+  notStartedCount: 0,
+  withoutPlannedTimeCount: 0,
+  completedWithoutTimeCount: 0,
+  partialCount: 0,
+  includedInCalculationCount: 0,
+}
+
 export function ConveyorProgressPage() {
   const { pathname } = useLocation()
   const { presentBlocking } = useSgpErrorSurface()
@@ -45,6 +61,9 @@ export function ConveyorProgressPage() {
   const [advancedOpen, setAdvancedOpen] = useState(false)
   const [debouncedFilters, setDebouncedFilters] = useState(filters)
   const [items, setItems] = useState<ConveyorProgressItem[]>([])
+  const [summaryTimeEfficiency, setSummaryTimeEfficiency] = useState<AggregateTimeEfficiency>(
+    EMPTY_AGGREGATE_TIME_EFFICIENCY,
+  )
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set())
@@ -104,6 +123,7 @@ export function ConveyorProgressPage() {
     try {
       const data = await fetchConveyorProgress(filtersToApiParams(debouncedFilters))
       setItems(data.items)
+      setSummaryTimeEfficiency(data.summary.timeEfficiency)
       setSelectedIds((prev) => {
         const next = new Set<string>()
         for (const id of prev) {
@@ -135,7 +155,10 @@ export function ConveyorProgressPage() {
     void loadData()
   }, [loadData])
 
-  const summary = useMemo(() => computeConveyorProgressSummary(items), [items])
+  const summary = useMemo(
+    () => computeConveyorProgressSummary(items, summaryTimeEfficiency),
+    [items, summaryTimeEfficiency],
+  )
 
   const selectedItems = useMemo(
     () => filterSelectedConveyors(items, selectedIds),

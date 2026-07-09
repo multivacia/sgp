@@ -14,6 +14,18 @@ const sampleItem: ConveyorProgressItem = {
   remainingMinutes: 80,
   exceededMinutes: 0,
   progressPercent: 33,
+  timeEfficiency: {
+    status: 'MAIS_RAPIDO',
+    efficiencyPct: 300,
+    deviationMinutes: -80,
+    deviationPct: -66.7,
+    classification: 'MAIS_RAPIDO',
+    notStartedCount: 0,
+    withoutPlannedTimeCount: 0,
+    completedWithoutTimeCount: 0,
+    partialCount: 1,
+    includedInCalculationCount: 1,
+  },
   tasks: [
     {
       taskId: 'task-1',
@@ -23,6 +35,18 @@ const sampleItem: ConveyorProgressItem = {
       remainingMinutes: 80,
       exceededMinutes: 0,
       progressPercent: 33,
+      timeEfficiency: {
+        status: 'MAIS_RAPIDO',
+        efficiencyPct: 300,
+        deviationMinutes: -80,
+        deviationPct: -66.7,
+        classification: 'MAIS_RAPIDO',
+        notStartedCount: 0,
+        withoutPlannedTimeCount: 0,
+        completedWithoutTimeCount: 0,
+        partialCount: 1,
+        includedInCalculationCount: 1,
+      },
       sectors: [
         {
           sectorId: 'sector-1',
@@ -32,6 +56,18 @@ const sampleItem: ConveyorProgressItem = {
           remainingMinutes: 80,
           exceededMinutes: 0,
           progressPercent: 33,
+          timeEfficiency: {
+            status: 'MAIS_RAPIDO',
+            efficiencyPct: 300,
+            deviationMinutes: -80,
+            deviationPct: -66.7,
+            classification: 'MAIS_RAPIDO',
+            notStartedCount: 0,
+            withoutPlannedTimeCount: 0,
+            completedWithoutTimeCount: 0,
+            partialCount: 1,
+            includedInCalculationCount: 1,
+          },
           activities: [
             {
               activityId: 'step-1',
@@ -43,6 +79,15 @@ const sampleItem: ConveyorProgressItem = {
               remainingMinutes: 40,
               exceededMinutes: 0,
               progressPercent: 33,
+              timeEfficiency: {
+                status: 'MAIS_RAPIDO',
+                isPartial: true,
+                includedInCalculation: true,
+                efficiencyPct: 300,
+                deviationMinutes: -40,
+                deviationPct: -66.7,
+                classification: 'MAIS_RAPIDO',
+              },
               timeEntries: [],
             },
           ],

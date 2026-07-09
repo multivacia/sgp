@@ -1,10 +1,20 @@
 import { useState, type ReactNode } from 'react'
 import type {
   ActivityProgressItem,
+  ActivityTimeEfficiency,
+  AggregateTimeEfficiency,
   ConveyorProgressItem,
   SectorProgressItem,
   TaskProgressItem,
 } from '../../domain/conveyor-progress/conveyorProgress.types'
+import {
+  formatAggregateTimeEfficiencyCounters,
+  formatAggregateTimeEfficiencyStatus,
+  formatTimeEfficiencyDeviationMinutes,
+  formatTimeEfficiencyDeviationPercent,
+  formatTimeEfficiencyPercent,
+  formatTimeEfficiencyStatus,
+} from '../../domain/conveyor-progress/conveyorProgressDisplay'
 import {
   isProgressActivityPrintable,
   type ActivityTicketProgressContext,
@@ -71,6 +81,7 @@ export function ConveyorProgressTable({
               <th className="px-3 py-3">Falta</th>
               <th className="px-3 py-3">Excedente</th>
               <th className="min-w-[8rem] px-3 py-3">Evolução</th>
+              <th className="min-w-[13rem] px-3 py-3">Eficiência</th>
               <th className="w-16 px-3 py-3 text-center">
                 <label className="inline-flex cursor-pointer flex-col items-center gap-1">
                   <input
@@ -187,6 +198,7 @@ function ConveyorRows({
         code={item.conveyorCode}
         statusLabel={statusLabel}
         metrics={item}
+        timeEfficiency={item.timeEfficiency}
         expanded={open}
         hasChildren={hasChildren}
         onToggle={() => setOpen((v) => !v)}
@@ -234,6 +246,7 @@ function TaskRows({
         label="Tarefa"
         name={task.taskName}
         metrics={task}
+        timeEfficiency={task.timeEfficiency}
         expanded={open}
         hasChildren={hasChildren}
         onToggle={() => setOpen((v) => !v)}
@@ -274,6 +287,7 @@ function SectorRows({
         label="Setor"
         name={sector.sectorName}
         metrics={sector}
+        timeEfficiency={sector.timeEfficiency}
         expanded={open}
         hasChildren={hasChildren}
         onToggle={() => setOpen((v) => !v)}
@@ -331,6 +345,7 @@ function ActivityRows({
         subtitle={activity.collaboratorName ?? undefined}
         statusLabel={statusLabel}
         metrics={activity}
+        timeEfficiency={activity.timeEfficiency}
         expanded={open}
         hasChildren={hasChildren}
         onToggle={() => setOpen((v) => !v)}
@@ -367,6 +382,7 @@ function MetricsRow({
   subtitle,
   statusLabel,
   metrics,
+  timeEfficiency,
   expanded,
   hasChildren,
   onToggle,
@@ -381,6 +397,7 @@ function MetricsRow({
   subtitle?: string
   statusLabel?: string | null
   metrics: MetricsLike
+  timeEfficiency: ActivityTimeEfficiency | AggregateTimeEfficiency
   expanded: boolean
   hasChildren: boolean
   onToggle: () => void
@@ -437,10 +454,91 @@ function MetricsRow({
       <td className="px-3 py-3">
         <EvolutionColumn metrics={metrics} />
       </td>
+      <td className="px-3 py-3">
+        <TimeEfficiencyCell efficiency={timeEfficiency} />
+      </td>
       <td className="px-3 py-3 text-center">
         {actions ?? selection ?? null}
       </td>
     </tr>
+  )
+}
+
+function TimeEfficiencyCell({
+  efficiency,
+}: {
+  efficiency: ActivityTimeEfficiency | AggregateTimeEfficiency
+}) {
+  const isActivityEfficiency = 'isPartial' in efficiency
+  const statusLabel = isActivityEfficiency
+    ? formatTimeEfficiencyStatus(efficiency.status)
+    : formatAggregateTimeEfficiencyStatus(efficiency.status)
+  const helperLabel =
+    isActivityEfficiency
+      ? efficiency.includedInCalculation
+        ? efficiency.isPartial
+          ? 'Parcial'
+          : 'Concluída'
+        : null
+      : formatAggregateTimeEfficiencyCounters(efficiency)
+
+  if (efficiency.efficiencyPct == null) {
+    return (
+      <div className="max-w-[15rem]">
+        <span className="text-xs font-medium text-slate-400">
+          {statusLabel ?? 'Sem base calculável'}
+        </span>
+        {helperLabel && (!isActivityEfficiency || efficiency.includedInCalculation) ? (
+          <div className="mt-1 text-[11px] text-slate-500">{helperLabel}</div>
+        ) : null}
+      </div>
+    )
+  }
+
+  return (
+    <div className="max-w-[15rem]">
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-xs font-semibold tabular-nums text-slate-800">
+          {formatTimeEfficiencyPercent(efficiency.efficiencyPct)}
+        </span>
+        {statusLabel ? (
+          <TimeEfficiencyBadge
+            label={statusLabel}
+            status={efficiency.status}
+          />
+        ) : null}
+      </div>
+      <div className="mt-1 text-[11px] text-slate-500">
+        {formatTimeEfficiencyDeviationMinutes(efficiency.deviationMinutes)} ·{' '}
+        {formatTimeEfficiencyDeviationPercent(efficiency.deviationPct)}
+      </div>
+      {helperLabel ? <div className="mt-1 text-[11px] text-slate-500">{helperLabel}</div> : null}
+    </div>
+  )
+}
+
+function TimeEfficiencyBadge({
+  label,
+  status,
+}: {
+  label: string
+  status: ActivityTimeEfficiency['status'] | AggregateTimeEfficiency['status']
+}) {
+  const styles =
+    status === 'MAIS_RAPIDO'
+      ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+      : status === 'DENTRO_DO_PREVISTO'
+        ? 'border-sky-200 bg-sky-50 text-sky-700'
+        : status === 'CRITICO'
+          ? 'border-rose-200 bg-rose-50 text-rose-700'
+          : 'border-amber-200 bg-amber-50 text-amber-700'
+
+  return (
+    <span
+      className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-medium ${styles}`}
+    >
+      {label}
+    </span>
   )
 }
 
@@ -468,9 +566,3 @@ function ExpandChevron({
   )
 }
 
-export function filterSelectedConveyors(
-  items: ConveyorProgressItem[],
-  selectedIds: ReadonlySet<string>,
-): ConveyorProgressItem[] {
-  return items.filter((i) => selectedIds.has(i.conveyorId))
-}
