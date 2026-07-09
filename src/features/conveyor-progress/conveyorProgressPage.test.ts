@@ -107,6 +107,40 @@ function sampleItem(
   }
 }
 
+function aggregateTimeEfficiency(
+  overrides: Partial<AggregateTimeEfficiency> = {},
+): AggregateTimeEfficiency {
+  return {
+    status: 'DENTRO_DO_PREVISTO',
+    efficiencyPct: 100,
+    deviationMinutes: 0,
+    deviationPct: 0,
+    classification: 'DENTRO_DO_PREVISTO',
+    notStartedCount: 0,
+    withoutPlannedTimeCount: 0,
+    completedWithoutTimeCount: 0,
+    partialCount: 0,
+    includedInCalculationCount: 1,
+    ...overrides,
+  }
+}
+
+function summaryRowItem(
+  id: string,
+  name: string,
+  timeEfficiency: AggregateTimeEfficiency,
+): ConveyorProgressItem {
+  return sampleItem(id, name, {
+    plannedMinutes: 60,
+    realizedMinutes: 60,
+    remainingMinutes: 0,
+    exceededMinutes: 0,
+    progressPercent: 100,
+    timeEfficiency,
+    tasks: [],
+  })
+}
+
 describe('computeConveyorProgressSummary', () => {
   it('agrega falta e excedente de forma coerente', () => {
     const s = computeConveyorProgressSummary([sampleItem('c1', 'E1')])
@@ -152,6 +186,97 @@ describe('ConveyorProgressTable render', () => {
     )
     const checkboxCount = (html.match(/type="checkbox"/g) ?? []).length
     expect(checkboxCount).toBe(2)
+  })
+
+  it('renderiza os principais estados visuais de eficiência sem depender das linhas internas', async () => {
+    const { ConveyorProgressTable } = await import('./ConveyorProgressTable')
+    const html = renderToStaticMarkup(
+      createElement(ConveyorProgressTable, {
+        items: [
+          summaryRowItem(
+            'c-fast',
+            'Esteira rápida',
+            aggregateTimeEfficiency({
+              status: 'MAIS_RAPIDO',
+              efficiencyPct: 150,
+              deviationMinutes: -20,
+              deviationPct: -33.3,
+              classification: 'MAIS_RAPIDO',
+            }),
+          ),
+          summaryRowItem(
+            'c-on-plan',
+            'Esteira dentro do previsto',
+            aggregateTimeEfficiency(),
+          ),
+          summaryRowItem(
+            'c-partial',
+            'Esteira parcial',
+            aggregateTimeEfficiency({
+              status: 'LEVE_DESVIO',
+              efficiencyPct: 90.9,
+              deviationMinutes: 10,
+              deviationPct: 10,
+              classification: 'LEVE_DESVIO',
+              partialCount: 1,
+              includedInCalculationCount: 2,
+            }),
+          ),
+          summaryRowItem(
+            'c-no-plan',
+            'Esteira sem tempo previsto',
+            aggregateTimeEfficiency({
+              status: null,
+              efficiencyPct: null,
+              deviationMinutes: null,
+              deviationPct: null,
+              classification: null,
+              withoutPlannedTimeCount: 1,
+              includedInCalculationCount: 0,
+            }),
+          ),
+          summaryRowItem(
+            'c-not-started',
+            'Esteira não iniciada',
+            aggregateTimeEfficiency({
+              status: null,
+              efficiencyPct: null,
+              deviationMinutes: null,
+              deviationPct: null,
+              classification: null,
+              notStartedCount: 1,
+              includedInCalculationCount: 0,
+            }),
+          ),
+          summaryRowItem(
+            'c-no-entry',
+            'Esteira concluída sem apontamento',
+            aggregateTimeEfficiency({
+              status: null,
+              efficiencyPct: null,
+              deviationMinutes: null,
+              deviationPct: null,
+              classification: null,
+              completedWithoutTimeCount: 1,
+              includedInCalculationCount: 0,
+            }),
+          ),
+        ],
+        selectedIds: new Set<string>(),
+        onToggleSelect: () => {},
+        onSelectAll: () => {},
+        onClearSelection: () => {},
+      }),
+    )
+
+    expect(html).toContain('Mais rápido que previsto')
+    expect(html).toContain('Dentro do previsto')
+    expect(html).toContain('2 no cálculo · 1 parcial')
+    expect(html).toContain('1 sem tempo previsto')
+    expect(html).toContain('1 não iniciada')
+    expect(html).toContain('1 concluída sem apontamento')
+    expect(html).toContain('Sem base calculável')
+    expect(html).not.toContain('>Mais rápido<')
   })
 })
 

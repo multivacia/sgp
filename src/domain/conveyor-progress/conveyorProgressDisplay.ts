@@ -25,7 +25,7 @@ export const TIME_EFFICIENCY_STATUS_LABELS: Record<ActivityTimeEfficiency['statu
   SEM_TEMPO_PREVISTO: 'Sem tempo previsto',
   NAO_INICIADA: 'Não iniciada',
   CONCLUIDA_SEM_APONTAMENTO: 'Concluída sem apontamento',
-  MAIS_RAPIDO: 'Mais rápido',
+  MAIS_RAPIDO: 'Mais rápido que previsto',
   DENTRO_DO_PREVISTO: 'Dentro do previsto',
   LEVE_DESVIO: 'Leve desvio',
   ATENCAO: 'Atenção',
@@ -36,7 +36,7 @@ export const TIME_EFFICIENCY_CLASSIFICATION_LABELS: Record<
   NonNullable<ActivityTimeEfficiency['classification']>,
   string
 > = {
-  MAIS_RAPIDO: 'Mais rápido',
+  MAIS_RAPIDO: 'Mais rápido que previsto',
   DENTRO_DO_PREVISTO: 'Dentro do previsto',
   LEVE_DESVIO: 'Leve desvio',
   ATENCAO: 'Atenção',
