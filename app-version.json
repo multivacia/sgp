@@ -1,5 +1,7 @@
 {
   "product": "SGP+",
   "version": "1.8.3",
-  "releaseName": "version-kiosk-contrast"
+  "releaseName": "Correção visual light-executive + identificação de versão",
+  "releaseDate": "2026-07-09",
+  "channel": "production"
 }

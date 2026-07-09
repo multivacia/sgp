@@ -22,13 +22,13 @@ describe('frontend version metadata', () => {
     ;(globalThis as TestGlobal).__SGP_APP_BASE_METADATA__ = {
       product: 'SGP+',
       version: '1.8.3',
-      releaseName: 'version-kiosk-contrast',
+      releaseName: 'Correção visual light-executive + identificação de versão',
     }
     const metadata = resolveFrontendVersionMetadata()
 
     expect(metadata.product).toBe('SGP+')
     expect(metadata.version).toBe('1.8.3')
-    expect(metadata.releaseName).toBe('version-kiosk-contrast')
+    expect(metadata.releaseName).toBe('Correção visual light-executive + identificação de versão')
     expect(metadata.environment).toBe('development')
     expect(metadata.commitSha).toBe('local')
     expect(metadata.buildTime).toBeNull()
@@ -38,7 +38,7 @@ describe('frontend version metadata', () => {
     ;(globalThis as TestGlobal).__SGP_APP_BASE_METADATA__ = {
       product: 'SGP+',
       version: '1.8.3',
-      releaseName: 'version-kiosk-contrast',
+      releaseName: 'Correção visual light-executive + identificação de versão',
     }
     vi.stubEnv('VITE_APP_VERSION', '1.8.3-rc.1')
     vi.stubEnv('VITE_APP_RELEASE_NAME', 'rc-kiosk-contrast')

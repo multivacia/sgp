@@ -55,7 +55,7 @@ jobs:
           APP_VERSION="$(node -p "const fs=require('node:fs'); const data=JSON.parse(fs.readFileSync('app-version.json','utf8')); data.version")"
           APP_RELEASE_NAME="$(node -p "const fs=require('node:fs'); const data=JSON.parse(fs.readFileSync('app-version.json','utf8')); data.releaseName || data.version")"
           BUILD_TIME="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
-          GIT_SHA="${GITHUB_SHA}"
+          GIT_SHA="$(printf '%.7s' "${GITHUB_SHA}")"
 
           {
             echo "APP_VERSION=${APP_VERSION}"

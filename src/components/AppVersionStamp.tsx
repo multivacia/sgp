@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
   buildVersionIdentityLabel,
-  getAppEnvironmentLabel,
 } from '../lib/api/env'
 import {
   buildVersionStampTitle,
@@ -40,7 +39,7 @@ export function AppVersionStamp({
   const mismatch = isApiVersionMismatch(frontend, apiVersion)
   const label = buildVersionIdentityLabel(frontend)
   const mismatchLabel = apiVersion
-    ? `API v${apiVersion.version} · ${getAppEnvironmentLabel(apiVersion.environment)}`
+    ? 'App/API divergentes · atualize'
     : null
 
   return (
