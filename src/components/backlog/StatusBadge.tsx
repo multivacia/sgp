@@ -5,9 +5,9 @@ const styles: Record<BacklogStatus, string> = {
   em_elaboracao:
     'border-white/14 bg-white/[0.07] text-slate-300 ring-1 ring-white/[0.06]',
   aguardando_planejamento:
-    'border-amber-400/45 bg-amber-500/18 text-amber-50 ring-1 ring-amber-500/18',
+    'border-sky-400/45 bg-sky-500/18 text-sky-100 ring-1 ring-sky-500/18',
   em_planejamento:
-    'border-violet-400/40 bg-violet-500/14 text-violet-100 ring-1 ring-violet-500/20',
+    'border-amber-400/50 bg-amber-500/20 text-amber-100 ring-1 ring-amber-500/22',
   a_iniciar:
     'border-sgp-blue-bright/50 bg-sgp-blue/28 text-sky-100 ring-1 ring-sgp-blue/22',
   em_andamento:
