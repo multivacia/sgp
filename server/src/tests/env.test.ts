@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   hasDatabaseConnectionInEnv,
+  resolveAppVersionMetadata,
   resolvePgPoolConfig,
 } from '../config/env.js'
 
@@ -68,5 +69,46 @@ describe('hasDatabaseConnectionInEnv', () => {
 
   it('false sem Modo A nem Modo B completo', () => {
     expect(hasDatabaseConnectionInEnv({ PGHOST: 'localhost' } as NodeJS.ProcessEnv)).toBe(false)
+  })
+})
+
+describe('resolveAppVersionMetadata', () => {
+  it('prioriza APP_ENV e APP_VERSION sobre fallback do ambiente', () => {
+    expect(
+      resolveAppVersionMetadata(
+        {
+          APP_VERSION: '2.4.0',
+          APP_RELEASE_NAME: 'release-2-4-0',
+          APP_ENV: 'hml',
+          GIT_SHA: 'abcdef123456',
+          BUILD_TIME: '2026-07-09T22:37:00Z',
+          NODE_ENV: 'production',
+        } as NodeJS.ProcessEnv,
+        'production',
+      ),
+    ).toEqual({
+      product: 'SGP+',
+      version: '2.4.0',
+      releaseName: 'release-2-4-0',
+      environment: 'homologation',
+      commit: 'abcdef123456',
+      buildTime: '2026-07-09T22:37:00Z',
+    })
+  })
+
+  it('usa fallback seguro quando metadados não são informados', () => {
+    const metadata = resolveAppVersionMetadata(
+      {
+        NODE_ENV: 'test',
+      } as NodeJS.ProcessEnv,
+      'test',
+    )
+
+    expect(metadata.product).toBe('SGP+')
+    expect(metadata.version).toBe('1.8.3')
+    expect(metadata.releaseName).toBe('Correção visual light-executive + identificação de versão')
+    expect(metadata.environment).toBe('development')
+    expect(metadata.commit).toBe('local')
+    expect(metadata.buildTime).toBeNull()
   })
 })

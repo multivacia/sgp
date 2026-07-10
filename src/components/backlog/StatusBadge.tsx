@@ -3,31 +3,66 @@ import { BACKLOG_STATUS_LABELS } from '../../lib/sgp-semantica-labels'
 
 const styles: Record<BacklogStatus, string> = {
   em_elaboracao:
-    'border-white/14 bg-white/[0.07] text-slate-300 ring-1 ring-white/[0.06]',
+    'border-slate-300 bg-slate-100 text-slate-800 ring-1 ring-slate-300',
   aguardando_planejamento:
-    'border-amber-400/45 bg-amber-500/18 text-amber-50 ring-1 ring-amber-500/18',
+    'border-sky-300 bg-sky-50 text-sky-800 ring-1 ring-sky-200',
   em_planejamento:
-    'border-violet-400/40 bg-violet-500/14 text-violet-100 ring-1 ring-violet-500/20',
+    'border-amber-400 bg-amber-100 text-amber-900 ring-1 ring-amber-300',
   a_iniciar:
-    'border-sgp-blue-bright/50 bg-sgp-blue/28 text-sky-100 ring-1 ring-sgp-blue/22',
+    'border-indigo-300 bg-indigo-50 text-indigo-800 ring-1 ring-indigo-200',
   em_andamento:
-    'border-white/12 bg-sgp-navy/55 text-slate-100 ring-1 ring-white/[0.08]',
+    'border-teal-300 bg-teal-50 text-teal-800 ring-1 ring-teal-200',
   finalizada:
-    'border-emerald-400/45 bg-emerald-500/16 text-emerald-50 ring-1 ring-emerald-500/18',
+    'border-emerald-300 bg-emerald-50 text-emerald-800 ring-1 ring-emerald-200',
   cancelada:
-    'border-rose-400/40 bg-rose-500/14 text-rose-100 ring-1 ring-rose-500/18',
+    'border-rose-300 bg-rose-50 text-rose-800 ring-1 ring-rose-200',
+}
+
+const FALLBACK_STYLE =
+  'border-slate-400 bg-slate-100 text-slate-800 ring-1 ring-slate-300'
+
+const NORMALIZED_BACKLOG_STATUS_MAP: Record<string, BacklogStatus> = {
+  em_elaboracao: 'em_elaboracao',
+  aguardando_planejamento: 'aguardando_planejamento',
+  em_planejamento: 'em_planejamento',
+  a_iniciar: 'a_iniciar',
+  em_andamento: 'em_andamento',
+  finalizada: 'finalizada',
+  cancelada: 'cancelada',
+}
+
+export function normalizeBacklogStatusValue(
+  status: BacklogStatus | string,
+): BacklogStatus | null {
+  const normalized = status.trim().toLowerCase()
+  return NORMALIZED_BACKLOG_STATUS_MAP[normalized] ?? null
+}
+
+function fallbackStatusLabel(status: string): string {
+  const trimmed = status.trim()
+  return trimmed.length > 0 ? trimmed : 'Status desconhecido'
 }
 
 type Props = {
-  status: BacklogStatus
+  status: BacklogStatus | string
 }
 
 export function StatusBadge({ status }: Props) {
+  const normalizedStatus = normalizeBacklogStatusValue(status)
+  const visualStatus = normalizedStatus ?? 'status_desconhecido'
+  const badgeClass = normalizedStatus ? styles[normalizedStatus] : FALLBACK_STYLE
+  const label = normalizedStatus
+    ? BACKLOG_STATUS_LABELS[normalizedStatus]
+    : fallbackStatusLabel(status)
+
   return (
     <span
-      className={`sgp-chip transition-colors duration-200 ${styles[status]}`}
+      data-backlog-status-badge=""
+      data-backlog-status={visualStatus}
+      data-backlog-status-raw={status}
+      className={`sgp-chip transition-colors duration-200 ${badgeClass}`}
     >
-      {BACKLOG_STATUS_LABELS[status]}
+      {label}
     </span>
   )
 }

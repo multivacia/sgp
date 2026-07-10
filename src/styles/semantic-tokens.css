@@ -96,6 +96,33 @@
 
   --semantic-dropzone-hover-bg: rgba(18, 26, 38, 0.88);
 
+  --semantic-ops-surface-bg: rgba(7, 13, 20, 0.86);
+  --semantic-ops-surface-muted: rgba(255, 255, 255, 0.05);
+  --semantic-ops-surface-border: rgba(255, 255, 255, 0.12);
+  --semantic-ops-surface-border-strong: rgba(255, 255, 255, 0.18);
+  --semantic-ops-text-primary: #f8fafc;
+  --semantic-ops-text-secondary: #cbd5e1;
+  --semantic-ops-text-muted: #94a3b8;
+  --semantic-ops-text-soft: #64748b;
+  --semantic-ops-warning-bg: rgba(245, 158, 11, 0.12);
+  --semantic-ops-warning-border: rgba(245, 158, 11, 0.4);
+  --semantic-ops-warning-text: #fde68a;
+  --semantic-ops-info-bg: rgba(59, 130, 246, 0.1);
+  --semantic-ops-info-border: rgba(59, 130, 246, 0.35);
+  --semantic-ops-info-text: #bfdbfe;
+  --semantic-ops-success-bg: rgba(16, 185, 129, 0.12);
+  --semantic-ops-success-border: rgba(16, 185, 129, 0.35);
+  --semantic-ops-success-text: #a7f3d0;
+  --semantic-ops-danger-bg: rgba(244, 63, 94, 0.12);
+  --semantic-ops-danger-border: rgba(244, 63, 94, 0.35);
+  --semantic-ops-danger-text: #fecdd3;
+  --semantic-version-stamp-bg: rgba(255, 255, 255, 0.04);
+  --semantic-version-stamp-border: rgba(255, 255, 255, 0.12);
+  --semantic-version-stamp-fg: #cbd5e1;
+  --semantic-version-stamp-alert-bg: rgba(245, 158, 11, 0.14);
+  --semantic-version-stamp-alert-border: rgba(245, 158, 11, 0.35);
+  --semantic-version-stamp-alert-fg: #fde68a;
+
   --semantic-table-row-hover-bg: rgba(255, 255, 255, 0.055);
   --semantic-table-row-hover-inset: rgba(255, 255, 255, 0.07);
 
@@ -324,6 +351,53 @@ html[data-theme="light-executive"] {
   --semantic-kpi-card-hover-end: var(--color-hover-surface);
 
   --semantic-dropzone-hover-bg: var(--color-accent-blue-soft);
+  --semantic-ops-surface-bg: #ffffff;
+  --semantic-ops-surface-muted: #f8fafc;
+  --semantic-ops-surface-border: #cbd5e1;
+  --semantic-ops-surface-border-strong: #94a3b8;
+  --semantic-ops-text-primary: #0f172a;
+  --semantic-ops-text-secondary: #334155;
+  --semantic-ops-text-muted: #475569;
+  --semantic-ops-text-soft: #64748b;
+  --semantic-ops-warning-bg: #fff7e6;
+  --semantic-ops-warning-border: #f59e0b;
+  --semantic-ops-warning-text: #92400e;
+  --semantic-ops-info-bg: #e8f1f8;
+  --semantic-ops-info-border: #7aa9c7;
+  --semantic-ops-info-text: #1e3a5f;
+  --semantic-ops-success-bg: #ecfdf5;
+  --semantic-ops-success-border: #10b981;
+  --semantic-ops-success-text: #065f46;
+  --semantic-ops-danger-bg: #fef2f2;
+  --semantic-ops-danger-border: #e11d48;
+  --semantic-ops-danger-text: #9f1239;
+  --semantic-backlog-status-draft-bg: #f3f4f6;
+  --semantic-backlog-status-draft-border: #d1d5db;
+  --semantic-backlog-status-draft-text: #374151;
+  --semantic-backlog-status-awaiting-bg: #eff6ff;
+  --semantic-backlog-status-awaiting-border: #93c5fd;
+  --semantic-backlog-status-awaiting-text: #1d4ed8;
+  --semantic-backlog-status-planning-bg: #fef3c7;
+  --semantic-backlog-status-planning-border: #f59e0b;
+  --semantic-backlog-status-planning-text: #92400e;
+  --semantic-backlog-status-starting-bg: #ecfeff;
+  --semantic-backlog-status-starting-border: #7dd3fc;
+  --semantic-backlog-status-starting-text: #075985;
+  --semantic-backlog-status-running-bg: #f0fdfa;
+  --semantic-backlog-status-running-border: #5eead4;
+  --semantic-backlog-status-running-text: #0f766e;
+  --semantic-backlog-status-done-bg: #f0fdf4;
+  --semantic-backlog-status-done-border: #86efac;
+  --semantic-backlog-status-done-text: #166534;
+  --semantic-backlog-status-cancelled-bg: #fef2f2;
+  --semantic-backlog-status-cancelled-border: #fca5a5;
+  --semantic-backlog-status-cancelled-text: #b91c1c;
+  --semantic-version-stamp-bg: rgba(255, 255, 255, 0.96);
+  --semantic-version-stamp-border: #cbd5e1;
+  --semantic-version-stamp-fg: #334155;
+  --semantic-version-stamp-alert-bg: #fff7e6;
+  --semantic-version-stamp-alert-border: #f59e0b;
+  --semantic-version-stamp-alert-fg: #92400e;
 
   --semantic-table-row-hover-bg: var(--color-hover-surface);
   --semantic-table-row-hover-inset: var(--color-border-subtle);

@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { config } from 'dotenv'
@@ -6,6 +7,8 @@ import { z } from 'zod'
 const __dirname = dirname(fileURLToPath(import.meta.url))
 /** Diretório `server/` (pai de `src/config/`) */
 const serverRoot = join(__dirname, '../..')
+const workspaceRoot = join(serverRoot, '..')
+const appVersionManifestPath = join(workspaceRoot, 'app-version.json')
 
 const serverEnvPath = join(serverRoot, '.env')
 
@@ -154,11 +157,114 @@ export type Env = {
   smtpRequireTls: boolean
 }
 
+export type AppRuntimeEnvironment =
+  | 'production'
+  | 'homologation'
+  | 'development'
+  | 'unknown'
+
+type AppVersionManifest = {
+  product: string
+  version: string
+  releaseName: string
+}
+
+export type AppVersionMetadata = {
+  product: string
+  version: string
+  releaseName: string
+  environment: AppRuntimeEnvironment
+  buildTime: string | null
+  commit: string
+}
+
 let cached: Env | undefined
+let cachedAppVersionManifest: AppVersionManifest | undefined
 
 /** Para testes de integração que precisam alterar `process.env` antes de `loadEnv()`. */
 export function resetEnvCacheForTests(): void {
   cached = undefined
+}
+
+function readAppVersionManifest(): AppVersionManifest {
+  if (cachedAppVersionManifest) return cachedAppVersionManifest
+
+  try {
+    const parsed = JSON.parse(
+      readFileSync(appVersionManifestPath, 'utf-8'),
+    ) as Partial<AppVersionManifest>
+    cachedAppVersionManifest = {
+      product:
+        typeof parsed.product === 'string' && parsed.product.trim()
+          ? parsed.product.trim()
+          : 'SGP+',
+      version:
+        typeof parsed.version === 'string' && parsed.version.trim()
+          ? parsed.version.trim()
+          : '0.0.0',
+      releaseName:
+        typeof parsed.releaseName === 'string' && parsed.releaseName.trim()
+          ? parsed.releaseName.trim()
+          : typeof parsed.version === 'string' && parsed.version.trim()
+            ? parsed.version.trim()
+            : 'local',
+    }
+  } catch {
+    cachedAppVersionManifest = {
+      product: 'SGP+',
+      version: '0.0.0',
+      releaseName: 'local',
+    }
+  }
+
+  return cachedAppVersionManifest
+}
+
+function normalizeAppRuntimeEnvironment(
+  raw: string | null | undefined,
+): AppRuntimeEnvironment {
+  const value = raw?.trim().toLowerCase()
+  if (!value) return 'unknown'
+  if (value === 'production' || value === 'prod') return 'production'
+  if (
+    value === 'homologation' ||
+    value === 'homolog' ||
+    value === 'homologacao' ||
+    value === 'homologação' ||
+    value === 'hml' ||
+    value === 'staging'
+  ) {
+    return 'homologation'
+  }
+  if (
+    value === 'development' ||
+    value === 'develop' ||
+    value === 'dev' ||
+    value === 'local' ||
+    value === 'test'
+  ) {
+    return 'development'
+  }
+  return 'unknown'
+}
+
+export function resolveAppVersionMetadata(
+  processEnv: NodeJS.ProcessEnv,
+  fallbackNodeEnv?: string,
+): AppVersionMetadata {
+  const base = readAppVersionManifest()
+
+  return {
+    product: base.product,
+    version: processEnv.APP_VERSION?.trim() || base.version,
+    releaseName:
+      processEnv.APP_RELEASE_NAME?.trim() || base.releaseName || base.version,
+    environment: normalizeAppRuntimeEnvironment(
+      processEnv.APP_ENV?.trim() || fallbackNodeEnv || processEnv.NODE_ENV,
+    ),
+    buildTime: processEnv.BUILD_TIME?.trim() || null,
+    commit: processEnv.GIT_SHA?.trim() || 'local',
+  }
 }
 
 /**

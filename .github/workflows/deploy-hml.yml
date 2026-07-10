@@ -1,13 +1,13 @@
-name: Deploy HostGator VPS
+name: Deploy HostGator VPS HML
 
 on:
   push:
     branches:
-      - main
+      - homol
   workflow_dispatch:
 
 concurrency:
-  group: deploy-hostgator-vps-main
+  group: deploy-hostgator-vps-hml
   cancel-in-progress: false
 
 permissions:
@@ -15,17 +15,17 @@ permissions:
 
 jobs:
   deploy:
-    name: Deploy SGP+ to HostGator VPS
+    name: Deploy SGP+ HML to HostGator VPS
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
     env:
-      DEPLOY_BRANCH: main
-      REMOTE_APP_DIR: /opt/sgp/sgp-main
-      REMOTE_WEB_DIR: /var/www/sgp-web
-      HEALTH_URL: https://sgp.multivacia.com/api/v1/health
-      APP_ENV: production
-      VITE_APP_ENV: production
+      DEPLOY_BRANCH: homol
+      REMOTE_APP_DIR: ${{ vars.HML_REMOTE_APP_DIR || '/opt/sgp/sgp-homol' }}
+      REMOTE_WEB_DIR: ${{ vars.HML_REMOTE_WEB_DIR || '/var/www/sgp-web-hml' }}
+      HEALTH_URL: ${{ vars.HML_HEALTH_URL || 'https://hml.sgp.multivacia.com/api/v1/health' }}
+      APP_ENV: homologation
+      VITE_APP_ENV: homologation
 
     steps:
       - name: Checkout repository
@@ -36,23 +36,24 @@ jobs:
         with:
           node-version: "22"
 
-      - name: Validate required secrets
+      - name: Validate required HML secrets
         shell: bash
         run: |
           set -euo pipefail
 
-          test -n "${{ secrets.VPS_HOST }}" || (echo "Missing secret VPS_HOST" && exit 1)
-          test -n "${{ secrets.VPS_PORT }}" || (echo "Missing secret VPS_PORT" && exit 1)
-          test -n "${{ secrets.VPS_USER }}" || (echo "Missing secret VPS_USER" && exit 1)
-          test -n "${{ secrets.VPS_SSH_KEY }}" || (echo "Missing secret VPS_SSH_KEY" && exit 1)
-          test -n "${{ secrets.VPS_KNOWN_HOSTS }}" || (echo "Missing secret VPS_KNOWN_HOSTS" && exit 1)
+          test -n "${{ secrets.HML_VPS_HOST }}" || (echo "Missing secret HML_VPS_HOST" && exit 1)
+          test -n "${{ secrets.HML_VPS_PORT }}" || (echo "Missing secret HML_VPS_PORT" && exit 1)
+          test -n "${{ secrets.HML_VPS_USER }}" || (echo "Missing secret HML_VPS_USER" && exit 1)
+          test -n "${{ secrets.HML_VPS_SSH_KEY }}" || (echo "Missing secret HML_VPS_SSH_KEY" && exit 1)
+          test -n "${{ secrets.HML_VPS_KNOWN_HOSTS }}" || (echo "Missing secret HML_VPS_KNOWN_HOSTS" && exit 1)
 
       - name: Resolve build metadata
         shell: bash
         run: |
           set -euo pipefail
 
-          APP_VERSION="$(node -p "const fs=require('node:fs'); const data=JSON.parse(fs.readFileSync('app-version.json','utf8')); data.version")"
+          BASE_VERSION="$(node -p "const fs=require('node:fs'); const data=JSON.parse(fs.readFileSync('app-version.json','utf8')); data.version")"
+          APP_VERSION="${HML_APP_VERSION:-${BASE_VERSION}-rc.1}"
           APP_RELEASE_NAME="$(node -p "const fs=require('node:fs'); const data=JSON.parse(fs.readFileSync('app-version.json','utf8')); data.releaseName || data.version")"
           BUILD_TIME="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
           GIT_SHA="$(printf '%.7s' "${GITHUB_SHA}")"
@@ -76,23 +77,23 @@ jobs:
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
 
-          printf '%s\n' "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/hostgator_vps_key
-          chmod 600 ~/.ssh/hostgator_vps_key
+          printf '%s\n' "${{ secrets.HML_VPS_SSH_KEY }}" > ~/.ssh/hostgator_hml_vps_key
+          chmod 600 ~/.ssh/hostgator_hml_vps_key
 
-          printf '%s\n' "${{ secrets.VPS_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
+          printf '%s\n' "${{ secrets.HML_VPS_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
           chmod 644 ~/.ssh/known_hosts
 
-      - name: Deploy on VPS
+      - name: Deploy on HML VPS
         shell: bash
         run: |
           set -euo pipefail
 
           ssh \
-            -i ~/.ssh/hostgator_vps_key \
-            -p "${{ secrets.VPS_PORT }}" \
+            -i ~/.ssh/hostgator_hml_vps_key \
+            -p "${{ secrets.HML_VPS_PORT }}" \
             -o IdentitiesOnly=yes \
             -o StrictHostKeyChecking=yes \
-            "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" \
+            "${{ secrets.HML_VPS_USER }}@${{ secrets.HML_VPS_HOST }}" \
             "DEPLOY_BRANCH='${DEPLOY_BRANCH}' REMOTE_APP_DIR='${REMOTE_APP_DIR}' REMOTE_WEB_DIR='${REMOTE_WEB_DIR}' HEALTH_URL='${HEALTH_URL}' APP_ENV='${APP_ENV}' APP_VERSION='${APP_VERSION}' APP_RELEASE_NAME='${APP_RELEASE_NAME}' VITE_APP_ENV='${VITE_APP_ENV}' VITE_APP_VERSION='${VITE_APP_VERSION}' VITE_APP_RELEASE_NAME='${VITE_APP_RELEASE_NAME}' GIT_SHA='${GIT_SHA}' BUILD_TIME='${BUILD_TIME}' VITE_GIT_SHA='${VITE_GIT_SHA}' VITE_BUILD_TIME='${VITE_BUILD_TIME}' bash -s" <<'REMOTE_SCRIPT'
           set -euo pipefail
 
@@ -147,15 +148,15 @@ jobs:
           test -f dist/index.html
 
           echo "==> Backing up current frontend"
-          BACKUP_DIR="/opt/sgp/backups/frontend-before-deploy-$(date +%Y%m%d-%H%M%S)"
+          BACKUP_DIR="/opt/sgp/backups/frontend-hml-before-deploy-$(date +%Y%m%d-%H%M%S)"
           mkdir -p "$BACKUP_DIR"
           rsync -a "$REMOTE_WEB_DIR"/ "$BACKUP_DIR"/
 
           echo "==> Publishing frontend"
           rsync -a --delete dist/ "$REMOTE_WEB_DIR"/
 
-          echo "==> Restarting PM2 process sgp-api"
-          pm2 restart sgp-api --update-env
+          echo "==> Restarting PM2 process sgp-api-hml"
+          pm2 restart sgp-api-hml --update-env
 
           echo "==> Saving PM2 process list"
           pm2 save
@@ -174,4 +175,4 @@ jobs:
         if: always()
         shell: bash
         run: |
-          rm -f ~/.ssh/hostgator_vps_key
+          rm -f ~/.ssh/hostgator_hml_vps_key
