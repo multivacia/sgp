@@ -11,13 +11,13 @@ import {
   kioskRequiresOperationalJustification,
   productionOutOfSequenceJustificationError,
   productionPlannedTimeReachedHint,
-  productionTimePlannedCoverageLabel,
-  productionTimePlannedCoveragePct,
   resolveKioskInitialSessionCompletionPct,
 } from '../../domain/production/kioskActivityCardLogic'
 import {
+  formatProductionMinutes,
   formatAwaitingPreviousActivitiesLabel,
   resolveOutOfSequenceActionLabel,
+  resolveProductionExceededMinutes,
   resolveProductionOperationalStatusDisplay,
   resolveSequenceListBadge,
 } from '../../domain/production/production.helpers'
@@ -42,53 +42,6 @@ function sliderPhrase(pct: number): string {
   if (pct <= 95) return 'Reta final!'
   if (pct < 100) return 'Finalizando…'
   return 'Concluído!'
-}
-
-function ProgressRing({ pct, label }: { pct: number; label: string }) {
-  const r = 40
-  const circ = 2 * Math.PI * r
-  const offset = circ * (1 - Math.max(0, Math.min(1, pct / 100)))
-  return (
-    <div className="relative h-24 w-24 shrink-0" aria-label={label}>
-      <svg
-        viewBox="0 0 100 100"
-        className="absolute inset-0 h-full w-full -rotate-90"
-        aria-hidden
-      >
-        <circle
-          cx={50}
-          cy={50}
-          r={r}
-          fill="none"
-          stroke="rgba(255,255,255,0.08)"
-          strokeWidth={8}
-        />
-        <circle
-          cx={50}
-          cy={50}
-          r={r}
-          fill="none"
-          strokeWidth={8}
-          strokeLinecap="round"
-          strokeDasharray={circ}
-          strokeDashoffset={offset}
-          style={{
-            stroke: 'var(--color-sgp-gold, #c9a227)',
-            transition: 'stroke-dashoffset 0.4s ease',
-          }}
-        />
-      </svg>
-      <div className="absolute inset-0 flex flex-col items-center justify-center px-1 text-center">
-        <span className="text-sm font-bold leading-tight text-white">{pct}%</span>
-        <span className="text-[8px] uppercase leading-tight tracking-wide text-slate-500">
-          tempo apontado
-        </span>
-        <span className="text-[7px] uppercase leading-tight tracking-wide text-slate-600">
-          do previsto
-        </span>
-      </div>
-    </div>
-  )
 }
 
 type Props = {
@@ -122,11 +75,13 @@ export function KioskActivityCard({ item, onSuccess }: Props) {
     setSessionPct(resolveKioskInitialSessionCompletionPct(item))
   }, [item.activityNodeId, item.lastSessionCompletionPct])
 
-  const timeCoveragePct = productionTimePlannedCoveragePct(item)
-  const timeCoverageLabel = productionTimePlannedCoverageLabel(timeCoveragePct)
   const statusDisplay = resolveProductionOperationalStatusDisplay(item)
   const plannedTimeHint = productionPlannedTimeReachedHint(item)
   const sequenceBadge = resolveSequenceListBadge(item)
+  const exceededMinutes = resolveProductionExceededMinutes(
+    item.plannedMinutes,
+    item.realizedMinutes,
+  )
   const sequenceHint =
     item.sequenceWarningLabel ??
     formatAwaitingPreviousActivitiesLabel(item.awaitingPreviousActivities)
@@ -327,7 +282,6 @@ export function KioskActivityCard({ item, onSuccess }: Props) {
           </div>
         )}
         <div className="flex items-start gap-4">
-          <ProgressRing pct={timeCoveragePct} label={timeCoverageLabel} />
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-start justify-between gap-2">
               <p className="text-lg font-semibold leading-snug text-white">
@@ -355,17 +309,28 @@ export function KioskActivityCard({ item, onSuccess }: Props) {
                 <span className="text-slate-300">{item.conveyorTitle}</span>
               </span>
             </div>
-            <p className="mt-1.5 text-xs text-slate-500">
-              Realizado:{' '}
-              <span className="text-slate-300">{item.realizedMinutes} min</span>
-              {item.plannedMinutes != null ? (
-                <>
-                  {' '}
-                  · Planejado:{' '}
-                  <span className="text-slate-300">{item.plannedMinutes} min</span>
-                </>
+            <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-xs sm:grid-cols-3">
+              <div>
+                <dt className="text-slate-500">Realizado</dt>
+                <dd className="mt-0.5 font-medium text-slate-200">
+                  {formatProductionMinutes(item.realizedMinutes)}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-slate-500">Planejado</dt>
+                <dd className="mt-0.5 font-medium text-slate-200">
+                  {formatProductionMinutes(item.plannedMinutes)}
+                </dd>
+              </div>
+              {exceededMinutes != null ? (
+                <div>
+                  <dt className="text-slate-500">Tempo excedido</dt>
+                  <dd className="mt-0.5 font-medium text-slate-200">
+                    {formatProductionMinutes(exceededMinutes)}
+                  </dd>
+                </div>
               ) : null}
-            </p>
+            </dl>
             {plannedTimeHint ? (
               <p className="mt-2 text-xs font-medium text-sky-300/90">{plannedTimeHint}</p>
             ) : null}
