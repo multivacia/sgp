@@ -589,6 +589,16 @@
   backdrop-filter: blur(10px);
 }
 
+[data-sgp-version-placement='sidebar'] {
+  border-color: transparent;
+  background-color: transparent;
+  color: var(--semantic-sgp-muted);
+  box-shadow: none;
+  backdrop-filter: none;
+  border-radius: 0;
+  padding: 0;
+}
+
 [data-sgp-version-alert] {
   border-color: var(--semantic-version-stamp-alert-border);
   background-color: var(--semantic-version-stamp-alert-bg);
@@ -597,6 +607,56 @@
 
 html[data-theme="light-executive"] [data-sgp-version-stamp] {
   box-shadow: 0 10px 24px -18px rgba(15, 23, 42, 0.28);
+}
+
+html[data-theme="light-executive"] [data-sgp-version-placement='sidebar'] {
+  color: var(--semantic-ops-text-soft);
+}
+
+html[data-theme="light-executive"] [data-backlog-status-badge] {
+  box-shadow: none;
+}
+
+html[data-theme="light-executive"] [data-backlog-status='em_elaboracao'] {
+  border-color: var(--semantic-backlog-status-draft-border) !important;
+  background-color: var(--semantic-backlog-status-draft-bg) !important;
+  color: var(--semantic-backlog-status-draft-text) !important;
+}
+
+html[data-theme="light-executive"] [data-backlog-status='aguardando_planejamento'] {
+  border-color: var(--semantic-backlog-status-awaiting-border) !important;
+  background-color: var(--semantic-backlog-status-awaiting-bg) !important;
+  color: var(--semantic-backlog-status-awaiting-text) !important;
+}
+
+html[data-theme="light-executive"] [data-backlog-status='em_planejamento'] {
+  border-color: var(--semantic-backlog-status-planning-border) !important;
+  background-color: var(--semantic-backlog-status-planning-bg) !important;
+  color: var(--semantic-backlog-status-planning-text) !important;
+}
+
+html[data-theme="light-executive"] [data-backlog-status='a_iniciar'] {
+  border-color: var(--semantic-backlog-status-starting-border) !important;
+  background-color: var(--semantic-backlog-status-starting-bg) !important;
+  color: var(--semantic-backlog-status-starting-text) !important;
+}
+
+html[data-theme="light-executive"] [data-backlog-status='em_andamento'] {
+  border-color: var(--semantic-backlog-status-running-border) !important;
+  background-color: var(--semantic-backlog-status-running-bg) !important;
+  color: var(--semantic-backlog-status-running-text) !important;
+}
+
+html[data-theme="light-executive"] [data-backlog-status='finalizada'] {
+  border-color: var(--semantic-backlog-status-done-border) !important;
+  background-color: var(--semantic-backlog-status-done-bg) !important;
+  color: var(--semantic-backlog-status-done-text) !important;
+}
+
+html[data-theme="light-executive"] [data-backlog-status='cancelada'] {
+  border-color: var(--semantic-backlog-status-cancelled-border) !important;
+  background-color: var(--semantic-backlog-status-cancelled-bg) !important;
+  color: var(--semantic-backlog-status-cancelled-text) !important;
 }
 
 html[data-theme="light-executive"] [data-sgp-surface="pointing"],

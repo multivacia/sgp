@@ -31,6 +31,11 @@ vi.mock('../lib/shell/shell-function-context', () => ({
   pathsWouldChangeForNavigation: () => false,
 }))
 
+vi.mock('./AppVersionStamp', () => ({
+  AppVersionStamp: ({ placement }: { placement?: string }) =>
+    createElement('div', { 'data-version-placement': placement }, 'SGP+ v1.8.3 · Produção'),
+}))
+
 describe('AppSidebar', () => {
   it('não renderiza Família ARGOS quando a flag está desligada', () => {
     const html = renderToStaticMarkup(
@@ -77,5 +82,19 @@ describe('AppSidebar', () => {
     expect(html).not.toContain('Minhas atividades')
     expect(html).not.toContain('href="/app/meu-trabalho"')
     expect(html).not.toContain('href="/app/minhas-atividades"')
+  })
+
+  it('renderiza a versão no rodapé do sidebar expandido', () => {
+    const html = renderToStaticMarkup(
+      createElement(AppSidebar, {
+        open: true,
+        onClose: () => {},
+        collapsed: false,
+        onToggleCollapsed: () => {},
+      }),
+    )
+
+    expect(html).toContain('SGP+ v1.8.3 · Produção')
+    expect(html).toContain('data-version-placement="sidebar"')
   })
 })

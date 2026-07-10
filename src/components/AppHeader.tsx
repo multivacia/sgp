@@ -11,7 +11,6 @@ import { useAuth } from '../lib/use-auth'
 import { isSupportTicketsEnabled } from '../lib/api/env'
 import { OpenSupportTicketDialog } from '../features/support/OpenSupportTicketDialog'
 import { QuickTimeEntryDrawer } from '../features/shell/QuickTimeEntryDrawer'
-import { AppVersionStamp } from './AppVersionStamp'
 
 function displayNameFromEmail(email: string) {
   const local = email.split('@')[0] ?? 'gestor'
@@ -112,9 +111,9 @@ export function AppHeader({ onMenuClick }: Props) {
             <p className="truncate font-heading text-base font-bold tracking-tight text-slate-50 md:text-lg">
               {shellContext}
             </p>
-            <div className="pt-1">
-              <AppVersionStamp placement="header" />
-            </div>
+            <p className="hidden truncate text-xs font-medium text-slate-500 sm:block">
+              SGP · execução e backlog
+            </p>
           </div>
         </div>
 

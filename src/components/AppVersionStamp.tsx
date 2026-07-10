@@ -11,7 +11,7 @@ import {
 } from '../lib/api/version'
 
 type Props = {
-  placement?: 'header' | 'footer'
+  placement?: 'header' | 'footer' | 'sidebar'
   className?: string
 }
 

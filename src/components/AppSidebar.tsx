@@ -17,6 +17,7 @@ import {
   useShellFunction,
 } from '../lib/shell/shell-function-context'
 import { SHOW_ARGOS_SIDEBAR_FAMILY } from '../lib/argos/argosUiFlags'
+import { AppVersionStamp } from './AppVersionStamp'
 import { BravoSidebarBrand } from './shell/BravoSidebarBrand'
 import { SgpMark } from './login/SgpMark'
 
@@ -484,6 +485,21 @@ export function AppSidebar({ open, onClose, collapsed, onToggleCollapsed }: Prop
             </section>
           ))}
         </nav>
+
+        <div
+          data-sidebar-version-block=""
+          className={[
+            'shrink-0 px-3 pb-4 pt-3 md:px-2 md:pb-5',
+            rail ? 'md:hidden' : '',
+          ].join(' ')}
+        >
+          <div className="border-t border-white/[0.06] pt-3">
+            <AppVersionStamp
+              placement="sidebar"
+              className="w-full justify-between gap-2"
+            />
+          </div>
+        </div>
 
       </aside>
     </>

@@ -25,6 +25,8 @@ type Props = {
 export function StatusBadge({ status }: Props) {
   return (
     <span
+      data-backlog-status-badge=""
+      data-backlog-status={status}
       className={`sgp-chip transition-colors duration-200 ${styles[status]}`}
     >
       {BACKLOG_STATUS_LABELS[status]}
