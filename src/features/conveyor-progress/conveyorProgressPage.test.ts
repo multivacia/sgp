@@ -30,7 +30,6 @@ function sampleItem(
     efficiencyPct: 66.7,
     deviationMinutes: 15,
     deviationPct: 50,
-    classification: 'CRITICO',
     notStartedCount: 0,
     withoutPlannedTimeCount: 0,
     completedWithoutTimeCount: 0,
@@ -44,7 +43,6 @@ function sampleItem(
     efficiencyPct: 66.7,
     deviationMinutes: 15,
     deviationPct: 50,
-    classification: 'CRITICO',
   }
 
   return {
@@ -115,7 +113,6 @@ function aggregateTimeEfficiency(
     efficiencyPct: 100,
     deviationMinutes: 0,
     deviationPct: 0,
-    classification: 'DENTRO_DO_PREVISTO',
     notStartedCount: 0,
     withoutPlannedTimeCount: 0,
     completedWithoutTimeCount: 0,
@@ -171,6 +168,8 @@ describe('ConveyorProgressTable render', () => {
     expect(html).toContain('Eficiência')
     expect(html).toContain('Seleção')
     expect(html).toContain('Esteira Teste')
+    expect(html).toContain('EM_ANDAMENTO')
+    expect(html).toContain('Crítico')
   })
 
   it('checkbox de seleção apenas no nível esteira', async () => {
@@ -201,7 +200,6 @@ describe('ConveyorProgressTable render', () => {
               efficiencyPct: 150,
               deviationMinutes: -20,
               deviationPct: -33.3,
-              classification: 'MAIS_RAPIDO',
             }),
           ),
           summaryRowItem(
@@ -217,7 +215,6 @@ describe('ConveyorProgressTable render', () => {
               efficiencyPct: 90.9,
               deviationMinutes: 10,
               deviationPct: 10,
-              classification: 'LEVE_DESVIO',
               partialCount: 1,
               includedInCalculationCount: 2,
             }),
@@ -230,7 +227,6 @@ describe('ConveyorProgressTable render', () => {
               efficiencyPct: null,
               deviationMinutes: null,
               deviationPct: null,
-              classification: null,
               withoutPlannedTimeCount: 1,
               includedInCalculationCount: 0,
             }),
@@ -243,7 +239,6 @@ describe('ConveyorProgressTable render', () => {
               efficiencyPct: null,
               deviationMinutes: null,
               deviationPct: null,
-              classification: null,
               notStartedCount: 1,
               includedInCalculationCount: 0,
             }),
@@ -256,7 +251,6 @@ describe('ConveyorProgressTable render', () => {
               efficiencyPct: null,
               deviationMinutes: null,
               deviationPct: null,
-              classification: null,
               completedWithoutTimeCount: 1,
               includedInCalculationCount: 0,
             }),
