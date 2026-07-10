@@ -3,19 +3,19 @@ import { BACKLOG_STATUS_LABELS } from '../../lib/sgp-semantica-labels'
 
 const styles: Record<BacklogStatus, string> = {
   em_elaboracao:
-    'border-white/14 bg-white/[0.07] text-slate-300 ring-1 ring-white/[0.06]',
+    'border-slate-300 bg-slate-100 text-slate-800 ring-1 ring-slate-300',
   aguardando_planejamento:
-    'border-sky-400/45 bg-sky-500/18 text-sky-100 ring-1 ring-sky-500/18',
+    'border-sky-300 bg-sky-50 text-sky-800 ring-1 ring-sky-200',
   em_planejamento:
-    'border-amber-400/50 bg-amber-500/20 text-amber-100 ring-1 ring-amber-500/22',
+    'border-amber-400 bg-amber-100 text-amber-900 ring-1 ring-amber-300',
   a_iniciar:
-    'border-sgp-blue-bright/50 bg-sgp-blue/28 text-sky-100 ring-1 ring-sgp-blue/22',
+    'border-indigo-300 bg-indigo-50 text-indigo-800 ring-1 ring-indigo-200',
   em_andamento:
-    'border-white/12 bg-sgp-navy/55 text-slate-100 ring-1 ring-white/[0.08]',
+    'border-teal-300 bg-teal-50 text-teal-800 ring-1 ring-teal-200',
   finalizada:
-    'border-emerald-400/45 bg-emerald-500/16 text-emerald-50 ring-1 ring-emerald-500/18',
+    'border-emerald-300 bg-emerald-50 text-emerald-800 ring-1 ring-emerald-200',
   cancelada:
-    'border-rose-400/40 bg-rose-500/14 text-rose-100 ring-1 ring-rose-500/18',
+    'border-rose-300 bg-rose-50 text-rose-800 ring-1 ring-rose-200',
 }
 
 type Props = {
