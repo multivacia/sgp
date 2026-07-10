@@ -59,6 +59,36 @@ export type OperationalPlanningExecutionOutsidePlanEntry = {
   notes: string | null
 }
 
+export type CollaboratorPlanningCapacityStatus =
+  | 'SEM_CAPACIDADE_CADASTRADA'
+  | 'DISPONIVEL'
+  | 'PROXIMO_DO_LIMITE'
+  | 'ACIMA_DA_CAPACIDADE'
+  | 'SOBRECARGA_CRITICA'
+
+export type CollaboratorPlanningCapacitySummary = {
+  collaboratorId: string
+  collaboratorName: string
+  capacityMinutes: number | null
+  plannedMinutes: number
+  availableMinutes: number | null
+  overloadMinutes: number
+  occupancyPct: number | null
+  status: CollaboratorPlanningCapacityStatus
+}
+
+export type OperationalPlanningCapacityAggregateSummary = {
+  collaboratorsCount: number
+  totalPlannedMinutes: number
+  totalOverloadMinutes: number
+  byStatus: Record<CollaboratorPlanningCapacityStatus, number>
+}
+
+export type OperationalPlanningCapacityPayload = {
+  summary: OperationalPlanningCapacityAggregateSummary
+  collaborators: CollaboratorPlanningCapacitySummary[]
+}
+
 export type OperationalPlanningWeekPayload = {
   hasPlan: boolean
   week: {
@@ -87,6 +117,7 @@ export type OperationalPlanningWeekPayload = {
     capacityMinutes: number
     plannedMinutes: number
   }>
+  capacity: OperationalPlanningCapacityPayload
   executionOutsidePlanSummary: OperationalPlanningExecutionOutsidePlanSummary
   executionOutsidePlanEntries: OperationalPlanningExecutionOutsidePlanEntry[]
   revision: {

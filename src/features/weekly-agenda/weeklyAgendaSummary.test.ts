@@ -79,6 +79,21 @@ describe('buildWeeklyAgendaSummaryStrip', () => {
       },
       summary: { plannedMinutes: 105, plannedItems: 2, collaboratorsCount: 2 },
       capacityByCollaboratorDay: [],
+      capacity: {
+        summary: {
+          collaboratorsCount: 2,
+          totalPlannedMinutes: 105,
+          totalOverloadMinutes: 0,
+          byStatus: {
+            SEM_CAPACIDADE_CADASTRADA: 0,
+            DISPONIVEL: 2,
+            PROXIMO_DO_LIMITE: 0,
+            ACIMA_DA_CAPACIDADE: 0,
+            SOBRECARGA_CRITICA: 0,
+          },
+        },
+        collaborators: [],
+      },
       executionOutsidePlanSummary: {
         totalMinutes: 20,
         entriesCount: 3,

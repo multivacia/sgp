@@ -58,6 +58,32 @@ const sampleWeekWithAttention: OperationalPlanningWeekPayload = {
   },
   summary: { plannedMinutes: 60, plannedItems: 1, collaboratorsCount: 1 },
   capacityByCollaboratorDay: [],
+  capacity: {
+    summary: {
+      collaboratorsCount: 1,
+      totalPlannedMinutes: 60,
+      totalOverloadMinutes: 0,
+      byStatus: {
+        SEM_CAPACIDADE_CADASTRADA: 0,
+        DISPONIVEL: 1,
+        PROXIMO_DO_LIMITE: 0,
+        ACIMA_DA_CAPACIDADE: 0,
+        SOBRECARGA_CRITICA: 0,
+      },
+    },
+    collaborators: [
+      {
+        collaboratorId: 'col-1',
+        collaboratorName: 'Carlos',
+        capacityMinutes: 2400,
+        plannedMinutes: 60,
+        availableMinutes: 2340,
+        overloadMinutes: 0,
+        occupancyPct: 2.5,
+        status: 'DISPONIVEL',
+      },
+    ],
+  },
   executionOutsidePlanSummary: {
     totalMinutes: 30,
     entriesCount: 2,

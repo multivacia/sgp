@@ -56,7 +56,26 @@ describe('operational planning revision flow', () => {
   })
 
   function mockWeekCapacity(): void {
-    vi.spyOn(operationalSettings, 'serviceResolveCollaboratorDailyCapacity').mockResolvedValue(480)
+    vi
+      .spyOn(operationalSettings, 'serviceResolveCollaboratorDailyCapacity')
+      .mockImplementation(async (_pool, collaboratorId, date) => ({
+        collaboratorId,
+        date: date ?? WEEK_START,
+        defaultDailyMinutes: 480,
+        overrideDailyMinutes: null,
+        resolvedDailyMinutes: 480,
+        source: 'default',
+      }))
+    vi
+      .spyOn(operationalSettings, 'serviceResolveCollaboratorExplicitDailyCapacity')
+      .mockImplementation(async (_pool, collaboratorId, date) => ({
+        collaboratorId,
+        date: date ?? WEEK_START,
+        defaultDailyMinutes: 480,
+        overrideDailyMinutes: null,
+        explicitDailyMinutes: 480,
+        source: 'default',
+      }))
     vi.spyOn(conveyorRepo, 'loadConveyorPlanItemsForWeekSync').mockResolvedValue(new Map())
   }
 

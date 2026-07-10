@@ -44,6 +44,21 @@ function weekPayload(
     plan: null,
     summary: { plannedMinutes: 0, plannedItems: 0, collaboratorsCount: 0 },
     capacityByCollaboratorDay: [],
+    capacity: {
+      summary: {
+        collaboratorsCount: 0,
+        totalPlannedMinutes: 0,
+        totalOverloadMinutes: 0,
+        byStatus: {
+          SEM_CAPACIDADE_CADASTRADA: 0,
+          DISPONIVEL: 0,
+          PROXIMO_DO_LIMITE: 0,
+          ACIMA_DA_CAPACIDADE: 0,
+          SOBRECARGA_CRITICA: 0,
+        },
+      },
+      collaborators: [],
+    },
     executionOutsidePlanSummary: {
       totalMinutes: 0,
       entriesCount: 0,

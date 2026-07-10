@@ -112,6 +112,7 @@ import {
 import { PlanningWeekOperationalSummaryBar } from './PlanningWeekOperationalSummaryBar'
 import { PlanningWeekDeviationBar } from './PlanningWeekDeviationBar'
 import { PlanningPrincipalDeviationsPanel } from './PlanningPrincipalDeviationsPanel'
+import { OperationalPlanningCapacityPanel } from './OperationalPlanningCapacityPanel'
 import { buildPlanningWeekOperationalSummary } from './planningWeekOperationalSummary'
 import {
   buildPlanningDeviationItems,
@@ -1582,6 +1583,8 @@ export function OperationalPlanningPage() {
             </div>
           ) : null}
         </section>
+
+        <OperationalPlanningCapacityPanel capacity={weekPayload?.capacity} />
 
         <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
           <div className="mt-10 grid gap-8 lg:grid-cols-[minmax(280px,360px)_1fr]">
