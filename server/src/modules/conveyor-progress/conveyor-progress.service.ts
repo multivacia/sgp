@@ -2,7 +2,9 @@ import type pg from 'pg'
 import {
   computeTimeEfficiencyMetrics,
   computeConveyorProgressMetrics,
+  consolidateWeightedOperationalProgress,
   consolidateWeightedTimeEfficiency,
+  resolveActivityOperationalProgressPct,
   sumMinutes,
 } from '../../shared/conveyorProgressMetrics.js'
 import type {
@@ -24,6 +26,50 @@ import {
 
 function metricsFromTotals(planned: number, realized: number) {
   return computeConveyorProgressMetrics(planned, realized)
+}
+
+function aggregateOperationalProgress(
+  activities: readonly Pick<ActivityProgressItemDto, 'operationalProgressPct' | 'plannedMinutes'>[],
+): number {
+  return consolidateWeightedOperationalProgress(
+    activities.map((activity) => ({
+      operationalProgressPct: activity.operationalProgressPct,
+      plannedMinutes: activity.plannedMinutes,
+    })),
+  ).operationalProgressPct
+}
+
+function buildLatestSessionCompletionPctByStep(
+  timeEntries: Awaited<ReturnType<typeof listTimeEntriesForConveyors>>,
+): Map<string, number> {
+  const latestByStep = new Map<
+    string,
+    { pct: number; entryAt: number; id: string }
+  >()
+
+  for (const entry of timeEntries) {
+    if (entry.session_completion_pct == null) continue
+    const pct = Number(entry.session_completion_pct)
+    if (!Number.isFinite(pct)) continue
+
+    const entryAt = entry.entry_at.getTime()
+    const current = latestByStep.get(entry.conveyor_node_id)
+    if (
+      !current ||
+      entryAt > current.entryAt ||
+      (entryAt === current.entryAt && entry.id > current.id)
+    ) {
+      latestByStep.set(entry.conveyor_node_id, {
+        pct,
+        entryAt,
+        id: entry.id,
+      })
+    }
+  }
+
+  return new Map(
+    [...latestByStep.entries()].map(([stepId, value]) => [stepId, value.pct]),
+  )
 }
 
 function isCompletedStepStatus(status: string | null | undefined): boolean {
@@ -60,6 +106,7 @@ function buildProgressTree(
 
   const entriesByStep = new Map<string, TimeEntryAnalyticalItemDto[]>()
   const realizedByStep = new Map<string, number>()
+  const latestSessionCompletionPctByStep = buildLatestSessionCompletionPctByStep(timeEntries)
 
   for (const te of timeEntries) {
     const list = entriesByStep.get(te.conveyor_node_id) ?? []
@@ -110,11 +157,16 @@ function buildProgressTree(
     for (const step of conveyorSteps) {
       const planned = step.planned_minutes ?? 0
       const realized = realizedByStep.get(step.step_id) ?? 0
-      const activityMetrics = metricsFromTotals(planned, realized)
+      const timeMetrics = metricsFromTotals(planned, realized)
+      const isCompleted = isCompletedStepStatus(step.operational_status)
+      const operationalProgressPct = resolveActivityOperationalProgressPct({
+        isCompleted,
+        latestSessionCompletionPct: latestSessionCompletionPctByStep.get(step.step_id) ?? null,
+      })
       const timeEfficiency = computeTimeEfficiencyMetrics({
         plannedMinutes: step.planned_minutes,
         realizedMinutes: realized,
-        isCompleted: isCompletedStepStatus(step.operational_status),
+        isCompleted,
       })
 
       const activity: ActivityProgressItemDto = {
@@ -122,7 +174,8 @@ function buildProgressTree(
         activityName: step.step_name,
         status: step.operational_status ?? 'PENDING',
         collaboratorName: assigneeByStep.get(step.step_id) ?? null,
-        ...activityMetrics,
+        ...timeMetrics,
+        operationalProgressPct,
         timeEfficiency,
         timeEntries: entriesByStep.get(step.step_id) ?? [],
       }
@@ -159,10 +212,12 @@ function buildProgressTree(
           .map((sector) => {
             const planned = sumMinutes(sector.activities.map((a) => a.plannedMinutes))
             const realized = sumMinutes(sector.activities.map((a) => a.realizedMinutes))
+            const timeMetrics = metricsFromTotals(planned, realized)
             return {
               sectorId: sector.sectorId,
               sectorName: sector.sectorName,
-              ...metricsFromTotals(planned, realized),
+              ...timeMetrics,
+              operationalProgressPct: aggregateOperationalProgress(sector.activities),
               timeEfficiency: consolidateWeightedTimeEfficiency(
                 sector.activities.map(buildActivityEfficiencyInput),
               ),
@@ -173,10 +228,12 @@ function buildProgressTree(
         const planned = sumMinutes(sectors.map((s) => s.plannedMinutes))
         const realized = sumMinutes(sectors.map((s) => s.realizedMinutes))
         const activities = collectActivitiesFromSectors(sectors)
+        const timeMetrics = metricsFromTotals(planned, realized)
         return {
           taskId: task.taskId,
           taskName: task.taskName,
-          ...metricsFromTotals(planned, realized),
+          ...timeMetrics,
+          operationalProgressPct: aggregateOperationalProgress(activities),
           timeEfficiency: consolidateWeightedTimeEfficiency(
             activities.map(buildActivityEfficiencyInput),
           ),
@@ -187,13 +244,15 @@ function buildProgressTree(
     const planned = sumMinutes(tasks.map((t) => t.plannedMinutes))
     const realized = sumMinutes(tasks.map((t) => t.realizedMinutes))
     const activities = collectActivitiesFromTasks(tasks)
+    const timeMetrics = metricsFromTotals(planned, realized)
 
     return {
       conveyorId: conveyor.id,
       conveyorCode: conveyor.code,
       conveyorName: conveyor.name,
       operationalStatus: conveyor.operational_status,
-      ...metricsFromTotals(planned, realized),
+      ...timeMetrics,
+      operationalProgressPct: aggregateOperationalProgress(activities),
       timeEfficiency: consolidateWeightedTimeEfficiency(
         activities.map(buildActivityEfficiencyInput),
       ),

@@ -55,7 +55,8 @@ function sampleItem(
     realizedMinutes: 66,
     remainingMinutes: 0,
     exceededMinutes: 41,
-    progressPercent: 264,
+    operationalProgressPct: 50,
+    timeConsumptionPct: 264,
     timeEfficiency: aggregateTimeEfficiency,
     tasks: [
       {
@@ -65,7 +66,8 @@ function sampleItem(
         realizedMinutes: 66,
         remainingMinutes: 0,
         exceededMinutes: 41,
-        progressPercent: 264,
+        operationalProgressPct: 50,
+        timeConsumptionPct: 264,
         timeEfficiency: aggregateTimeEfficiency,
         sectors: [
           {
@@ -75,7 +77,8 @@ function sampleItem(
             realizedMinutes: 66,
             remainingMinutes: 0,
             exceededMinutes: 41,
-            progressPercent: 264,
+            operationalProgressPct: 50,
+            timeConsumptionPct: 264,
             timeEfficiency: aggregateTimeEfficiency,
             activities: [
               {
@@ -86,7 +89,8 @@ function sampleItem(
                 realizedMinutes: 66,
                 remainingMinutes: 0,
                 exceededMinutes: 41,
-                progressPercent: 264,
+                operationalProgressPct: 50,
+                timeConsumptionPct: 264,
                 timeEfficiency: activityTimeEfficiency,
                 timeEntries: [
                   {
@@ -135,7 +139,8 @@ function summaryRowItem(
     realizedMinutes: 60,
     remainingMinutes: 0,
     exceededMinutes: 0,
-    progressPercent: 100,
+    operationalProgressPct: 100,
+    timeConsumptionPct: 100,
     timeEfficiency,
     tasks: [],
   })
@@ -171,6 +176,22 @@ describe('ConveyorProgressTable render', () => {
     expect(html).toContain('Eficiência')
     expect(html).toContain('Seleção')
     expect(html).toContain('Esteira Teste')
+  })
+
+  it('renderiza evolução operacional sem confundir com consumo temporal', async () => {
+    const { ConveyorProgressTable } = await import('./ConveyorProgressTable')
+    const html = renderToStaticMarkup(
+      createElement(ConveyorProgressTable, {
+        items: [sampleItem('c1', 'Esteira Teste')],
+        selectedIds: new Set<string>(),
+        onToggleSelect: () => {},
+        onSelectAll: () => {},
+        onClearSelection: () => {},
+      }),
+    )
+
+    expect(html).toContain('50%')
+    expect(html).not.toContain('264%')
   })
 
   it('checkbox de seleção apenas no nível esteira', async () => {

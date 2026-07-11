@@ -8,7 +8,7 @@ export type MetricsLike = {
   realizedMinutes: number
   remainingMinutes: number
   exceededMinutes: number
-  progressPercent: number
+  operationalProgressPct: number
 }
 
 export function DurationCell({
@@ -56,11 +56,7 @@ export function RealizedCell({ minutes }: { minutes: number }) {
 }
 
 export function EvolutionColumn({ metrics }: { metrics: MetricsLike }) {
-  if (metrics.plannedMinutes <= 0) {
-    return <span className="text-slate-400">—</span>
-  }
-
-  const barWidth = Math.min(100, Math.max(0, metrics.progressPercent))
+  const barWidth = Math.min(100, Math.max(0, metrics.operationalProgressPct))
   const exceeded = metrics.exceededMinutes > 0
 
   return (
@@ -70,12 +66,12 @@ export function EvolutionColumn({ metrics }: { metrics: MetricsLike }) {
           exceeded ? 'text-amber-600' : 'text-slate-700'
         }`}
       >
-        {formatConveyorProgressPercent(metrics.progressPercent)}
+        {formatConveyorProgressPercent(metrics.operationalProgressPct)}
       </span>
       <span
         className="inline-flex h-2 min-w-[4rem] flex-1 overflow-hidden rounded-full bg-slate-200"
         role="progressbar"
-        aria-valuenow={metrics.progressPercent}
+        aria-valuenow={metrics.operationalProgressPct}
         aria-valuemin={0}
         aria-valuemax={100}
       >

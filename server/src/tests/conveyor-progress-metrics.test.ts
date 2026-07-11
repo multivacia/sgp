@@ -1,32 +1,108 @@
 import { describe, expect, it } from 'vitest'
 import {
   computeConveyorProgressMetrics,
+  computeTimeConsumptionPct,
   computeTimeEfficiencyMetrics,
+  consolidateWeightedOperationalProgress,
   consolidateWeightedTimeEfficiency,
+  resolveActivityOperationalProgressPct,
 } from '../shared/conveyorProgressMetrics.js'
 
 describe('computeConveyorProgressMetrics', () => {
-  it('calcula faltante e percentual quando realizado < previsto', () => {
+  it('calcula faltante e consumo temporal quando realizado < previsto', () => {
     const m = computeConveyorProgressMetrics(120, 90)
     expect(m.plannedMinutes).toBe(120)
     expect(m.realizedMinutes).toBe(90)
     expect(m.remainingMinutes).toBe(30)
     expect(m.exceededMinutes).toBe(0)
-    expect(m.progressPercent).toBe(75)
+    expect(m.timeConsumptionPct).toBe(75)
   })
 
   it('zera faltante e calcula excedente quando realizado > previsto', () => {
     const m = computeConveyorProgressMetrics(100, 180)
     expect(m.remainingMinutes).toBe(0)
     expect(m.exceededMinutes).toBe(80)
-    expect(m.progressPercent).toBe(180)
+    expect(m.timeConsumptionPct).toBe(180)
   })
 
-  it('evita divisão por zero quando previsto = 0', () => {
+  it('retorna consumo null quando previsto = 0', () => {
     const m = computeConveyorProgressMetrics(0, 45)
-    expect(m.progressPercent).toBe(0)
+    expect(m.timeConsumptionPct).toBeNull()
     expect(m.exceededMinutes).toBe(45)
     expect(m.remainingMinutes).toBe(0)
+  })
+})
+
+describe('computeTimeConsumptionPct', () => {
+  it('separa consumo temporal do progresso operacional no cenário real', () => {
+    expect(computeTimeConsumptionPct(205, 185)).toBe(90.2)
+  })
+
+  it('calcula consumo acima de 100% sem confundir com evolução', () => {
+    expect(computeTimeConsumptionPct(15, 185)).toBe(1233.3)
+  })
+})
+
+describe('resolveActivityOperationalProgressPct', () => {
+  it('retorna 0% sem apontamento operacional', () => {
+    expect(
+      resolveActivityOperationalProgressPct({
+        isCompleted: false,
+        latestSessionCompletionPct: null,
+      }),
+    ).toBe(0)
+  })
+
+  it('retorna 50% com último apontamento parcial', () => {
+    expect(
+      resolveActivityOperationalProgressPct({
+        isCompleted: false,
+        latestSessionCompletionPct: 50,
+      }),
+    ).toBe(50)
+  })
+
+  it('retorna 100% quando concluída', () => {
+    expect(
+      resolveActivityOperationalProgressPct({
+        isCompleted: true,
+        latestSessionCompletionPct: 50,
+      }),
+    ).toBe(100)
+  })
+})
+
+describe('consolidateWeightedOperationalProgress', () => {
+  it('pondera evolução operacional por tempo previsto das atividades', () => {
+    const summary = consolidateWeightedOperationalProgress([
+      { operationalProgressPct: 50, plannedMinutes: 205 },
+      { operationalProgressPct: 100, plannedMinutes: 95 },
+    ])
+
+    expect(summary.operationalProgressPct).toBe(66)
+    expect(summary.includedActivityCount).toBe(2)
+    expect(summary.withoutPlannedTimeCount).toBe(0)
+  })
+
+  it('usa média simples quando nenhuma atividade tem tempo previsto', () => {
+    const summary = consolidateWeightedOperationalProgress([
+      { operationalProgressPct: 40, plannedMinutes: 0 },
+      { operationalProgressPct: 80, plannedMinutes: 0 },
+    ])
+
+    expect(summary.operationalProgressPct).toBe(60)
+    expect(summary.withoutPlannedTimeCount).toBe(2)
+  })
+
+  it('ignora atividades sem tempo previsto no denominador ponderado', () => {
+    const summary = consolidateWeightedOperationalProgress([
+      { operationalProgressPct: 50, plannedMinutes: 100 },
+      { operationalProgressPct: 100, plannedMinutes: 0 },
+    ])
+
+    expect(summary.operationalProgressPct).toBe(50)
+    expect(summary.includedActivityCount).toBe(1)
+    expect(summary.withoutPlannedTimeCount).toBe(1)
   })
 })
 

@@ -32,6 +32,7 @@ export type ConveyorProgressTimeEntryRow = {
   notes: string | null
   entry_mode: string
   collaborator_name: string
+  session_completion_pct: number | null
 }
 
 export type ConveyorProgressAssigneeRow = {
@@ -185,6 +186,7 @@ export async function listTimeEntriesForConveyors(
     notes: string | null
     entry_mode: string
     collaborator_name: string
+    session_completion_pct: number | null
   }>(
     `
     SELECT
@@ -196,7 +198,8 @@ export async function listTimeEntriesForConveyors(
       te.executed_quantity,
       te.notes,
       te.entry_mode::text AS entry_mode,
-      col.full_name AS collaborator_name
+      col.full_name AS collaborator_name,
+      te.session_completion_pct
     FROM conveyor_time_entries te
     INNER JOIN collaborators col ON col.id = te.collaborator_id
     WHERE ${where.join(' AND ')}

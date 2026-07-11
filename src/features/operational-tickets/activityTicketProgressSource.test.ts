@@ -24,7 +24,8 @@ function context(
       realizedMinutes: 20,
       remainingMinutes: 40,
       exceededMinutes: 0,
-      progressPercent: 33,
+      operationalProgressPct: 33,
+      timeConsumptionPct: 33.3,
       timeEfficiency: {
         status: 'MAIS_RAPIDO',
         isPartial: true,

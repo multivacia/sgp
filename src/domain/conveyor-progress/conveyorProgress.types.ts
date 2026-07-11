@@ -57,7 +57,8 @@ export type ActivityProgressItem = {
   realizedMinutes: number
   remainingMinutes: number
   exceededMinutes: number
-  progressPercent: number
+  operationalProgressPct: number
+  timeConsumptionPct: number | null
   timeEfficiency: ActivityTimeEfficiency
   timeEntries: TimeEntryAnalyticalItem[]
 }
@@ -69,7 +70,8 @@ export type SectorProgressItem = {
   realizedMinutes: number
   remainingMinutes: number
   exceededMinutes: number
-  progressPercent: number
+  operationalProgressPct: number
+  timeConsumptionPct: number | null
   timeEfficiency: AggregateTimeEfficiency
   activities: ActivityProgressItem[]
 }
@@ -81,7 +83,8 @@ export type TaskProgressItem = {
   realizedMinutes: number
   remainingMinutes: number
   exceededMinutes: number
-  progressPercent: number
+  operationalProgressPct: number
+  timeConsumptionPct: number | null
   timeEfficiency: AggregateTimeEfficiency
   sectors: SectorProgressItem[]
 }
@@ -95,7 +98,8 @@ export type ConveyorProgressItem = {
   realizedMinutes: number
   remainingMinutes: number
   exceededMinutes: number
-  progressPercent: number
+  operationalProgressPct: number
+  timeConsumptionPct: number | null
   timeEfficiency: AggregateTimeEfficiency
   tasks: TaskProgressItem[]
 }

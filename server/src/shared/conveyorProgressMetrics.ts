@@ -1,10 +1,29 @@
-/** Métricas previsto / realizado / faltante / excedente / evolução (esteiras). */
-export type ConveyorProgressMetrics = {
+/** Métricas temporais previsto / realizado / faltante / excedente / consumo do previsto. */
+export type ConveyorProgressTimeMetrics = {
   plannedMinutes: number
   realizedMinutes: number
   remainingMinutes: number
   exceededMinutes: number
-  progressPercent: number
+  timeConsumptionPct: number | null
+}
+
+/** @deprecated Use ConveyorProgressTimeMetrics — mantido para compatibilidade interna de imports. */
+export type ConveyorProgressMetrics = ConveyorProgressTimeMetrics
+
+export type OperationalProgressInput = {
+  isCompleted: boolean
+  latestSessionCompletionPct: number | null | undefined
+}
+
+export type WeightedOperationalProgressInput = {
+  operationalProgressPct: number
+  plannedMinutes: number
+}
+
+export type WeightedOperationalProgressSummary = {
+  operationalProgressPct: number
+  includedActivityCount: number
+  withoutPlannedTimeCount: number
 }
 
 export type TimeEfficiencyStatus =
@@ -98,10 +117,70 @@ function calculateTimeEfficiencyValues(
   }
 }
 
+export function computeTimeConsumptionPct(
+  plannedMinutes: number | null | undefined,
+  realizedMinutes: number | null | undefined,
+): number | null {
+  const planned = normalizePlannedMinutes(plannedMinutes)
+  if (planned == null) return null
+  const realized = normalizeMinutes(realizedMinutes)
+  return roundToSingleDecimal((realized / planned) * 100)
+}
+
+export function resolveActivityOperationalProgressPct(
+  input: OperationalProgressInput,
+): number {
+  if (input.isCompleted) return 100
+  const pct = input.latestSessionCompletionPct
+  if (typeof pct !== 'number' || !Number.isFinite(pct)) return 0
+  return Math.max(0, Math.min(100, Math.round(pct)))
+}
+
+export function consolidateWeightedOperationalProgress(
+  items: readonly WeightedOperationalProgressInput[],
+): WeightedOperationalProgressSummary {
+  if (items.length === 0) {
+    return {
+      operationalProgressPct: 0,
+      includedActivityCount: 0,
+      withoutPlannedTimeCount: 0,
+    }
+  }
+
+  const withPlanned = items.filter((item) => normalizePlannedMinutes(item.plannedMinutes) != null)
+  const withoutPlannedTimeCount = items.length - withPlanned.length
+
+  if (withPlanned.length > 0) {
+    let weightedSum = 0
+    let totalWeight = 0
+    for (const item of withPlanned) {
+      const weight = normalizePlannedMinutes(item.plannedMinutes) ?? 0
+      weightedSum += item.operationalProgressPct * weight
+      totalWeight += weight
+    }
+
+    return {
+      operationalProgressPct:
+        totalWeight > 0 ? Math.round(weightedSum / totalWeight) : 0,
+      includedActivityCount: withPlanned.length,
+      withoutPlannedTimeCount,
+    }
+  }
+
+  const average =
+    items.reduce((acc, item) => acc + item.operationalProgressPct, 0) / items.length
+
+  return {
+    operationalProgressPct: Math.round(average),
+    includedActivityCount: items.length,
+    withoutPlannedTimeCount,
+  }
+}
+
 export function computeConveyorProgressMetrics(
   plannedMinutes: number,
   realizedMinutes: number,
-): ConveyorProgressMetrics {
+): ConveyorProgressTimeMetrics {
   const planned = normalizeMinutes(plannedMinutes)
   const realized = normalizeMinutes(realizedMinutes)
   return {
@@ -109,7 +188,7 @@ export function computeConveyorProgressMetrics(
     realizedMinutes: realized,
     remainingMinutes: Math.max(planned - realized, 0),
     exceededMinutes: Math.max(realized - planned, 0),
-    progressPercent: planned > 0 ? Math.round((realized / planned) * 100) : 0,
+    timeConsumptionPct: computeTimeConsumptionPct(planned, realized),
   }
 }
 

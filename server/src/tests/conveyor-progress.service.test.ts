@@ -60,6 +60,7 @@ function timeEntryRow(
     notes: overrides.notes ?? null,
     entry_mode: overrides.entry_mode ?? 'manual',
     collaborator_name: overrides.collaborator_name ?? 'Maria',
+    session_completion_pct: overrides.session_completion_pct ?? null,
   }
 }
 
@@ -315,5 +316,56 @@ describe('serviceConveyorProgress', () => {
       withoutPlannedTimeCount: 1,
       completedWithoutTimeCount: 1,
     })
+  })
+
+  it('separa evolução operacional do consumo temporal no cenário real', async () => {
+    const conveyors: ConveyorProgressConveyorRow[] = [
+      {
+        id: 'conv-a',
+        code: 'EST-001',
+        name: 'Esteira A',
+        operational_status: 'EM_ANDAMENTO',
+      },
+    ]
+
+    const steps: ConveyorProgressStepRow[] = [
+      stepRow({
+        step_id: 'a-1',
+        step_name: 'Atividade parcial',
+        planned_minutes: 205,
+        operational_status: 'IN_PROGRESS',
+      }),
+    ]
+
+    const timeEntries: ConveyorProgressTimeEntryRow[] = [
+      timeEntryRow({
+        id: 'te-a1',
+        conveyor_id: 'conv-a',
+        conveyor_node_id: 'a-1',
+        minutes: 185,
+        session_completion_pct: 50,
+      }),
+    ]
+
+    repoMocks.listConveyorsForProgress.mockResolvedValue(conveyors)
+    repoMocks.listStepHierarchyForConveyors.mockResolvedValue(steps)
+    repoMocks.listTimeEntriesForConveyors.mockResolvedValue(timeEntries)
+
+    const result = await serviceConveyorProgress(pool, {})
+
+    const activity = result.items[0]?.tasks[0]?.sectors[0]?.activities[0]
+    expect(activity).toMatchObject({
+      plannedMinutes: 205,
+      realizedMinutes: 185,
+      remainingMinutes: 20,
+      exceededMinutes: 0,
+      operationalProgressPct: 50,
+      timeConsumptionPct: 90.2,
+    })
+
+    expect(result.items[0]?.operationalProgressPct).toBe(50)
+    expect(result.items[0]?.timeConsumptionPct).toBe(90.2)
+    expect(result.items[0]?.tasks[0]?.operationalProgressPct).toBe(50)
+    expect(result.items[0]?.tasks[0]?.sectors[0]?.operationalProgressPct).toBe(50)
   })
 })

@@ -30,7 +30,7 @@ export function ConveyorProgressSummary({ summary }: Props) {
     realizedMinutes: summary.realizedMinutes,
     remainingMinutes: summary.remainingMinutes,
     exceededMinutes: summary.exceededMinutes,
-    progressPercent: summary.averageProgressPercent,
+    operationalProgressPct: summary.averageOperationalProgressPct,
   }
 
   return (

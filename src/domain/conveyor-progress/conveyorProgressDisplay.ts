@@ -3,7 +3,7 @@ import type {
   ActivityTimeEfficiency,
   AggregateTimeEfficiency,
 } from './conveyorProgress.types'
-import { computeConveyorProgressMetrics, sumMinutes } from './conveyorProgressMetrics'
+import { computeConveyorProgressMetrics, consolidateWeightedOperationalProgress, sumMinutes } from './conveyorProgressMetrics'
 import type { ConveyorProgressItem } from './conveyorProgress.types'
 
 export type ConveyorProgressSummaryMetrics = {
@@ -12,7 +12,7 @@ export type ConveyorProgressSummaryMetrics = {
   realizedMinutes: number
   remainingMinutes: number
   exceededMinutes: number
-  averageProgressPercent: number
+  averageOperationalProgressPct: number
   timeEfficiency: AggregateTimeEfficiency
 }
 
@@ -128,7 +128,7 @@ export function computeConveyorProgressSummary(
       realizedMinutes: 0,
       remainingMinutes: 0,
       exceededMinutes: 0,
-      averageProgressPercent: 0,
+      averageOperationalProgressPct: 0,
       timeEfficiency,
     }
   }
@@ -137,13 +137,15 @@ export function computeConveyorProgressSummary(
   const realizedMinutes = sumMinutes(items.map((i) => i.realizedMinutes))
   const totals = computeConveyorProgressMetrics(plannedMinutes, realizedMinutes)
 
-  const withPlanned = items.filter((i) => i.plannedMinutes > 0)
-  const averageProgressPercent =
-    withPlanned.length > 0
-      ? Math.round(
-          withPlanned.reduce((acc, i) => acc + i.progressPercent, 0) / withPlanned.length,
-        )
-      : 0
+  const activities = items.flatMap((item) =>
+    item.tasks.flatMap((task) => task.sectors.flatMap((sector) => sector.activities)),
+  )
+  const averageOperationalProgressPct = consolidateWeightedOperationalProgress(
+    activities.map((activity) => ({
+      operationalProgressPct: activity.operationalProgressPct,
+      plannedMinutes: activity.plannedMinutes,
+    })),
+  ).operationalProgressPct
 
   return {
     conveyorCount: items.length,
@@ -151,7 +153,7 @@ export function computeConveyorProgressSummary(
     realizedMinutes: totals.realizedMinutes,
     remainingMinutes: totals.remainingMinutes,
     exceededMinutes: totals.exceededMinutes,
-    averageProgressPercent,
+    averageOperationalProgressPct,
     timeEfficiency,
   }
 }

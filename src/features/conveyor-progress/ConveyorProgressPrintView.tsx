@@ -63,8 +63,8 @@ export function ConveyorProgressPrintView({
           ? `+${formatConveyorProgressDuration(summary.exceededMinutes)}`
           : '—'}{' '}
         · Evolução média:{' '}
-        {summary.plannedMinutes > 0
-          ? formatConveyorProgressPercent(summary.averageProgressPercent)
+        {summary.conveyorCount > 0
+          ? formatConveyorProgressPercent(summary.averageOperationalProgressPct)
           : '—'}
       </div>
 
@@ -186,7 +186,7 @@ function PrintMetricsRow({
     realizedMinutes: number
     remainingMinutes: number
     exceededMinutes: number
-    progressPercent: number
+    operationalProgressPct: number
   }
 }) {
   return (
@@ -205,9 +205,7 @@ function PrintMetricsRow({
           : '—'}
       </td>
       <td className="py-1">
-        {metrics.plannedMinutes > 0
-          ? formatConveyorProgressPercent(metrics.progressPercent)
-          : '—'}
+        {formatConveyorProgressPercent(metrics.operationalProgressPct)}
       </td>
     </tr>
   )
