@@ -1,24 +1,17 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { SessionIdleWarningDialog } from './SessionIdleWarningDialog'
 import { useAuth } from '../../lib/use-auth'
 import { shouldShowSessionIdleWarning } from '../../features/admin/system-settings/systemSettingsValidation'
 
 export function SessionIdleWarningHost() {
   const { user, sessionIdle, refreshUser, logout } = useAuth()
-  const [open, setOpen] = useState(false)
-  const [remainingSeconds, setRemainingSeconds] = useState(0)
+  const [nowMs, setNowMs] = useState(() => Date.now())
 
   useEffect(() => {
-    if (!user || !sessionIdle) {
-      setOpen(false)
-      return
-    }
+    if (!user || !sessionIdle) return
 
     const tick = () => {
-      const remainingMs = Date.parse(sessionIdle.idleExpiresAt) - Date.now()
-      const remainingSec = Math.max(0, Math.ceil(remainingMs / 1000))
-      setRemainingSeconds(remainingSec)
-      setOpen(shouldShowSessionIdleWarning(remainingMs, sessionIdle.idleWarningMinutes))
+      setNowMs(Date.now())
     }
 
     tick()
@@ -26,11 +19,19 @@ export function SessionIdleWarningHost() {
     return () => window.clearInterval(interval)
   }, [user, sessionIdle])
 
+  const remainingMs = useMemo(() => {
+    if (!user || !sessionIdle) return 0
+    return Date.parse(sessionIdle.idleExpiresAt) - nowMs
+  }, [nowMs, sessionIdle, user])
+
+  const remainingSeconds = Math.max(0, Math.ceil(remainingMs / 1000))
+  const open =
+    !!user &&
+    !!sessionIdle &&
+    shouldShowSessionIdleWarning(remainingMs, sessionIdle.idleWarningMinutes)
+
   async function continueSession() {
-    const updated = await refreshUser()
-    if (updated) {
-      setOpen(false)
-    }
+    await refreshUser()
   }
 
   return (
