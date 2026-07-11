@@ -18,7 +18,6 @@ import { AuthContext } from './auth-context-instance'
 import type { AuthUser } from './auth-store'
 import {
   isAdministrativeSessionPath,
-  shouldReplaceSessionIdle,
   useAdministrativeSessionActivityCoordinator,
 } from './session/adminSessionActivityCoordinator'
 import { getMe, postLogin, postLogout } from '../services/auth/authApiService'
@@ -30,6 +29,11 @@ import {
 const SESSION_REVOKED_EVENT = 'sgp:session-revoked'
 const SESSION_EXPIRED_EVENT = 'sgp:session-expired'
 
+function parseLastActivityAt(sessionIdle: SessionIdlePolicy): number {
+  const parsed = Date.parse(sessionIdle.lastActivityAt)
+  return Number.isFinite(parsed) ? parsed : Date.now()
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const location = useLocation()
   const [user, setUser] = useState<AuthUser | null>(null)
@@ -38,103 +42,157 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [sessionEndedMessage, setSessionEndedMessage] = useState<string | null>(
     null,
   )
+  const [hasLocalActivitySinceLastServerSync, setHasLocalActivitySinceLastServerSync] =
+    useState(false)
+  const [isSessionRefreshInFlight, setIsSessionRefreshInFlight] =
+    useState(false)
   const mountedRef = useRef(true)
   const userRef = useRef<AuthUser | null>(null)
   const sessionIdleRef = useRef<SessionIdlePolicy | null>(null)
   const authEpochRef = useRef(0)
+  const hasLocalActivityRef = useRef(false)
+  const localActivityVersionRef = useRef(0)
+  const lastLocalActivityAtRef = useRef<number | null>(null)
+  const lastSuccessfulServerSyncAtRef = useRef<number | null>(null)
+  const refreshRequestIdRef = useRef(0)
+  const latestAppliedRefreshRequestIdRef = useRef(0)
+  const inFlightSessionRefreshRef = useRef<Promise<boolean> | null>(null)
 
   const setUserState = useCallback((nextUser: AuthUser | null) => {
     userRef.current = nextUser
     setUser(nextUser)
   }, [])
 
-  const replaceSessionIdle = useCallback((nextSessionIdle: SessionIdlePolicy) => {
-    const currentSessionIdle = sessionIdleRef.current
-    if (!shouldReplaceSessionIdle(currentSessionIdle, nextSessionIdle)) {
-      return false
-    }
-    sessionIdleRef.current = nextSessionIdle
-    setSessionIdle(nextSessionIdle)
-    return true
+  const clearLocalActivityState = useCallback(() => {
+    hasLocalActivityRef.current = false
+    setHasLocalActivitySinceLastServerSync(false)
+    lastLocalActivityAtRef.current = null
   }, [])
-
-  const clearSessionState = useCallback((message: string | null) => {
-    authEpochRef.current += 1
-    sessionIdleRef.current = null
-    setSessionIdle(null)
-    setUserState(null)
-    setSessionEndedMessage(message)
-  }, [setUserState])
 
   const applyAuthenticatedSession = useCallback(
     (session: { user: AuthUser; sessionIdle: SessionIdlePolicy }) => {
       if (!mountedRef.current) return false
       setUserState(session.user)
+      sessionIdleRef.current = session.sessionIdle
+      setSessionIdle(session.sessionIdle)
       setSessionEndedMessage(null)
-      return replaceSessionIdle(session.sessionIdle)
+      lastSuccessfulServerSyncAtRef.current = parseLastActivityAt(
+        session.sessionIdle,
+      )
+      return true
     },
-    [replaceSessionIdle, setUserState],
+    [setUserState],
   )
 
-  const clearSessionEndedMessage = useCallback(() => {
-    setSessionEndedMessage(null)
+  const clearSessionState = useCallback(
+    (message: string | null) => {
+      authEpochRef.current += 1
+      sessionIdleRef.current = null
+      setSessionIdle(null)
+      setUserState(null)
+      setSessionEndedMessage(message)
+      clearLocalActivityState()
+      lastSuccessfulServerSyncAtRef.current = null
+      refreshRequestIdRef.current += 1
+      latestAppliedRefreshRequestIdRef.current = refreshRequestIdRef.current
+      inFlightSessionRefreshRef.current = null
+      setIsSessionRefreshInFlight(false)
+    },
+    [clearLocalActivityState, setUserState],
+  )
+
+  const markLocalActivity = useCallback((occurredAt: number) => {
+    if (!userRef.current || !sessionIdleRef.current) return
+    localActivityVersionRef.current += 1
+    lastLocalActivityAtRef.current = occurredAt
+    if (!hasLocalActivityRef.current) {
+      hasLocalActivityRef.current = true
+      setHasLocalActivitySinceLastServerSync(true)
+    }
   }, [])
 
-  const refreshSessionSnapshot = useCallback(async () => {
-    const requestEpoch = authEpochRef.current
-    try {
-      const session = await getMe()
-      if (
-        !mountedRef.current ||
-        authEpochRef.current !== requestEpoch ||
-        !userRef.current
-      ) {
-        return null
-      }
-      return session
-    } catch (error) {
-      if (!mountedRef.current || authEpochRef.current !== requestEpoch) {
-        return null
-      }
-      if (error instanceof ApiError && error.status === 401) {
-        if (
-          error.code !== SESSION_EXPIRED_CODE &&
-          error.code !== SESSION_REVOKED_CREDENTIALS_CHANGED_CODE
-        ) {
-          clearSessionState(null)
-        }
-        return null
-      }
-      return null
-    }
-  }, [clearSessionState])
-
-  const administrativeSession = useAdministrativeSessionActivityCoordinator({
+  useAdministrativeSessionActivityCoordinator({
     enabled:
       !!user &&
       !!sessionIdle &&
       isAdministrativeSessionPath(location.pathname),
     navigationKey: `${location.pathname}${location.search}${location.hash}`,
-    sessionIdle,
-    refreshSession: refreshSessionSnapshot,
-    onSessionIdle(nextSessionIdle) {
-      return replaceSessionIdle(nextSessionIdle)
-    },
-    onKeepaliveSession(session) {
-      return applyAuthenticatedSession(session)
-    },
-    onSessionEnded(reason, message) {
-      if (reason === 'revoked') {
-        clearSessionState(message?.trim() || SESSION_REVOKED_USER_MESSAGE)
-        return
-      }
-      if (reason === 'expired') {
-        clearSessionState(message?.trim() || SESSION_EXPIRED_USER_MESSAGE)
-        return
-      }
-      clearSessionState(null)
-    },
+    onLocalActivity: markLocalActivity,
   })
+
+  const refreshAdministrativeSession = useCallback(async () => {
+    if (inFlightSessionRefreshRef.current) {
+      return inFlightSessionRefreshRef.current
+    }
+    if (!userRef.current) return false
+
+    const requestEpoch = authEpochRef.current
+    const requestId = refreshRequestIdRef.current + 1
+    refreshRequestIdRef.current = requestId
+    const activityVersionAtStart = localActivityVersionRef.current
+    setIsSessionRefreshInFlight(true)
+
+    let currentPromise: Promise<boolean> | null = null
+    currentPromise = (async () => {
+      try {
+        const session = await getMe()
+        if (
+          !mountedRef.current ||
+          authEpochRef.current !== requestEpoch ||
+          !userRef.current
+        ) {
+          return false
+        }
+        if (requestId < latestAppliedRefreshRequestIdRef.current) {
+          return false
+        }
+        latestAppliedRefreshRequestIdRef.current = requestId
+        applyAuthenticatedSession(session)
+        if (localActivityVersionRef.current === activityVersionAtStart) {
+          clearLocalActivityState()
+        } else {
+          hasLocalActivityRef.current = true
+          setHasLocalActivitySinceLastServerSync(true)
+        }
+        return true
+      } catch (error) {
+        if (!mountedRef.current || authEpochRef.current !== requestEpoch) {
+          return false
+        }
+        if (error instanceof ApiError && error.status === 401) {
+          if (
+            error.code !== SESSION_EXPIRED_CODE &&
+            error.code !== SESSION_REVOKED_CREDENTIALS_CHANGED_CODE
+          ) {
+            clearSessionState(null)
+          }
+          return false
+        }
+        return false
+      } finally {
+        if (
+          mountedRef.current &&
+          authEpochRef.current === requestEpoch
+        ) {
+          setIsSessionRefreshInFlight(false)
+        }
+        if (inFlightSessionRefreshRef.current === currentPromise) {
+          inFlightSessionRefreshRef.current = null
+        }
+      }
+    })()
+
+    inFlightSessionRefreshRef.current = currentPromise
+    return currentPromise
+  }, [
+    applyAuthenticatedSession,
+    clearLocalActivityState,
+    clearSessionState,
+  ])
+
+  const clearSessionEndedMessage = useCallback(() => {
+    setSessionEndedMessage(null)
+  }, [])
 
   const bootstrap = useCallback(async () => {
     const requestEpoch = authEpochRef.current
@@ -142,59 +200,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const session = await getMe()
       if (!mountedRef.current || authEpochRef.current !== requestEpoch) return
       applyAuthenticatedSession(session)
-      administrativeSession.publishOfficialSessionIdle(session.sessionIdle)
+      clearLocalActivityState()
     } catch {
       if (!mountedRef.current || authEpochRef.current !== requestEpoch) return
       clearSessionState(null)
     }
-  }, [administrativeSession, applyAuthenticatedSession, clearSessionState])
+  }, [applyAuthenticatedSession, clearLocalActivityState, clearSessionState])
 
   const refreshUser = useCallback(async () => {
-    const requestEpoch = authEpochRef.current
-    try {
-      const session = await getMe()
-      if (!mountedRef.current || authEpochRef.current !== requestEpoch) {
-        return userRef.current
-      }
-      applyAuthenticatedSession(session)
-      administrativeSession.publishOfficialSessionIdle(session.sessionIdle)
-      return session.user
-    } catch (error) {
-      if (!mountedRef.current || authEpochRef.current !== requestEpoch) {
-        return userRef.current
-      }
-      if (error instanceof ApiError && error.status === 401) {
-        if (
-          error.code !== SESSION_EXPIRED_CODE &&
-          error.code !== SESSION_REVOKED_CREDENTIALS_CHANGED_CODE
-        ) {
-          clearSessionState(null)
-        }
-        return null
-      }
-      return userRef.current
-    }
-  }, [administrativeSession, applyAuthenticatedSession, clearSessionState])
+    await refreshAdministrativeSession()
+    return userRef.current
+  }, [refreshAdministrativeSession])
 
   useEffect(() => {
     function onSessionRevoked(e: Event) {
       const detail = (e as CustomEvent<{ message?: string }>).detail
-      const message =
-        detail?.message?.trim() || SESSION_REVOKED_USER_MESSAGE
-      clearSessionState(message)
-      administrativeSession.publishSessionEnded(
-        'revoked',
-        message,
+      clearSessionState(
+        detail?.message?.trim() || SESSION_REVOKED_USER_MESSAGE,
       )
     }
     function onSessionExpired(e: Event) {
       const detail = (e as CustomEvent<{ message?: string }>).detail
-      const message =
-        detail?.message?.trim() || SESSION_EXPIRED_USER_MESSAGE
-      clearSessionState(message)
-      administrativeSession.publishSessionEnded(
-        'expired',
-        message,
+      clearSessionState(
+        detail?.message?.trim() || SESSION_EXPIRED_USER_MESSAGE,
       )
     }
     window.addEventListener(SESSION_REVOKED_EVENT, onSessionRevoked)
@@ -203,7 +231,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       window.removeEventListener(SESSION_REVOKED_EVENT, onSessionRevoked)
       window.removeEventListener(SESSION_EXPIRED_EVENT, onSessionExpired)
     }
-  }, [administrativeSession, clearSessionState])
+  }, [clearSessionState])
 
   useEffect(() => {
     mountedRef.current = true
@@ -222,23 +250,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const session = await postLogin(email, password)
     authEpochRef.current += 1
     flushSync(() => {
-      setUserState(session.user)
-      sessionIdleRef.current = session.sessionIdle
-      setSessionIdle(session.sessionIdle)
-      setSessionEndedMessage(null)
+      applyAuthenticatedSession(session)
+      clearLocalActivityState()
     })
-    administrativeSession.publishOfficialSessionIdle(session.sessionIdle)
     return session.user
-  }, [administrativeSession, setUserState])
+  }, [applyAuthenticatedSession, clearLocalActivityState])
 
   const logout = useCallback(async () => {
     try {
       await postLogout()
     } finally {
       clearSessionState(null)
-      administrativeSession.publishSessionEnded('logout')
     }
-  }, [administrativeSession, clearSessionState])
+  }, [clearSessionState])
 
   const can = useCallback(
     (permissionCode: string) =>
@@ -258,10 +282,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       ready,
       sessionEndedMessage,
       sessionIdle,
+      hasLocalActivitySinceLastServerSync,
+      isSessionRefreshInFlight,
       clearSessionEndedMessage,
       login,
       logout,
       refreshUser,
+      refreshAdministrativeSession,
       can,
       canAny,
     }),
@@ -270,10 +297,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       ready,
       sessionEndedMessage,
       sessionIdle,
+      hasLocalActivitySinceLastServerSync,
+      isSessionRefreshInFlight,
       clearSessionEndedMessage,
       login,
       logout,
       refreshUser,
+      refreshAdministrativeSession,
       can,
       canAny,
     ],
