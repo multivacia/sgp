@@ -16,6 +16,13 @@ import type { PutRolePermissionsBody } from './rbac.schemas.js'
 
 const COLABORADOR_ROLE_CODE = 'COLABORADOR'
 const ADMIN_ROLE_CODE = 'ADMIN'
+const SUPER_ADMIN_ROLE_CODE = 'SUPER_ADMIN'
+
+/** Permissões restritas: só SUPER_ADMIN pode recebê-las via API RBAC. */
+const SUPER_ADMIN_ONLY_PERMISSION_PREFIXES = [
+  'backups.',
+  'system_settings.',
+] as const
 
 /** Permissões que o papel ADMIN deve manter sempre (V1.5). */
 export const ADMIN_REQUIRED_PERMISSION_CODES = [
@@ -26,6 +33,23 @@ export const ADMIN_REQUIRED_PERMISSION_CODES = [
   'users.force_password_change',
   'audit.view',
 ] as const
+
+function assertSuperAdminOnlyPermissions(
+  roleCode: string,
+  permissionCodes: string[],
+): void {
+  if (roleCode === SUPER_ADMIN_ROLE_CODE) return
+  const blocked = permissionCodes.filter((code) =>
+    SUPER_ADMIN_ONLY_PERMISSION_PREFIXES.some((p) => code.startsWith(p)),
+  )
+  if (blocked.length > 0) {
+    throw new AppError(
+      `Permissões restritas ao Super Administrador não podem ser atribuídas a este papel: ${blocked.join(', ')}.`,
+      400,
+      ErrorCodes.VALIDATION_ERROR,
+    )
+  }
+}
 
 async function withTransaction<T>(
   pool: pg.Pool,
@@ -119,6 +143,7 @@ export async function servicePutRolePermissions(
 
   const nextSet = new Set(uniqueCodes)
   assertAdminSafeguards(role.code, nextSet)
+  assertSuperAdminOnlyPermissions(role.code, uniqueCodes)
 
   const orderedIds = uniqueCodes
     .slice()
