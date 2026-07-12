@@ -1,7 +1,7 @@
 {
   "product": "SGP+",
-  "version": "1.8.3",
-  "releaseName": "Correção visual light-executive + identificação de versão",
-  "releaseDate": "2026-07-09",
+  "version": "1.8.4",
+  "releaseName": "Aviso de inatividade da sessão administrativa",
+  "releaseDate": "2026-07-12",
   "channel": "production"
 }

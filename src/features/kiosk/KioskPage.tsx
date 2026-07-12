@@ -68,9 +68,12 @@ export function KioskPage() {
   return (
     <div
       data-sgp-surface="kiosk"
-      className="fixed inset-0 flex flex-col overflow-hidden bg-sgp-void select-none touch-manipulation"
+      className="fixed inset-0 flex min-h-dvh flex-col overflow-hidden bg-sgp-void select-none touch-manipulation"
     >
-      <div className="min-h-0 flex-1 overflow-hidden">
+      <div
+        data-sgp-kiosk-main=""
+        className="flex min-h-0 flex-1 flex-col overflow-hidden"
+      >
         {screen.view === 'grid' && (
           <KioskCollaboratorGrid onSelect={handleCollaboratorSelect} />
         )}

@@ -63,7 +63,7 @@ export function KioskCollaboratorGrid({ onSelect }: Props) {
   }
 
   return (
-    <div className="flex flex-1 flex-col overflow-hidden">
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
       {/* Header */}
       <div className="shrink-0 border-b border-white/[0.07] px-6 py-4">
         <div className="flex flex-wrap items-center justify-between gap-3">

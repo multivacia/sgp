@@ -18,6 +18,7 @@ import {
 } from '../lib/shell/shell-function-context'
 import { SHOW_ARGOS_SIDEBAR_FAMILY } from '../lib/argos/argosUiFlags'
 import { AppVersionStamp } from './AppVersionStamp'
+import { SessionIdleSidebarDebug } from './session/SessionIdleSidebarDebug'
 import { BravoSidebarBrand } from './shell/BravoSidebarBrand'
 import { SgpMark } from './login/SgpMark'
 
@@ -341,6 +342,8 @@ export function AppSidebar({ open, onClose, collapsed, onToggleCollapsed }: Prop
           rail ? 'md:w-16' : 'md:w-[18rem]'
         } ${open ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}
       >
+        <SessionIdleSidebarDebug rail={rail} />
+
         {/* Toggle — apenas desktop (collapse não se aplica ao drawer mobile). */}
         <div className="hidden shrink-0 flex-row items-center justify-end gap-2 px-3 pb-1 pt-4 md:flex md:px-2 md:pt-5">
           <button

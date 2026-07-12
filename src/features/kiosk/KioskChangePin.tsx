@@ -92,7 +92,7 @@ export function KioskChangePin({ collaborator, onSuccess, onBack }: Props) {
       : 'Digite o mesmo PIN novamente para confirmar'
 
   return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-8 px-6 py-8">
+    <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-8 px-6 py-8">
       {/* Avatar + nome */}
       <div className="flex flex-col items-center gap-3 text-center">
         <ProductionCollaboratorAvatar collaborator={collaborator} size="lg" />

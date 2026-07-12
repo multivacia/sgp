@@ -16,13 +16,19 @@ type Props = {
   collaborator: ProductionCollaboratorSummary
   initialItems: ProductionWorkQueueItem[]
   onExit: () => void
+  initialViewMode?: ViewMode
 }
 
 type ViewMode = 'carousel' | 'list'
 
-export function KioskActivityCards({ collaborator, initialItems, onExit }: Props) {
+export function KioskActivityCards({
+  collaborator,
+  initialItems,
+  onExit,
+  initialViewMode = 'carousel',
+}: Props) {
   const [items, setItems] = useState(initialItems)
-  const [viewMode, setViewMode] = useState<ViewMode>('carousel')
+  const [viewMode, setViewMode] = useState<ViewMode>(initialViewMode)
   const [currentIndex, setCurrentIndex] = useState(() =>
     findInitialKioskCarouselIndex(initialItems),
   )
@@ -79,7 +85,7 @@ export function KioskActivityCards({ collaborator, initialItems, onExit }: Props
   const DOTS_MAX = 10
 
   return (
-    <div className="flex flex-1 flex-col overflow-hidden">
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
       {/* Barra de header */}
       <div className="shrink-0 border-b border-white/[0.07] px-4 py-3">
         <div className="flex flex-wrap items-center gap-3">
@@ -161,7 +167,7 @@ export function KioskActivityCards({ collaborator, initialItems, onExit }: Props
 
       {/* Conteúdo */}
       {filtered.length === 0 ? (
-        <div className="flex flex-1 items-center justify-center p-8 text-center">
+        <div className="flex min-h-0 flex-1 items-center justify-center p-8 text-center">
           <p className="text-slate-400">
             {search
               ? 'Nenhuma atividade encontrada para essa busca.'
@@ -169,7 +175,7 @@ export function KioskActivityCards({ collaborator, initialItems, onExit }: Props
           </p>
         </div>
       ) : viewMode === 'carousel' ? (
-        <div className="flex flex-1 flex-col overflow-hidden">
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
           {activeItem ? (
             <div className="shrink-0 border-b border-white/[0.07] px-5 py-2">
               {(() => {
@@ -196,7 +202,7 @@ export function KioskActivityCards({ collaborator, initialItems, onExit }: Props
           ) : null}
           {/* Área do carrossel */}
           <div
-            className="flex-1 overflow-hidden"
+            className="min-h-0 flex-1 overflow-hidden"
             onTouchStart={handleTouchStart}
             onTouchEnd={handleTouchEnd}
           >
@@ -219,7 +225,10 @@ export function KioskActivityCards({ collaborator, initialItems, onExit }: Props
           </div>
 
           {/* Navegação e dots */}
-          <div className="shrink-0 flex items-center justify-center gap-4 border-t border-white/[0.07] px-5 py-3">
+          <div
+            data-sgp-kiosk-carousel-nav=""
+            className="flex shrink-0 items-center justify-center gap-4 border-t border-white/[0.07] px-5 py-3"
+          >
             <button
               type="button"
               onClick={prev}
@@ -269,7 +278,10 @@ export function KioskActivityCards({ collaborator, initialItems, onExit }: Props
         </div>
       ) : (
         /* Modo lista */
-        <div className="flex-1 overflow-y-auto p-5">
+        <div
+          data-sgp-kiosk-list-scroll=""
+          className="min-h-0 flex-1 overflow-y-auto p-5"
+        >
           <div className="flex flex-col gap-6">
             {listSections.map((section) => (
               <section key={section.id} className="flex flex-col gap-3">
