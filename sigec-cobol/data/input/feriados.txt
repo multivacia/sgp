@@ -1,0 +1,12 @@
+20260101NACBR0000000CONFRATERNIZACAO UNIVERSAL              NIBGE               
+20260216NACBR0000000CARNAVAL SEGUNDA                        NIBGE               
+20260217NACBR0000000CARNAVAL TERCA                          NIBGE               
+20260403NACBR0000000SEXTA-FEIRA SANTA                       NIBGE               
+20260421NACBR0000000TIRADENTES                              NIBGE               
+20260501NACBR0000000DIA DO TRABALHO                         NIBGE               
+20260604NACBR0000000CORPUS CHRISTI                          NIBGE               
+20260907NACBR0000000INDEPENDENCIA                           NIBGE               
+20261012NACBR0000000NOSSA SENHORA APARECIDA                 NIBGE               
+20261102NACBR0000000FINADOS                                 NIBGE               
+20261115NACBR0000000PROCLAMACAO REPUBLICA                   NIBGE               
+20261225NACBR0000000NATAL                                   NIBGE               

@@ -1,0 +1,12 @@
+H20260115083000SGRCON  000000010V001                                                                                                                                                                    
+DCTR00000000001 CPF22233344401   CARLOS ALBERTO MENDES                                       PFCR000000001200000012202602020025000200                                                                   
+DCTR000000000002CNP11222333000181INDUSTRIA MODELO LTDA                                       PJFI000000025000000060202602020018000200                                                                   
+DCTR000000000003LE 110042490114  COOPERATIVA UNIAO CENTRAL                                   ESCO000000005000000024202602020012000200                                                                   
+DCTR000000000004CPF22233344400   CARLOS ALBERTO MENDES (DV ERR)                              PFCR000000001200000012202602020025000200                                                                   
+DCTR000000000005CNP11222333000180INDUSTRIA MODELO LTDA (DV ERR)                              PJFI000000025000000060202602020018000200                                                                   
+DCTR000000000006CPF1122334455    DOCUMENTO CURTO                                             PFCR000000000500000006202602020025000200                                                                   
+DCTR000000000007CPF44455566677   TIPO INVALIDO                                               XXCR000000000500000006202602020025000200                                                                   
+DCTR000000000008CPF55566677788   PARCELAS ACIMA DOC                                          PFEM000000010000000300202602020025000200                                                                   
+DCTR000000000009CPF66677788899   PARCELAS ACIMA CODIGO                                       PFEM000000010000000400202602020025000200                                                                   
+DCTR000000000010CPF77788899900   INICIO EM FERIADO                                           PFCR000000000800000008202604210025000200                                                                   
+T0000000150000000007920000020260115                                                                                                                                                                     

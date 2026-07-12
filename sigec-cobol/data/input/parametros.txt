@@ -1,0 +1,17 @@
+LIMITE-COMMIT                 N1000                          2026010199991231COMMIT INTERM  SETUP001
+LIMITE-ERROS                  N500                           2026010199991231MAX ERROS      SETUP001
+LIMITE-CTR-DIA                N100000                        2026010199991231MAX CTR DIARIO SETUP001
+LIMITE-PAG-DIA                N500000                        2026010199991231MAX PAG DIARIO SETUP001
+DIAS-INAD-LEVE                N5                             2026010199991231INICIO LEVE    SETUP001
+DIAS-INAD-MOD                 N30                            2026010199991231INICIO MOD     SETUP001
+DIAS-INAD-GRAVE               N60                            2026010199991231INICIO GRAVE   SETUP001
+DIAS-INAD-CRIT                N90                            2026010199991231INICIO CRIT    SETUP001
+PCT-DESC-MOD                  N20                            2026010199991231DESC MOD       SETUP001
+PCT-DESC-GRAVE                N30                            2026010199991231DESC GRAVE     SETUP001
+PCT-DESC-CRIT                 N50                            2026010199991231DESC CRIT      SETUP001
+FL-INCLUI-CRITICA             FN                             2026010199991231INCL CRIT      SETUP001
+FL-ES-RISCO-LIVRE             FN                             2026010199991231ES RISCO       SETUP001
+FL-SIMULA-DB2                 FN                             2026010199991231SIM DB2        SETUP001
+FL-GERA-INTERFACES            FS                             2026010199991231GERA INT       SETUP001
+FL-GERA-RELATORIOS            FS                             2026010199991231GERA REL       SETUP001
+FL-RECALC-SALDO               FS                             2026010199991231RECALC SALDO   SETUP001
