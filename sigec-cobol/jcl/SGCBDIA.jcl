@@ -1,0 +1,149 @@
+//SGCBDIA  JOB (SIGEC,DIARIO),'JANELA DIARIA SIGEC',
+//         CLASS=A,MSGCLASS=X,MSGLEVEL=(1,1),
+//         NOTIFY=&SYSUID,REGION=0M,TIME=1440,
+//         RESTART=*
+//*
+//*----------------------------------------------------------------*
+//* SISTEMA .: SIGEC                                              *
+//* JCL .....: SGCBDIA  - JANELA BATCH DIARIA COMPLETA             *
+//* FUNCAO ..: EXECUTA A CADEIA CANONICA                           *
+//*            SGCB0010 -> 0020 -> 0030 -> 0040 -> 0070 ->         *
+//*                     -> 0100 -> 0130 -> 0160 -> 0190            *
+//* PARM    .: DATA DE PROCESSAMENTO NO FORMATO 'YYYYMMDD[/DIA|MES]*
+//* USO .....: DISPARADO PELO SCHEDULER TODA MADRUGADA UTIL.       *
+//*----------------------------------------------------------------*
+//*
+//JOBLIB   DD  DSN=SIGEC.LAB.LOADLIB,DISP=SHR
+//         DD  DSN=DB2P.DB2.SDSNLOAD,DISP=SHR
+//*
+//*================================================================*
+//* SORT OPCIONAL - PRE-ORDENA SGLCTRIN POR CHAVE DE CONTRATO      *
+//*================================================================*
+//STEP005  EXEC PGM=SORT,COND=(0,NE)
+//SYSOUT   DD  SYSOUT=*
+//SORTIN   DD  DSN=SIGEC.LAB.IN.SGLCTRIN(0),DISP=SHR
+//SORTOUT  DD  DSN=&&CTRINSRT,
+//             DISP=(NEW,PASS,DELETE),
+//             UNIT=SYSDA,SPACE=(CYL,(20,10)),
+//             DCB=(RECFM=FB,LRECL=200,BLKSIZE=27800)
+//SYSIN    DD  *
+  SORT FIELDS=(1,20,CH,A)
+/*
+//*
+//*================================================================*
+//* STEP010 - SGCB0010 (DRIVER) EXECUTA A CADEIA COMPLETA          *
+//*================================================================*
+//STEP010  EXEC PGM=SGCB0010,PARM='&SYSDATE'
+//STEPLIB  DD  DSN=SIGEC.LAB.LOADLIB,DISP=SHR
+//         DD  DSN=DB2P.DB2.SDSNLOAD,DISP=SHR
+//SYSPRINT DD  SYSOUT=*
+//SYSOUT   DD  SYSOUT=*
+//SYSUDUMP DD  SYSOUT=*
+//SYSABOUT DD  SYSOUT=*
+//SYSDBOUT DD  SYSOUT=*
+//*---- ENTRADAS DE PARM PADRAO DO DRIVER --------------------------
+//PARMFL   DD  DSN=SIGEC.LAB.PARM.SGLPARM,DISP=SHR
+//FERIA    DD  DSN=SIGEC.LAB.CALEND.SGLFERIA,DISP=SHR
+//BLOQ     DD  DSN=SIGEC.LAB.OPS.SGLBLOQ,DISP=SHR
+//LOGEXEC  DD  DSN=SIGEC.LAB.LOG.SGLLOG(+1),
+//             DISP=(NEW,CATLG,DELETE),
+//             SPACE=(TRK,(20,10)),
+//             DCB=(RECFM=FB,LRECL=180,BLKSIZE=27720)
+//*---- SYSIN COM DATA ALTERNATIVA (SO LIDA SE PARM VAZIO) --------
+//SYSIN    DD  DUMMY
+//*---- ENTRADAS DOS PROCESSADORES (COMPARTILHADAS NO STEP) -------
+//CTRIN    DD  DSN=*.STEP005.SORTOUT,DISP=(OLD,DELETE)
+//CTRVL    DD  DSN=SIGEC.LAB.OUT.SGLCTRVL(+1),
+//             DISP=(NEW,CATLG,DELETE),
+//             SPACE=(CYL,(20,10)),
+//             DCB=(RECFM=FB,LRECL=220,BLKSIZE=27720)
+//CTRRE    DD  DSN=SIGEC.LAB.OUT.SGLCTRRE(+1),
+//             DISP=(NEW,CATLG,DELETE),
+//             SPACE=(CYL,(10,5)),
+//             DCB=(RECFM=FB,LRECL=260,BLKSIZE=27820)
+//ESTAT    DD  DSN=SIGEC.LAB.OPS.SGLESTAT,DISP=MOD
+//SGLPAGIN DD  DSN=SIGEC.LAB.IN.SGLPAGIN(0),DISP=SHR
+//SGLPAGVL DD  DSN=SIGEC.LAB.OUT.SGLPAGVL(+1),
+//             DISP=(NEW,CATLG,DELETE),
+//             SPACE=(CYL,(20,10)),
+//             DCB=(RECFM=FB,LRECL=140,BLKSIZE=27860)
+//SGLPAGRE DD  DSN=SIGEC.LAB.OUT.SGLPAGRE(+1),
+//             DISP=(NEW,CATLG,DELETE),
+//             SPACE=(CYL,(10,5)),
+//             DCB=(RECFM=FB,LRECL=180,BLKSIZE=27720)
+//SGLENCAR DD  DSN=SIGEC.LAB.OUT.SGLENCAR(+1),
+//             DISP=(NEW,CATLG,DELETE),
+//             SPACE=(CYL,(20,10)),
+//             DCB=(RECFM=FB,LRECL=200,BLKSIZE=27800)
+//SGLINADI DD  DSN=SIGEC.LAB.OUT.SGLINADI(+1),
+//             DISP=(NEW,CATLG,DELETE),
+//             SPACE=(CYL,(20,10)),
+//             DCB=(RECFM=FB,LRECL=200,BLKSIZE=27800)
+//SGLPROP  DD  DSN=SIGEC.LAB.OUT.SGLPROP(+1),
+//             DISP=(NEW,CATLG,DELETE),
+//             SPACE=(CYL,(10,5)),
+//             DCB=(RECFM=FB,LRECL=240,BLKSIZE=27600)
+//SGLINTCB DD  DSN=SIGEC.LAB.OUT.SGLINTCB(+1),
+//             DISP=(NEW,CATLG,DELETE),
+//             SPACE=(CYL,(10,5)),
+//             DCB=(RECFM=FB,LRECL=200,BLKSIZE=27800)
+//SGLINTCT DD  DSN=SIGEC.LAB.OUT.SGLINTCT(+1),
+//             DISP=(NEW,CATLG,DELETE),
+//             SPACE=(CYL,(10,5)),
+//             DCB=(RECFM=FB,LRECL=200,BLKSIZE=27800)
+//SGLINTRG DD  DSN=SIGEC.LAB.OUT.SGLINTRG(+1),
+//             DISP=(NEW,CATLG,DELETE),
+//             SPACE=(CYL,(10,5)),
+//             DCB=(RECFM=FB,LRECL=200,BLKSIZE=27800)
+//SGLERRIN DD  DSN=SIGEC.LAB.OPS.SGLERROS,DISP=SHR
+//SGLERROT DD  DSN=SIGEC.LAB.OPS.SGLERROS.OUT,
+//             DISP=(NEW,CATLG,DELETE),
+//             SPACE=(CYL,(5,5)),
+//             DCB=(RECFM=FB,LRECL=160,BLKSIZE=27840)
+//SGLRELDT DD  DSN=SIGEC.LAB.OUT.SGLRELDT(+1),
+//             DISP=(NEW,CATLG,DELETE),
+//             SPACE=(CYL,(20,10)),
+//             DCB=(RECFM=FB,LRECL=240,BLKSIZE=27600)
+//SGLRELST DD  DSN=SIGEC.LAB.OUT.SGLRELST(+1),
+//             DISP=(NEW,CATLG,DELETE),
+//             SPACE=(TRK,(15,5)),
+//             DCB=(RECFM=FB,LRECL=200,BLKSIZE=27800)
+//*---- DD OPCIONAL: BLOQUEIO POR CONTRATO (PODE SER OMITIDO) -----
+//*BLOQCTR DD  DSN=SIGEC.LAB.OPS.SGLBLOQ.CTR,DISP=SHR
+//BLOQCTR  DD  DUMMY
+//*---- DB2 PLAN E RUN ATTACH DINAMICO ----------------------------
+//SYSTSPRT DD  SYSOUT=*
+//SYSTSIN  DD  *
+  DSN SYSTEM(DB2P)
+  RUN  PROGRAM(SGCB0030) PLAN(SIGECPLN) -
+       LIB('SIGEC.LAB.LOADLIB') PARMS('/&SYSDATE')
+  END
+//*
+//*================================================================*
+//* STEP090 - CHECK POS-JANELA (SO SE STEP010 NAO ABORTOU)         *
+//*================================================================*
+//STEP090  EXEC PGM=IEBGENER,COND=(8,LT,STEP010)
+//SYSPRINT DD  SYSOUT=*
+//SYSUT1   DD  DSN=SIGEC.LAB.OUT.SGLRELST(0),DISP=SHR
+//SYSUT2   DD  SYSOUT=*
+//SYSIN    DD  DUMMY
+//*
+//*================================================================*
+//* IF/THEN/ELSE - ROTA DE CONTINGENCIA SE STEP010 RC >= 12        *
+//*================================================================*
+//STEP095  IF (STEP010.RC LT 12) THEN
+//SNDOK    EXEC PGM=IEBGENER
+//SYSPRINT DD  SYSOUT=*
+//SYSUT1   DD  DSN=SIGEC.LAB.LOG.SGLLOG(0),DISP=SHR
+//SYSUT2   DD  SYSOUT=*
+//SYSIN    DD  DUMMY
+//STEP095  ELSE
+//SNDNOK   EXEC PGM=IEBGENER
+//SYSPRINT DD  SYSOUT=*
+//SYSUT1   DD  *
+JANELA SIGEC ABORTADA - VERIFICAR SPOOL DE STEP010
+/*
+//SYSUT2   DD  SYSOUT=(A,PLANTAO)
+//SYSIN    DD  DUMMY
+//STEP095  ENDIF
+//
