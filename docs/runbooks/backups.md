@@ -124,6 +124,22 @@ Sem snapshot prévio validado da base atual → `RestoreBlockedError`.
 - Um backup por vez (lock).
 - Dump de uma database (não `pg_dumpall` de cluster).
 
+## Pendências de governança SUPER_ADMIN
+
+Implementado nesta branch (base segura):
+
+- Permissões `backups.*` e `system_settings.*` só no papel `SUPER_ADMIN` (grant + revoke pós-`0013`).
+- Denylist no `PUT` de permissões por papel: papéis ≠ `SUPER_ADMIN` não podem receber `backups.*` / `system_settings.*`.
+- Autorização continua baseada em permissões (sem `role === 'SUPER_ADMIN'` bypass).
+
+Ainda pendente (fora do escopo desta V1 — registrar para demanda dedicada):
+
+- Impedir que o sistema fique sem nenhum `SUPER_ADMIN` ativo.
+- Impedir que o último `SUPER_ADMIN` remova de si a capacidade de governança (role/perms).
+- Auditoria específica de atribuição/remoção do papel `SUPER_ADMIN` (hoje há `role_permissions_updated` e updates de usuário genéricos).
+- Remover/neutralizar promoção por e-mail hardcoded em migrations legadas (`0036` / `master@bravo.com.br`) em migration futura dedicada.
+- Bootstrap explícito do primeiro `SUPER_ADMIN` (env/comando/operador) sem hardcode.
+
 ## Rollback da feature
 
 1. `BACKUP_ENABLED=false` (ou remover `BACKUP_DIRECTORY`).

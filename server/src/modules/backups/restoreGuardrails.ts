@@ -33,9 +33,10 @@ export async function assertPreRestoreSnapshotReady(snapshot: {
  * Stub documentado: cria snapshot PRE_RESTORE_SNAPSHOT antes de restore.
  * Não implementado na V1 — interface reservada para evolução futura.
  */
-export async function createPreRestoreSnapshot(_input?: {
+export async function createPreRestoreSnapshot(input?: {
   actorUserId?: string | null
 }): Promise<{ id: string; status: string; integrityStatus: string }> {
+  void input
   throw new Error(
     'createPreRestoreSnapshot não está implementado na V1. Restore administrativo permanece bloqueado.',
   )

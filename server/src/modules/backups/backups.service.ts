@@ -180,74 +180,90 @@ export async function serviceTriggerFullBackup(
     )
   }
 
-  const active = await countActiveBackupRuns(pool)
-  if (active > 0) {
-    throw new AppError(
-      'Já existe um backup em andamento.',
-      409,
-      ErrorCodes.CONFLICT,
-    )
-  }
+  // Adquire o lock antes do INSERT para evitar corrida entre dois POST simultâneos.
+  inMemoryLock = true
+  let backgroundStarted = false
 
-  const target = resolvePgDumpTarget(env)
-  const envLabel = environmentLabel(env)
-  const logicalFileName = buildFullLogicalFileName(
-    env.backupFilePrefix,
-    envLabel,
-  )
-  const storageKey = toRelativeStorageKey(logicalFileName)
-
-  const run = await insertBackupRun(pool, {
-    environment: envLabel,
-    databaseName: target.database,
-    backupKind: 'FULL_LOGICAL',
-    triggerType: options.triggerType,
-    status: 'REQUESTED',
-    storageKey,
-    logicalFileName,
-    createdByUserId: options.actorUserId,
-  })
-
-  if (options.actorUserId) {
-    await insertAdminAuditEvent(pool, {
-      eventType: 'backup_run_requested',
-      actorUserId: options.actorUserId,
-      targetUserId: null,
-      targetCollaboratorId: null,
-      metadata: {
-        backup_run_id: run.id,
-        trigger_type: options.triggerType,
-        status: 'REQUESTED',
-        logical_file_name: logicalFileName,
-        environment: envLabel,
-        database_name: target.database,
-      },
-    })
-  }
-
-  const work = executeFullBackup(pool, env, run.id, options.logger)
-
-  if (options.wait) {
-    await work
-    const refreshed = await findBackupRunById(pool, run.id)
-    if (!refreshed) {
-      throw new AppError('Backup não encontrado após execução.', 500, ErrorCodes.INTERNAL)
-    }
-    if (refreshed.status !== 'COMPLETED') {
+  try {
+    const active = await countActiveBackupRuns(pool)
+    if (active > 0) {
       throw new AppError(
-        refreshed.error_message || 'Backup falhou.',
-        500,
-        ErrorCodes.INTERNAL,
+        'Já existe um backup em andamento.',
+        409,
+        ErrorCodes.CONFLICT,
       )
     }
-    return toBackupRunPublic(refreshed)
+
+    const target = resolvePgDumpTarget(env)
+    const envLabel = environmentLabel(env)
+    const logicalFileName = buildFullLogicalFileName(
+      env.backupFilePrefix,
+      envLabel,
+    )
+    const storageKey = toRelativeStorageKey(logicalFileName)
+
+    const run = await insertBackupRun(pool, {
+      environment: envLabel,
+      databaseName: target.database,
+      backupKind: 'FULL_LOGICAL',
+      triggerType: options.triggerType,
+      status: 'REQUESTED',
+      storageKey,
+      logicalFileName,
+      createdByUserId: options.actorUserId,
+    })
+
+    if (options.actorUserId) {
+      await insertAdminAuditEvent(pool, {
+        eventType: 'backup_run_requested',
+        actorUserId: options.actorUserId,
+        targetUserId: null,
+        targetCollaboratorId: null,
+        metadata: {
+          backup_run_id: run.id,
+          trigger_type: options.triggerType,
+          status: 'REQUESTED',
+          logical_file_name: logicalFileName,
+          environment: envLabel,
+          database_name: target.database,
+        },
+      })
+    }
+
+    const work = executeFullBackup(pool, env, run.id, options.logger)
+    backgroundStarted = true
+
+    if (options.wait) {
+      await work
+      const refreshed = await findBackupRunById(pool, run.id)
+      if (!refreshed) {
+        throw new AppError(
+          'Backup não encontrado após execução.',
+          500,
+          ErrorCodes.INTERNAL,
+        )
+      }
+      if (refreshed.status !== 'COMPLETED') {
+        throw new AppError(
+          refreshed.error_message || 'Backup falhou.',
+          500,
+          ErrorCodes.INTERNAL,
+        )
+      }
+      return toBackupRunPublic(refreshed)
+    }
+
+    void work.catch((err) => {
+      options.logger?.error({ err }, 'backup_run_background_failed')
+    })
+
+    return toBackupRunPublic(run)
+  } catch (err) {
+    if (!backgroundStarted) {
+      inMemoryLock = false
+    }
+    throw err
   }
-
-  void work.catch((err) => {
-    options.logger?.error({ err }, 'backup_run_background_failed')
-  })
-
-  return toBackupRunPublic(run)
 }
 
 async function executeFullBackup(
@@ -256,8 +272,7 @@ async function executeFullBackup(
   runId: string,
   logger?: Logger,
 ): Promise<void> {
-  if (inMemoryLock) return
-  inMemoryLock = true
+  // Lock já adquirido em serviceTriggerFullBackup; liberado no finally.
   let tempPath: string | null = null
   let finalPath: string | null = null
 
