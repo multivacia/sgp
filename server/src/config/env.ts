@@ -155,6 +155,21 @@ export type Env = {
   smtpUser?: string
   smtpPass?: string
   smtpRequireTls: boolean
+  /** Gestão de backups administrativos (defaults seguros; desligado por padrão). */
+  backupEnabled: boolean
+  backupDirectory: string
+  backupRetentionDays: number
+  backupScheduleCron: string
+  backupDatabaseName?: string
+  backupDatabaseHost?: string
+  backupDatabasePort?: number
+  backupDatabaseUser?: string
+  backupFilePrefix: string
+  backupWalDirectory: string
+  backupMaxDownloadSizeBytes?: number
+  backupCommandTimeoutSeconds: number
+  backupPgDumpPath: string
+  backupPgRestorePath: string
 }
 
 export type AppRuntimeEnvironment =
@@ -729,6 +744,64 @@ export function loadEnv(): Env {
     )
   }
 
+  const backupEnabled =
+    parseOptionalBooleanFlag(process.env.BACKUP_ENABLED) ?? false
+  const backupDirectory = process.env.BACKUP_DIRECTORY?.trim() || ''
+  let backupRetentionDays = 14
+  const rawRetention = process.env.BACKUP_RETENTION_DAYS?.trim()
+  if (rawRetention !== undefined && rawRetention !== '') {
+    const n = Number.parseInt(rawRetention, 10)
+    if (Number.isNaN(n) || n < 1 || n > 3650) {
+      throw new Error(
+        'BACKUP_RETENTION_DAYS deve ser um inteiro entre 1 e 3650.',
+      )
+    }
+    backupRetentionDays = n
+  }
+  const backupScheduleCron =
+    process.env.BACKUP_SCHEDULE_CRON?.trim() || '0 2 * * *'
+  const backupDatabaseName =
+    process.env.BACKUP_DATABASE_NAME?.trim() || undefined
+  const backupDatabaseHost =
+    process.env.BACKUP_DATABASE_HOST?.trim() || undefined
+  let backupDatabasePort: number | undefined
+  const rawBackupPort = process.env.BACKUP_DATABASE_PORT?.trim()
+  if (rawBackupPort !== undefined && rawBackupPort !== '') {
+    backupDatabasePort = parsePortLabel(rawBackupPort, 'BACKUP_DATABASE_PORT')
+  }
+  const backupDatabaseUser =
+    process.env.BACKUP_DATABASE_USER?.trim() || undefined
+  const backupFilePrefix =
+    process.env.BACKUP_FILE_PREFIX?.trim() || 'sgp'
+  const backupWalDirectory =
+    process.env.BACKUP_WAL_DIRECTORY?.trim() || ''
+  let backupMaxDownloadSizeBytes: number | undefined
+  const rawMaxDl = process.env.BACKUP_MAX_DOWNLOAD_SIZE_BYTES?.trim()
+  if (rawMaxDl !== undefined && rawMaxDl !== '') {
+    const n = Number.parseInt(rawMaxDl, 10)
+    if (Number.isNaN(n) || n < 1) {
+      throw new Error(
+        'BACKUP_MAX_DOWNLOAD_SIZE_BYTES deve ser um inteiro positivo.',
+      )
+    }
+    backupMaxDownloadSizeBytes = n
+  }
+  let backupCommandTimeoutSeconds = 3600
+  const rawTimeoutSec = process.env.BACKUP_COMMAND_TIMEOUT_SECONDS?.trim()
+  if (rawTimeoutSec !== undefined && rawTimeoutSec !== '') {
+    const n = Number.parseInt(rawTimeoutSec, 10)
+    if (Number.isNaN(n) || n < 30 || n > 86_400) {
+      throw new Error(
+        'BACKUP_COMMAND_TIMEOUT_SECONDS deve ser um inteiro entre 30 e 86400.',
+      )
+    }
+    backupCommandTimeoutSeconds = n
+  }
+  const backupPgDumpPath =
+    process.env.BACKUP_PG_DUMP_PATH?.trim() || 'pg_dump'
+  const backupPgRestorePath =
+    process.env.BACKUP_PG_RESTORE_PATH?.trim() || 'pg_restore'
+
   const v = parsed.data
   const databaseUrl =
     'connectionString' in pgPoolConfig ? pgPoolConfig.connectionString : undefined
@@ -787,6 +860,20 @@ export function loadEnv(): Env {
     smtpUser,
     smtpPass,
     smtpRequireTls,
+    backupEnabled,
+    backupDirectory,
+    backupRetentionDays,
+    backupScheduleCron,
+    backupDatabaseName,
+    backupDatabaseHost,
+    backupDatabasePort,
+    backupDatabaseUser,
+    backupFilePrefix,
+    backupWalDirectory,
+    backupMaxDownloadSizeBytes,
+    backupCommandTimeoutSeconds,
+    backupPgDumpPath,
+    backupPgRestorePath,
   }
   return cached
 }

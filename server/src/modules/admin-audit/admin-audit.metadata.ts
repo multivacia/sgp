@@ -67,6 +67,58 @@ const METADATA_ALLOWLIST: Record<
     'target_collaborator_id',
     'reason',
   ],
+  backup_run_requested: [
+    'backup_run_id',
+    'trigger_type',
+    'status',
+    'logical_file_name',
+    'environment',
+    'database_name',
+  ],
+  backup_run_completed: [
+    'backup_run_id',
+    'trigger_type',
+    'status',
+    'size_bytes',
+    'integrity_status',
+    'logical_file_name',
+    'environment',
+    'database_name',
+    'result',
+  ],
+  backup_run_failed: [
+    'backup_run_id',
+    'trigger_type',
+    'status',
+    'integrity_status',
+    'logical_file_name',
+    'environment',
+    'database_name',
+    'result',
+  ],
+  backup_downloaded: [
+    'backup_run_id',
+    'status',
+    'size_bytes',
+    'integrity_status',
+    'logical_file_name',
+    'environment',
+    'database_name',
+    'result',
+  ],
+  backup_wal_synced: [
+    'segments_upserted',
+    'environment',
+    'database_name',
+    'result',
+  ],
+  backup_wal_downloaded: [
+    'wal_segment_id',
+    'size_bytes',
+    'environment',
+    'database_name',
+    'result',
+  ],
 }
 
 export function buildSanitizedMetadata(
@@ -176,6 +228,41 @@ export function buildSanitizedMetadata(
       if (!t.length) throw new Error('reason não pode ser vazio')
       if (t.length > 4000) throw new Error('reason excede tamanho máximo')
       out[key] = t
+      continue
+    }
+
+    if (key === 'backup_run_id' || key === 'wal_segment_id') {
+      if (!isUuidString(v)) throw new Error(`${key} deve ser UUID`)
+      out[key] = v
+      continue
+    }
+
+    if (key === 'trigger_type' || key === 'status' || key === 'integrity_status') {
+      if (typeof v !== 'string' || !v.trim()) throw new Error(`${key} inválido`)
+      out[key] = v
+      continue
+    }
+
+    if (key === 'logical_file_name' || key === 'environment' || key === 'database_name') {
+      if (typeof v !== 'string' || !v.trim()) throw new Error(`${key} inválido`)
+      if (v.includes('/') || v.includes('\\') || v.includes('..')) {
+        throw new Error(`${key} contém path inválido`)
+      }
+      out[key] = v
+      continue
+    }
+
+    if (key === 'size_bytes' || key === 'segments_upserted') {
+      if (typeof v !== 'number' || !Number.isFinite(v) || v < 0) {
+        throw new Error(`${key} deve ser número não negativo`)
+      }
+      out[key] = v
+      continue
+    }
+
+    if (key === 'result') {
+      if (typeof v !== 'string' || !v.trim()) throw new Error('result inválido')
+      out[key] = v.slice(0, 200)
       continue
     }
   }

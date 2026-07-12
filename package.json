@@ -22,6 +22,7 @@
     "server:migrate:matrix": "npm run migrate:file --prefix server -- migrations/0003_matrix_nodes.sql",
     "server:seed": "npm run seed --prefix server",
     "server:seed-production-pins": "npm run seed:production-pins --prefix server",
+    "backup:full": "npm --prefix server run backup:full",
     "server:test": "npm run test --prefix server",
     "print-agent:dev": "npm run dev --prefix sgp-print-agent",
     "print-agent:install": "npm install --prefix sgp-print-agent",

@@ -12,6 +12,12 @@ export const ADMIN_AUDIT_EVENT_TYPES = [
   'role_permissions_updated',
   'time_entry_created_on_behalf',
   'time_entry_deleted_by_manager',
+  'backup_run_requested',
+  'backup_run_completed',
+  'backup_run_failed',
+  'backup_downloaded',
+  'backup_wal_synced',
+  'backup_wal_downloaded',
 ] as const
 
 export type AdminAuditEventType = (typeof ADMIN_AUDIT_EVENT_TYPES)[number]

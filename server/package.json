@@ -11,6 +11,7 @@
     "migrate:file": "tsx src/scripts/migrate-file.ts",
     "seed": "tsx src/scripts/seed.ts",
     "seed:production-pins": "tsx src/scripts/seed-production-pins.ts",
+    "backup:full": "tsx src/scripts/run-full-backup.ts",
     "test": "vitest run",
     "test:watch": "vitest"
   },

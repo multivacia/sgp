@@ -7,6 +7,7 @@ import type { Env } from './config/env.js'
 import { corsOptions } from './config/cors.js'
 import { adminAuditRouter } from './modules/admin-audit/admin-audit.routes.js'
 import { adminUsersRouter } from './modules/admin-users/admin-users.routes.js'
+import { backupsRouter } from './modules/backups/backups.routes.js'
 import { authRouter } from './modules/auth/auth.routes.js'
 import { collaboratorsRouter } from './modules/collaborators/collaborators.routes.js'
 import { dashboardRouter } from './modules/dashboard/dashboard.routes.js'
@@ -64,6 +65,7 @@ export function createApp(pool: pg.Pool, logger: Logger, env: Env): Express {
   app.use('/api/v1', conveyorProgressRouter())
   app.use('/api/v1', supportRouter())
   app.use('/api/v1', systemSettingsRouter())
+  app.use('/api/v1', backupsRouter())
 
   app.use(notFoundHandler)
   app.use(errorHandler(logger))
