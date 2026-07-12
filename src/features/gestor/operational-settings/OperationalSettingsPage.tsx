@@ -20,6 +20,11 @@ import {
 } from '../../../lib/errors'
 import { useSgpErrorSurface } from '../../../lib/errors/SgpErrorPresentation'
 import {
+  PERMISSION_BACKUPS_VIEW,
+  PERMISSION_OPERATIONAL_SETTINGS_MANAGE,
+} from '../../../lib/permissions/permissionCodes'
+import { useAuth } from '../../../lib/use-auth'
+import {
   createOperationalCollaboratorRole,
   createOperationalSector,
   deleteOperationalCollaboratorRole,
@@ -29,18 +34,30 @@ import {
   patchOperationalCollaboratorRole,
   patchOperationalSector,
 } from '../../../services/admin/operationalSettingsApiService'
+import { BackupsTab } from './BackupsTab'
 import { ExtraTimeEntryDescriptionsTab } from './ExtraTimeEntryDescriptionsTab'
 import { TimeEntryJustificationsTab } from './TimeEntryJustificationsTab'
 import { OperationalCapacityTab } from './capacity/OperationalCapacityTab'
 
-type TabId = 'sectors' | 'roles' | 'capacity' | 'extraTimeDescriptions' | 'timeEntryJustifications'
+type TabId =
+  | 'sectors'
+  | 'roles'
+  | 'capacity'
+  | 'extraTimeDescriptions'
+  | 'timeEntryJustifications'
+  | 'backups'
 
 type ToastState = { message: string; variant: SgpToastVariant } | null
 
 export function OperationalSettingsPage() {
   const { pathname } = useLocation()
+  const { can } = useAuth()
+  const canManageOperational = can(PERMISSION_OPERATIONAL_SETTINGS_MANAGE)
+  const canViewBackups = can(PERMISSION_BACKUPS_VIEW)
   const { presentBlocking } = useSgpErrorSurface()
-  const [tab, setTab] = useState<TabId>('sectors')
+  const [tab, setTab] = useState<TabId>(() =>
+    canManageOperational ? 'sectors' : canViewBackups ? 'backups' : 'sectors',
+  )
   const [toast, setToast] = useState<ToastState>(null)
 
   const [sectors, setSectors] = useState<OperationalSectorRow[]>([])
@@ -102,12 +119,18 @@ export function OperationalSettingsPage() {
   }, [govErr])
 
   useEffect(() => {
-    void loadSectors()
-  }, [loadSectors])
+    if (canManageOperational) void loadSectors()
+  }, [canManageOperational, loadSectors])
 
   useEffect(() => {
-    if (tab === 'roles') void loadRoles()
-  }, [tab, loadRoles])
+    if (canManageOperational && tab === 'roles') void loadRoles()
+  }, [canManageOperational, tab, loadRoles])
+
+  useEffect(() => {
+    if (!canManageOperational && canViewBackups && tab !== 'backups') {
+      setTab('backups')
+    }
+  }, [canManageOperational, canViewBackups, tab])
 
   return (
     <SgpContextActionsMenuProvider>
@@ -136,6 +159,8 @@ export function OperationalSettingsPage() {
       ) : null}
 
       <div className="mt-8 flex flex-wrap gap-2 border-b border-white/[0.08] pb-3">
+        {canManageOperational ? (
+          <>
         <button
           type="button"
           onClick={() => setTab('sectors')}
@@ -189,17 +214,34 @@ export function OperationalSettingsPage() {
               : 'text-slate-400 hover:bg-white/[0.04]'
           }`}
         >
-          Justificativas operacionais
+          Justificativas de apontamento
         </button>
+          </>
+        ) : null}
+        {canViewBackups ? (
+          <button
+            type="button"
+            onClick={() => setTab('backups')}
+            className={`rounded-lg px-4 py-2 text-sm font-bold transition ${
+              tab === 'backups'
+                ? 'bg-sgp-gold/15 text-sgp-gold ring-1 ring-sgp-gold/35'
+                : 'text-slate-400 hover:bg-white/[0.04]'
+            }`}
+          >
+            Backups
+          </button>
+        ) : null}
       </div>
 
-      {tab === 'capacity' ? (
+      {tab === 'backups' && canViewBackups ? (
+        <BackupsTab onError={govErr} onToast={pushToast} />
+      ) : tab === 'capacity' && canManageOperational ? (
         <OperationalCapacityTab />
-      ) : tab === 'extraTimeDescriptions' ? (
+      ) : tab === 'extraTimeDescriptions' && canManageOperational ? (
         <ExtraTimeEntryDescriptionsTab onError={govErr} onToast={pushToast} />
-      ) : tab === 'timeEntryJustifications' ? (
+      ) : tab === 'timeEntryJustifications' && canManageOperational ? (
         <TimeEntryJustificationsTab onError={govErr} onToast={pushToast} />
-      ) : tab === 'sectors' ? (
+      ) : tab === 'sectors' && canManageOperational ? (
         <section className="mt-6">
           <div className="sgp-panel sgp-panel-hover">
             <div className="flex flex-col gap-3 md:flex-row md:flex-wrap md:items-end md:justify-between">

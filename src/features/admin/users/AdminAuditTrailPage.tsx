@@ -30,6 +30,12 @@ function eventLabel(t: AdminAuditEventType): string {
     admin_user_collaborator_linked: 'Colaborador vinculado',
     admin_user_collaborator_unlinked: 'Colaborador desvinculado',
     role_permissions_updated: 'Permissões do papel atualizadas',
+    backup_run_requested: 'Backup solicitado',
+    backup_run_completed: 'Backup concluído',
+    backup_run_failed: 'Backup falhou',
+    backup_downloaded: 'Backup baixado',
+    backup_wal_synced: 'WAL sincronizado',
+    backup_wal_downloaded: 'WAL baixado',
   }
   return map[t] ?? t
 }

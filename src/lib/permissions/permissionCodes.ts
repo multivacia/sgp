@@ -14,3 +14,13 @@ export const PERMISSION_OPERATIONAL_SETTINGS_MANAGE =
 /** Configurações sistêmicas sensíveis — ver `system-settings.routes.ts`. */
 export const PERMISSION_SYSTEM_SETTINGS_VIEW = 'system_settings.view' as const
 export const PERMISSION_SYSTEM_SETTINGS_MANAGE = 'system_settings.manage' as const
+
+/** Gestão de backups administrativos — ver `backups.routes.ts`. */
+export const PERMISSION_BACKUPS_VIEW = 'backups.view' as const
+export const PERMISSION_BACKUPS_CREATE = 'backups.create' as const
+export const PERMISSION_BACKUPS_DOWNLOAD = 'backups.download' as const
+export const PERMISSION_BACKUPS_WAL_VIEW = 'backups.wal.view' as const
+export const PERMISSION_BACKUPS_WAL_DOWNLOAD = 'backups.wal.download' as const
+export const PERMISSION_BACKUPS_RESTORE = 'backups.restore' as const
+export const PERMISSION_BACKUPS_DELETE = 'backups.delete' as const
+export const PERMISSION_BACKUPS_SETTINGS = 'backups.settings' as const

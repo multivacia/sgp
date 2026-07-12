@@ -25,6 +25,11 @@ import {
 type ToastState = { message: string; variant: SgpToastVariant } | null
 
 const COLABORADOR = 'COLABORADOR'
+const SUPER_ADMIN = 'SUPER_ADMIN'
+
+function isSuperAdminOnlyPermission(code: string): boolean {
+  return code.startsWith('backups.') || code.startsWith('system_settings.')
+}
 
 function domainFromCode(code: string): string {
   const i = code.indexOf('.')
@@ -73,7 +78,13 @@ export function RbacRolePermissionsPage() {
     null,
   )
 
-  const grouped = useMemo(() => groupPermissions(catalog), [catalog])
+  const grouped = useMemo(() => {
+    const visible =
+      activeRole?.code === SUPER_ADMIN
+        ? catalog
+        : catalog.filter((p) => !isSuperAdminOnlyPermission(p.code))
+    return groupPermissions(visible)
+  }, [activeRole?.code, catalog])
   const readOnlyColab =
     activeRole?.code === COLABORADOR
 

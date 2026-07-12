@@ -5,6 +5,7 @@
  */
 
 import {
+  PERMISSION_BACKUPS_VIEW,
   PERMISSION_OPERATIONAL_SETTINGS_MANAGE,
   PERMISSION_RBAC_MANAGE_ROLE_PERMISSIONS,
   PERMISSION_SYSTEM_SETTINGS_VIEW,
@@ -137,7 +138,10 @@ export const GESTAO_NAV_ITEMS: ShellNavItem[] = [
     label: 'Configurações operacionais',
     section: 'gestao',
     navGroup: 'cadastros_operacionais',
-    permission: PERMISSION_OPERATIONAL_SETTINGS_MANAGE,
+    anyOfPermissions: [
+      PERMISSION_OPERATIONAL_SETTINGS_MANAGE,
+      PERMISSION_BACKUPS_VIEW,
+    ],
   },
   {
     to: '/app/configuracoes/sistema',

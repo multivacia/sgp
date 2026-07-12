@@ -10,6 +10,12 @@ export const ADMIN_AUDIT_EVENT_TYPES = [
   'admin_user_collaborator_linked',
   'admin_user_collaborator_unlinked',
   'role_permissions_updated',
+  'backup_run_requested',
+  'backup_run_completed',
+  'backup_run_failed',
+  'backup_downloaded',
+  'backup_wal_synced',
+  'backup_wal_downloaded',
 ] as const
 
 export type AdminAuditEventType = (typeof ADMIN_AUDIT_EVENT_TYPES)[number]

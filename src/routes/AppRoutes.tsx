@@ -37,6 +37,7 @@ import { ChangePasswordPage } from '../pages/ChangePasswordPage'
 import { RequireAuth } from './RequireAuth'
 import { RequirePasswordChangeCleared } from './RequirePasswordChangeCleared'
 import {
+  PERMISSION_BACKUPS_VIEW,
   PERMISSION_OPERATIONAL_SETTINGS_MANAGE,
   PERMISSION_RBAC_MANAGE_ROLE_PERMISSIONS,
   PERMISSION_SYSTEM_SETTINGS_VIEW,
@@ -146,9 +147,14 @@ export function AppRoutes() {
             <Route
               path="configuracoes-operacionais"
               element={
-                <RequirePermission permission={PERMISSION_OPERATIONAL_SETTINGS_MANAGE}>
+                <RequireAnyPermission
+                  permissions={[
+                    PERMISSION_OPERATIONAL_SETTINGS_MANAGE,
+                    PERMISSION_BACKUPS_VIEW,
+                  ]}
+                >
                   <OperationalSettingsPage />
-                </RequirePermission>
+                </RequireAnyPermission>
               }
             />
             <Route
