@@ -1,0 +1,53 @@
+--*********************************************************************
+--* SIGEC.SG_PARCELA                                                   *
+--* Parcelas de um contrato. Chave composta (ID_CONTRATO, NR_PARCELA). *
+--*********************************************************************
+
+SET CURRENT SCHEMA = SIGEC;
+
+CREATE TABLE SIGEC.SG_PARCELA (
+  ID_CONTRATO       VARCHAR(15)   NOT NULL,
+  NR_PARCELA        SMALLINT      NOT NULL,
+  DT_VENCIMENTO     DATE          NOT NULL,
+  VR_PARCELA        DECIMAL(15,2) NOT NULL,
+  VR_SALDO          DECIMAL(15,2) NOT NULL WITH DEFAULT 0,
+  VR_JUROS          DECIMAL(15,2) NOT NULL WITH DEFAULT 0,
+  VR_MULTA          DECIMAL(15,2) NOT NULL WITH DEFAULT 0,
+  ST_PARCELA        CHAR(2)       NOT NULL WITH DEFAULT 'AB',
+  DT_ULTIMO_PAGTO   DATE,
+  DIAS_ATRASO       SMALLINT      NOT NULL WITH DEFAULT 0,
+  DH_INCLUSAO       TIMESTAMP     NOT NULL WITH DEFAULT CURRENT TIMESTAMP,
+  DH_ALTERACAO      TIMESTAMP,
+  USUARIO_INCLUSAO  VARCHAR(30)   NOT NULL,
+  USUARIO_ALTERACAO VARCHAR(30),
+  SITUACAO_REG      CHAR(1)       NOT NULL WITH DEFAULT 'A',
+  CONSTRAINT PK_SG_PARCELA PRIMARY KEY (ID_CONTRATO, NR_PARCELA),
+  CONSTRAINT FK_SG_PAR_CTR FOREIGN KEY (ID_CONTRATO)
+    REFERENCES SIGEC.SG_CONTRATO (ID_CONTRATO) ON DELETE CASCADE,
+  CONSTRAINT CK_SG_PAR_STATUS CHECK (ST_PARCELA IN
+    ('AB','PG','PP','VC','CN')),
+  CONSTRAINT CK_SG_PAR_VLR    CHECK (VR_PARCELA >= 0 AND VR_SALDO >= 0),
+  CONSTRAINT CK_SG_PAR_SITREG CHECK (SITUACAO_REG IN ('A','I'))
+);
+
+CREATE INDEX SIGEC.IX_SG_PAR_VENC
+  ON SIGEC.SG_PARCELA (DT_VENCIMENTO, ST_PARCELA);
+
+CREATE INDEX SIGEC.IX_SG_PAR_STATUS
+  ON SIGEC.SG_PARCELA (ST_PARCELA, DIAS_ATRASO DESC);
+
+COMMENT ON TABLE SIGEC.SG_PARCELA IS
+  'Parcelas geradas para cada contrato do SIGEC.';
+
+COMMENT ON COLUMN SIGEC.SG_PARCELA.ID_CONTRATO     IS 'FK/PK: contrato ao qual a parcela pertence.';
+COMMENT ON COLUMN SIGEC.SG_PARCELA.NR_PARCELA      IS 'Numero sequencial da parcela dentro do contrato.';
+COMMENT ON COLUMN SIGEC.SG_PARCELA.DT_VENCIMENTO   IS 'Data de vencimento da parcela.';
+COMMENT ON COLUMN SIGEC.SG_PARCELA.VR_PARCELA      IS 'Valor original da parcela.';
+COMMENT ON COLUMN SIGEC.SG_PARCELA.VR_SALDO        IS 'Saldo devedor atual da parcela (apos pagamentos parciais).';
+COMMENT ON COLUMN SIGEC.SG_PARCELA.VR_JUROS        IS 'Juros acumulados desde o vencimento.';
+COMMENT ON COLUMN SIGEC.SG_PARCELA.VR_MULTA        IS 'Multa aplicada por atraso.';
+COMMENT ON COLUMN SIGEC.SG_PARCELA.ST_PARCELA      IS 'Status: AB aberta, PG paga, PP parcial, VC vencida, CN cancelada.';
+COMMENT ON COLUMN SIGEC.SG_PARCELA.DT_ULTIMO_PAGTO IS 'Data do ultimo pagamento (parcial ou total) da parcela.';
+COMMENT ON COLUMN SIGEC.SG_PARCELA.DIAS_ATRASO    IS 'Dias em atraso na data da ultima atualizacao (0 se em dia).';
+
+COMMIT;
