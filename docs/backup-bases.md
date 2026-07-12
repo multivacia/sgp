@@ -1,5 +1,8 @@
 # Backup de todas as bases PostgreSQL (`pg_dumpall`)
 
+> **Gestão administrativa no SGP+ (catálogo, UI, retenção, WAL inventário):** ver [`docs/runbooks/backups.md`](runbooks/backups.md).
+> Este documento cobre o fluxo operacional legado via `pg_dumpall` em scripts shell/PowerShell.
+
 ## Objetivo
 
 Fornecer um fluxo **operacional, simples e auditável** para gerar **um único ficheiro lógico** (plain SQL) com **timestamp**, contendo:
