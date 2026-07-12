@@ -313,6 +313,43 @@ describe('AuthProvider', () => {
     expect(screen.getByTestId('user').textContent).toBe('anon')
   })
 
+  it('resposta após unmount não atualiza estado', async () => {
+    const refreshDeferred = deferred<{
+      user: ReturnType<typeof createUser>
+      sessionIdle: ReturnType<typeof createSessionIdle>
+    }>()
+    const consoleErrorSpy = vi
+      .spyOn(console, 'error')
+      .mockImplementation(() => {})
+
+    getMeMock
+      .mockResolvedValueOnce({
+        user: createUser(),
+        sessionIdle: createSessionIdle(Date.now()),
+      })
+      .mockImplementationOnce(() => refreshDeferred.promise)
+
+    const view = renderAuthApp()
+    await flushAsyncWork()
+
+    act(() => {
+      fireEvent.click(screen.getByText('refresh-admin'))
+    })
+
+    view.unmount()
+
+    await act(async () => {
+      refreshDeferred.resolve({
+        user: createUser(),
+        sessionIdle: createSessionIdle(Date.now() + 30_000),
+      })
+      await refreshDeferred.promise
+    })
+    await flushAsyncWork()
+
+    expect(consoleErrorSpy).not.toHaveBeenCalled()
+  })
+
   it('401 real continua limpando a sessão administrativa', async () => {
     getMeMock
       .mockResolvedValueOnce({
