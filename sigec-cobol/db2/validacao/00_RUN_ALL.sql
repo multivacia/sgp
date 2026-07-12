@@ -1,0 +1,24 @@
+--*********************************************************************
+--* 00_RUN_ALL.sql                                                     *
+--* Executa todas as validacoes em sequencia.                          *
+--* Use no lugar de rodar cada arquivo manualmente.                    *
+--*                                                                    *
+--* Exemplo (DB2 CLP):                                                 *
+--*   db2 -tvf 00_RUN_ALL.sql                                          *
+--*********************************************************************
+
+-- @include 01_CONTAGEM.sql
+-- @include 02_INCONSISTENCIAS_SALDO.sql
+-- @include 03_PARCELAS_ORFAS.sql
+-- @include 04_INCONSISTENCIAS_STATUS.sql
+-- @include 05_AGING_INADIMPLENCIA.sql
+-- @include 06_INTEGRIDADE_PAGAMENTOS.sql
+-- @include 07_DOMINIOS.sql
+-- @include 08_PARAMETROS.sql
+--
+-- Observacao: DB2 CLP nao possui diretiva @include nativa.
+-- Concatene os arquivos em shell:
+--   cat 01_CONTAGEM.sql 02_INCONSISTENCIAS_SALDO.sql \
+--       03_PARCELAS_ORFAS.sql 04_INCONSISTENCIAS_STATUS.sql \
+--       05_AGING_INADIMPLENCIA.sql 06_INTEGRIDADE_PAGAMENTOS.sql \
+--       07_DOMINIOS.sql 08_PARAMETROS.sql | db2 -t
