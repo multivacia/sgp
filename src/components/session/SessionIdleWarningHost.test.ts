@@ -129,13 +129,34 @@ describe('SessionIdleWarningHost', () => {
     expect(refreshAdministrativeSession).toHaveBeenCalledTimes(1)
   })
 
-  it('mantém o modal aberto enquanto a renovação iniciada após atividade ainda está em andamento', () => {
+  it('mantém o modal fechado enquanto a renovação automática iniciada por atividade está em andamento', () => {
     const refreshAdministrativeSession = vi.fn(async () => true)
-    const initialValue = createAuthValue({
-      sessionIdle: createSessionIdle(Date.now() - 25 * 60_000, 30, 5),
+    renderWithAuth(
+      createAuthValue({
+        sessionIdle: createSessionIdle(Date.now() - 25 * 60_000, 30, 5),
+        hasLocalActivitySinceLastServerSync: true,
+        isSessionRefreshInFlight: true,
+        refreshAdministrativeSession,
+      }),
+    )
+
+    act(() => {
+      vi.advanceTimersByTime(0)
     })
 
-    const view = renderWithAuth(initialValue)
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(refreshAdministrativeSession).not.toHaveBeenCalled()
+  })
+
+  it('mantém o modal aberto enquanto o refresh manual do botão Continuar conectado está em andamento', () => {
+    const refreshAdministrativeSession = vi.fn(async () => true)
+
+    const view = renderWithAuth(
+      createAuthValue({
+        sessionIdle: createSessionIdle(Date.now() - 25 * 60_000, 30, 5),
+        refreshAdministrativeSession,
+      }),
+    )
 
     act(() => {
       vi.advanceTimersByTime(0)
@@ -143,13 +164,14 @@ describe('SessionIdleWarningHost', () => {
 
     expect(screen.queryByRole('dialog')).not.toBeNull()
 
+    fireEvent.click(screen.getByText('Continuar conectado'))
+
     view.rerender(
       createElement(
         AuthContext.Provider,
         {
           value: createAuthValue({
-            sessionIdle: initialValue.sessionIdle,
-            hasLocalActivitySinceLastServerSync: true,
+            sessionIdle: createSessionIdle(Date.now() - 25 * 60_000, 30, 5),
             isSessionRefreshInFlight: true,
             refreshAdministrativeSession,
           }),
@@ -163,7 +185,7 @@ describe('SessionIdleWarningHost', () => {
     })
 
     expect(screen.queryByRole('dialog')).not.toBeNull()
-    expect(refreshAdministrativeSession).not.toHaveBeenCalled()
+    expect(refreshAdministrativeSession).toHaveBeenCalledTimes(1)
   })
 
   it('renovação bem-sucedida mantém o modal fechado com novo sessionIdle oficial', () => {
