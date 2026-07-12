@@ -61,6 +61,13 @@
                   ACCESS MODE  IS SEQUENTIAL
                   FILE STATUS  IS WS-FS-ERR-IN.
       *
+      *---- ENTRADA OPCIONAL VB (LAYOUT VARIAVEL / MULTI-LAYOUT) ------*
+           SELECT SGLVARAR-FILE
+                  ASSIGN TO SGLVARAR
+                  ORGANIZATION IS SEQUENTIAL
+                  ACCESS MODE  IS SEQUENTIAL
+                  FILE STATUS  IS WS-FS-VARAR.
+      *
       *---- SAIDAS ---------------------------------------------------*
            SELECT SGLRELDT-FILE
                   ASSIGN TO SGLRELDT
@@ -120,6 +127,14 @@
        01  REG-ERR-IN.
            05  ERR-IN-BUFFER             PIC X(200).
       *
+       FD  SGLVARAR-FILE
+           RECORDING MODE IS V
+           RECORD IS VARYING IN SIZE FROM 50 TO 400 CHARACTERS
+               DEPENDING ON WS-SGVA-TAMANHO
+           BLOCK CONTAINS 0 RECORDS
+           LABEL RECORDS ARE STANDARD.
+       01  REG-VARAR-FD                  PIC X(400).
+      *
       *---- SAIDAS ---------------------------------------------------*
        FD  SGLRELDT-FILE
            RECORDING MODE IS F
@@ -165,6 +180,7 @@
       *    AREA DE COMUNICACAO PARA CALL DINAMICO
            COPY SGINTFMT.
            COPY SGCOMMAR.
+           COPY SGLVARAR.
       *
        01  WS-FILE-STATUS.
            05  WS-FS-ENCAR               PIC X(02) VALUE '00'.
@@ -187,6 +203,11 @@
                88  FS-ERRIN-EOF                   VALUE '10'.
                88  FS-ERRIN-INDISP                VALUES '35' '37'
                                                          '39' '93'.
+           05  WS-FS-VARAR               PIC X(02) VALUE '00'.
+               88  FS-VARAR-OK                    VALUE '00'.
+               88  FS-VARAR-EOF                   VALUE '10'.
+               88  FS-VARAR-INDISP                VALUES '35' '37'
+                                                         '39' '93'.
            05  WS-FS-RELDT               PIC X(02) VALUE '00'.
                88  FS-RELDT-OK                    VALUE '00'.
            05  WS-FS-RELST               PIC X(02) VALUE '00'.
@@ -197,6 +218,10 @@
                88  FS-INTCT-OK                    VALUE '00'.
            05  WS-FS-ERR-OT              PIC X(02) VALUE '00'.
                88  FS-ERROT-OK                    VALUE '00'.
+      *
+       01  WS-QT-VARAR-LIDOS             PIC 9(09) VALUE ZEROES.
+       01  WS-FL-VARAR-ATIVO             PIC X(01) VALUE 'N'.
+           88  WS-VARAR-DISPONIVEL                VALUE 'S'.
       *
        01  WS-CTRL.
            05  WS-PROG                   PIC X(08) VALUE 'SGCB0190'.
@@ -276,6 +301,7 @@
            PERFORM 3100-PROC-INADIMPLENCIA
            PERFORM 3200-PROC-PROPOSTAS
            PERFORM 3300-PROC-ERROS
+           PERFORM 3400-PROC-VARIAVEL
       *
            PERFORM 5000-CONSULTAS-CONSOLIDADAS
       *
@@ -345,6 +371,17 @@
            IF NOT FS-ERRIN-OK AND NOT FS-ERRIN-INDISP
               PERFORM 8700-ERRO-ABERTURA
               GO TO 2000-FIM
+           END-IF
+      *
+      *    ARQUIVO VB OPCIONAL - SE AUSENTE, SEGUE SEM ELE
+           OPEN INPUT SGLVARAR-FILE
+           IF FS-VARAR-OK
+              MOVE 'S'                   TO WS-FL-VARAR-ATIVO
+           ELSE
+              MOVE 'N'                   TO WS-FL-VARAR-ATIVO
+              IF NOT FS-VARAR-INDISP
+                 DISPLAY 'SGCB0190 AVISO SGLVARAR FS=' WS-FS-VARAR
+              END-IF
            END-IF
       *
            OPEN OUTPUT SGLRELDT-FILE
@@ -699,6 +736,41 @@
        3300-FIM. EXIT.
       *
       *---------------------------------------------------------------*
+       3400-PROC-VARIAVEL SECTION.
+      *---------------------------------------------------------------*
+      * CONSOME ARQUIVO VB MULTI-LAYOUT (SGLVARAR). CADA REGISTRO    *
+      * PODE TER TAMANHO E FORMATO DIFERENTES CONFORME SGVA-TIPO.    *
+      *---------------------------------------------------------------*
+           IF NOT WS-VARAR-DISPONIVEL
+              GO TO 3400-FIM
+           END-IF
+      *
+           PERFORM UNTIL FS-VARAR-EOF
+              MOVE 150 TO WS-SGVA-TAMANHO
+              READ SGLVARAR-FILE INTO REG-SGLVARAR
+                 AT END
+                    MOVE '10' TO WS-FS-VARAR
+                 NOT AT END
+                    ADD 1 TO WS-QT-VARAR-LIDOS
+                    EVALUATE TRUE
+                       WHEN SGVA-TIPO-CTR
+                          ADD 1 TO WS-QT-RELDT-GRAV
+                       WHEN SGVA-TIPO-PAG
+                          ADD 1 TO WS-QT-INTCT-GRAV
+                       WHEN SGVA-TIPO-EVT
+                          ADD 1 TO WS-QT-ERR-GRAV
+                       WHEN SGVA-TIPO-EXT
+                          CONTINUE
+                       WHEN OTHER
+                          DISPLAY 'SGCB0190 TIPO VB IGNORADO='
+                                  SGVA-TIPO
+                    END-EVALUATE
+              END-READ
+           END-PERFORM
+           DISPLAY 'SGCB0190 SGLVARAR LIDOS=' WS-QT-VARAR-LIDOS.
+       3400-FIM. EXIT.
+      *
+      *---------------------------------------------------------------*
        5000-CONSULTAS-CONSOLIDADAS SECTION.
       *---------------------------------------------------------------*
            EXEC SQL
@@ -914,6 +986,9 @@
            CLOSE SGLINADI-FILE
            CLOSE SGLPROP-FILE
            CLOSE SGLERROS-IN-FILE
+           IF WS-VARAR-DISPONIVEL
+              CLOSE SGLVARAR-FILE
+           END-IF
            CLOSE SGLRELDT-FILE
            CLOSE SGLRELST-FILE
            CLOSE SGLINTCB-FILE

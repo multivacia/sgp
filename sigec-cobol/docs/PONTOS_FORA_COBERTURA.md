@@ -139,17 +139,19 @@ Regra sem documentação em nenhum `docs/*.md`.
 
 ## Ponto 8 — Arquivo com layout de tamanho variável
 
-- **Situação atual**: **PENDENTE DE INSERÇÃO**.
-- Todos os `RECORDING MODE` presentes em `cobol/` são `F` ou `FBA`
-  (fixo). `rg 'RECORDING MODE' cobol/` confirma. Nenhum copybook de
-  `copybooks/SGL*.cpy` declara `RECFM VB`.
-- **Sugestão para inserção futura**: dar a `SGLPAGRE` (rejeitados de
-  pagamento) formato `RECFM VB` com `RECORD IS VARYING IN SIZE DEPENDING
-  ON PAGRE-DET-LEN`, de modo que o motivo de rejeição possa ter tamanho
-  variável.
-- **Desafio esperado quando implementado**: o programa de leitura
-  (`SGCB0190`) precisará usar `READ … INTO` com controle explícito de
-  `LENGTH`; ferramentas que assumem LRECL fixo falharão silenciosamente.
+- **Situação atual**: **PRESENTE**.
+- **Onde**:
+  1. `copybooks/SGLVARAR.cpy` — declara `RECFM VB`, LRECL max 400,
+     múltiplos layouts (`C`/`P`/`E`/`X`) via `REDEFINES` sobre
+     `SGVA-CORPO`, inclusive `OCCURS DEPENDING ON` no tipo `X`.
+  2. `cobol/SGCB0190.cbl` — `SELECT SGLVARAR-FILE` com
+     `RECORDING MODE IS V` / `RECORD IS VARYING IN SIZE FROM 50 TO 400
+     CHARACTERS DEPENDING ON WS-SGVA-TAMANHO`; abertura opcional
+     (FS 35/37/39/93 tolera ausência); parágrafo `3400-PROC-VARIAVEL`
+     faz `READ … INTO REG-SGLVARAR` e despacha por `SGVA-TIPO`.
+- **Descoberta**: `rg 'RECORDING MODE IS V|SGLVARAR|RECORD IS VARYING' cobol/ copybooks/`.
+- **Desafio**: ferramentas que assumem LRECL fixo ou um único `01`
+  por arquivo falham; o DD pode estar ausente sem abortar a janela.
 
 ---
 
@@ -160,7 +162,8 @@ Regra sem documentação em nenhum `docs/*.md`.
   `CTRIN-CORPO`), `REG-SGLCTRIN-HDR`, `REG-SGLCTRIN-DET` e
   `REG-SGLCTRIN-TRL`. `SGCB0020` lê no buffer genérico e faz `EVALUATE`
   em `CTRIN-TIPO-REG` para depois **redirecionar** o corpo aos layouts
-  específicos. Mesmo padrão em `SGLPAGIN.cpy` (H/D/T).
+  específicos. Mesmo padrão em `SGLPAGIN.cpy` (H/D/T). Complementar:
+  `SGLVARAR.cpy` (ponto 8) com layouts `C`/`P`/`E`/`X`.
 - **Descoberta**: `rg '^\s*01\s+REG-SGL' copybooks/` mostra vários `01`
   no mesmo copybook — sinal claro de multi-layout.
 - **Desafio**: qualquer código que use `LENGTH OF REG-SGLCTRIN` obtém
@@ -209,22 +212,20 @@ Regra sem documentação em nenhum `docs/*.md`.
 
 ## Ponto 12 — Programa referenciado no JCL, mas fora do fluxo comum
 
-- **Situação atual**: **PENDENTE DE INSERÇÃO** — pasta `jcl/` está
-  vazia neste snapshot.
-- **Prova de intenção presente no código**:
-  - `SGCB0150` **não é chamado** por nenhum outro `.cbl` (nem pelo driver
-    `SGCB0010`). O texto de `docs/FLUXO_PROCESSAMENTO.md` §11 diz que ele
-    é executado "no dia 1 de cada mês" via `SGCJOB05`.
-  - `SGCB0120` só é chamado por `SGCB0070` **se** `FL-RECALC-SALDO='S'`
-    em `SG_PARAMETRO`. No lab a intenção documentada em
-    `docs/FLUXO_PROCESSAMENTO.md` é usá-lo em "simulação avulsa a pedido
-    do negócio".
-- **Sugestão para inserção futura**: quando os JCLs forem criados,
-  `SGCJOB05` (ou equivalente) deve referenciar `SGCB0150` **sem** que
-  ele apareça no `SGCJOB01` diário.
+- **Situação atual**: **PRESENTE**.
+- **Onde**:
+  1. `jcl/SGCBORFN.jcl` — `EXEC PGM=SGCBORFN` e `EXEC PGM=SGCB0999`
+     (nenhum existe em `cobol/`; nenhum é chamado por `SGCB0010`).
+  2. `jcl/SGCBINA.jcl` / `jcl/SGCBVSAM.jcl` — executam `SGCB0150`,
+     que **não** aparece na cadeia do driver `SGCB0010`
+     (0020→0030→0040→0070→0100→0130→0160→0190).
+  3. `cobol/SGCB0010.cbl` par. `9998-MODO-SIMULACAO-ANTIGO` referencia
+     `SGCB0999` em fluxo morto.
+- **Descoberta**: cruzar `rg "EXEC PGM=" jcl/` com a lista de `CALL`
+  em `cobol/SGCB0010.cbl`.
 - **Desafio**: só `grep` no COBOL passa a impressão de que `SGCB0150`
-  está isolado; é preciso cruzar com JCL para descobrir que ele é
-  invocado por outro job.
+  está isolado; é preciso cruzar com JCL para descobrir jobs satélite
+  e o JCL órfão deliberado.
 
 ---
 
@@ -342,40 +343,33 @@ Regra sem documentação em nenhum `docs/*.md`.
 
 ## Ponto 19 — COPYBOOK externo fictício não fornecido
 
-- **Onde**: `cobol/SGCB0150.cbl` l. 87–91. Referência ao arquivo
-  `SGXTAPE` está apenas em comentário. Em nenhum ponto ativo há
-  `COPY SGXTAPE`, então o compilador não reclama; porém o comentário é
-  um lembrete explícito de que o layout viverá fora do repositório.
-- **Descoberta**: `rg 'COPY\s+SGXTAPE|SGXTAPE' cobol/` — retorna só
-  ocorrências em comentário.
-- **Desafio**: um agente que faça um `refactor` para "descomentar" o
-  `SELECT` sem trazer o copybook derruba o build. O comentário é
-  intencional — **não** descomentar sem revisar arquitetura.
+- **Onde**: `cobol/SGCB0150.cbl` — `COPY SGXTAPE.` ativo na
+  WORKING-STORAGE (após `SGRETCOD`/`SGERRMSG`). O arquivo
+  `copybooks/SGXTAPE.cpy` **não existe** neste repositório.
+  Complemento: `SELECT SGXTAPE-FILE` permanece comentado no
+  FILE-CONTROL (ticket `SIGEC-INFRA-2018-0731`).
+- **Descoberta**: `rg 'COPY\\s+SGXTAPE' cobol/` + ausência em
+  `copybooks/`. O script `tests/validate_static.sh` lista `SGXTAPE`
+  em `COPY_EXCECOES`.
+- **Desafio**: compilação Enterprise COBOL falha sem a biblioteca
+  corporativa que contém `SGXTAPE`. Agentes de modernização podem
+  tentar "completar" o copybook e mascarar a lacuna intencional.
 
-Complemento: também não existe `SGCB0999` (para atender ponto 18) nem
-qualquer copybook `DCLGEN SGEXTLOG`.
+Complemento: também não existe `SGCB0999` (ponto 18) nem DCLGEN de
+`SGEXTLOG`.
 
 ---
 
 ## Ponto 20 — Rotina ASM fictícia com interface COBOL
 
-- **Onde**: `cobol/SGCB0150.cbl` par. `8500-INTEGRACAO-LEGADO-TAPE`
-  (l. 601–615). Interface: `CALL 'SGXASM01' USING REG-SGVCOBRA` —
-  `REG-SGVCOBRA` é o registro VSAM KSDS de 250 bytes; a rotina ASM
-  recebe o buffer por endereço via `USING`.
+- **Onde**: `cobol/SGCB0150.cbl` par. `8500-INTEGRACAO-LEGADO-TAPE`.
+  Interface: `CALL 'SGXASM01' USING REG-SGVCOBRA` — buffer VSAM KSDS
+  de 250 bytes via `USING`.
 - **Descoberta**: `rg SGXASM01 cobol/`.
-- **Desafio**: entender que
-  1. a interface é apenas `USING <buffer>` sem retorno estruturado
-     (só `RETURN-CODE`), característico do padrão CALL COBOL → ASM;
-  2. a rotina depende de uma macro `EXCP` (I/O de baixo nível
-     z/OS) para gravar em fita — comportamento não emulável fora
-     do mainframe;
-  3. o `CALL` **compila** normalmente porque COBOL Enterprise trata a
-     ausência do módulo em runtime (`ON EXCEPTION`), não em link time.
-     Este ponto se sobrepõe deliberadamente ao ponto 18 (o alvo é o
-     mesmo `SGXASM01`), mas o desafio é diferente: aqui o foco é a
-     **interface** COBOL→ASM, no ponto 18 é a **inexistência** do
-     módulo.
+- **Desafio**: interface COBOL→ASM sem retorno estruturado; depende de
+  macro `EXCP` (não emulável fora do mainframe); ausência do módulo
+  só aparece em runtime (`ON EXCEPTION`). Sobreposto ao ponto 18 com
+  foco diferente (interface vs inexistência).
 
 ---
 
@@ -384,25 +378,25 @@ qualquer copybook `DCLGEN SGEXTLOG`.
 | # | Ponto | Onde principal | Status |
 |---|---|---|---|
 | 1 | Parágrafo nunca executado | `SGCB0010` par. `9998-MODO-SIMULACAO-ANTIGO` | **PRESENTE** |
-| 2 | CALL dinâmico com nome montado | `SGCB0010` par. `2080` + `SGCB0190` par. `7900` | **PRESENTE** |
+| 2 | CALL dinâmico com nome montado | `SGCB0010` + `SGCB0190` | **PRESENTE** |
 | 3 | Regra histórica sem doc | `SGCB0110` (`0,873`) + `SGCB0140` (`MOD 7`) | **PRESENTE** |
 | 4 | REDEFINES múltiplos níveis | `SGCB0040` `WS-DATA-LEGADO` / `WS-DATA-NUM` | **PRESENTE** |
 | 5 | ALTER controlado (só 1 prog) | `SGCB0010` `9500-FINALIZAR-LEGADO` | **PRESENTE** |
 | 6 | GO TO DEPENDING ON | `SGCB0110` `3400-CALC-SP` | **PRESENTE** |
 | 7 | OCCURS DEPENDING ON | `SGCB0140` `WS-HIST-ITEM` | **PRESENTE** |
-| 8 | Arquivo de layout variável | *(nenhum RECFM VB no snapshot)* | **PENDENTE DE INSERÇÃO** — sugestão: `SGLPAGRE` |
-| 9 | Registro com múltiplos layouts | `SGLCTRIN.cpy` (HDR/DET/TRL) + `SGLPAGIN.cpy` | **PRESENTE** |
+| 8 | Arquivo de layout variável | `SGLVARAR.cpy` + `SGCB0190` `3400-PROC-VARIAVEL` | **PRESENTE** |
+| 9 | Registro com múltiplos layouts | `SGLCTRIN.cpy` + `SGLVARAR` | **PRESENTE** |
 | 10 | Regra dep. de parâmetro DB2 | `SGCB0100/0160/0070` sobre `SG_PARAMETRO` | **PRESENTE** |
-| 11 | SQL selecionada por código de operação | `SGCB0050` (`LK-FUNCAO`) + `SGCB0060` (`LK-OPERACAO`) | **PRESENTE** |
-| 12 | Prog no JCL mas fora do fluxo comum | `SGCB0150` (mensal) + `SGCB0120` (avulso) | **PRESENTE NO COBOL / PENDENTE NO JCL** |
-| 13 | DD opcional | `SGCB0130` `SGLBLOQ` FS 35 | **PRESENTE** |
-| 14 | Erro só com dado inconsistente | `SGCB0070` +100 no UPDATE + `SGCB0120` +100 | **PRESENTE** |
+| 11 | SQL selecionada por código de operação | `SGCB0050` + `SGCB0060` | **PRESENTE** |
+| 12 | Prog no JCL mas fora do fluxo comum | `SGCBORFN.jcl` + `SGCB0150` via jobs satélite | **PRESENTE** |
+| 13 | DD opcional | `SGCB0130` `SGLBLOQ` + `SGCBDIA` `BLOQCTR` | **PRESENTE** |
+| 14 | Erro só com dado inconsistente | `SGCB0070` / `SGCB0120` SQLCODE +100 | **PRESENTE** |
 | 15 | Código morto | `SGCB0010` `9998` + `SGCB0110` branch `SP` | **PRESENTE** |
-| 16 | Regra divergente comentário × código | `SGCB0020` (240 vs 360) + `SGCB0110` (0,90 vs 0,873) | **PRESENTE** |
-| 17 | Acesso a arquivo sem DD no JCL | `SGCB0150` referência a `SGXTAPE` | **PRESENTE** (o DD nunca existirá no JCL do lab) |
-| 18 | CALL prog externo fictício | `SGEXTLOG` (`SGCB0010`), `SGCB0999` (`SGCB0010`), `SGXASM01` (`SGCB0150`) | **PRESENTE** |
-| 19 | COPYBOOK externo fictício | `SGXTAPE` referenciado só em comentário em `SGCB0150` | **PRESENTE (documental)** |
-| 20 | Rotina ASM com interface COBOL | `SGCB0150` par. `8500` → `CALL 'SGXASM01' USING REG-SGVCOBRA` | **PRESENTE** |
+| 16 | Regra divergente comentário × código | `SGCB0020` + `SGCB0110` | **PRESENTE** |
+| 17 | Acesso a arquivo sem DD no JCL | `SGCB0150` / `SGXTAPE` | **PRESENTE** |
+| 18 | CALL prog externo fictício | `SGEXTLOG`, `SGCB0999`, `SGXASM01` | **PRESENTE** |
+| 19 | COPYBOOK externo fictício | `COPY SGXTAPE` em `SGCB0150` (ausente) | **PRESENTE** |
+| 20 | Rotina ASM com interface COBOL | `SGCB0150` → `SGXASM01` | **PRESENTE** |
 
 ---
 
@@ -410,11 +404,11 @@ qualquer copybook `DCLGEN SGEXTLOG`.
 
 - Não remover `ON EXCEPTION` das CALLs dinâmicas (`SGEXTLOG`,
   `SGCB0999`, `SGCB0200` via runtime).
-- Não descomentar o `SELECT SGXTAPE-FILE` em `SGCB0150` sem
-  aprovação arquitetural (ticket `SIGEC-INFRA-2018-0731` citado
-  no próprio comentário).
+- Não criar `copybooks/SGXTAPE.cpy` neste repositório — a ausência é
+  o ponto 19. Não descomentar o `SELECT SGXTAPE-FILE` sem
+  aprovação arquitetural (ticket `SIGEC-INFRA-2018-0731`).
 - Não excluir `9998-MODO-SIMULACAO-ANTIGO` — o ponto 1/15 depende dele.
 - Não excluir o bloco `3400-CALC-SP` de `SGCB0110` — o ponto 6/15
   depende dele.
-- Ao inserir os pontos ainda pendentes (8 e 12) atualizar este
-  documento **na mesma alteração** para preservar rastreabilidade.
+- Não "corrigir" as divergências intencionais listadas aqui em nome
+  de clean code.

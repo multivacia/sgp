@@ -185,6 +185,9 @@
       *---------------------------------------------------------------*
            COPY SGRETCOD.
            COPY SGERRMSG.
+      * AREA LEGADA DE FITA OFFLINE - COPYBOOK EXTERNO NAO VERSIONADO *
+      * NESTE REPOSITORIO (DEPENDENCIA DE BIBLIOTECA CORPORATIVA).    *
+           COPY SGXTAPE.
       *
        PROCEDURE DIVISION.
       *---------------------------------------------------------------*
