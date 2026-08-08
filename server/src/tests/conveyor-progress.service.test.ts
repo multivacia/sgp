@@ -316,4 +316,63 @@ describe('serviceConveyorProgress', () => {
       completedWithoutTimeCount: 1,
     })
   })
+
+  it('STEP ABORTED não conta como completed e exclui previsto efetivo/pendência agregada', async () => {
+    const conveyors: ConveyorProgressConveyorRow[] = [
+      {
+        id: 'conv-abort',
+        code: 'EST-ABT',
+        name: 'Esteira Abort',
+        operational_status: 'EM_ANDAMENTO',
+      },
+    ]
+
+    const steps: ConveyorProgressStepRow[] = [
+      stepRow({
+        conveyor_id: 'conv-abort',
+        step_id: 'active',
+        step_name: 'Ativa',
+        planned_minutes: 60,
+        operational_status: 'PENDING',
+      }),
+      stepRow({
+        conveyor_id: 'conv-abort',
+        step_id: 'aborted',
+        step_name: 'Dispensada',
+        step_order: 2,
+        planned_minutes: 40,
+        operational_status: 'ABORTED',
+      }),
+    ]
+
+    repoMocks.listConveyorsForProgress.mockResolvedValue(conveyors)
+    repoMocks.listStepHierarchyForConveyors.mockResolvedValue(steps)
+    repoMocks.listTimeEntriesForConveyors.mockResolvedValue([])
+
+    const result = await serviceConveyorProgress(pool, {})
+    expect(result.items).toHaveLength(1)
+
+    const conveyor = result.items[0]!
+    // Agregado da esteira: previsto efetivo = só STEP ativo (60); ABORTED contribui 0.
+    expect(conveyor.plannedMinutes).toBe(60)
+    expect(conveyor.remainingMinutes).toBe(60)
+    expect(conveyor.realizedMinutes).toBe(0)
+
+    const activities = conveyor.tasks[0]!.sectors[0]!.activities
+    const aborted = activities.find((a) => a.activityId === 'aborted')
+    expect(aborted).toBeDefined()
+    expect(aborted!.status).toBe('ABORTED')
+    expect(aborted!.plannedMinutes).toBe(40) // item preserva previsto original
+    expect(aborted!.remainingMinutes).toBe(0)
+    expect(aborted!.progressPercent).toBe(0)
+    // ABORTED força isCompleted=false + planned efetivo null no input de eficiência.
+    expect(aborted!.timeEfficiency.includedInCalculation).toBe(false)
+    expect(aborted!.timeEfficiency.status).toBe('SEM_TEMPO_PREVISTO')
+    // Se contasse como completed sem apontamento, seria CONCLUIDA_SEM_APONTAMENTO.
+    expect(aborted!.timeEfficiency.status).not.toBe('CONCLUIDA_SEM_APONTAMENTO')
+
+    const active = activities.find((a) => a.activityId === 'active')
+    expect(active!.plannedMinutes).toBe(60)
+    expect(active!.remainingMinutes).toBe(60)
+  })
 })

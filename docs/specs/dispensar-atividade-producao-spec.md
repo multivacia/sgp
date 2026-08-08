@@ -39,7 +39,7 @@ Fonte: decisões humanas fechadas em `2026-08-08` + inventário (veredito **SEGU
 |---|---|
 | Avaliação humana anterior | `APROVADA COM AJUSTES OBRIGATÓRIOS` |
 | Esta revisão | Fecha concorrência, contrato HTTP, restauração, 409 de chave e testes concorrentes |
-| Implementação | **BLOQUEADA** até nova aprovação explícita desta revisão |
+| Implementação | **APROVADA PARA IMPLEMENTAÇÃO** (autorização humana explícita `2026-08-08` — implementação local; sem commit/push/PR/deploy) |
 
 ---
 
@@ -366,8 +366,9 @@ Nenhuma bloqueante para fechar esta revisão.
 
 ## Próximo passo
 
-1. **Aprovação humana explícita desta revisão** da spec.
-2. Só então `sgp-implementer` com escopo fechado (deploy atômico app + migration).
+1. ~~Aprovação humana explícita desta revisão~~ — **concedida** (`SGP_AUTORIZACAO_IMPLEMENTAR_DISPENSAR_ATIVIDADE`).
+2. `sgp-implementer` com escopo fechado (migration só em banco local/teste isolado).
 3. Relatório do implementador **deve** incluir branch, SHA-base e `git status --short` reais.
+4. `sgp-test-reviewer` independente; depois **parar** (sem commit/push/PR).
 
-**Implementação agora: bloqueada.**
+**Implementação local: autorizada. Commit/push/PR/deploy: ainda bloqueados.**

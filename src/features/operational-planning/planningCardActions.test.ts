@@ -14,6 +14,7 @@ describe('planningCardActions', () => {
     expect(canPointTimeOnPlanningStep('REOPENED')).toBe(true)
     expect(canPointTimeOnPlanningStep('BLOCKED')).toBe(true)
     expect(canPointTimeOnPlanningStep('COMPLETED')).toBe(false)
+    expect(canPointTimeOnPlanningStep('ABORTED')).toBe(false)
     expect(canPointTimeOnPlanningStep(null)).toBe(true)
   })
 

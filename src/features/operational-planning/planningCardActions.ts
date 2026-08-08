@@ -28,7 +28,7 @@ function normalizeStatus(status: PlanningCardStepStatus): string | null {
 
 export function canPointTimeOnPlanningStep(status: PlanningCardStepStatus): boolean {
   const key = normalizeStatus(status)
-  return key !== 'COMPLETED'
+  return key !== 'COMPLETED' && key !== 'ABORTED'
 }
 
 export function canCompletePlanningStep(

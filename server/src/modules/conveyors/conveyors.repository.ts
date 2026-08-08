@@ -87,6 +87,11 @@ export type ConveyorNodeFlatRow = {
   operational_completed_at: string | null
   operational_completed_by: string | null
   operational_completed_by_email: string | null
+  aborted_at: string | null
+  aborted_by: string | null
+  aborted_by_email: string | null
+  abort_reason_code: string | null
+  abort_reason_text: string | null
 }
 
 /** Atualização atómica de status + completed_at (modo calculado no serviço). */
@@ -200,6 +205,11 @@ export async function listConveyorNodesByConveyorId(
     operational_completed_at: Date | null
     operational_completed_by: string | null
     operational_completed_by_email: string | null
+    aborted_at: Date | null
+    aborted_by: string | null
+    aborted_by_email: string | null
+    abort_reason_code: string | null
+    abort_reason_text: string | null
   }>(
     `
     SELECT
@@ -214,9 +224,15 @@ export async function listConveyorNodesByConveyorId(
       cn.operational_status,
       cn.operational_completed_at,
       cn.operational_completed_by::text,
-      au.email AS operational_completed_by_email
+      au.email AS operational_completed_by_email,
+      cn.aborted_at,
+      cn.aborted_by::text,
+      au_abort.email AS aborted_by_email,
+      cn.abort_reason_code,
+      cn.abort_reason_text
     FROM conveyor_nodes cn
     LEFT JOIN app_users au ON au.id = cn.operational_completed_by
+    LEFT JOIN app_users au_abort ON au_abort.id = cn.aborted_by
     WHERE cn.conveyor_id = $1::uuid AND cn.deleted_at IS NULL
     `,
     [conveyorId],
@@ -236,6 +252,11 @@ export async function listConveyorNodesByConveyorId(
       : null,
     operational_completed_by: row.operational_completed_by,
     operational_completed_by_email: row.operational_completed_by_email,
+    aborted_at: row.aborted_at ? row.aborted_at.toISOString() : null,
+    aborted_by: row.aborted_by,
+    aborted_by_email: row.aborted_by_email,
+    abort_reason_code: row.abort_reason_code,
+    abort_reason_text: row.abort_reason_text,
   }))
 }
 
@@ -331,6 +352,72 @@ export async function updateConveyorNodeStepOperationalFields(
       fields.operational_completed_at,
       fields.operational_completed_by,
     ],
+  )
+  return Boolean(r.rows[0])
+}
+
+/** Dispensa: ABORTED + auditoria própria (não toca operational_completed_*). */
+export async function updateConveyorNodeStepAborted(
+  pool: pg.Pool | pg.PoolClient,
+  conveyorId: string,
+  nodeId: string,
+  fields: {
+    aborted_at: string
+    aborted_by: string
+    abort_reason_code: string
+    abort_reason_text: string | null
+    /** Origens permitidas — update condicional sob lock. */
+    expectedStatuses: readonly ConveyorNodeStepOperationalStatusDb[]
+  },
+): Promise<boolean> {
+  const r = await pool.query<{ id: string }>(
+    `UPDATE conveyor_nodes SET
+       operational_status = 'ABORTED',
+       aborted_at = $3::timestamptz,
+       aborted_by = $4::uuid,
+       abort_reason_code = $5::varchar,
+       abort_reason_text = $6::text,
+       updated_at = now()
+     WHERE id = $2::uuid
+       AND conveyor_id = $1::uuid
+       AND deleted_at IS NULL
+       AND node_type = 'STEP'
+       AND operational_status = ANY($7::varchar[])
+     RETURNING id::text`,
+    [
+      conveyorId,
+      nodeId,
+      fields.aborted_at,
+      fields.aborted_by,
+      fields.abort_reason_code,
+      fields.abort_reason_text,
+      [...fields.expectedStatuses],
+    ],
+  )
+  return Boolean(r.rows[0])
+}
+
+/** Restaura dispensa: ABORTED → REOPENED e limpa auditoria de aborto. */
+export async function updateConveyorNodeStepRestoreAborted(
+  pool: pg.Pool | pg.PoolClient,
+  conveyorId: string,
+  nodeId: string,
+): Promise<boolean> {
+  const r = await pool.query<{ id: string }>(
+    `UPDATE conveyor_nodes SET
+       operational_status = 'REOPENED',
+       aborted_at = NULL,
+       aborted_by = NULL,
+       abort_reason_code = NULL,
+       abort_reason_text = NULL,
+       updated_at = now()
+     WHERE id = $2::uuid
+       AND conveyor_id = $1::uuid
+       AND deleted_at IS NULL
+       AND node_type = 'STEP'
+       AND operational_status = 'ABORTED'
+     RETURNING id::text`,
+    [conveyorId, nodeId],
   )
   return Boolean(r.rows[0])
 }

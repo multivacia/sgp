@@ -61,8 +61,9 @@ export function groupWorkQueueItem(
   row: Pick<MyWorkQueueRawRow, 'planned_date' | 'activity_operational_status'>,
   date: string,
 ): MyWorkQueueItemApi['group'] {
-  if (row.planned_date < date) return 'overdue'
   if (row.activity_operational_status === 'COMPLETED') return 'completed'
+  if (row.activity_operational_status === 'ABORTED') return 'completed'
+  if (row.planned_date < date) return 'overdue'
   return 'today'
 }
 
@@ -128,6 +129,8 @@ export async function serviceGetWorkQueueForCollaborator(
 
   const mappedItems = raw.map((row): MyWorkQueueItemApi => {
     const isActivityCompleted = row.activity_operational_status === 'COMPLETED'
+    const isActivityAborted = row.activity_operational_status === 'ABORTED'
+    const closedForPointing = isActivityCompleted || isActivityAborted
     const seq = analyzeConveyorActivitySequence(
       nodesByConveyor.get(row.conveyor_id) ?? [],
       row.activity_node_id,
@@ -139,11 +142,11 @@ export async function serviceGetWorkQueueForCollaborator(
     )
     const sequenceForCollaborator = mapWorkQueueSequenceForCollaborator({
       seq,
-      isActivityCompleted,
+      isActivityCompleted: closedForPointing,
       conveyorOperationalStatus: row.conveyor_operational_status,
       planItemStatus: row.status,
     })
-    const isOutOfSequence = !isActivityCompleted && sequenceForCollaborator.isOutOfSequence
+    const isOutOfSequence = !closedForPointing && sequenceForCollaborator.isOutOfSequence
     return {
       workPlanId: row.work_plan_id,
       workPlanItemId: row.work_plan_item_id,
@@ -164,47 +167,49 @@ export async function serviceGetWorkQueueForCollaborator(
       activityTitle: row.activity_title,
       activityOperationalStatus: row.activity_operational_status,
       isActivityCompleted,
-      isOverdue: row.planned_date < date,
+      isOverdue: !closedForPointing && row.planned_date < date,
       isOutOfSequence,
       isNextRecommended:
-        !isActivityCompleted &&
+        !closedForPointing &&
         resolveIsNextRecommended({
-          isActivityCompleted,
+          isActivityCompleted: closedForPointing,
           hasPreviousPendingStep: sequenceForCollaborator.hasPreviousPendingStep,
           canPointTime: sequenceForCollaborator.canPointTime,
         }),
       hasPreviousPendingStep:
-        !isActivityCompleted && sequenceForCollaborator.hasPreviousPendingStep,
-      sequenceWarningType: !isActivityCompleted
+        !closedForPointing && sequenceForCollaborator.hasPreviousPendingStep,
+      sequenceWarningType: !closedForPointing
         ? sequenceForCollaborator.sequenceWarningType
         : undefined,
-      sequenceWarningLabel: !isActivityCompleted
+      sequenceWarningLabel: !closedForPointing
         ? sequenceForCollaborator.sequenceWarningLabel
         : undefined,
       requiresOutOfSequenceJustification:
-        !isActivityCompleted && sequenceForCollaborator.requiresOutOfSequenceJustification,
-      canPointTime: sequenceForCollaborator.canPointTime,
-      blockingReason: sequenceForCollaborator.blockingReason,
-      previousOpenCount: !isActivityCompleted ? sequenceForCollaborator.previousOpenCount : 0,
-      previousOpenActivities: !isActivityCompleted
+        !closedForPointing && sequenceForCollaborator.requiresOutOfSequenceJustification,
+      canPointTime: !isActivityAborted && sequenceForCollaborator.canPointTime,
+      blockingReason: isActivityAborted
+        ? 'ACTIVITY_ABORTED'
+        : sequenceForCollaborator.blockingReason,
+      previousOpenCount: !closedForPointing ? sequenceForCollaborator.previousOpenCount : 0,
+      previousOpenActivities: !closedForPointing
         ? sequenceForCollaborator.previousOpenActivities
         : [],
-      allPreviousOpenActivities: !isActivityCompleted
+      allPreviousOpenActivities: !closedForPointing
         ? sequenceForCollaborator.allPreviousOpenActivities
         : [],
-      awaitingPreviousActivities: !isActivityCompleted
+      awaitingPreviousActivities: !closedForPointing
         ? sequenceForCollaborator.awaitingPreviousActivities
         : [],
       hasPreviousOpenActivitiesFromOtherCollaborators:
-        !isActivityCompleted &&
+        !closedForPointing &&
         sequenceForCollaborator.hasPreviousOpenActivitiesFromOtherCollaborators,
-      previousOpenActivitiesFromOtherCollaborators: !isActivityCompleted
+      previousOpenActivitiesFromOtherCollaborators: !closedForPointing
         ? sequenceForCollaborator.awaitingPreviousActivities.map((p) => ({
             ...p,
             collaboratorNames: [] as string[],
           }))
         : [],
-      previousOpenActivitiesWarningMessage: !isActivityCompleted
+      previousOpenActivitiesWarningMessage: !closedForPointing
         ? sequenceForCollaborator.previousOpenActivitiesWarningMessage
         : null,
       structuralSequenceIndex: sequenceForCollaborator.structuralSequenceIndex,

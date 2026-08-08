@@ -211,7 +211,7 @@ export async function listMyWorkQueueRows(
         OR (
           $4::boolean = TRUE
           AND i.planned_date < $3::date
-          AND step.operational_status IS DISTINCT FROM 'COMPLETED'
+          AND (step.operational_status IS DISTINCT FROM 'COMPLETED' AND step.operational_status IS DISTINCT FROM 'ABORTED')
         )
       )
     ORDER BY

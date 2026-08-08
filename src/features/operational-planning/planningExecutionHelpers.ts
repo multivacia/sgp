@@ -50,6 +50,7 @@ const OPERATIONAL_STATUS_UI_LABELS: Record<string, string> = {
   COMPLETED: 'Concluída',
   REOPENED: 'Reaberta',
   BLOCKED: 'Bloqueada',
+  ABORTED: 'Dispensada',
 }
 
 function normalizePlannedMinutes(raw: number | null | undefined): number {

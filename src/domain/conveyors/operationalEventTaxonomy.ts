@@ -21,6 +21,10 @@ export function getOperationalEventDisplayLabel(eventType: string): string {
       return 'Atividade concluída'
     case 'CONVEYOR_STEP_REOPENED':
       return 'Atividade reaberta'
+    case 'CONVEYOR_STEP_ABORTED':
+      return 'Atividade dispensada'
+    case 'CONVEYOR_STEP_RESTORED':
+      return 'Dispensa restaurada'
     case 'CONVEYOR_STEP_BLOCKED':
       return 'Atividade bloqueada'
     case 'CONVEYOR_STEP_UNBLOCKED':
@@ -48,7 +52,10 @@ export function getOperationalEventCategory(eventType: string): OperationalEvent
     case 'CONVEYOR_STEP_COMPLETED':
       return 'completion'
     case 'CONVEYOR_STEP_REOPENED':
+    case 'CONVEYOR_STEP_RESTORED':
       return 'reopen'
+    case 'CONVEYOR_STEP_ABORTED':
+      return 'other'
     case 'CONVEYOR_STEP_BLOCKED':
     case 'CONVEYOR_STEP_UNBLOCKED':
       return 'block'
@@ -120,6 +127,9 @@ export function getOperationalEventSeverity(eventType: string): OperationalEvent
     case 'CONVEYOR_STEP_COMPLETED':
       return 'success'
     case 'CONVEYOR_STEP_REOPENED':
+    case 'CONVEYOR_STEP_RESTORED':
+      return 'warning'
+    case 'CONVEYOR_STEP_ABORTED':
       return 'warning'
     case 'CONVEYOR_STEP_BLOCKED':
       return 'critical'

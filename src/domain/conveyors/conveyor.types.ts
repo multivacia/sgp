@@ -162,6 +162,7 @@ export type ConveyorNodeStepOperationalStatus =
   | 'BLOCKED'
   | 'COMPLETED'
   | 'REOPENED'
+  | 'ABORTED'
 
 export type ConveyorStructureStep = {
   id: string
@@ -176,6 +177,10 @@ export type ConveyorStructureStep = {
   completedAt: string | null
   completedByName: string | null
   completionEventId: string | null
+  abortedAt?: string | null
+  abortedByName?: string | null
+  abortReasonCode?: string | null
+  abortReasonText?: string | null
 }
 
 export type ConveyorStructureArea = {

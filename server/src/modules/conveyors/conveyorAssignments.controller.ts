@@ -1,11 +1,15 @@
 import type { Request, Response } from 'express'
 import type pg from 'pg'
+import { ZodError } from 'zod'
 import { ok } from '../../shared/http/ok.js'
+import { AppError } from '../../shared/errors/AppError.js'
+import { ErrorCodes } from '../../shared/errors/errorCodes.js'
 import {
   assigneeScopedParamsSchema,
   conveyorStepParamsSchema,
   patchConveyorStepCompletionBodySchema,
   postAssigneeBodySchema,
+  postConveyorStepAbortBodySchema,
   postTimeEntryBodySchema,
   postTimeEntryOnBehalfBodySchema,
   timeEntryScopedParamsSchema,
@@ -23,6 +27,11 @@ import { serviceAnalyzeConveyorActivitySequence } from './conveyorActivitySequen
 import { findConveyorById } from './conveyors.repository.js'
 import { mapWorkQueueSequenceForCollaborator } from '../my-work-queue/work-queue-sequence-for-collaborator.js'
 import { servicePatchConveyorStepCompletion } from './conveyor-step-operational.service.js'
+import {
+  parseIdempotencyKeyHeader,
+  serviceAbortConveyorStep,
+  serviceRestoreAbortedConveyorStep,
+} from './conveyor-step-abort.service.js'
 import { findCollaboratorIdByAppUserId } from '../auth/auth.repository.js'
 
 export async function postConveyorStepAssignee(
@@ -225,6 +234,65 @@ export async function patchConveyorStepCompletion(
     justificationComplement: body.justificationComplement?.trim() || undefined,
   })
   res.status(200).json(ok(out.detail, { stepCompletionIdempotent: out.idempotent }))
+}
+
+export async function postConveyorStepAbort(
+  req: Request,
+  res: Response,
+): Promise<void> {
+  const params = conveyorStepParamsSchema.parse(req.params)
+  let body: ReturnType<typeof postConveyorStepAbortBodySchema.parse>
+  try {
+    body = postConveyorStepAbortBodySchema.parse(req.body ?? {})
+  } catch (e) {
+    if (e instanceof ZodError) {
+      throw new AppError(
+        e.issues[0]?.message ?? 'Corpo inválido para dispensa de atividade.',
+        400,
+        ErrorCodes.VALIDATION_ERROR,
+      )
+    }
+    throw e
+  }
+  const idempotencyKey = parseIdempotencyKeyHeader(
+    typeof req.headers['idempotency-key'] === 'string'
+      ? req.headers['idempotency-key']
+      : Array.isArray(req.headers['idempotency-key'])
+        ? req.headers['idempotency-key'][0]
+        : null,
+  )
+  const pool = req.app.locals.pool as pg.Pool
+  const out = await serviceAbortConveyorStep(pool, {
+    conveyorId: params.conveyorId,
+    stepNodeId: params.stepNodeId,
+    actorAppUserId: req.authUser!.id,
+    idempotencyKey,
+    reasonCode: body.reasonCode,
+    reasonText: body.reasonText,
+  })
+  res.status(200).json(ok(out.detail, { stepAbortIdempotent: out.idempotent }))
+}
+
+export async function postConveyorStepRestoreAborted(
+  req: Request,
+  res: Response,
+): Promise<void> {
+  const params = conveyorStepParamsSchema.parse(req.params)
+  const idempotencyKey = parseIdempotencyKeyHeader(
+    typeof req.headers['idempotency-key'] === 'string'
+      ? req.headers['idempotency-key']
+      : Array.isArray(req.headers['idempotency-key'])
+        ? req.headers['idempotency-key'][0]
+        : null,
+  )
+  const pool = req.app.locals.pool as pg.Pool
+  const out = await serviceRestoreAbortedConveyorStep(pool, {
+    conveyorId: params.conveyorId,
+    stepNodeId: params.stepNodeId,
+    actorAppUserId: req.authUser!.id,
+    idempotencyKey,
+  })
+  res.status(200).json(ok(out.detail, { stepRestoreAbortedIdempotent: out.idempotent }))
 }
 
 export async function deleteConveyorStepTimeEntry(

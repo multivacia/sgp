@@ -15,7 +15,7 @@ function step(
   id: string,
   name: string,
   orderIndex: number,
-  status: 'PENDING' | 'COMPLETED' | 'IN_PROGRESS' = 'PENDING',
+  status: 'PENDING' | 'COMPLETED' | 'IN_PROGRESS' | 'ABORTED' = 'PENDING',
   assignees?: ConveyorDetail['structure']['options'][0]['areas'][0]['steps'][0]['assignees'],
 ) {
   return {
@@ -241,6 +241,42 @@ describe('filterConveyorActivityTicketSources', () => {
     const filtered = filterConveyorActivityTicketSources(sources, false)
     expect(filtered).toHaveLength(1)
     expect(filtered[0]?.activityNodeId).toBe('step-open')
+  })
+
+  it('STEP ABORTED é excluído do lote padrão (e com includeCompleted)', () => {
+    const detail = buildDetail({
+      structure: {
+        options: [
+          {
+            id: 'opt-1',
+            name: 'Bancos dianteiros',
+            orderIndex: 0,
+            areas: [
+              {
+                id: 'area-1',
+                name: 'Costura',
+                orderIndex: 0,
+                steps: [
+                  step('step-open', 'Costurar lateral', 0, 'IN_PROGRESS'),
+                  step('step-aborted', 'Atividade dispensada', 1, 'ABORTED'),
+                ],
+              },
+            ],
+          },
+        ],
+      },
+      totalSteps: 2,
+    })
+    const sources = collectConveyorActivityTicketSources(detail, null)
+    expect(sources).toHaveLength(2)
+
+    const defaultBatch = filterConveyorActivityTicketSources(sources, false)
+    expect(defaultBatch).toHaveLength(1)
+    expect(defaultBatch[0]?.activityNodeId).toBe('step-open')
+
+    const withCompleted = filterConveyorActivityTicketSources(sources, true)
+    expect(withCompleted).toHaveLength(1)
+    expect(withCompleted[0]?.activityNodeId).toBe('step-open')
   })
 })
 

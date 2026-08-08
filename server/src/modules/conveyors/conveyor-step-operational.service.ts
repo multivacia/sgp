@@ -7,7 +7,7 @@ import {
   listConveyorNodesByConveyorId,
   updateConveyorNodeStepOperationalFields,
 } from './conveyors.repository.js'
-import { canTransitionStepStatus, type ConveyorNodeStepOperationalStatusDb } from './stepOperationalStatus.js'
+import { canTransitionStepStatus, isStepAbortedStatus, type ConveyorNodeStepOperationalStatusDb } from './stepOperationalStatus.js'
 import type { ConveyorDetailApi } from './conveyors.dto.js'
 import { loadConveyorStructureWithAssignees, mapDetailRowToApi } from './conveyors.service.js'
 import {
@@ -24,6 +24,7 @@ import {
   resolveTimeEntryJustification,
   TIME_ENTRY_JUSTIFICATION_REQUIRED_MESSAGE,
 } from '../../shared/timeEntryJustificationResolver.js'
+import { lockConveyorAndStepForUpdate } from './lockConveyorAndStepForUpdate.js'
 
 const NOTE_MAX = 2000
 
@@ -309,6 +310,21 @@ async function serviceCompleteStep(
   const client = await pool.connect()
   try {
     await client.query('BEGIN')
+    const locked = await lockConveyorAndStepForUpdate(client, input.conveyorId, input.stepNodeId)
+    const lockedStatus: ConveyorNodeStepOperationalStatusDb =
+      locked.step.operational_status ?? 'PENDING'
+    if (lockedStatus === 'COMPLETED') {
+      await client.query('COMMIT')
+      const structure = await loadConveyorStructureWithAssignees(pool, input.conveyorId, nodes)
+      return { detail: mapDetailRowToApi(conveyor, structure), idempotent: true }
+    }
+    if (isStepAbortedStatus(lockedStatus) || !canTransitionStepStatus(lockedStatus, 'COMPLETED')) {
+      throw new AppError(
+        `Transição de estado da etapa não permitida (${lockedStatus} → COMPLETED).`,
+        422,
+        ErrorCodes.INVALID_STATUS_TRANSITION,
+      )
+    }
     await completeConveyorStepOnClient(client, {
       conveyorId: input.conveyorId,
       stepNodeId: input.stepNodeId,
@@ -317,7 +333,7 @@ async function serviceCompleteStep(
       outOfSequenceJustification: outOfSeqJustificationStored,
       trigger: 'COMPLETE',
       sequence: seq,
-      currentStatus: current,
+      currentStatus: lockedStatus,
     })
     await client.query('COMMIT')
   } catch (e) {
@@ -379,6 +395,23 @@ async function serviceReopenStep(
   let eventCreated = true
   try {
     await client.query('BEGIN')
+    const locked = await lockConveyorAndStepForUpdate(client, input.conveyorId, input.stepNodeId)
+    const lockedStatus: ConveyorNodeStepOperationalStatusDb =
+      locked.step.operational_status ?? 'PENDING'
+    if (lockedStatus !== 'COMPLETED') {
+      throw new AppError(
+        'A etapa só pode ser reaberta quando estiver concluída.',
+        422,
+        ErrorCodes.VALIDATION_ERROR,
+      )
+    }
+    if (!canTransitionStepStatus(lockedStatus, 'REOPENED')) {
+      throw new AppError(
+        `Transição de estado da etapa não permitida (${lockedStatus} → REOPENED).`,
+        422,
+        ErrorCodes.INVALID_STATUS_TRANSITION,
+      )
+    }
     const updated = await updateConveyorNodeStepOperationalFields(client, input.conveyorId, input.stepNodeId, {
       operational_status: 'REOPENED',
       operational_completed_at: null,
@@ -391,7 +424,7 @@ async function serviceReopenStep(
       conveyorId: input.conveyorId,
       nodeId: input.stepNodeId,
       eventType: 'CONVEYOR_STEP_REOPENED',
-      previousValue: current,
+      previousValue: lockedStatus,
       newValue: 'REOPENED',
       reason: 'EXPLICITLY_REOPENED',
       source: 'USER_ACTION',
@@ -400,10 +433,10 @@ async function serviceReopenStep(
       idempotencyKey,
       metadataJson: {
         note: noteSafe,
-        previousOperationalStatus: current,
+        previousOperationalStatus: lockedStatus,
         newOperationalStatus: 'REOPENED',
-        previousCompletedAt: previousCompletedAtIso,
-        previousCompletedBy: stepRow.operational_completed_by ?? null,
+        previousCompletedAt: locked.step.operational_completed_at ?? previousCompletedAtIso,
+        previousCompletedBy: locked.step.operational_completed_by ?? stepRow.operational_completed_by ?? null,
         plannedMinutes: planned,
         realizedMinutes: realized,
         pendingMinutesAfterReopen,

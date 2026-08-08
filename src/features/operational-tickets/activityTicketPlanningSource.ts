@@ -71,6 +71,7 @@ export function filterPlanningActivityTicketSources(
 ): ActivityTicketPlanningSource[] {
   return sources.filter((source) => {
     if (isPlanningActivityTicketSourceCancelled(source)) return false
+    if (source.activityOperationalStatus?.trim() === 'ABORTED') return false
     if (!includeCompleted && isConveyorActivityTicketSourceCompleted(source)) return false
     return true
   })

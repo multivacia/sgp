@@ -1,4 +1,5 @@
 import type { ConveyorNodeStepOperationalStatusDb } from './stepOperationalStatus.js'
+import { isStepClosedForSequence } from './stepOperationalStatus.js'
 
 /**
  * Nós da esteira para ordenação Tarefa (OPTION) > Setor (AREA) > Atividade (STEP).
@@ -155,7 +156,7 @@ export function analyzeConveyorActivitySequence(
 
   const before = linear.slice(0, idx)
   const openBefore = before.filter(
-    (e) => (e.step.operational_status ?? 'PENDING') !== 'COMPLETED',
+    (e) => !isStepClosedForSequence(e.step.operational_status ?? 'PENDING'),
   )
 
   const allPreviousOpenActivities = openBefore.map(toPreviousOpenSummary)

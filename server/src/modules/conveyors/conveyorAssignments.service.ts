@@ -44,7 +44,9 @@ import { serviceAnalyzeConveyorActivitySequence } from './conveyorActivitySequen
 import type { ConveyorActivitySequenceAnalysis } from './conveyorActivitySequence.service.js'
 import { completeConveyorStepOnClient } from './conveyor-step-operational.service.js'
 import type { ConveyorNodeStepOperationalStatusDb } from './stepOperationalStatus.js'
+import { isStepAbortedStatus } from './stepOperationalStatus.js'
 import { serviceCreateConveyorOperationalEvent } from './operational-events/conveyor-operational-events.service.js'
+import { lockConveyorAndStepForUpdate } from './lockConveyorAndStepForUpdate.js'
 import {
   pickStandardJustificationSnapshot,
   resolveTimeEntryJustification,
@@ -525,6 +527,13 @@ export async function serviceCreateConveyorTimeEntry(
       ErrorCodes.VALIDATION_ERROR,
     )
   }
+  if (isStepAbortedStatus(op as ConveyorNodeStepOperationalStatusDb)) {
+    throw new AppError(
+      'Esta atividade foi dispensada; não é possível novo apontamento.',
+      409,
+      ErrorCodes.CONFLICT,
+    )
+  }
 
   const entryOrigin = input.entryOrigin ?? 'ASSIGNED'
   let exceptionJustification: string | null = null
@@ -632,11 +641,7 @@ export async function serviceCreateConveyorTimeEntry(
     ...mergedStandardFields,
   }
 
-  const shouldAutoStart =
-    conveyor.operational_status === 'A_INICIAR'
-
   const markAsDone = input.markAsDone === true
-  const currentStatus = op as ConveyorNodeStepOperationalStatusDb
   const seq =
     input.sequence ??
     (await serviceAnalyzeConveyorActivitySequence(
@@ -649,8 +654,26 @@ export async function serviceCreateConveyorTimeEntry(
   const client = await pool.connect()
   try {
     await client.query('BEGIN')
+    const locked = await lockConveyorAndStepForUpdate(client, input.conveyorId, input.conveyorNodeId)
+    const lockedStatus: ConveyorNodeStepOperationalStatusDb =
+      locked.step.operational_status ?? 'PENDING'
+    if (lockedStatus === 'COMPLETED') {
+      throw new AppError(
+        'Esta atividade já está concluída operacionalmente; não é possível novo apontamento.',
+        422,
+        ErrorCodes.VALIDATION_ERROR,
+      )
+    }
+    if (isStepAbortedStatus(lockedStatus)) {
+      throw new AppError(
+        'Esta atividade foi dispensada; não é possível novo apontamento.',
+        409,
+        ErrorCodes.CONFLICT,
+      )
+    }
+    const shouldAutoStartLocked = locked.conveyor.operational_status === 'A_INICIAR'
     await insertConveyorTimeEntry(client, row)
-    if (shouldAutoStart) {
+    if (shouldAutoStartLocked) {
       await updateConveyorOperationalStatus(
         client,
         input.conveyorId,
@@ -689,7 +712,7 @@ export async function serviceCreateConveyorTimeEntry(
         outOfSequenceJustification: oosJustDb,
         trigger: 'COMPLETE',
         sequence: seq,
-        currentStatus,
+        currentStatus: lockedStatus,
       })
     }
 
@@ -854,6 +877,23 @@ export async function serviceCreateConveyorTimeEntryOnBehalf(
   const client = await pool.connect()
   try {
     await client.query('BEGIN')
+    const locked = await lockConveyorAndStepForUpdate(client, input.conveyorId, input.conveyorNodeId)
+    const lockedStatus: ConveyorNodeStepOperationalStatusDb =
+      locked.step.operational_status ?? 'PENDING'
+    if (lockedStatus === 'COMPLETED') {
+      throw new AppError(
+        'Esta atividade já está concluída operacionalmente; não é possível novo apontamento.',
+        422,
+        ErrorCodes.VALIDATION_ERROR,
+      )
+    }
+    if (isStepAbortedStatus(lockedStatus)) {
+      throw new AppError(
+        'Esta atividade foi dispensada; não é possível novo apontamento.',
+        409,
+        ErrorCodes.CONFLICT,
+      )
+    }
     try {
       await insertConveyorTimeEntry(client, row)
       if (seq.isOutOfSequence) {

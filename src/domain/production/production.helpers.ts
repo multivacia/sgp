@@ -136,6 +136,9 @@ export function resolveProductionOperationalStatusDisplay(
   if (status === 'COMPLETED') {
     return { label: 'Concluída', colorClass: 'text-emerald-400' }
   }
+  if (status === 'ABORTED') {
+    return { label: 'Dispensada', colorClass: 'text-slate-400' }
+  }
   return { label: 'A iniciar', colorClass: 'text-slate-400' }
 }
 
