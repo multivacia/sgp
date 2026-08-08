@@ -11,6 +11,7 @@ import { resolveSequenceListBadge } from '../../domain/production/production.hel
 import { getProductionWorkQueue } from '../../services/production/productionApiService'
 import { ProductionCollaboratorAvatar } from '../production/ProductionCollaboratorAvatar'
 import { KioskActivityCard } from './KioskActivityCard'
+import { KioskOtherEntriesSection } from './KioskOtherEntriesSection'
 
 type Props = {
   collaborator: ProductionCollaboratorSummary
@@ -310,6 +311,7 @@ export function KioskActivityCards({ collaborator, initialItems, onExit }: Props
           </div>
         </div>
       )}
+      <KioskOtherEntriesSection collaborator={collaborator} />
     </div>
   )
 }

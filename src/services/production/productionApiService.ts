@@ -7,8 +7,15 @@ import type {
   ProductionSession,
   ProductionTimeEntryPayload,
   ProductionTimeEntryResult,
+  ProductionUnassignedTimeEntryPayload,
   ProductionWorkQueueResponse,
 } from '../../domain/production/production.types'
+import type { TimeEntryCandidateItem } from '../../domain/my-activities/my-activities.types'
+import type {
+  CreateExtraTimeEntryInput,
+  ExtraTimeEntryDescriptionOption,
+  ExtraTimeEntryItem,
+} from '../../domain/my-activities/extraTimeEntries.types'
 
 const BASE = '/api/v1/production'
 
@@ -309,6 +316,53 @@ export async function createProductionTimeEntry(
     }
     throw new ApiError(PRODUCTION_TIME_ENTRY_ERROR_MESSAGE, 503, { cause: e })
   }
+}
+
+export async function listProductionExtraTimeEntryDescriptions(): Promise<
+  ExtraTimeEntryDescriptionOption[]
+> {
+  const data = await productionRequestJson<ExtraTimeEntryDescriptionOption[]>(
+    'GET',
+    `${BASE}/me/extra-time-entry-descriptions`,
+  )
+  return Array.isArray(data) ? data : []
+}
+
+export async function createProductionExtraTimeEntry(
+  input: CreateExtraTimeEntryInput,
+): Promise<ExtraTimeEntryItem> {
+  return productionRequestJson<ExtraTimeEntryItem>(
+    'POST',
+    `${BASE}/me/extra-time-entries`,
+    { body: input },
+  )
+}
+
+export async function listProductionTimeEntryCandidates(options: {
+  q: string
+  limit?: number
+  includeUnassigned?: boolean
+}): Promise<TimeEntryCandidateItem[]> {
+  const params = new URLSearchParams()
+  if (options.q.trim()) params.set('q', options.q.trim())
+  if (options.limit != null) params.set('limit', String(options.limit))
+  if (options.includeUnassigned) params.set('includeUnassigned', 'true')
+  const query = params.toString()
+  const path = query
+    ? `${BASE}/me/time-entry-candidates?${query}`
+    : `${BASE}/me/time-entry-candidates`
+  const data = await productionRequestJson<TimeEntryCandidateItem[]>('GET', path)
+  return Array.isArray(data) ? data : []
+}
+
+export async function createProductionUnassignedTimeEntry(
+  input: ProductionUnassignedTimeEntryPayload,
+): Promise<ProductionTimeEntryResult> {
+  return productionRequestJson<ProductionTimeEntryResult>(
+    'POST',
+    `${BASE}/time-entries/unassigned-exception`,
+    { body: input },
+  )
 }
 
 export async function getProductionWorkQueue(

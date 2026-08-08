@@ -32,6 +32,8 @@ export type JustificationSelectProps = {
   preferredLabelHint?: string | null
   /** Quando true, exibe indicador de obrigatoriedade (exceção/OOS). */
   required?: boolean
+  /** Texto da opção vazia; preserva o padrão global quando omitido. */
+  placeholder?: string
   /** Estado do catálogo para validação externa. */
   onCatalogStateChange?: (state: {
     useFallback: boolean
@@ -55,6 +57,7 @@ export function JustificationSelect({
   preferredCategory = null,
   preferredLabelHint = null,
   required = false,
+  placeholder = JUSTIFICATION_SELECT_MESSAGES.placeholder,
   onCatalogStateChange,
 }: JustificationSelectProps) {
   const [options, setOptions] = useState<TimeEntryJustificationOption[]>([])
@@ -183,7 +186,7 @@ export function JustificationSelect({
           }}
           className="sgp-input-app mt-1.5 w-full rounded-lg border border-white/10 bg-sgp-void/80 px-3 py-2.5 text-sm text-slate-200"
         >
-          <option value="">{JUSTIFICATION_SELECT_MESSAGES.placeholder}</option>
+          <option value="">{placeholder}</option>
           {options.map((o) => (
             <option key={o.id} value={o.id} title={o.description ?? undefined}>
               {o.label}

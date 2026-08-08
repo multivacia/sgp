@@ -37,3 +37,28 @@ export const productionTimeEntryBodySchema = productionTimeEntryBodyBaseSchema.s
 )
 
 export type ProductionTimeEntryBody = z.infer<typeof productionTimeEntryBodySchema>
+
+export const productionUnassignedTimeEntryBodySchema = z.object({
+  conveyorId: z.string().uuid(),
+  stepNodeId: z.string().uuid(),
+  minutes: z.number().int().min(1),
+  note: z.union([z.string().max(2000).trim(), z.null()]).optional(),
+  exceptionJustificationId: z.string().uuid().optional(),
+  exceptionJustificationComplement: z
+    .union([z.string().max(2000).trim(), z.null()])
+    .optional(),
+  exceptionJustification: z
+    .union([z.string().max(4000).trim(), z.null()])
+    .optional(),
+  outOfSequenceJustificationId: z.string().uuid().optional(),
+  outOfSequenceJustificationComplement: z
+    .union([z.string().max(2000).trim(), z.null()])
+    .optional(),
+  outOfSequenceJustification: z
+    .union([z.string().max(4000).trim(), z.null()])
+    .optional(),
+})
+
+export type ProductionUnassignedTimeEntryBody = z.infer<
+  typeof productionUnassignedTimeEntryBodySchema
+>

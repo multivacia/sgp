@@ -108,6 +108,19 @@ export type ProductionTimeEntryResult = {
   entryOrigin: string
 }
 
+export type ProductionUnassignedTimeEntryPayload = {
+  conveyorId: string
+  stepNodeId: string
+  minutes: number
+  note?: string | null
+  exceptionJustificationId?: string
+  exceptionJustificationComplement?: string
+  exceptionJustification?: string | null
+  outOfSequenceJustificationId?: string
+  outOfSequenceJustificationComplement?: string
+  outOfSequenceJustification?: string | null
+}
+
 export type ProductionWorkQueueResponse = {
   date: string
   planStatus: 'PUBLISHED' | null

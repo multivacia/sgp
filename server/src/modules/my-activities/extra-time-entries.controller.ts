@@ -11,14 +11,14 @@ import {
   serviceListMyRecentExtraTimeEntries,
 } from './extra-time-entries.service.js'
 
-function toOptionJson(row: { id: string; description: string }) {
+export function toOptionJson(row: { id: string; description: string }) {
   return {
     id: row.id,
     description: row.description,
   }
 }
 
-function toEntryJson(row: {
+export function toEntryJson(row: {
   id: string
   description_id: string
   description: string
