@@ -287,6 +287,46 @@ export async function reopenConveyorStep(
 }
 
 /**
+ * Dispensa operacional de STEP — POST …/steps/:stepNodeId/abort
+ * Requer header Idempotency-Key estável (cliente reenvia no retry).
+ */
+export async function abortConveyorStep(
+  conveyorId: string,
+  stepNodeId: string,
+  body: { reasonCode: string; reasonText?: string | null },
+  options?: { idempotencyKey?: string },
+): Promise<{ data: ConveyorDetail; meta: Record<string, unknown> }> {
+  const idempotencyKey = options?.idempotencyKey?.trim() || crypto.randomUUID()
+  return requestJsonEnvelope<ConveyorDetail>(
+    'POST',
+    `${BASE}/conveyors/${encodeURIComponent(conveyorId)}/steps/${encodeURIComponent(stepNodeId)}/abort`,
+    {
+      body,
+      headers: { 'Idempotency-Key': idempotencyKey },
+    },
+  )
+}
+
+/**
+ * Restaura STEP dispensado — POST …/steps/:stepNodeId/restore-aborted
+ */
+export async function restoreAbortedConveyorStep(
+  conveyorId: string,
+  stepNodeId: string,
+  options?: { idempotencyKey?: string },
+): Promise<{ data: ConveyorDetail; meta: Record<string, unknown> }> {
+  const idempotencyKey = options?.idempotencyKey?.trim() || crypto.randomUUID()
+  return requestJsonEnvelope<ConveyorDetail>(
+    'POST',
+    `${BASE}/conveyors/${encodeURIComponent(conveyorId)}/steps/${encodeURIComponent(stepNodeId)}/restore-aborted`,
+    {
+      body: {},
+      headers: { 'Idempotency-Key': idempotencyKey },
+    },
+  )
+}
+
+/**
  * Exclusão física — DELETE /api/v1/conveyors/:id.
  * Somente esteiras com `operational_status = NO_BACKLOG` e sem dependências operacionais bloqueantes.
  * RBAC: `conveyors.create` (evolução futura: `conveyors.delete`).

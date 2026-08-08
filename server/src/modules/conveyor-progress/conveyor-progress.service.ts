@@ -30,7 +30,26 @@ function isCompletedStepStatus(status: string | null | undefined): boolean {
   return (status ?? '').trim().toUpperCase() === 'COMPLETED'
 }
 
+function isAbortedStepStatus(status: string | null | undefined): boolean {
+  return (status ?? '').trim().toUpperCase() === 'ABORTED'
+}
+
+/** Previsto efetivo: exclui STEPs dispensados (ABORTED) da carga agregada. */
+function effectivePlannedMinutesForAggregate(
+  status: string | null | undefined,
+  plannedMinutes: number,
+): number {
+  return isAbortedStepStatus(status) ? 0 : plannedMinutes
+}
+
 function buildActivityEfficiencyInput(activity: Pick<ActivityProgressItemDto, 'plannedMinutes' | 'realizedMinutes' | 'status'>) {
+  if (isAbortedStepStatus(activity.status)) {
+    return {
+      plannedMinutes: null,
+      realizedMinutes: activity.realizedMinutes,
+      isCompleted: false,
+    }
+  }
   return {
     plannedMinutes: activity.plannedMinutes,
     realizedMinutes: activity.realizedMinutes,
@@ -108,14 +127,20 @@ function buildProgressTree(
     >()
 
     for (const step of conveyorSteps) {
-      const planned = step.planned_minutes ?? 0
+      const plannedOriginal = step.planned_minutes ?? 0
+      const plannedEffective = effectivePlannedMinutesForAggregate(
+        step.operational_status,
+        plannedOriginal,
+      )
       const realized = realizedByStep.get(step.step_id) ?? 0
-      const activityMetrics = metricsFromTotals(planned, realized)
-      const timeEfficiency = computeTimeEfficiencyMetrics({
-        plannedMinutes: step.planned_minutes,
-        realizedMinutes: realized,
-        isCompleted: isCompletedStepStatus(step.operational_status),
-      })
+      const activityMetrics = metricsFromTotals(plannedOriginal, realized)
+      const timeEfficiency = computeTimeEfficiencyMetrics(
+        buildActivityEfficiencyInput({
+          plannedMinutes: plannedOriginal,
+          realizedMinutes: realized,
+          status: step.operational_status ?? 'PENDING',
+        }),
+      )
 
       const activity: ActivityProgressItemDto = {
         activityId: step.step_id,
@@ -123,6 +148,14 @@ function buildProgressTree(
         status: step.operational_status ?? 'PENDING',
         collaboratorName: assigneeByStep.get(step.step_id) ?? null,
         ...activityMetrics,
+        // Agregados usam previsto efetivo (0 se ABORTED); o item preserva previsto original acima.
+        plannedMinutes: plannedOriginal,
+        remainingMinutes: isAbortedStepStatus(step.operational_status)
+          ? 0
+          : activityMetrics.remainingMinutes,
+        progressPercent: isAbortedStepStatus(step.operational_status)
+          ? 0
+          : activityMetrics.progressPercent,
         timeEfficiency,
         timeEntries: entriesByStep.get(step.step_id) ?? [],
       }
@@ -148,6 +181,9 @@ function buildProgressTree(
         }
         task.sectors.set(step.area_id, sector)
       }
+      // Attach effective planned for aggregation via side channel on activities list order.
+      ;(activity as ActivityProgressItemDto & { _effectivePlanned?: number })._effectivePlanned =
+        plannedEffective
       sector.activities.push(activity)
     }
 
@@ -157,7 +193,13 @@ function buildProgressTree(
         const sectors: SectorProgressItemDto[] = [...task.sectors.values()]
           .sort((a, b) => a.sectorOrder - b.sectorOrder)
           .map((sector) => {
-            const planned = sumMinutes(sector.activities.map((a) => a.plannedMinutes))
+            const planned = sumMinutes(
+              sector.activities.map(
+                (a) =>
+                  (a as ActivityProgressItemDto & { _effectivePlanned?: number })
+                    ._effectivePlanned ?? a.plannedMinutes,
+              ),
+            )
             const realized = sumMinutes(sector.activities.map((a) => a.realizedMinutes))
             return {
               sectorId: sector.sectorId,
@@ -166,7 +208,12 @@ function buildProgressTree(
               timeEfficiency: consolidateWeightedTimeEfficiency(
                 sector.activities.map(buildActivityEfficiencyInput),
               ),
-              activities: sector.activities,
+              activities: sector.activities.map((a) => {
+                const { _effectivePlanned: _, ...rest } = a as ActivityProgressItemDto & {
+                  _effectivePlanned?: number
+                }
+                return rest
+              }),
             }
           })
 

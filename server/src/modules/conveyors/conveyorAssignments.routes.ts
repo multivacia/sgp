@@ -9,7 +9,9 @@ import {
   getConveyorStepSequenceCheck,
   getConveyorStepTimeEntries,
   patchConveyorStepCompletion,
+  postConveyorStepAbort,
   postConveyorStepAssignee,
+  postConveyorStepRestoreAborted,
   postConveyorStepTimeEntry,
   postConveyorStepTimeEntryOnBehalf,
 } from './conveyorAssignments.controller.js'
@@ -22,6 +24,18 @@ export function conveyorAssignmentsRouter(): Router {
     '/conveyors/:conveyorId/steps/:stepNodeId/completion',
     requireAuth(),
     asyncRoute(patchConveyorStepCompletion),
+  )
+  r.post(
+    '/conveyors/:conveyorId/steps/:stepNodeId/abort',
+    requireAuth(),
+    requirePermission('conveyors.create'),
+    asyncRoute(postConveyorStepAbort),
+  )
+  r.post(
+    '/conveyors/:conveyorId/steps/:stepNodeId/restore-aborted',
+    requireAuth(),
+    requirePermission('conveyors.create'),
+    asyncRoute(postConveyorStepRestoreAborted),
   )
   r.get(
     '/conveyors/:conveyorId/steps/:stepNodeId/sequence-check',

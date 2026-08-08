@@ -12,6 +12,7 @@ export type ProductionCanTrackTimeInput = {
   conveyorOperationalStatus: string | null
   /** Itens da fila de produção já vêm filtrados por `assigned_collaborator_id`. */
   isPlannedForCollaborator: boolean
+  activityOperationalStatus?: string | null
 }
 
 function conveyorAllowsProductionTracking(
@@ -33,6 +34,7 @@ function conveyorAllowsProductionTracking(
  */
 export function resolveProductionCanTrackTime(input: ProductionCanTrackTimeInput): boolean {
   if (input.isActivityCompleted) return false
+  if ((input.activityOperationalStatus ?? '').trim() === 'ABORTED') return false
   if (input.planItemStatus === 'CANCELLED') return false
   if (!input.isPlannedForCollaborator) return false
   return conveyorAllowsProductionTracking(input.conveyorOperationalStatus)

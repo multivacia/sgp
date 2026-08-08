@@ -259,5 +259,13 @@ describe('analyzeConveyorActivitySequence', () => {
       expect(r.isOutOfSequence).toBe(true)
       expect(r.awaitingOthersActivities[0]?.activityTitle).toBe('Funilaria')
     })
+
+    it('9) predecessora ABORTED não bloqueia sequência', () => {
+      const nodes = fourStepTree({ act1: 'ABORTED', act2: 'PENDING' })
+      const r = analyzeConveyorActivitySequence(nodes, 'act2')
+      expect(r.targetFound).toBe(true)
+      expect(r.hasPreviousPendingStep).toBe(false)
+      expect(r.previousOpenCount).toBe(0)
+    })
   })
 })

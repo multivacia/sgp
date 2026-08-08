@@ -120,10 +120,19 @@ export function isConveyorActivityTicketSourceCompleted(
   })
 }
 
+export function isConveyorActivityTicketSourceAborted(
+  source: Pick<ActivityTicketPrintModelInput, 'activityOperationalStatus'>,
+): boolean {
+  return source.activityOperationalStatus?.trim() === 'ABORTED'
+}
+
 export function filterConveyorActivityTicketSources(
   sources: readonly ConveyorActivityTicketSource[],
   includeCompleted: boolean,
 ): ConveyorActivityTicketSource[] {
-  if (includeCompleted) return [...sources]
-  return sources.filter((source) => !isConveyorActivityTicketSourceCompleted(source))
+  return sources.filter((source) => {
+    if (isConveyorActivityTicketSourceAborted(source)) return false
+    if (!includeCompleted && isConveyorActivityTicketSourceCompleted(source)) return false
+    return true
+  })
 }

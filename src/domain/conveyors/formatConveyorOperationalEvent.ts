@@ -78,6 +78,17 @@ export function formatConveyorOperationalEvent(
       return baseDisplay(event, stepCompletedDescription(event))
     case 'CONVEYOR_STEP_REOPENED':
       return baseDisplay(event, stepReopenedDescription(event))
+    case 'CONVEYOR_STEP_ABORTED':
+      return baseDisplay(
+        event,
+        formatOperationalEventReasonLine(event) ??
+          'A atividade foi dispensada e não entra mais na sequência nem nas filas apontáveis.',
+      )
+    case 'CONVEYOR_STEP_RESTORED':
+      return baseDisplay(
+        event,
+        'A dispensa foi restaurada. A atividade volta elegível a novo planejamento, sem reativar itens cancelados.',
+      )
     case 'CONVEYOR_STEP_BLOCKED':
       return baseDisplay(
         event,

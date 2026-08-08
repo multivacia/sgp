@@ -31,6 +31,7 @@ function mapToProductionItem(
     planItemStatus: item.status,
     conveyorOperationalStatus: item.conveyorOperationalStatus,
     isPlannedForCollaborator: true,
+    activityOperationalStatus: item.activityOperationalStatus,
   }
 
   const canTrackTime = resolveProductionCanTrackTime(trackInput)

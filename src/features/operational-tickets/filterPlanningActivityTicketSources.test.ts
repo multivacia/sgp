@@ -63,11 +63,21 @@ describe('filterPlanningActivityTicketSources', () => {
     expect(filterPlanningActivityTicketSources([item], true)).toHaveLength(1)
   })
 
-  it('filtra corretamente lista mista (ativo + concluído + cancelado)', () => {
+  it('STEP ABORTED é excluído do lote padrão e também com includeCompleted = true', () => {
+    const aborted = source({
+      activityNodeId: 'dispensado',
+      activityOperationalStatus: 'ABORTED',
+    })
+    expect(filterPlanningActivityTicketSources([aborted], false)).toHaveLength(0)
+    expect(filterPlanningActivityTicketSources([aborted], true)).toHaveLength(0)
+  })
+
+  it('filtra corretamente lista mista (ativo + concluído + cancelado + ABORTED)', () => {
     const sources = [
       source({ activityNodeId: 'ativo', activityOperationalStatus: 'IN_PROGRESS' }),
       source({ activityNodeId: 'concluido', activityOperationalStatus: 'COMPLETED' }),
       source({ activityNodeId: 'cancelado', status: 'CANCELLED' }),
+      source({ activityNodeId: 'dispensado', activityOperationalStatus: 'ABORTED' }),
     ]
 
     const semConcluidos = filterPlanningActivityTicketSources(sources, false)
@@ -79,5 +89,6 @@ describe('filterPlanningActivityTicketSources', () => {
     expect(comConcluidos.map((s) => s.activityNodeId)).toContain('ativo')
     expect(comConcluidos.map((s) => s.activityNodeId)).toContain('concluido')
     expect(comConcluidos.map((s) => s.activityNodeId)).not.toContain('cancelado')
+    expect(comConcluidos.map((s) => s.activityNodeId)).not.toContain('dispensado')
   })
 })

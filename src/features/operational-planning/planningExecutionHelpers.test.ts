@@ -203,6 +203,7 @@ describe('resolvePlanningItemOperationalStatusLabel', () => {
     expect(resolvePlanningItemOperationalStatusLabel('PENDING')).toBe('Aberta')
     expect(resolvePlanningItemOperationalStatusLabel('IN_PROGRESS')).toBe('Em andamento')
     expect(resolvePlanningItemOperationalStatusLabel('COMPLETED')).toBe('Concluída')
+    expect(resolvePlanningItemOperationalStatusLabel('ABORTED')).toBe('Dispensada')
   })
 
   it('returns null for empty or unknown', () => {

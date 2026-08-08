@@ -178,3 +178,20 @@ export const patchConveyorStepCompletionBodySchema = z.object({
 export type PatchConveyorStepCompletionBody = z.infer<
   typeof patchConveyorStepCompletionBodySchema
 >
+
+export const postConveyorStepAbortBodySchema = z.object({
+  reasonCode: z.string().min(1).max(64),
+  reasonText: z.union([z.string().max(2000), z.null()]).optional(),
+})
+
+export type PostConveyorStepAbortBody = z.infer<typeof postConveyorStepAbortBodySchema>
+
+export const postConveyorStepRestoreAbortedBodySchema = z
+  .object({})
+  .passthrough()
+  .optional()
+  .default({})
+
+export type PostConveyorStepRestoreAbortedBody = z.infer<
+  typeof postConveyorStepRestoreAbortedBodySchema
+>

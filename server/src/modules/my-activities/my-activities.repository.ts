@@ -158,7 +158,7 @@ export async function listTimeEntryCandidatesForCollaborator(
         AND step.deleted_at IS NULL
         AND step.is_active = TRUE
         AND step.node_type = 'STEP'
-        AND (step.operational_status IS DISTINCT FROM 'COMPLETED')
+        AND ((step.operational_status IS DISTINCT FROM 'COMPLETED' AND step.operational_status IS DISTINCT FROM 'ABORTED'))
       INNER JOIN conveyors cv
         ON cv.id = cna.conveyor_id
         AND cv.deleted_at IS NULL
@@ -294,7 +294,7 @@ export async function listTimeEntryUnassignedOpenStepsForCollaborator(
     WHERE step.deleted_at IS NULL
       AND step.is_active = TRUE
       AND step.node_type = 'STEP'
-      AND (step.operational_status IS DISTINCT FROM 'COMPLETED')
+      AND ((step.operational_status IS DISTINCT FROM 'COMPLETED' AND step.operational_status IS DISTINCT FROM 'ABORTED'))
       AND NOT EXISTS (
         SELECT 1
         FROM conveyor_node_assignees cna
@@ -418,7 +418,7 @@ export async function listTimeEntryCandidatesFromPublishedPlan(
       AND step.deleted_at IS NULL
       AND step.is_active = TRUE
       AND step.node_type = 'STEP'
-      AND (step.operational_status IS DISTINCT FROM 'COMPLETED')
+      AND ((step.operational_status IS DISTINCT FROM 'COMPLETED' AND step.operational_status IS DISTINCT FROM 'ABORTED'))
     INNER JOIN conveyor_nodes area
       ON area.id = step.parent_id
       AND area.deleted_at IS NULL
@@ -439,7 +439,7 @@ export async function listTimeEntryCandidatesFromPublishedPlan(
         i.planned_date = $3::date
         OR (
           i.planned_date < $3::date
-          AND step.operational_status IS DISTINCT FROM 'COMPLETED'
+          AND (step.operational_status IS DISTINCT FROM 'COMPLETED' AND step.operational_status IS DISTINCT FROM 'ABORTED')
         )
       )
       AND (

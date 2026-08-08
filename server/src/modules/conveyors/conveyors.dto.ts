@@ -55,6 +55,7 @@ export type ConveyorNodeStepOperationalStatusApi =
   | 'BLOCKED'
   | 'COMPLETED'
   | 'REOPENED'
+  | 'ABORTED'
 
 export type ConveyorStructureStepApi = {
   id: string
@@ -68,6 +69,10 @@ export type ConveyorStructureStepApi = {
   completedAt: string | null
   completedByName: string | null
   completionEventId: string | null
+  abortedAt?: string | null
+  abortedByName?: string | null
+  abortReasonCode?: string | null
+  abortReasonText?: string | null
 }
 
 export type ConveyorStructureAreaApi = {

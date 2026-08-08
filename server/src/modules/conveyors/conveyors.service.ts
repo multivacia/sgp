@@ -278,6 +278,10 @@ export function buildConveyorStructureFromNodes(
                 completedAt: st.operational_completed_at,
                 completedByName: st.operational_completed_by_email?.trim() || null,
                 completionEventId: null,
+                abortedAt: st.aborted_at,
+                abortedByName: st.aborted_by_email?.trim() || null,
+                abortReasonCode: st.abort_reason_code,
+                abortReasonText: st.abort_reason_text,
               }
             }),
         })),
