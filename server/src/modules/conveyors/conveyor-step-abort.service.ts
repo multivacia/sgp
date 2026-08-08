@@ -4,6 +4,7 @@ import { ErrorCodes } from '../../shared/errors/errorCodes.js'
 import { appUserHasPermission } from '../permissions/permissions.repository.js'
 import { serviceCreateConveyorOperationalEvent } from './operational-events/conveyor-operational-events.service.js'
 import { getConveyorOperationalEventByIdempotencyKey } from './operational-events/conveyor-operational-events.repository.js'
+import type { ConveyorOperationalEventRow } from './operational-events/conveyor-operational-events.types.js'
 import {
   findConveyorById,
   listConveyorNodesByConveyorId,
@@ -132,6 +133,117 @@ async function cancelLinkedPlanItemsForAbortedStep(
   return { conveyorPlanItemIds, workPlanItemIds }
 }
 
+export type StepAbortIdempotencyEventType = 'CONVEYOR_STEP_ABORTED' | 'CONVEYOR_STEP_RESTORED'
+
+export type StepAbortIdempotencyInput = {
+  idempotencyKey: string
+  expectedEventType: StepAbortIdempotencyEventType
+  conveyorId: string
+  stepNodeId: string
+  currentStatus: ConveyorNodeStepOperationalStatusDb
+  expectedStatusAfterOperation: ConveyorNodeStepOperationalStatusDb
+}
+
+function eventMatchesOperation(
+  event: Pick<ConveyorOperationalEventRow, 'event_type' | 'conveyor_id' | 'node_id'>,
+  expected: {
+    expectedEventType: StepAbortIdempotencyEventType
+    conveyorId: string
+    stepNodeId: string
+  },
+): boolean {
+  return (
+    event.event_type === expected.expectedEventType &&
+    event.conveyor_id === expected.conveyorId &&
+    event.node_id === expected.stepNodeId
+  )
+}
+
+/**
+ * Decide replay idempotente ANTES de qualquer mutação.
+ *
+ * A `idempotency_key` tem índice único global em `conveyor_operational_events`,
+ * logo uma chave já usada por outro tipo/esteira/nó nunca pode ser tratada como
+ * replay: a operação atual não conseguiria gravar o evento e mutaria o STEP sem auditoria.
+ *
+ * Deve ser chamado sob lock (`lockConveyorAndStepForUpdate`) e antes de mutar.
+ */
+export async function resolveStepAbortIdempotencyReplay(
+  queryable: pg.PoolClient,
+  input: StepAbortIdempotencyInput,
+): Promise<{ replay: boolean }> {
+  const existing = await getConveyorOperationalEventByIdempotencyKey(
+    queryable,
+    input.idempotencyKey,
+  )
+  if (!existing) return { replay: false }
+
+  if (!eventMatchesOperation(existing, input)) {
+    throw new AppError(
+      'Idempotency-Key já utilizada em outra operação.',
+      409,
+      ErrorCodes.CONFLICT,
+    )
+  }
+
+  if (input.currentStatus === input.expectedStatusAfterOperation) {
+    return { replay: true }
+  }
+
+  console.warn(
+    JSON.stringify({
+      event: 'conveyor_step_abort_idempotency_state_mismatch',
+      expectedEventType: input.expectedEventType,
+      conveyorId: input.conveyorId,
+      stepNodeId: input.stepNodeId,
+      existingEventId: existing.id,
+      currentStatus: input.currentStatus,
+      expectedStatusAfterOperation: input.expectedStatusAfterOperation,
+    }),
+  )
+  throw new AppError(
+    'Idempotency-Key já utilizada em outra operação.',
+    409,
+    ErrorCodes.CONFLICT,
+  )
+}
+
+/**
+ * Defesa adicional: evento devolvido com `created: false` tem de ser exatamente
+ * o evento desta operação. Caso contrário a TX deve abortar (ROLLBACK).
+ *
+ * É conflito de idempotência (409), não falha interna: o diagnóstico fica no log
+ * técnico e a mensagem HTTP permanece genérica.
+ */
+function assertReusedEventMatchesOperation(
+  event: ConveyorOperationalEventRow,
+  expected: {
+    expectedEventType: StepAbortIdempotencyEventType
+    conveyorId: string
+    stepNodeId: string
+  },
+): void {
+  if (eventMatchesOperation(event, expected)) return
+
+  console.warn(
+    JSON.stringify({
+      event: 'conveyor_step_abort_reused_event_mismatch',
+      expectedEventType: expected.expectedEventType,
+      conveyorId: expected.conveyorId,
+      stepNodeId: expected.stepNodeId,
+      reusedEventId: event.id,
+      reusedEventType: event.event_type,
+      reusedConveyorId: event.conveyor_id,
+      reusedNodeId: event.node_id,
+    }),
+  )
+  throw new AppError(
+    'Idempotency-Key já utilizada em outra operação.',
+    409,
+    ErrorCodes.CONFLICT,
+  )
+}
+
 async function loadDetail(
   pool: pg.Pool,
   conveyorId: string,
@@ -177,91 +289,100 @@ export async function serviceAbortConveyorStep(
       input.stepNodeId,
     )
 
-    assertConveyorAllowsAbort(conveyor.operational_status)
-
     const current: ConveyorNodeStepOperationalStatusDb = step.operational_status ?? 'PENDING'
 
-    if (current === 'ABORTED') {
-      const existing = await getConveyorOperationalEventByIdempotencyKey(
-        client,
-        input.idempotencyKey,
-      )
-      if (
-        existing &&
-        existing.event_type === 'CONVEYOR_STEP_ABORTED' &&
-        existing.conveyor_id === input.conveyorId &&
-        existing.node_id === input.stepNodeId
-      ) {
-        idempotent = true
-        await client.query('COMMIT')
-        return { detail: await loadDetail(pool, input.conveyorId), idempotent }
-      }
-      throw new AppError(
-        'Esta atividade já está dispensada.',
-        409,
-        ErrorCodes.CONFLICT,
-      )
-    }
-
-    if (!canTransitionStepStatus(current, 'ABORTED')) {
-      throw new AppError(
-        `Transição de estado da etapa não permitida (${current} → ABORTED).`,
-        409,
-        ErrorCodes.CONFLICT,
-      )
-    }
-
-    const occurredIso = new Date().toISOString()
-    const updated = await updateConveyorNodeStepAborted(
-      client,
-      input.conveyorId,
-      input.stepNodeId,
-      {
-        aborted_at: occurredIso,
-        aborted_by: input.actorAppUserId,
-        abort_reason_code: reason.reasonCode,
-        abort_reason_text: reason.reasonText,
-        expectedStatuses: STEP_ABORT_ALLOWED_ORIGINS,
-      },
-    )
-    if (!updated) {
-      throw new AppError(
-        'Conflito ao dispensar a atividade (estado alterado concorrentemente).',
-        409,
-        ErrorCodes.CONFLICT,
-      )
-    }
-
-    const cancelled = await cancelLinkedPlanItemsForAbortedStep(client, {
+    // Replay comprovado é resolvido antes do estado da esteira: se a operação já foi
+    // aplicada, finalizar a esteira depois não pode transformar a repetição em erro.
+    const idempotency = await resolveStepAbortIdempotencyReplay(client, {
+      idempotencyKey: input.idempotencyKey,
+      expectedEventType: 'CONVEYOR_STEP_ABORTED',
       conveyorId: input.conveyorId,
       stepNodeId: input.stepNodeId,
-      cancellationReason: cancellationReasonForAbort(reason),
+      currentStatus: current,
+      expectedStatusAfterOperation: 'ABORTED',
     })
 
-    const ev = await serviceCreateConveyorOperationalEvent(client, {
-      conveyorId: input.conveyorId,
-      nodeId: input.stepNodeId,
-      eventType: 'CONVEYOR_STEP_ABORTED',
-      previousValue: current,
-      newValue: 'ABORTED',
-      reason: reason.reasonCode,
-      source: 'USER_ACTION',
-      occurredAt: occurredIso,
-      createdBy: input.actorAppUserId,
-      idempotencyKey: input.idempotencyKey,
-      metadataJson: {
+    if (idempotency.replay) {
+      idempotent = true
+      await client.query('COMMIT')
+    } else {
+      assertConveyorAllowsAbort(conveyor.operational_status)
+
+      if (current === 'ABORTED') {
+        throw new AppError(
+          'Esta atividade já está dispensada.',
+          409,
+          ErrorCodes.CONFLICT,
+        )
+      }
+
+      if (!canTransitionStepStatus(current, 'ABORTED')) {
+        throw new AppError(
+          `Transição de estado da etapa não permitida (${current} → ABORTED).`,
+          409,
+          ErrorCodes.CONFLICT,
+        )
+      }
+
+      const occurredIso = new Date().toISOString()
+      const updated = await updateConveyorNodeStepAborted(
+        client,
+        input.conveyorId,
+        input.stepNodeId,
+        {
+          aborted_at: occurredIso,
+          aborted_by: input.actorAppUserId,
+          abort_reason_code: reason.reasonCode,
+          abort_reason_text: reason.reasonText,
+          expectedStatuses: STEP_ABORT_ALLOWED_ORIGINS,
+        },
+      )
+      if (!updated) {
+        throw new AppError(
+          'Conflito ao dispensar a atividade (estado alterado concorrentemente).',
+          409,
+          ErrorCodes.CONFLICT,
+        )
+      }
+
+      const cancelled = await cancelLinkedPlanItemsForAbortedStep(client, {
+        conveyorId: input.conveyorId,
         stepNodeId: input.stepNodeId,
-        reasonCode: reason.reasonCode,
-        reasonText: reason.reasonText,
-        previousOperationalStatus: current,
-        conveyorPlanItemIdsCancelled: cancelled.conveyorPlanItemIds,
-        workPlanItemIdsCancelled: cancelled.workPlanItemIds,
-        idempotencyKey: input.idempotencyKey,
-      },
-    })
-    idempotent = !ev.created
+        cancellationReason: cancellationReasonForAbort(reason),
+      })
 
-    await client.query('COMMIT')
+      const ev = await serviceCreateConveyorOperationalEvent(client, {
+        conveyorId: input.conveyorId,
+        nodeId: input.stepNodeId,
+        eventType: 'CONVEYOR_STEP_ABORTED',
+        previousValue: current,
+        newValue: 'ABORTED',
+        reason: reason.reasonCode,
+        source: 'USER_ACTION',
+        occurredAt: occurredIso,
+        createdBy: input.actorAppUserId,
+        idempotencyKey: input.idempotencyKey,
+        metadataJson: {
+          stepNodeId: input.stepNodeId,
+          reasonCode: reason.reasonCode,
+          reasonText: reason.reasonText,
+          previousOperationalStatus: current,
+          conveyorPlanItemIdsCancelled: cancelled.conveyorPlanItemIds,
+          workPlanItemIdsCancelled: cancelled.workPlanItemIds,
+          idempotencyKey: input.idempotencyKey,
+        },
+      })
+      if (!ev.created) {
+        assertReusedEventMatchesOperation(ev.event, {
+          expectedEventType: 'CONVEYOR_STEP_ABORTED',
+          conveyorId: input.conveyorId,
+          stepNodeId: input.stepNodeId,
+        })
+      }
+      idempotent = !ev.created
+
+      await client.query('COMMIT')
+    }
   } catch (e) {
     try {
       await client.query('ROLLBACK')
@@ -273,7 +394,9 @@ export async function serviceAbortConveyorStep(
     client.release()
   }
 
-  return { detail: await loadDetail(pool, input.conveyorId), idempotent }
+  // Só após `client.release()`: `loadDetail` pede outra conexão ao pool.
+  const detail = await loadDetail(pool, input.conveyorId)
+  return { detail, idempotent }
 }
 
 export async function serviceRestoreAbortedConveyorStep(
@@ -297,88 +420,99 @@ export async function serviceRestoreAbortedConveyorStep(
       input.stepNodeId,
     )
 
-    if (conveyor.operational_status === 'FINALIZADA' || conveyor.operational_status === 'CANCELADA') {
-      throw new AppError(
-        'Não é possível restaurar atividades em esteira finalizada ou cancelada.',
-        409,
-        ErrorCodes.CONFLICT,
-      )
-    }
-
     const current: ConveyorNodeStepOperationalStatusDb = step.operational_status ?? 'PENDING'
 
-    if (current !== 'ABORTED') {
-      const existing = await getConveyorOperationalEventByIdempotencyKey(
-        client,
-        input.idempotencyKey,
-      )
-      if (
-        existing &&
-        existing.event_type === 'CONVEYOR_STEP_RESTORED' &&
-        existing.conveyor_id === input.conveyorId &&
-        existing.node_id === input.stepNodeId
-      ) {
-        idempotent = true
-        await client.query('COMMIT')
-        return { detail: await loadDetail(pool, input.conveyorId), idempotent }
-      }
-      throw new AppError(
-        'A atividade só pode ser restaurada quando estiver dispensada.',
-        409,
-        ErrorCodes.CONFLICT,
-      )
-    }
-
-    if (!canTransitionStepStatus(current, 'REOPENED')) {
-      throw new AppError(
-        `Transição de estado da etapa não permitida (${current} → REOPENED).`,
-        409,
-        ErrorCodes.CONFLICT,
-      )
-    }
-
-    const previousAbort = {
-      abortedAt: step.aborted_at,
-      abortedBy: step.aborted_by,
-      abortReasonCode: step.abort_reason_code,
-      abortReasonText: step.abort_reason_text,
-    }
-
-    const occurredIso = new Date().toISOString()
-    const updated = await updateConveyorNodeStepRestoreAborted(
-      client,
-      input.conveyorId,
-      input.stepNodeId,
-    )
-    if (!updated) {
-      throw new AppError(
-        'Conflito ao restaurar a atividade (estado alterado concorrentemente).',
-        409,
-        ErrorCodes.CONFLICT,
-      )
-    }
-
-    const ev = await serviceCreateConveyorOperationalEvent(client, {
-      conveyorId: input.conveyorId,
-      nodeId: input.stepNodeId,
-      eventType: 'CONVEYOR_STEP_RESTORED',
-      previousValue: 'ABORTED',
-      newValue: 'REOPENED',
-      reason: 'EXPLICITLY_RESTORED_FROM_ABORTED',
-      source: 'USER_ACTION',
-      occurredAt: occurredIso,
-      createdBy: input.actorAppUserId,
+    // Ver `serviceAbortConveyorStep`: replay comprovado precede o estado da esteira.
+    const idempotency = await resolveStepAbortIdempotencyReplay(client, {
       idempotencyKey: input.idempotencyKey,
-      metadataJson: {
-        stepNodeId: input.stepNodeId,
-        previousAbort,
-        plansNotReactivated: true,
-        idempotencyKey: input.idempotencyKey,
-      },
+      expectedEventType: 'CONVEYOR_STEP_RESTORED',
+      conveyorId: input.conveyorId,
+      stepNodeId: input.stepNodeId,
+      currentStatus: current,
+      expectedStatusAfterOperation: 'REOPENED',
     })
-    idempotent = !ev.created
 
-    await client.query('COMMIT')
+    if (idempotency.replay) {
+      idempotent = true
+      await client.query('COMMIT')
+    } else {
+      if (
+        conveyor.operational_status === 'FINALIZADA' ||
+        conveyor.operational_status === 'CANCELADA'
+      ) {
+        throw new AppError(
+          'Não é possível restaurar atividades em esteira finalizada ou cancelada.',
+          409,
+          ErrorCodes.CONFLICT,
+        )
+      }
+
+      if (current !== 'ABORTED') {
+        throw new AppError(
+          'A atividade só pode ser restaurada quando estiver dispensada.',
+          409,
+          ErrorCodes.CONFLICT,
+        )
+      }
+
+      if (!canTransitionStepStatus(current, 'REOPENED')) {
+        throw new AppError(
+          `Transição de estado da etapa não permitida (${current} → REOPENED).`,
+          409,
+          ErrorCodes.CONFLICT,
+        )
+      }
+
+      const previousAbort = {
+        abortedAt: step.aborted_at,
+        abortedBy: step.aborted_by,
+        abortReasonCode: step.abort_reason_code,
+        abortReasonText: step.abort_reason_text,
+      }
+
+      const occurredIso = new Date().toISOString()
+      const updated = await updateConveyorNodeStepRestoreAborted(
+        client,
+        input.conveyorId,
+        input.stepNodeId,
+      )
+      if (!updated) {
+        throw new AppError(
+          'Conflito ao restaurar a atividade (estado alterado concorrentemente).',
+          409,
+          ErrorCodes.CONFLICT,
+        )
+      }
+
+      const ev = await serviceCreateConveyorOperationalEvent(client, {
+        conveyorId: input.conveyorId,
+        nodeId: input.stepNodeId,
+        eventType: 'CONVEYOR_STEP_RESTORED',
+        previousValue: 'ABORTED',
+        newValue: 'REOPENED',
+        reason: 'EXPLICITLY_RESTORED_FROM_ABORTED',
+        source: 'USER_ACTION',
+        occurredAt: occurredIso,
+        createdBy: input.actorAppUserId,
+        idempotencyKey: input.idempotencyKey,
+        metadataJson: {
+          stepNodeId: input.stepNodeId,
+          previousAbort,
+          plansNotReactivated: true,
+          idempotencyKey: input.idempotencyKey,
+        },
+      })
+      if (!ev.created) {
+        assertReusedEventMatchesOperation(ev.event, {
+          expectedEventType: 'CONVEYOR_STEP_RESTORED',
+          conveyorId: input.conveyorId,
+          stepNodeId: input.stepNodeId,
+        })
+      }
+      idempotent = !ev.created
+
+      await client.query('COMMIT')
+    }
   } catch (e) {
     try {
       await client.query('ROLLBACK')
@@ -390,5 +524,7 @@ export async function serviceRestoreAbortedConveyorStep(
     client.release()
   }
 
-  return { detail: await loadDetail(pool, input.conveyorId), idempotent }
+  // Só após `client.release()`: `loadDetail` pede outra conexão ao pool.
+  const detail = await loadDetail(pool, input.conveyorId)
+  return { detail, idempotent }
 }
