@@ -25,8 +25,12 @@ import {
   patchMatrixNode,
   restoreMatrixNode,
 } from '../../services/operation-matrix/operationMatrixApiService'
-import type { MatrixNodeApi } from '../../domain/operation-matrix/operation-matrix.types'
+import type {
+  MatrixDuplicationWarning,
+  MatrixNodeApi,
+} from '../../domain/operation-matrix/operation-matrix.types'
 import { useAuth } from '../../lib/use-auth'
+import { MatrixDuplicationWarningsBanner } from './MatrixDuplicationWarningsBanner'
 
 type FiltroAtivo = 'todos' | 'ativos' | 'inativos'
 const MATRIX_DEFAULT_PAGE_SIZE = 25
@@ -57,6 +61,9 @@ export function OperationMatrixListPage() {
   const [restoring, setRestoring] = useState(false)
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null)
   const [toast, setToast] = useState<ToastState>(null)
+  const [duplicationWarnings, setDuplicationWarnings] = useState<
+    MatrixDuplicationWarning[]
+  >([])
   const canManageMatrix = can('operation_matrix.manage')
   const load = useCallback(async () => {
     setLoading(true)
@@ -186,9 +193,11 @@ export function OperationMatrixListPage() {
     }
     setActionLoadingId(item.id)
     setLoadError(null)
+    setDuplicationWarnings([])
     try {
-      await duplicateMatrixItem(item.id)
+      const { warnings } = await duplicateMatrixItem(item.id)
       setToast({ message: 'Matriz duplicada com sucesso.', variant: 'success' })
+      setDuplicationWarnings(warnings)
       await load()
     } catch (e) {
       setToast({ message: DUPLICATE_MATRIX_FAIL, variant: 'error' })
@@ -234,6 +243,10 @@ export function OperationMatrixListPage() {
           onDismiss={() => setToast(null)}
         />
       ) : null}
+      <MatrixDuplicationWarningsBanner
+        warnings={duplicationWarnings}
+        onDismiss={() => setDuplicationWarnings([])}
+      />
       <header className="sgp-header-card max-w-6xl">
         <p className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-sgp-gold">
           <span className="h-px w-8 bg-gradient-to-r from-sgp-gold to-transparent" />

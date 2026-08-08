@@ -108,10 +108,8 @@ export function validateManualOpcoesForSubmit(
         if (et.teamIds.filter(Boolean).length > 1) {
           return 'Cada atividade pode ter no máximo uma equipe padrão.'
         }
-        const supportIds = [...new Set(et.collaboratorIds.filter(Boolean))]
-        if (supportIds.length > 1 && !et.primaryCollaboratorId?.trim()) {
-          return 'Selecione um colaborador principal quando houver mais de um colaborador associado à atividade.'
-        }
+        // Responsável (= colaborador "principal"/`defaultResponsibleId`) é sempre
+        // opcional — não bloqueia o submit, mesmo com vários colaboradores de apoio.
       }
     }
   }
@@ -122,4 +120,63 @@ export function manualStructureIsNonEmpty(
   opcoes: CriarMatrizManualOpcao[],
 ): boolean {
   return opcoes.length > 0
+}
+
+/**
+ * Responsável na Atividade da Matriz — regra de negócio (equipe → responsável):
+ * revalida `primaryCollaboratorId` de cada etapa contra a filiação (ativa) conhecida
+ * da equipe efetiva (`teamIds[0]`) daquela etapa. Times sem elegibilidade ainda
+ * carregada (ausentes de `eligibleMemberIdsByTeam`) são preservados sem alteração —
+ * a decisão fica adiada até a filiação ser conhecida. Reselecionar a mesma equipe
+ * não altera nada (o responsável já era válido para ela). Retorna a mesma referência
+ * quando nada muda (evita re-render desnecessário).
+ */
+export function reconcileManualOpcoesResponsiblesAgainstEligibility(
+  opcoes: CriarMatrizManualOpcao[],
+  eligibleMemberIdsByTeam: ReadonlyMap<string, ReadonlySet<string>>,
+): CriarMatrizManualOpcao[] {
+  let changed = false
+  const next = opcoes.map((op) => {
+    let opChanged = false
+    const areas = op.areas.map((ar) => {
+      let arChanged = false
+      const etapas = ar.etapas.map((et) => {
+        const rec = reconcileEtapaCollaborators(et)
+        const teamId = rec.teamIds[0]
+        if (!teamId || !rec.primaryCollaboratorId) return et
+        const eligible = eligibleMemberIdsByTeam.get(teamId)
+        if (!eligible || eligible.has(rec.primaryCollaboratorId)) return et
+        arChanged = true
+        return { ...et, primaryCollaboratorId: null }
+      })
+      if (!arChanged) return ar
+      opChanged = true
+      return { ...ar, etapas }
+    })
+    if (!opChanged) return op
+    changed = true
+    return { ...op, areas }
+  })
+  return changed ? next : opcoes
+}
+
+/**
+ * Decide o `defaultResponsibleId` (nó de matriz único, ex.: editor de catálogo)
+ * ao aplicar uma mudança de equipe. Sem equipe efetiva o responsável é sempre
+ * inválido. Reselecionar a mesma equipe preserva o valor atual. Numa troca real
+ * de equipe, só preserva quando `eligibleMemberIds` confirma a elegibilidade —
+ * conjunto vazio ou ausência de dado tratam a troca como perda de elegibilidade
+ * (uso conservador em telas sem filiação de equipe carregada).
+ */
+export function reconcileResponsibleOnTeamChange(params: {
+  previousTeamId: string | null
+  nextTeamId: string | null
+  currentResponsibleId: string | null
+  eligibleMemberIds: ReadonlySet<string>
+}): string | null {
+  const { previousTeamId, nextTeamId, currentResponsibleId, eligibleMemberIds } = params
+  if (!currentResponsibleId) return null
+  if (!nextTeamId) return null
+  if (previousTeamId === nextTeamId) return currentResponsibleId
+  return eligibleMemberIds.has(currentResponsibleId) ? currentResponsibleId : null
 }

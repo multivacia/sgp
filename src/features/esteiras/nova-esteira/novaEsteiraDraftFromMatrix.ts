@@ -16,21 +16,35 @@ function newKey() {
   return crypto.randomUUID()
 }
 
-/** Alocações iniciais na esteira a partir da equipe padrão da Atividade na Matriz. */
+/**
+ * Alocações iniciais na esteira a partir da equipe padrão e do responsável
+ * padrão (`default_responsible_id`) da Atividade na Matriz. Herdadas apenas como
+ * valores iniciais — continuam editáveis pelo usuário antes do submit (não são
+ * um vínculo travado com a Matriz de origem).
+ */
 export function matrixActivityToInitialAllocRows(
   act: MatrixNodeTreeApi,
 ): NovaEsteiraAlocacaoLinha[] {
   if (act.node_type !== 'ACTIVITY') return []
+  const rows: NovaEsteiraAlocacaoLinha[] = []
+  const responsibleId = act.default_responsible_id?.trim()
+  if (responsibleId) {
+    rows.push({
+      type: 'COLLABORATOR',
+      collaboratorId: responsibleId,
+      isPrimary: true,
+    })
+  }
   const tid = matrixActivityPrimaryTeamId(act)
-  if (!tid) return []
-  return [
-    {
+  if (tid) {
+    rows.push({
       type: 'TEAM',
       teamId: tid,
       /** Equipe operacional — nunca responsável principal nominal (regra do POST /conveyors). */
       isPrimary: false,
-    },
-  ]
+    })
+  }
+  return rows
 }
 
 function emptyStepFromActivity(act: MatrixNodeTreeApi): ManualStepDraft {

@@ -7,6 +7,7 @@ import { normalizeMatrixTeamIds } from './matrixTreeAggregates'
 export type ActivityFieldPatch = {
   planned_minutes: number | null
   team_ids: string[]
+  default_responsible_id: string | null
 }
 
 const STRUCTURE_NAME_NODE_TYPES = new Set(['TASK', 'SECTOR', 'ACTIVITY'] as const)
@@ -100,13 +101,14 @@ export function collectPreviewStructureDeletions(
 }
 
 export function activityFieldsSignature(tree: MatrixNodeTreeApi): string {
-  const rows: { id: string; pm: number | null; teams: string[] }[] = []
+  const rows: { id: string; pm: number | null; teams: string[]; resp: string | null }[] = []
   function walk(n: MatrixNodeTreeApi) {
     if (n.node_type === 'ACTIVITY') {
       rows.push({
         id: n.id,
         pm: n.planned_minutes ?? null,
         teams: normalizeMatrixTeamIds(n.team_ids).slice(0, 1),
+        resp: n.default_responsible_id ?? null,
       })
     }
     for (const c of n.children) walk(c)
@@ -119,7 +121,7 @@ export function activityFieldsSignature(tree: MatrixNodeTreeApi): string {
 export function patchActivityFieldsInTreeClone(
   tree: MatrixNodeTreeApi,
   activityId: string,
-  patch: Partial<Pick<ActivityFieldPatch, 'planned_minutes' | 'team_ids'>>,
+  patch: Partial<Pick<ActivityFieldPatch, 'planned_minutes' | 'team_ids' | 'default_responsible_id'>>,
 ): MatrixNodeTreeApi {
   const next = deepCloneMatrixTree(tree)
   const node = findNodeInTree(next, activityId)
@@ -129,6 +131,9 @@ export function patchActivityFieldsInTreeClone(
   }
   if (patch.team_ids !== undefined) {
     node.team_ids = normalizeMatrixTeamIds(patch.team_ids).slice(0, 1)
+  }
+  if (patch.default_responsible_id !== undefined) {
+    node.default_responsible_id = patch.default_responsible_id
   }
   return next
 }
@@ -205,6 +210,7 @@ export function collectActivityFieldDiffs(
       baseMap.set(n.id, {
         planned_minutes: n.planned_minutes ?? null,
         team_ids: normalizeMatrixTeamIds(n.team_ids).slice(0, 1),
+        default_responsible_id: n.default_responsible_id ?? null,
       })
     }
     for (const c of n.children) collect(c)
@@ -219,11 +225,13 @@ export function collectActivityFieldDiffs(
       const cur: ActivityFieldPatch = {
         planned_minutes: n.planned_minutes ?? null,
         team_ids: teams,
+        default_responsible_id: n.default_responsible_id ?? null,
       }
       if (
         b &&
         (b.planned_minutes !== cur.planned_minutes ||
-          JSON.stringify(b.team_ids) !== JSON.stringify(cur.team_ids))
+          JSON.stringify(b.team_ids) !== JSON.stringify(cur.team_ids) ||
+          b.default_responsible_id !== cur.default_responsible_id)
       ) {
         out.push({ id: n.id, patch: cur })
       }

@@ -1,4 +1,5 @@
 import type { MatrixNodeTreeApi } from '../../domain/operation-matrix/operation-matrix.types'
+import type { TeamMember } from '../../domain/teams/team.types'
 
 /**
  * IDs de equipe da atividade: trim, dedupe mantendo a 1ª ocorrência (ordem do backend / assignment).
@@ -25,6 +26,18 @@ export function matrixActivityPrimaryTeamId(node: MatrixNodeTreeApi): string | n
 /** Atividade com equipe padrão definida (colaborador legado em `default_responsible_id` não conta). */
 export function activityHasMatrixDefaultTeam(node: MatrixNodeTreeApi): boolean {
   return matrixActivityPrimaryTeamId(node) != null
+}
+
+/**
+ * Responsável na Atividade da Matriz: membro elegível = vínculo de equipe ativo
+ * + colaborador ativo (mesma regra imposta pelo backend em `operation-matrix.service.ts`).
+ */
+export function isEligibleActiveTeamMember(m: TeamMember): boolean {
+  return (
+    m.isActive &&
+    m.collaboratorIsActive &&
+    String(m.collaboratorStatus).toUpperCase() === 'ACTIVE'
+  )
 }
 
 /** Agregados da subárvore enraizada em um nó (para chips na árvore e resumo no painel). */

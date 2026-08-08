@@ -2,18 +2,20 @@ import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
 
 vi.mock('../../lib/api/client', () => ({
   requestJson: vi.fn(),
+  requestJsonEnvelope: vi.fn(),
 }))
 
 vi.mock('../../lib/api/env', () => ({
   getApiBaseUrl: vi.fn(() => ''),
 }))
 
-import { requestJson } from '../../lib/api/client'
+import { requestJsonEnvelope } from '../../lib/api/client'
 import {
   EXPORT_MATRIX_ITEM_ACTION_LABEL,
   EXPORT_MATRIX_ITEM_FAIL_MESSAGE,
   buildMatrixExportFallbackFilename,
   duplicateMatrixItem,
+  duplicateMatrixNode,
   exportMatrixItemToExcel,
 } from './operationMatrixApiService'
 
@@ -22,35 +24,119 @@ describe('duplicateMatrixItem', () => {
     vi.clearAllMocks()
   })
 
-  it('chama POST /api/v1/operation-matrix/items/:id/duplicate', async () => {
-    vi.mocked(requestJson).mockResolvedValue({
-      id: 'new-id',
-      name: 'Padrão (Cópia)',
-      is_active: true,
+  it('chama POST /api/v1/operation-matrix/items/:id/duplicate e retorna data + warnings vazio', async () => {
+    vi.mocked(requestJsonEnvelope).mockResolvedValue({
+      data: { id: 'new-id', name: 'Padrão (Cópia)', is_active: true },
+      meta: {},
     })
     const out = await duplicateMatrixItem('abc-123')
-    expect(requestJson).toHaveBeenCalledWith(
+    expect(requestJsonEnvelope).toHaveBeenCalledWith(
       'POST',
       '/api/v1/operation-matrix/items/abc-123/duplicate',
     )
     expect(out).toEqual({
-      id: 'new-id',
-      name: 'Padrão (Cópia)',
-      is_active: true,
+      data: { id: 'new-id', name: 'Padrão (Cópia)', is_active: true },
+      warnings: [],
     })
   })
 
   it('codifica o id na URL', async () => {
-    vi.mocked(requestJson).mockResolvedValue({
-      id: 'x',
-      name: 'n',
-      is_active: false,
+    vi.mocked(requestJsonEnvelope).mockResolvedValue({
+      data: { id: 'x', name: 'n', is_active: false },
+      meta: {},
     })
     await duplicateMatrixItem('a/b')
-    expect(requestJson).toHaveBeenCalledWith(
+    expect(requestJsonEnvelope).toHaveBeenCalledWith(
       'POST',
       '/api/v1/operation-matrix/items/a%2Fb/duplicate',
     )
+  })
+
+  it('preserva meta.warnings vazio, com 1 item e com múltiplos itens', async () => {
+    vi.mocked(requestJsonEnvelope).mockResolvedValueOnce({
+      data: { id: 'i1', name: 'M', is_active: true },
+      meta: { warnings: [] },
+    })
+    expect((await duplicateMatrixItem('i1')).warnings).toEqual([])
+
+    const oneWarning = [
+      {
+        code: 'MATRIX_ACTIVITY_RESPONSIBLE_NOT_COPIED',
+        sourceActivityId: 'a1',
+        duplicatedActivityId: 'a1-copy',
+        activityName: 'Atividade 1',
+        sourceResponsibleId: 'c1',
+        reason: 'TEAM_MEMBERSHIP_INACTIVE',
+        message: 'Aviso 1',
+      },
+    ]
+    vi.mocked(requestJsonEnvelope).mockResolvedValueOnce({
+      data: { id: 'i2', name: 'M', is_active: true },
+      meta: { warnings: oneWarning },
+    })
+    expect((await duplicateMatrixItem('i2')).warnings).toEqual(oneWarning)
+
+    const manyWarnings = [
+      ...oneWarning,
+      {
+        code: 'MATRIX_ACTIVITY_RESPONSIBLE_NOT_COPIED',
+        sourceActivityId: 'a2',
+        duplicatedActivityId: 'a2-copy',
+        activityName: 'Atividade 2',
+        sourceResponsibleId: 'c2',
+        reason: 'RESPONSIBLE_INACTIVE',
+        message: 'Aviso 2',
+      },
+    ]
+    vi.mocked(requestJsonEnvelope).mockResolvedValueOnce({
+      data: { id: 'i3', name: 'M', is_active: true },
+      meta: { warnings: manyWarnings },
+    })
+    const result = await duplicateMatrixItem('i3')
+    expect(result.warnings).toHaveLength(2)
+    expect(result.warnings).toEqual(manyWarnings)
+  })
+})
+
+describe('duplicateMatrixNode', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('chama POST /api/v1/operation-matrix/nodes/:id/duplicate e preserva meta.warnings', async () => {
+    vi.mocked(requestJsonEnvelope).mockResolvedValue({
+      data: { id: 'node-1' } as never,
+      meta: {
+        warnings: [
+          {
+            code: 'MATRIX_ACTIVITY_RESPONSIBLE_NOT_COPIED',
+            sourceActivityId: 'a1',
+            duplicatedActivityId: 'a1-copy',
+            activityName: 'Atividade duplicada',
+            sourceResponsibleId: 'c1',
+            reason: 'RESPONSIBLE_NOT_IN_TEAM',
+            message: 'Responsável não copiado.',
+          },
+        ],
+      },
+    })
+    const out = await duplicateMatrixNode('node-src')
+    expect(requestJsonEnvelope).toHaveBeenCalledWith(
+      'POST',
+      '/api/v1/operation-matrix/nodes/node-src/duplicate',
+    )
+    expect(out.warnings).toHaveLength(1)
+    expect(out.warnings[0]?.activityName).toBe('Atividade duplicada')
+    expect(out.data).toEqual({ id: 'node-1' })
+  })
+
+  it('não quebra quando meta.warnings está ausente (retorna array vazio)', async () => {
+    vi.mocked(requestJsonEnvelope).mockResolvedValue({
+      data: { id: 'node-2' } as never,
+      meta: {},
+    })
+    const out = await duplicateMatrixNode('node-2')
+    expect(out.warnings).toEqual([])
   })
 })
 

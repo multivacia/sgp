@@ -67,6 +67,27 @@ export type MatrixNodeRow = {
   deleted_at: Date | null
 }
 
+/** Motivo pelo qual o responsável padrão não foi copiado numa duplicação. */
+export type MatrixDuplicationWarningReason =
+  | 'RESPONSIBLE_INACTIVE'
+  | 'TEAM_MEMBERSHIP_INACTIVE'
+  | 'RESPONSIBLE_NOT_IN_TEAM'
+
+/** Aviso não-bloqueante emitido quando uma duplicação preserva a equipe mas descarta o responsável inválido. */
+export type MatrixDuplicationWarning = {
+  code: 'MATRIX_ACTIVITY_RESPONSIBLE_NOT_COPIED'
+  sourceActivityId: string
+  duplicatedActivityId: string
+  activityName: string
+  sourceResponsibleId: string
+  reason: MatrixDuplicationWarningReason
+  message: string
+}
+
+export type MatrixDuplicationMeta = {
+  warnings: MatrixDuplicationWarning[]
+}
+
 export function rowToMatrixNodeApi(row: MatrixNodeRow): MatrixNodeApi {
   return {
     id: row.id,

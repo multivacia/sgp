@@ -1023,6 +1023,316 @@ describe('S9.2.4 — assignees sem null no POST /conveyors', () => {
   })
 })
 
+describe('responsável na Atividade da Matriz (isolada) — ACCEPT_SUGGESTED / SELECT_ALTERNATIVE', () => {
+  const TEAM_ID = 'e1111111-1111-4111-8111-111111111111'
+  const COLLAB_ID = 'f2222222-2222-4222-8222-222222222222'
+
+  function oneStepDraft(): ConveyorDraft {
+    return {
+      schemaVersion: '1.1.0',
+      suggestedDados: { title: 'Esteira' },
+      options: [
+        {
+          orderIndex: 1,
+          title: 'Itens inferidos',
+          areas: [
+            {
+              orderIndex: 1,
+              title: 'Serviço',
+              steps: [{ orderIndex: 1, title: 'LINHA OS', plannedMinutes: 0 }],
+            },
+          ],
+        },
+      ],
+      warnings: [],
+      humanReviewRequired: true,
+    }
+  }
+
+  const sampleTaskSubtree = (): ArgosMatrixSubtreeV11 => ({
+    rootNodeId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+    rootNodeType: 'TASK',
+    rootTitle: '10 - LATERAIS TRASEIRAS',
+    totalAreas: 1,
+    totalActivities: 2,
+    totalPlannedMinutes: 75,
+    areas: [
+      {
+        matrixNodeId: 'sec-1',
+        title: 'Laterais',
+        orderIndex: 1,
+        plannedMinutes: 75,
+        activities: [
+          {
+            matrixNodeId: 'a1111111-1111-4111-8111-111111111111',
+            title: 'Etapa matriz 1',
+            orderIndex: 1,
+            plannedMinutes: 40,
+            teamId: TEAM_ID,
+            teamName: 'Equipe teste',
+          },
+          {
+            matrixNodeId: 'a2222222-2222-4222-8222-222222222222',
+            title: 'Etapa matriz 2',
+            orderIndex: 2,
+            plannedMinutes: 35,
+          },
+        ],
+      },
+    ],
+  })
+
+  it('1) ACCEPT_SUGGESTED com equipe e responsável em reusedStructure produz COLLABORATOR isPrimary=true + TEAM', () => {
+    const d = twoStepDraft()
+    const plan: ArgosMatchingPlanItemV11[] = [
+      {
+        extractedServiceDescription: 'S1',
+        suggestedAction: 'REVIEW_SIMILAR',
+        reusedStructure: {
+          kind: 'MATRIX_ACTIVITY',
+          plannedMinutes: 42,
+          activity: 'Atividade da Matriz',
+          teamId: TEAM_ID,
+          collaboratorId: COLLAB_ID,
+        },
+      },
+      { extractedServiceDescription: 'S2', suggestedAction: 'CREATE_NEW' },
+    ]
+    const k0 = buildReviewItemKey(plan[0]!, 0)
+    const out = applyReviewDecisionsToDraftV11(d, plan, {
+      [k0]: {
+        itemKey: k0,
+        currentDecision: 'ACCEPT_SUGGESTED',
+        updatedAt: new Date().toISOString(),
+      },
+    })
+    const payload = draftV1ToCreateConveyorInput(out)
+    const assignees = payload.options[0]!.areas[0]!.steps[0]!.assignees ?? []
+    expect(assignees).toEqual([
+      {
+        type: 'COLLABORATOR',
+        collaboratorId: COLLAB_ID,
+        isPrimary: true,
+        assignmentOrigin: 'reaproveitada',
+      },
+      {
+        type: 'TEAM',
+        teamId: TEAM_ID,
+        isPrimary: false,
+        assignmentOrigin: 'reaproveitada',
+      },
+    ])
+  })
+
+  it('2) SELECT_ALTERNATIVE com equipe e responsável no candidato alternativo produz o mesmo resultado', () => {
+    const d = twoStepDraft()
+    const plan: ArgosMatchingPlanItemV11[] = [
+      {
+        extractedServiceDescription: 'S1',
+        suggestedAction: 'REVIEW_SIMILAR',
+        alternativeCandidates: [
+          {
+            matrixNodeId: 'alt-a',
+            kind: 'MATRIX_ACTIVITY',
+            activity: 'Atividade matriz B',
+            plannedMinutes: 88,
+            confidence: 0.77,
+            matchReason: 'like',
+            teamId: TEAM_ID,
+            collaboratorId: COLLAB_ID,
+          },
+        ],
+      },
+      { extractedServiceDescription: 'S2', suggestedAction: 'CREATE_NEW' },
+    ]
+    const k0 = buildReviewItemKey(plan[0]!, 0)
+    const out = applyReviewDecisionsToDraftV11(d, plan, {
+      [k0]: {
+        itemKey: k0,
+        currentDecision: 'SELECT_ALTERNATIVE',
+        selectedAlternativeMatrixNodeId: 'alt-a',
+        updatedAt: new Date().toISOString(),
+      },
+    })
+    const payload = draftV1ToCreateConveyorInput(out)
+    const assignees = payload.options[0]!.areas[0]!.steps[0]!.assignees ?? []
+    expect(assignees).toEqual([
+      {
+        type: 'COLLABORATOR',
+        collaboratorId: COLLAB_ID,
+        isPrimary: true,
+        assignmentOrigin: 'reaproveitada',
+      },
+      {
+        type: 'TEAM',
+        teamId: TEAM_ID,
+        isPrimary: false,
+        assignmentOrigin: 'reaproveitada',
+      },
+    ])
+  })
+
+  it('3a) ACCEPT_SUGGESTED sem responsável configurado: só TEAM, sem COLLABORATOR, sem erro', () => {
+    const d = twoStepDraft()
+    const plan: ArgosMatchingPlanItemV11[] = [
+      {
+        extractedServiceDescription: 'S1',
+        suggestedAction: 'REVIEW_SIMILAR',
+        reusedStructure: {
+          kind: 'MATRIX_ACTIVITY',
+          plannedMinutes: 15,
+          activity: 'Atividade sem responsável',
+          teamId: TEAM_ID,
+        },
+      },
+      { extractedServiceDescription: 'S2', suggestedAction: 'CREATE_NEW' },
+    ]
+    const k0 = buildReviewItemKey(plan[0]!, 0)
+    const out = applyReviewDecisionsToDraftV11(d, plan, {
+      [k0]: {
+        itemKey: k0,
+        currentDecision: 'ACCEPT_SUGGESTED',
+        updatedAt: new Date().toISOString(),
+      },
+    })
+    const payload = draftV1ToCreateConveyorInput(out)
+    const assignees = payload.options[0]!.areas[0]!.steps[0]!.assignees ?? []
+    expect(assignees.some((a) => a.type === 'COLLABORATOR')).toBe(false)
+    expect(assignees).toEqual([
+      { type: 'TEAM', teamId: TEAM_ID, isPrimary: false, assignmentOrigin: 'reaproveitada' },
+    ])
+  })
+
+  it('3b) SELECT_ALTERNATIVE sem equipe nem responsável no candidato: nenhum assignee, sem erro', () => {
+    const d = twoStepDraft()
+    const plan: ArgosMatchingPlanItemV11[] = [
+      {
+        extractedServiceDescription: 'S1',
+        suggestedAction: 'REVIEW_SIMILAR',
+        alternativeCandidates: [
+          {
+            matrixNodeId: 'alt-a',
+            kind: 'MATRIX_ACTIVITY',
+            activity: 'Sem equipe nem responsável',
+            plannedMinutes: 12,
+            confidence: 0.5,
+            matchReason: 'like',
+          },
+        ],
+      },
+      { extractedServiceDescription: 'S2', suggestedAction: 'CREATE_NEW' },
+    ]
+    const k0 = buildReviewItemKey(plan[0]!, 0)
+    const out = applyReviewDecisionsToDraftV11(d, plan, {
+      [k0]: {
+        itemKey: k0,
+        currentDecision: 'SELECT_ALTERNATIVE',
+        selectedAlternativeMatrixNodeId: 'alt-a',
+        updatedAt: new Date().toISOString(),
+      },
+    })
+    const payload = draftV1ToCreateConveyorInput(out)
+    expect(payload.options[0]!.areas[0]!.steps[0]!.assignees ?? []).toEqual([])
+  })
+
+  it('4a) regressão: ACCEPT_SUGGESTED de subárvore (MATRIX_SUBTREE) continua herdando responsável + equipe', () => {
+    const d = oneStepDraft()
+    const st = sampleTaskSubtree()
+    const plan: ArgosMatchingPlanItemV11[] = [
+      {
+        extractedServiceDescription: 'LATERAL TRASEIRA',
+        suggestedAction: 'REVIEW_SIMILAR',
+        matchedMatrixNodeId: st.rootNodeId,
+        matchedMatrixNodeType: 'TASK',
+        reusedStructure: {
+          kind: 'MATRIX_SUBTREE',
+          activity: st.rootTitle,
+          plannedMinutes: st.totalPlannedMinutes,
+        },
+        matrixSubtree: st,
+      },
+    ]
+    const k0 = buildReviewItemKey(plan[0]!, 0)
+    const out = applyReviewDecisionsToDraftV11(d, plan, {
+      [k0]: {
+        itemKey: k0,
+        currentDecision: 'ACCEPT_SUGGESTED',
+        updatedAt: new Date().toISOString(),
+      },
+    })
+    const payload = draftV1ToCreateConveyorInput(out)
+    const assignees = payload.options[0]!.areas[0]!.steps[0]!.assignees ?? []
+    expect(assignees.some((a) => a.type === 'TEAM' && a.teamId === TEAM_ID)).toBe(true)
+  })
+
+  it('4b) regressão: SELECT_ALTERNATIVE de subárvore (MATRIX_SUBTREE) continua herdando corretamente', () => {
+    const d = oneStepDraft()
+    const altSubtree: ArgosMatrixSubtreeV11 = {
+      ...sampleTaskSubtree(),
+      rootNodeId: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+      rootTitle: 'Alternativa TASK',
+      areas: [
+        {
+          matrixNodeId: 'sec-alt',
+          title: 'Área alt',
+          orderIndex: 1,
+          activities: [
+            {
+              matrixNodeId: 'alt-act',
+              title: 'Só alternativa',
+              orderIndex: 1,
+              plannedMinutes: 99,
+              teamId: TEAM_ID,
+              defaultResponsibleId: COLLAB_ID,
+            },
+          ],
+        },
+      ],
+      totalActivities: 1,
+      totalPlannedMinutes: 99,
+    }
+    const plan: ArgosMatchingPlanItemV11[] = [
+      {
+        extractedServiceDescription: 'SERVICO',
+        suggestedAction: 'REVIEW_SIMILAR',
+        matchedMatrixNodeId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+        matchedMatrixNodeType: 'TASK',
+        reusedStructure: { kind: 'MATRIX_SUBTREE', activity: 'Principal' },
+        matrixSubtree: sampleTaskSubtree(),
+        alternativeCandidates: [
+          {
+            matrixNodeId: altSubtree.rootNodeId,
+            nodeType: 'TASK',
+            kind: 'MATRIX_SUBTREE',
+            activity: altSubtree.rootTitle,
+            plannedMinutes: altSubtree.totalPlannedMinutes,
+            confidence: 0.72,
+            matchReason: 'alt',
+            matrixSubtree: altSubtree,
+          },
+        ],
+      },
+    ]
+    const k0 = buildReviewItemKey(plan[0]!, 0)
+    const out = applyReviewDecisionsToDraftV11(d, plan, {
+      [k0]: {
+        itemKey: k0,
+        currentDecision: 'SELECT_ALTERNATIVE',
+        selectedAlternativeMatrixNodeId: altSubtree.rootNodeId,
+        updatedAt: new Date().toISOString(),
+      },
+    })
+    const payload = draftV1ToCreateConveyorInput(out)
+    const assignees = payload.options[0]!.areas[0]!.steps[0]!.assignees ?? []
+    expect(assignees).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ type: 'COLLABORATOR', collaboratorId: COLLAB_ID, isPrimary: true }),
+        expect.objectContaining({ type: 'TEAM', teamId: TEAM_ID, isPrimary: false }),
+      ]),
+    )
+  })
+})
+
 function buildIngestForAudit(plan: ArgosMatchingPlanItemV11[]): ArgosDocumentIngestResult {
   return {
     requestId: 'req-1',

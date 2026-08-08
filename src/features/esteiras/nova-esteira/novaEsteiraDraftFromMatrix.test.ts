@@ -243,6 +243,8 @@ describe('buildManualConveyorInput', () => {
 })
 
 describe('matrixActivityToInitialAllocRows', () => {
+  const RESPONSIBLE_ID = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'
+
   it('herda equipe da matriz com isPrimary false', () => {
     const rows = matrixActivityToInitialAllocRows(
       activityNode({
@@ -256,12 +258,68 @@ describe('matrixActivityToInitialAllocRows', () => {
     ])
   })
 
-  it('retorna vazio quando atividade não tem equipe padrão', () => {
+  it('retorna vazio quando atividade não tem equipe nem responsável padrão', () => {
     expect(
       matrixActivityToInitialAllocRows(
         activityNode({ id: 'act-2', name: 'Sem equipe' }),
       ),
     ).toEqual([])
+  })
+
+  it('herda responsável padrão (COLLABORATOR isPrimary true) junto com a equipe', () => {
+    const rows = matrixActivityToInitialAllocRows(
+      activityNode({
+        id: 'act-3',
+        name: 'Com responsável',
+        team_ids: [TEAM_ID],
+        default_responsible_id: RESPONSIBLE_ID,
+      }),
+    )
+    expect(rows).toEqual([
+      { type: 'COLLABORATOR', collaboratorId: RESPONSIBLE_ID, isPrimary: true },
+      { type: 'TEAM', teamId: TEAM_ID, isPrimary: false },
+    ])
+  })
+
+  it('herda só o responsável quando a atividade não tem equipe padrão', () => {
+    const rows = matrixActivityToInitialAllocRows(
+      activityNode({
+        id: 'act-4',
+        name: 'Só responsável',
+        default_responsible_id: RESPONSIBLE_ID,
+      }),
+    )
+    expect(rows).toEqual([
+      { type: 'COLLABORATOR', collaboratorId: RESPONSIBLE_ID, isPrimary: true },
+    ])
+  })
+
+  it('a alocação herdada do responsável materializa corretamente no POST (via manualAssigneeRowsToApi)', () => {
+    const rows = matrixActivityToInitialAllocRows(
+      activityNode({
+        id: 'act-5',
+        name: 'Com responsável e equipe',
+        team_ids: [TEAM_ID],
+        default_responsible_id: RESPONSIBLE_ID,
+      }),
+    )
+    const assignees = manualAssigneeRowsToApi(rows)
+    expect(assignees).toEqual([
+      {
+        type: 'COLLABORATOR',
+        collaboratorId: RESPONSIBLE_ID,
+        isPrimary: true,
+        assignmentOrigin: 'manual',
+        orderIndex: 0,
+      },
+      {
+        type: 'TEAM',
+        teamId: TEAM_ID,
+        isPrimary: false,
+        assignmentOrigin: 'manual',
+        orderIndex: 1,
+      },
+    ])
   })
 })
 

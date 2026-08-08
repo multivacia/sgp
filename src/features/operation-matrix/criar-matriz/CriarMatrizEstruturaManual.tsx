@@ -1,15 +1,35 @@
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { MatrixSuggestionCatalogData } from '../../../catalog/matrixSuggestion/types'
 import type { Collaborator } from '../../../domain/collaborators/collaborator.types'
-import type { Team } from '../../../domain/teams/team.types'
+import type { Team, TeamMember } from '../../../domain/teams/team.types'
+import { listTeamMembers } from '../../../services/teams/teamsApiService'
 import { LabelSuggestField } from '../components/LabelSuggestField'
+import { isEligibleActiveTeamMember } from '../matrixTreeAggregates'
 import {
   newManualArea,
   newManualEtapa,
   newManualOpcao,
   reconcileEtapaCollaborators,
+  reconcileManualOpcoesResponsiblesAgainstEligibility,
   type CriarMatrizManualEtapa,
   type CriarMatrizManualOpcao,
 } from './criarMatrizManualDraft'
+
+type TeamMembersState = TeamMember[] | 'loading' | 'error'
+
+/** Times cuja equipe efetiva (`teamIds[0]`) de cada etapa aparece no rascunho. */
+function collectUsedTeamIds(opcoes: CriarMatrizManualOpcao[]): Set<string> {
+  const ids = new Set<string>()
+  for (const op of opcoes) {
+    for (const ar of op.areas) {
+      for (const et of ar.etapas) {
+        const tid = reconcileEtapaCollaborators(et).teamIds[0]
+        if (tid) ids.add(tid)
+      }
+    }
+  }
+  return ids
+}
 
 type Props = {
   opcoes: CriarMatrizManualOpcao[]
@@ -82,6 +102,66 @@ export function CriarMatrizEstruturaManual({
   collaboratorsError,
   matrixSuggestionCatalog,
 }: Props) {
+  const [membersByTeam, setMembersByTeam] = useState<Record<string, TeamMembersState>>({})
+  const requestedTeamIdsRef = useRef<Set<string>>(new Set())
+  const opcoesRef = useRef(opcoes)
+  const onChangeRef = useRef(onChange)
+  useEffect(() => {
+    opcoesRef.current = opcoes
+  }, [opcoes])
+  useEffect(() => {
+    onChangeRef.current = onChange
+  }, [onChange])
+
+  const usedTeamIds = useMemo(() => collectUsedTeamIds(opcoes), [opcoes])
+
+  /**
+   * Não escreve `'loading'` de forma síncrona: a ausência da chave em `membersByTeam`
+   * já é tratada como "carregando" na leitura (evita setState síncrono dentro do efeito).
+   */
+  function fetchTeamMembers(teamId: string) {
+    requestedTeamIdsRef.current.add(teamId)
+    listTeamMembers(teamId)
+      .then((rows) => {
+        setMembersByTeam((prev) => ({ ...prev, [teamId]: rows }))
+      })
+      .catch(() => {
+        requestedTeamIdsRef.current.delete(teamId)
+        setMembersByTeam((prev) => ({ ...prev, [teamId]: 'error' }))
+      })
+  }
+
+  useEffect(() => {
+    for (const teamId of usedTeamIds) {
+      if (!requestedTeamIdsRef.current.has(teamId)) {
+        fetchTeamMembers(teamId)
+      }
+    }
+  }, [usedTeamIds])
+
+  const eligibleMemberIdsByTeam = useMemo(() => {
+    const map = new Map<string, ReadonlySet<string>>()
+    for (const [teamId, entry] of Object.entries(membersByTeam)) {
+      if (entry === 'loading' || entry === 'error') continue
+      map.set(teamId, new Set(entry.filter(isEligibleActiveTeamMember).map((m) => m.collaboratorId)))
+    }
+    return map
+  }, [membersByTeam])
+
+  useEffect(() => {
+    const reconciled = reconcileManualOpcoesResponsiblesAgainstEligibility(
+      opcoesRef.current,
+      eligibleMemberIdsByTeam,
+    )
+    if (reconciled !== opcoesRef.current) {
+      onChangeRef.current(reconciled)
+    }
+  }, [eligibleMemberIdsByTeam])
+
+  function applyOpcoesChange(next: CriarMatrizManualOpcao[]) {
+    onChange(reconcileManualOpcoesResponsiblesAgainstEligibility(next, eligibleMemberIdsByTeam))
+  }
+
   function addFirstOption() {
     onChange([newManualOpcao(nid())])
   }
@@ -350,7 +430,7 @@ export function CriarMatrizEstruturaManual({
                                           type="checkbox"
                                           checked={checked}
                                           onChange={(ev) =>
-                                            onChange(
+                                            applyOpcoesChange(
                                               updateEtapa(
                                                 opcoes,
                                                 op.id,
@@ -398,12 +478,66 @@ export function CriarMatrizEstruturaManual({
                                     Não há colaboradores ativos.
                                   </p>
                                 )}
+                              {(() => {
+                                const effectiveTeamId = etRec.teamIds[0] ?? null
+                                const teamMembersState = effectiveTeamId
+                                  ? membersByTeam[effectiveTeamId]
+                                  : undefined
+                                const eligibleIds = effectiveTeamId
+                                  ? eligibleMemberIdsByTeam.get(effectiveTeamId)
+                                  : undefined
+                                if (!effectiveTeamId) {
+                                  return (
+                                    <p className="mt-2 text-[11px] text-slate-500">
+                                      Selecione um time acima para poder indicar um
+                                      responsável.
+                                    </p>
+                                  )
+                                }
+                                if (teamMembersState === 'loading' || teamMembersState === undefined) {
+                                  return (
+                                    <p className="mt-2 text-[11px] text-slate-500">
+                                      Carregando membros do time…
+                                    </p>
+                                  )
+                                }
+                                if (teamMembersState === 'error') {
+                                  return (
+                                    <p className="mt-2 text-[11px] text-rose-300">
+                                      Não foi possível carregar os membros do time.{' '}
+                                      <button
+                                        type="button"
+                                        className="font-semibold underline"
+                                        onClick={() => fetchTeamMembers(effectiveTeamId)}
+                                      >
+                                        Tentar novamente
+                                      </button>
+                                    </p>
+                                  )
+                                }
+                                if (eligibleIds && eligibleIds.size === 0) {
+                                  return (
+                                    <p className="mt-2 text-[11px] text-slate-500">
+                                      Nenhum membro ativo neste time — não é possível
+                                      indicar um responsável até haver um membro ativo.
+                                    </p>
+                                  )
+                                }
+                                return null
+                              })()}
                               <div className="mt-2 space-y-2">
                                 {ids.map((cid, idx) => {
                                   const rowOptions = selectOptionsForRow(
                                     collaborators,
                                     ids,
                                     idx,
+                                  )
+                                  const effectiveTeamId = etRec.teamIds[0] ?? null
+                                  const eligibleIds = effectiveTeamId
+                                    ? eligibleMemberIdsByTeam.get(effectiveTeamId)
+                                    : undefined
+                                  const canBeResponsible = Boolean(
+                                    effectiveTeamId && eligibleIds?.has(cid),
                                   )
                                   return (
                                     <div
@@ -451,14 +585,22 @@ export function CriarMatrizEstruturaManual({
                                           </option>
                                         ))}
                                       </select>
-                                      <label className="flex items-center gap-1.5 text-xs text-slate-400">
+                                      <label
+                                        className="flex items-center gap-1.5 text-xs text-slate-400"
+                                        title={
+                                          canBeResponsible
+                                            ? undefined
+                                            : 'Só um membro ativo do time selecionado pode ser o responsável.'
+                                        }
+                                      >
                                         <input
                                           type="radio"
-                                          className="accent-sgp-gold"
+                                          className="accent-sgp-gold disabled:opacity-40"
                                           name={`principal-${et.id}`}
                                           checked={
                                             etRec.primaryCollaboratorId === cid
                                           }
+                                          disabled={!canBeResponsible}
                                           onChange={() =>
                                             onChange(
                                               updateEtapa(
@@ -475,7 +617,7 @@ export function CriarMatrizEstruturaManual({
                                             )
                                           }
                                         />
-                                        Principal
+                                        Responsável
                                       </label>
                                       <button
                                         type="button"

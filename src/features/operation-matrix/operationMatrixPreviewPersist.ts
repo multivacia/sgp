@@ -48,6 +48,7 @@ export function toCreateMatrixNodeInput(
     input.plannedMinutes = node.planned_minutes ?? null
     input.teamIds = normalizeMatrixTeamIds(node.team_ids).slice(0, 1)
     input.required = node.required
+    input.defaultResponsibleId = node.default_responsible_id ?? null
   }
   return input
 }
@@ -92,6 +93,7 @@ export function planOperationMatrixPreviewApiPersist(
       input: {
         plannedMinutes: patch.planned_minutes,
         teamIds: patch.team_ids,
+        defaultResponsibleId: patch.default_responsible_id,
       },
     })
   }
@@ -142,6 +144,7 @@ export async function persistOperationMatrixPreviewToApi(
     await api.patchNode(remapPreviewPersistNodeId(id, idMap), {
       plannedMinutes: patch.planned_minutes,
       teamIds: patch.team_ids,
+      defaultResponsibleId: patch.default_responsible_id,
     })
   }
 

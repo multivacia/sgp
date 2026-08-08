@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto'
-import { describe, expect, it, beforeAll, afterAll } from 'vitest'
+import { describe, expect, it, beforeAll, afterAll, afterEach } from 'vitest'
 import request from 'supertest'
+import type pg from 'pg'
 import { createApp } from '../app.js'
 import { createLogger } from '../plugins/logger.js'
 import { closePool, getPool } from '../plugins/db.js'
@@ -11,10 +12,126 @@ import {
 } from '../config/env.js'
 import { hashPassword } from '../shared/password/password.js'
 import { sessionCookieForUser } from './sessionTestCookie.js'
+import { servicePatchNode } from '../modules/operation-matrix/operation-matrix.service.js'
 
 loadDotenvFiles()
 
 const hasDb = hasDatabaseConnectionInEnv(process.env)
+
+/** Cria ITEM → TASK → SECTOR para pendurar uma ACTIVITY nos testes de responsável padrão. */
+async function createHierarchyForActivity(
+  app: ReturnType<typeof createApp>,
+  cookie: string,
+  label: string,
+): Promise<{ itemId: string; sectorId: string }> {
+  const rItem = await request(app)
+    .post('/api/v1/operation-matrix/nodes')
+    .set('Cookie', cookie)
+    .send({
+      nodeType: 'ITEM',
+      name: `Resp ${label} ${randomUUID().slice(0, 8)}`,
+      isActive: true,
+    })
+  const itemId = rItem.body.data?.id as string
+
+  const rTask = await request(app)
+    .post('/api/v1/operation-matrix/nodes')
+    .set('Cookie', cookie)
+    .send({ nodeType: 'TASK', parentId: itemId, name: `Tarefa ${label}` })
+  const taskId = rTask.body.data?.id as string
+
+  const rSector = await request(app)
+    .post('/api/v1/operation-matrix/nodes')
+    .set('Cookie', cookie)
+    .send({ nodeType: 'SECTOR', parentId: taskId, name: `Setor ${label}` })
+  const sectorId = rSector.body.data?.id as string
+
+  return { itemId, sectorId }
+}
+
+async function insertCollaboratorFixture(
+  pool: ReturnType<typeof getPool>,
+  opts: { active?: boolean } = {},
+): Promise<string> {
+  const id = randomUUID()
+  const active = opts.active ?? true
+  await pool.query(
+    `INSERT INTO collaborators (id, full_name, status, is_active) VALUES ($1::uuid, $2, $3, $4)`,
+    [id, `Colab resp ${id.slice(0, 8)}`, active ? 'ACTIVE' : 'INACTIVE', active],
+  )
+  return id
+}
+
+async function insertTeamFixture(
+  pool: ReturnType<typeof getPool>,
+): Promise<string> {
+  const id = randomUUID()
+  await pool.query(
+    `INSERT INTO teams (id, name, is_active) VALUES ($1::uuid, $2, true)`,
+    [id, `Team resp ${id.slice(0, 8)}`],
+  )
+  return id
+}
+
+async function insertTeamMemberFixture(
+  pool: ReturnType<typeof getPool>,
+  teamId: string,
+  collaboratorId: string,
+  opts: { active?: boolean } = {},
+): Promise<void> {
+  await pool.query(
+    `INSERT INTO team_members (team_id, collaborator_id, is_active) VALUES ($1::uuid, $2::uuid, $3)`,
+    [teamId, collaboratorId, opts.active ?? true],
+  )
+}
+
+/** Remove por padrão de nome (`insertTeamFixture`/`insertCollaboratorFixture`) — evita poluir outros testes. */
+async function cleanupRespFixtures(pool: ReturnType<typeof getPool>): Promise<void> {
+  await pool.query(
+    `DELETE FROM matrix_node_assignment_teams
+     WHERE team_id IN (SELECT id FROM teams WHERE name LIKE 'Team resp %')`,
+  )
+  await pool.query(
+    `DELETE FROM team_members
+     WHERE team_id IN (SELECT id FROM teams WHERE name LIKE 'Team resp %')
+        OR collaborator_id IN (SELECT id FROM collaborators WHERE full_name LIKE 'Colab resp %')`,
+  )
+  await pool.query(`DELETE FROM teams WHERE name LIKE 'Team resp %'`)
+  await pool.query(`DELETE FROM collaborators WHERE full_name LIKE 'Colab resp %'`)
+}
+
+/**
+ * Envolve o pool real, mas força um erro na etapa de gravação dos vínculos de equipe
+ * (`matrix_node_assignment_teams`) — usado para provar atomicidade/rollback (AC11).
+ */
+function poisonPoolForTeamLinkFailure(realPool: pg.Pool): pg.Pool {
+  return {
+    query: (
+      ...args: Parameters<pg.Pool['query']>
+    ): ReturnType<pg.Pool['query']> =>
+      (realPool.query as (...a: unknown[]) => unknown)(
+        ...args,
+      ) as ReturnType<pg.Pool['query']>,
+    connect: async () => {
+      const client = await realPool.connect()
+      const originalQuery = client.query.bind(client)
+      return {
+        query: (...args: unknown[]) => {
+          const text = args[0]
+          const sqlText =
+            typeof text === 'string'
+              ? text
+              : ((text as { text?: string } | undefined)?.text ?? '')
+          if (/INSERT INTO matrix_node_assignment_teams/i.test(sqlText)) {
+            return Promise.reject(new Error('simulated team link failure'))
+          }
+          return (originalQuery as (...a: unknown[]) => unknown)(...args)
+        },
+        release: client.release.bind(client),
+      }
+    },
+  } as unknown as pg.Pool
+}
 
 const GOV_ADMIN_USER_ID = '55555555-5555-5555-5555-555555555555'
 const GOV_ADMIN_EMAIL = 'gov-collab-test@sgp-argos.local'
@@ -656,5 +773,662 @@ describe.skipIf(!hasDb)('operation-matrix (integração)', () => {
       [teamId],
     )
     await pool.query(`DELETE FROM teams WHERE id = $1::uuid`, [teamId])
+  })
+
+  describe('responsável padrão de Atividade (equipe + colaborador)', () => {
+    afterEach(async () => {
+      await cleanupRespFixtures(pool)
+    })
+
+    it('[AC1] cria atividade sem responsável — continua permitido', async () => {
+      const cookie = await sessionCookieForUser(
+        pool,
+        GOV_ADMIN_USER_ID,
+        GOV_ADMIN_EMAIL,
+      )
+      const { itemId, sectorId } = await createHierarchyForActivity(
+        app,
+        cookie,
+        'ac1',
+      )
+      const r = await request(app)
+        .post('/api/v1/operation-matrix/nodes')
+        .set('Cookie', cookie)
+        .send({
+          nodeType: 'ACTIVITY',
+          parentId: sectorId,
+          name: 'Atividade sem responsável',
+        })
+      expect(r.status).toBe(201)
+      expect(r.body.data?.default_responsible_id).toBeNull()
+
+      await request(app)
+        .delete(`/api/v1/operation-matrix/nodes/${itemId}`)
+        .set('Cookie', cookie)
+    })
+
+    it('[AC2] cria atividade com responsável ativo e membro da equipe — persiste equipe e responsável', async () => {
+      const cookie = await sessionCookieForUser(
+        pool,
+        GOV_ADMIN_USER_ID,
+        GOV_ADMIN_EMAIL,
+      )
+      const { itemId, sectorId } = await createHierarchyForActivity(
+        app,
+        cookie,
+        'ac2',
+      )
+      const teamId = await insertTeamFixture(pool)
+      const collaboratorId = await insertCollaboratorFixture(pool)
+      await insertTeamMemberFixture(pool, teamId, collaboratorId)
+
+      const r = await request(app)
+        .post('/api/v1/operation-matrix/nodes')
+        .set('Cookie', cookie)
+        .send({
+          nodeType: 'ACTIVITY',
+          parentId: sectorId,
+          name: 'Atividade com responsável',
+          teamIds: [teamId],
+          defaultResponsibleId: collaboratorId,
+        })
+      expect(r.status).toBe(201)
+      expect(r.body.data?.team_ids).toEqual([teamId])
+      expect(r.body.data?.default_responsible_id).toBe(collaboratorId)
+
+      await request(app)
+        .delete(`/api/v1/operation-matrix/nodes/${itemId}`)
+        .set('Cookie', cookie)
+    })
+
+    it('[AC3] rejeita responsável externo à equipe informada (422)', async () => {
+      const cookie = await sessionCookieForUser(
+        pool,
+        GOV_ADMIN_USER_ID,
+        GOV_ADMIN_EMAIL,
+      )
+      const { itemId, sectorId } = await createHierarchyForActivity(
+        app,
+        cookie,
+        'ac3',
+      )
+      const teamId = await insertTeamFixture(pool)
+      const outsiderId = await insertCollaboratorFixture(pool)
+
+      const r = await request(app)
+        .post('/api/v1/operation-matrix/nodes')
+        .set('Cookie', cookie)
+        .send({
+          nodeType: 'ACTIVITY',
+          parentId: sectorId,
+          name: 'Atividade responsável externo',
+          teamIds: [teamId],
+          defaultResponsibleId: outsiderId,
+        })
+      expect(r.status).toBe(422)
+
+      await request(app)
+        .delete(`/api/v1/operation-matrix/nodes/${itemId}`)
+        .set('Cookie', cookie)
+    })
+
+    it('[AC4] rejeita responsável inativo (422)', async () => {
+      const cookie = await sessionCookieForUser(
+        pool,
+        GOV_ADMIN_USER_ID,
+        GOV_ADMIN_EMAIL,
+      )
+      const { itemId, sectorId } = await createHierarchyForActivity(
+        app,
+        cookie,
+        'ac4',
+      )
+      const teamId = await insertTeamFixture(pool)
+      const inactiveId = await insertCollaboratorFixture(pool, {
+        active: false,
+      })
+      await insertTeamMemberFixture(pool, teamId, inactiveId)
+
+      const r = await request(app)
+        .post('/api/v1/operation-matrix/nodes')
+        .set('Cookie', cookie)
+        .send({
+          nodeType: 'ACTIVITY',
+          parentId: sectorId,
+          name: 'Atividade responsável inativo',
+          teamIds: [teamId],
+          defaultResponsibleId: inactiveId,
+        })
+      expect(r.status).toBe(422)
+
+      await request(app)
+        .delete(`/api/v1/operation-matrix/nodes/${itemId}`)
+        .set('Cookie', cookie)
+    })
+
+    it('[AC5] rejeita vínculo de equipe inativo (422)', async () => {
+      const cookie = await sessionCookieForUser(
+        pool,
+        GOV_ADMIN_USER_ID,
+        GOV_ADMIN_EMAIL,
+      )
+      const { itemId, sectorId } = await createHierarchyForActivity(
+        app,
+        cookie,
+        'ac5',
+      )
+      const teamId = await insertTeamFixture(pool)
+      const collaboratorId = await insertCollaboratorFixture(pool)
+      await insertTeamMemberFixture(pool, teamId, collaboratorId, {
+        active: false,
+      })
+
+      const r = await request(app)
+        .post('/api/v1/operation-matrix/nodes')
+        .set('Cookie', cookie)
+        .send({
+          nodeType: 'ACTIVITY',
+          parentId: sectorId,
+          name: 'Atividade vínculo inativo',
+          teamIds: [teamId],
+          defaultResponsibleId: collaboratorId,
+        })
+      expect(r.status).toBe(422)
+
+      await request(app)
+        .delete(`/api/v1/operation-matrix/nodes/${itemId}`)
+        .set('Cookie', cookie)
+    })
+
+    it('[AC6] rejeita responsável sem equipe válida (422)', async () => {
+      const cookie = await sessionCookieForUser(
+        pool,
+        GOV_ADMIN_USER_ID,
+        GOV_ADMIN_EMAIL,
+      )
+      const { itemId, sectorId } = await createHierarchyForActivity(
+        app,
+        cookie,
+        'ac6',
+      )
+      const collaboratorId = await insertCollaboratorFixture(pool)
+
+      const r = await request(app)
+        .post('/api/v1/operation-matrix/nodes')
+        .set('Cookie', cookie)
+        .send({
+          nodeType: 'ACTIVITY',
+          parentId: sectorId,
+          name: 'Atividade sem equipe',
+          defaultResponsibleId: collaboratorId,
+        })
+      expect(r.status).toBe(422)
+
+      await request(app)
+        .delete(`/api/v1/operation-matrix/nodes/${itemId}`)
+        .set('Cookie', cookie)
+    })
+
+    it('[AC7] PATCH só de defaultResponsibleId (sem teamIds) valida contra a equipe persistida', async () => {
+      const cookie = await sessionCookieForUser(
+        pool,
+        GOV_ADMIN_USER_ID,
+        GOV_ADMIN_EMAIL,
+      )
+      const { itemId, sectorId } = await createHierarchyForActivity(
+        app,
+        cookie,
+        'ac7',
+      )
+      const teamId = await insertTeamFixture(pool)
+      const collaboratorA = await insertCollaboratorFixture(pool)
+      const collaboratorB = await insertCollaboratorFixture(pool)
+      await insertTeamMemberFixture(pool, teamId, collaboratorA)
+      await insertTeamMemberFixture(pool, teamId, collaboratorB)
+
+      const rAct = await request(app)
+        .post('/api/v1/operation-matrix/nodes')
+        .set('Cookie', cookie)
+        .send({
+          nodeType: 'ACTIVITY',
+          parentId: sectorId,
+          name: 'Atividade AC7',
+          teamIds: [teamId],
+          defaultResponsibleId: collaboratorA,
+        })
+      const activityId = rAct.body.data?.id as string
+
+      const rPatch = await request(app)
+        .patch(`/api/v1/operation-matrix/nodes/${activityId}`)
+        .set('Cookie', cookie)
+        .send({ defaultResponsibleId: collaboratorB })
+      expect(rPatch.status).toBe(200)
+      expect(rPatch.body.data?.default_responsible_id).toBe(collaboratorB)
+      expect(rPatch.body.data?.team_ids).toEqual([teamId])
+
+      await request(app)
+        .delete(`/api/v1/operation-matrix/nodes/${itemId}`)
+        .set('Cookie', cookie)
+    })
+
+    it('[AC8] PATCH conjunto de teamIds + defaultResponsibleId é validado contra o request e é atômico', async () => {
+      const cookie = await sessionCookieForUser(
+        pool,
+        GOV_ADMIN_USER_ID,
+        GOV_ADMIN_EMAIL,
+      )
+      const { itemId, sectorId } = await createHierarchyForActivity(
+        app,
+        cookie,
+        'ac8',
+      )
+      const teamA = await insertTeamFixture(pool)
+      const collaboratorA = await insertCollaboratorFixture(pool)
+      await insertTeamMemberFixture(pool, teamA, collaboratorA)
+
+      const rAct = await request(app)
+        .post('/api/v1/operation-matrix/nodes')
+        .set('Cookie', cookie)
+        .send({
+          nodeType: 'ACTIVITY',
+          parentId: sectorId,
+          name: 'Atividade AC8',
+          teamIds: [teamA],
+          defaultResponsibleId: collaboratorA,
+        })
+      const activityId = rAct.body.data?.id as string
+
+      const teamB = await insertTeamFixture(pool)
+      const collaboratorB = await insertCollaboratorFixture(pool)
+      await insertTeamMemberFixture(pool, teamB, collaboratorB)
+
+      // Inválido: collaboratorA não pertence à teamB do próprio request → rejeitado e nada muda.
+      const rBad = await request(app)
+        .patch(`/api/v1/operation-matrix/nodes/${activityId}`)
+        .set('Cookie', cookie)
+        .send({ teamIds: [teamB], defaultResponsibleId: collaboratorA })
+      expect(rBad.status).toBe(422)
+
+      const unchanged = await pool.query<{
+        default_responsible_id: string | null
+      }>(`SELECT default_responsible_id FROM matrix_nodes WHERE id = $1::uuid`, [
+        activityId,
+      ])
+      expect(unchanged.rows[0]?.default_responsible_id).toBe(collaboratorA)
+      const unchangedLinks = await pool.query<{ team_id: string }>(
+        `SELECT team_id::text AS team_id FROM matrix_node_assignment_teams
+         WHERE matrix_node_id = $1::uuid AND deleted_at IS NULL`,
+        [activityId],
+      )
+      expect(unchangedLinks.rows.map((r) => r.team_id)).toEqual([teamA])
+
+      // Válido: teamB + collaboratorB (membro de teamB) no mesmo request.
+      const rGood = await request(app)
+        .patch(`/api/v1/operation-matrix/nodes/${activityId}`)
+        .set('Cookie', cookie)
+        .send({ teamIds: [teamB], defaultResponsibleId: collaboratorB })
+      expect(rGood.status).toBe(200)
+      expect(rGood.body.data?.team_ids).toEqual([teamB])
+      expect(rGood.body.data?.default_responsible_id).toBe(collaboratorB)
+
+      await request(app)
+        .delete(`/api/v1/operation-matrix/nodes/${itemId}`)
+        .set('Cookie', cookie)
+    })
+
+    it('[AC9] mudança real de equipe que invalida o responsável atual limpa o responsável automaticamente', async () => {
+      const cookie = await sessionCookieForUser(
+        pool,
+        GOV_ADMIN_USER_ID,
+        GOV_ADMIN_EMAIL,
+      )
+      const { itemId, sectorId } = await createHierarchyForActivity(
+        app,
+        cookie,
+        'ac9',
+      )
+      const teamA = await insertTeamFixture(pool)
+      const collaboratorA = await insertCollaboratorFixture(pool)
+      await insertTeamMemberFixture(pool, teamA, collaboratorA)
+
+      const rAct = await request(app)
+        .post('/api/v1/operation-matrix/nodes')
+        .set('Cookie', cookie)
+        .send({
+          nodeType: 'ACTIVITY',
+          parentId: sectorId,
+          name: 'Atividade AC9',
+          teamIds: [teamA],
+          defaultResponsibleId: collaboratorA,
+        })
+      const activityId = rAct.body.data?.id as string
+
+      const teamB = await insertTeamFixture(pool)
+      // collaboratorA não é membro de teamB.
+
+      const rPatch = await request(app)
+        .patch(`/api/v1/operation-matrix/nodes/${activityId}`)
+        .set('Cookie', cookie)
+        .send({ teamIds: [teamB] })
+      expect(rPatch.status).toBe(200)
+      expect(rPatch.body.data?.team_ids).toEqual([teamB])
+      expect(rPatch.body.data?.default_responsible_id).toBeNull()
+
+      await request(app)
+        .delete(`/api/v1/operation-matrix/nodes/${itemId}`)
+        .set('Cookie', cookie)
+    })
+
+    it('[AC10] reenviar a mesma equipe já persistida preserva o responsável atual', async () => {
+      const cookie = await sessionCookieForUser(
+        pool,
+        GOV_ADMIN_USER_ID,
+        GOV_ADMIN_EMAIL,
+      )
+      const { itemId, sectorId } = await createHierarchyForActivity(
+        app,
+        cookie,
+        'ac10',
+      )
+      const teamA = await insertTeamFixture(pool)
+      const collaboratorA = await insertCollaboratorFixture(pool)
+      await insertTeamMemberFixture(pool, teamA, collaboratorA)
+
+      const rAct = await request(app)
+        .post('/api/v1/operation-matrix/nodes')
+        .set('Cookie', cookie)
+        .send({
+          nodeType: 'ACTIVITY',
+          parentId: sectorId,
+          name: 'Atividade AC10',
+          teamIds: [teamA],
+          defaultResponsibleId: collaboratorA,
+        })
+      const activityId = rAct.body.data?.id as string
+
+      const rPatch = await request(app)
+        .patch(`/api/v1/operation-matrix/nodes/${activityId}`)
+        .set('Cookie', cookie)
+        .send({ teamIds: [teamA] })
+      expect(rPatch.status).toBe(200)
+      expect(rPatch.body.data?.team_ids).toEqual([teamA])
+      expect(rPatch.body.data?.default_responsible_id).toBe(collaboratorA)
+
+      await request(app)
+        .delete(`/api/v1/operation-matrix/nodes/${itemId}`)
+        .set('Cookie', cookie)
+    })
+
+    it('[AC11] falha simulada no vínculo de equipe durante PATCH que também altera responsável não deixa gravação parcial', async () => {
+      const cookie = await sessionCookieForUser(
+        pool,
+        GOV_ADMIN_USER_ID,
+        GOV_ADMIN_EMAIL,
+      )
+      const { itemId, sectorId } = await createHierarchyForActivity(
+        app,
+        cookie,
+        'ac11',
+      )
+      const teamA = await insertTeamFixture(pool)
+      const collaboratorA = await insertCollaboratorFixture(pool)
+      await insertTeamMemberFixture(pool, teamA, collaboratorA)
+
+      const rAct = await request(app)
+        .post('/api/v1/operation-matrix/nodes')
+        .set('Cookie', cookie)
+        .send({
+          nodeType: 'ACTIVITY',
+          parentId: sectorId,
+          name: 'Atividade AC11 original',
+          teamIds: [teamA],
+          defaultResponsibleId: collaboratorA,
+        })
+      const activityId = rAct.body.data?.id as string
+
+      const teamB = await insertTeamFixture(pool)
+      const collaboratorB = await insertCollaboratorFixture(pool)
+      await insertTeamMemberFixture(pool, teamB, collaboratorB)
+
+      const poisoned = poisonPoolForTeamLinkFailure(pool)
+      await expect(
+        servicePatchNode(poisoned, activityId, {
+          name: 'Nome que não deveria persistir',
+          teamIds: [teamB],
+          defaultResponsibleId: collaboratorB,
+        }),
+      ).rejects.toThrow()
+
+      const row = await pool.query<{
+        name: string
+        default_responsible_id: string | null
+      }>(
+        `SELECT name, default_responsible_id FROM matrix_nodes WHERE id = $1::uuid`,
+        [activityId],
+      )
+      expect(row.rows[0]?.name).toBe('Atividade AC11 original')
+      expect(row.rows[0]?.default_responsible_id).toBe(collaboratorA)
+
+      const links = await pool.query<{ team_id: string }>(
+        `SELECT team_id::text AS team_id FROM matrix_node_assignment_teams
+         WHERE matrix_node_id = $1::uuid AND deleted_at IS NULL`,
+        [activityId],
+      )
+      expect(links.rows.map((r) => r.team_id)).toEqual([teamA])
+
+      await request(app)
+        .delete(`/api/v1/operation-matrix/nodes/${itemId}`)
+        .set('Cookie', cookie)
+    })
+  })
+
+  describe('duplicação — warnings de responsável não copiado', () => {
+    afterEach(async () => {
+      await cleanupRespFixtures(pool)
+    })
+
+    it('[AC12] duplicação com responsável válido preserva equipe e responsável na cópia', async () => {
+      const cookie = await sessionCookieForUser(
+        pool,
+        GOV_ADMIN_USER_ID,
+        GOV_ADMIN_EMAIL,
+      )
+      const { itemId, sectorId } = await createHierarchyForActivity(
+        app,
+        cookie,
+        'ac12',
+      )
+      const teamId = await insertTeamFixture(pool)
+      const collaboratorId = await insertCollaboratorFixture(pool)
+      await insertTeamMemberFixture(pool, teamId, collaboratorId)
+
+      const rAct = await request(app)
+        .post('/api/v1/operation-matrix/nodes')
+        .set('Cookie', cookie)
+        .send({
+          nodeType: 'ACTIVITY',
+          parentId: sectorId,
+          name: 'Atividade AC12',
+          teamIds: [teamId],
+          defaultResponsibleId: collaboratorId,
+        })
+      const activityId = rAct.body.data?.id as string
+
+      const rDup = await request(app)
+        .post(`/api/v1/operation-matrix/nodes/${activityId}/duplicate`)
+        .set('Cookie', cookie)
+      expect(rDup.status).toBe(201)
+      expect(rDup.body.meta?.warnings).toEqual([])
+
+      const rTree = await request(app)
+        .get(`/api/v1/operation-matrix/items/${itemId}/tree`)
+        .set('Cookie', cookie)
+      const task = rTree.body.data?.children?.find(
+        (n: { node_type?: string }) => n.node_type === 'TASK',
+      )
+      const sector = task?.children?.find(
+        (n: { node_type?: string }) => n.node_type === 'SECTOR',
+      )
+      const activities = (sector?.children ?? []).filter(
+        (n: { node_type?: string }) => n.node_type === 'ACTIVITY',
+      )
+      expect(activities.length).toBe(2)
+      const dup = activities.find(
+        (a: { id?: string }) => a.id !== activityId,
+      )
+      expect(dup?.team_ids).toEqual([teamId])
+      expect(dup?.default_responsible_id).toBe(collaboratorId)
+
+      await request(app)
+        .delete(`/api/v1/operation-matrix/nodes/${itemId}`)
+        .set('Cookie', cookie)
+    })
+
+    it('[AC13] duplicação com responsável inválido conclui com sucesso, cópia sem responsável e 1 warning', async () => {
+      const cookie = await sessionCookieForUser(
+        pool,
+        GOV_ADMIN_USER_ID,
+        GOV_ADMIN_EMAIL,
+      )
+      const { itemId, sectorId } = await createHierarchyForActivity(
+        app,
+        cookie,
+        'ac13',
+      )
+      const teamId = await insertTeamFixture(pool)
+      const collaboratorId = await insertCollaboratorFixture(pool)
+      await insertTeamMemberFixture(pool, teamId, collaboratorId)
+
+      const rAct = await request(app)
+        .post('/api/v1/operation-matrix/nodes')
+        .set('Cookie', cookie)
+        .send({
+          nodeType: 'ACTIVITY',
+          parentId: sectorId,
+          name: 'Atividade AC13',
+          teamIds: [teamId],
+          defaultResponsibleId: collaboratorId,
+        })
+      const activityId = rAct.body.data?.id as string
+
+      // Vínculo com a equipe fica inativo depois da criação (dado histórico inconsistente).
+      await pool.query(
+        `UPDATE team_members SET is_active = false
+         WHERE team_id = $1::uuid AND collaborator_id = $2::uuid`,
+        [teamId, collaboratorId],
+      )
+
+      const rDup = await request(app)
+        .post(`/api/v1/operation-matrix/nodes/${activityId}/duplicate`)
+        .set('Cookie', cookie)
+      expect(rDup.status).toBe(201)
+      const warnings = (rDup.body.meta?.warnings ?? []) as Array<{
+        code: string
+        sourceActivityId: string
+        duplicatedActivityId: string
+        activityName: string
+        sourceResponsibleId: string
+        reason: string
+        message: string
+      }>
+      expect(warnings.length).toBe(1)
+      expect(warnings[0]?.code).toBe('MATRIX_ACTIVITY_RESPONSIBLE_NOT_COPIED')
+      expect(warnings[0]?.sourceActivityId).toBe(activityId)
+      expect(warnings[0]?.activityName).toBe('Atividade AC13')
+      expect(warnings[0]?.sourceResponsibleId).toBe(collaboratorId)
+      expect(warnings[0]?.reason).toBe('TEAM_MEMBERSHIP_INACTIVE')
+      expect(typeof warnings[0]?.message).toBe('string')
+      expect(warnings[0]?.message.length).toBeGreaterThan(10)
+
+      const rTree = await request(app)
+        .get(`/api/v1/operation-matrix/items/${itemId}/tree`)
+        .set('Cookie', cookie)
+      const task = rTree.body.data?.children?.find(
+        (n: { node_type?: string }) => n.node_type === 'TASK',
+      )
+      const sector = task?.children?.find(
+        (n: { node_type?: string }) => n.node_type === 'SECTOR',
+      )
+      const activities = (sector?.children ?? []).filter(
+        (n: { node_type?: string }) => n.node_type === 'ACTIVITY',
+      )
+      const dup = activities.find(
+        (a: { id?: string }) => a.id === warnings[0]?.duplicatedActivityId,
+      )
+      expect(dup?.default_responsible_id).toBeNull()
+      expect(dup?.team_ids).toEqual([teamId])
+
+      await request(app)
+        .delete(`/api/v1/operation-matrix/nodes/${itemId}`)
+        .set('Cookie', cookie)
+    })
+
+    it('[AC14] duplicação com múltiplas atividades inválidas retorna múltiplos warnings, um por atividade', async () => {
+      const cookie = await sessionCookieForUser(
+        pool,
+        GOV_ADMIN_USER_ID,
+        GOV_ADMIN_EMAIL,
+      )
+      const { itemId, sectorId } = await createHierarchyForActivity(
+        app,
+        cookie,
+        'ac14',
+      )
+      const teamId = await insertTeamFixture(pool)
+      const collaboratorX = await insertCollaboratorFixture(pool)
+      const collaboratorY = await insertCollaboratorFixture(pool)
+      await insertTeamMemberFixture(pool, teamId, collaboratorX)
+      await insertTeamMemberFixture(pool, teamId, collaboratorY)
+
+      const rActX = await request(app)
+        .post('/api/v1/operation-matrix/nodes')
+        .set('Cookie', cookie)
+        .send({
+          nodeType: 'ACTIVITY',
+          parentId: sectorId,
+          name: 'Atividade X AC14',
+          teamIds: [teamId],
+          defaultResponsibleId: collaboratorX,
+        })
+      const rActY = await request(app)
+        .post('/api/v1/operation-matrix/nodes')
+        .set('Cookie', cookie)
+        .send({
+          nodeType: 'ACTIVITY',
+          parentId: sectorId,
+          name: 'Atividade Y AC14',
+          teamIds: [teamId],
+          defaultResponsibleId: collaboratorY,
+        })
+      const activityXId = rActX.body.data?.id as string
+      const activityYId = rActY.body.data?.id as string
+
+      await pool.query(
+        `UPDATE team_members SET is_active = false
+         WHERE team_id = $1::uuid AND collaborator_id = ANY($2::uuid[])`,
+        [teamId, [collaboratorX, collaboratorY]],
+      )
+
+      const rDup = await request(app)
+        .post(`/api/v1/operation-matrix/items/${itemId}/duplicate`)
+        .set('Cookie', cookie)
+      expect(rDup.status).toBe(201)
+      const warnings = (rDup.body.meta?.warnings ?? []) as Array<{
+        sourceActivityId: string
+        reason: string
+      }>
+      expect(warnings.length).toBe(2)
+      const bySource = new Map(warnings.map((w) => [w.sourceActivityId, w]))
+      expect(bySource.get(activityXId)?.reason).toBe('TEAM_MEMBERSHIP_INACTIVE')
+      expect(bySource.get(activityYId)?.reason).toBe('TEAM_MEMBERSHIP_INACTIVE')
+
+      const newId = rDup.body.data?.id as string
+      await request(app)
+        .delete(`/api/v1/operation-matrix/nodes/${newId}`)
+        .set('Cookie', cookie)
+      await request(app)
+        .delete(`/api/v1/operation-matrix/nodes/${itemId}`)
+        .set('Cookie', cookie)
+    })
   })
 })

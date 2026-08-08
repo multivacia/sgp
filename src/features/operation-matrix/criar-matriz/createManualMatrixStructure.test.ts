@@ -55,4 +55,81 @@ describe('createManualOpcoesUnderItem', () => {
       }),
     )
   })
+
+  it('inclui defaultResponsibleId (= colaborador principal) na criação de ACTIVITY', async () => {
+    const mockedCreate = vi.mocked(createMatrixNode)
+    mockedCreate.mockResolvedValueOnce({ id: 'task-id' } as never)
+    mockedCreate.mockResolvedValueOnce({ id: 'sector-id' } as never)
+    mockedCreate.mockResolvedValueOnce({ id: 'activity-id' } as never)
+
+    await createManualOpcoesUnderItem('item-id', [
+      {
+        id: 'op1',
+        name: 'Opção',
+        description: '',
+        areas: [
+          {
+            id: 'a1',
+            name: 'Área',
+            etapas: [
+              {
+                id: 'e1',
+                name: 'Etapa',
+                plannedMinutes: 15,
+                teamIds: ['team-1'],
+                collaboratorIds: ['col-1', 'col-2'],
+                primaryCollaboratorId: 'col-1',
+              },
+            ],
+          },
+        ],
+      },
+    ])
+
+    expect(mockedCreate).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        nodeType: 'ACTIVITY',
+        teamIds: ['team-1'],
+        defaultResponsibleId: 'col-1',
+      }),
+    )
+  })
+
+  it('envia defaultResponsibleId null quando não há colaborador principal', async () => {
+    const mockedCreate = vi.mocked(createMatrixNode)
+    mockedCreate.mockResolvedValueOnce({ id: 'task-id' } as never)
+    mockedCreate.mockResolvedValueOnce({ id: 'sector-id' } as never)
+    mockedCreate.mockResolvedValueOnce({ id: 'activity-id' } as never)
+
+    await createManualOpcoesUnderItem('item-id', [
+      {
+        id: 'op1',
+        name: 'Opção',
+        description: '',
+        areas: [
+          {
+            id: 'a1',
+            name: 'Área',
+            etapas: [
+              {
+                id: 'e1',
+                name: 'Etapa',
+                plannedMinutes: 15,
+                teamIds: [],
+                collaboratorIds: [],
+                primaryCollaboratorId: null,
+              },
+            ],
+          },
+        ],
+      },
+    ])
+
+    expect(mockedCreate).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        nodeType: 'ACTIVITY',
+        defaultResponsibleId: null,
+      }),
+    )
+  })
 })
