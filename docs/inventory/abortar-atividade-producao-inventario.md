@@ -380,6 +380,7 @@ conveyor_step_aborted:{conveyorId}:{stepNodeId}:{occurredIso}
 2. Na transação: **bloquear** o nó STEP no banco (`SELECT … FOR UPDATE` em `conveyor_nodes`) antes de ler/atualizar.
 3. Atualização **condicional** do status (só aborta se origem ∈ permitidas).
 4. Nó + evento + cancelamento de planos na **mesma** TX.
+5. **Revisão pós-aprovação (spec):** o mesmo protocolo de lock aplica-se também a **restauração**, **conclusão** e **gravação de apontamento**, com ordem única anti-deadlock e testes concorrentes — ver `docs/specs/dispensar-atividade-producao-spec.md` (seção Protocolo de lock).
 
 ---
 
