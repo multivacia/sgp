@@ -14,6 +14,7 @@ import { useShellFunction } from '../../lib/shell/shell-function-context'
 import { useRegisterTransientContext } from '../../lib/shell/transient-context'
 import type { Collaborator } from '../../domain/collaborators/collaborator.types'
 import type { Team } from '../../domain/teams/team.types'
+import type { MatrixDuplicationWarning } from '../../domain/operation-matrix/operation-matrix.types'
 import { createCollaboratorsApiService } from '../../services/collaborators/collaboratorsApiService'
 import { listTeams } from '../../services/teams/teamsApiService'
 import {
@@ -392,13 +393,21 @@ export function OperationMatrixNewPage() {
       })
       newItemId = created.id
 
+      const cloneWarnings: MatrixDuplicationWarning[] = []
       for (const inst of catalogOpcoesDraft) {
-        await cloneTaskSubtreeUnderItem(created.id, inst.draftRoot)
+        const { warnings } = await cloneTaskSubtreeUnderItem(
+          created.id,
+          inst.draftRoot,
+        )
+        cloneWarnings.push(...warnings)
       }
 
       await createManualOpcoesUnderItem(created.id, manualOpcoes)
 
-      navigate(`/app/matrizes-operacao/${created.id}`, { replace: true })
+      navigate(`/app/matrizes-operacao/${created.id}`, {
+        replace: true,
+        state: cloneWarnings.length > 0 ? { cloneWarnings } : undefined,
+      })
     } catch (err) {
       if (newItemId) {
         try {

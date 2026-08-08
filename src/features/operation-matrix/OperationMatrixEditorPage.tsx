@@ -182,7 +182,8 @@ function pickPostDadosSelection(
 export function OperationMatrixEditorPage() {
   const { catalog: matrixSuggestionCatalog } = useMatrixSuggestionCatalog()
   const { itemId } = useParams<{ itemId: string }>()
-  const { pathname } = useLocation()
+  const location = useLocation()
+  const { pathname } = location
   const { presentBlocking } = useSgpErrorSurface()
   const navigate = useNavigate()
   const { requestNavigateWithTransientGuard } = useShellFunction()
@@ -195,9 +196,16 @@ export function OperationMatrixEditorPage() {
   const [teams, setTeams] = useState<Team[]>([])
   const [lastDeletedId, setLastDeletedId] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  /** Avisos vindos da criação da matriz (`OperationMatrixNewPage`), quando a
+   * clonagem de tarefas do catálogo teve de omitir algum responsável inválido. */
   const [duplicationWarnings, setDuplicationWarnings] = useState<
     MatrixDuplicationWarning[]
-  >([])
+  >(
+    () =>
+      (location.state as { cloneWarnings?: MatrixDuplicationWarning[] } | null)
+        ?.cloneWarnings ?? [],
+  )
+  const consumedNavCloneWarningsRef = useRef(false)
 
   const [formName, setFormName] = useState('')
   const [formCode, setFormCode] = useState('')
@@ -381,6 +389,18 @@ export function OperationMatrixEditorPage() {
   useEffect(() => {
     setStructureExpandedTaskIds(new Set())
   }, [itemId])
+
+  /** Consome `location.state.cloneWarnings` uma única vez (evita reexibição ao
+   * navegar de volta com o mesmo estado de histórico). */
+  useEffect(() => {
+    if (consumedNavCloneWarningsRef.current) return
+    const navWarnings = (
+      location.state as { cloneWarnings?: MatrixDuplicationWarning[] } | null
+    )?.cloneWarnings
+    if (!navWarnings || navWarnings.length === 0) return
+    consumedNavCloneWarningsRef.current = true
+    navigate(pathname, { replace: true, state: null })
+  }, [location.state, navigate, pathname])
 
   useEffect(() => {
     let cancelled = false
@@ -1098,10 +1118,12 @@ export function OperationMatrixEditorPage() {
       ...entry.taskSubtree,
       order_index: nextOrder,
     }
+    setDuplicationWarnings([])
     setBusy(true)
     try {
-      await cloneTaskSubtreeUnderItem(tree.id, subtreeForClone)
+      const { warnings } = await cloneTaskSubtreeUnderItem(tree.id, subtreeForClone)
       pushToast('Tarefa incluída na matriz a partir do catálogo.')
+      setDuplicationWarnings(warnings)
       const newTree = await loadTree()
       if (!newTree) return
       const added = newTree.children
