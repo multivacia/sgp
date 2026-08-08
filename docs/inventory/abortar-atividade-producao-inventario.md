@@ -16,9 +16,9 @@ Para o cenário de negócio (esteira já liberada; atividade deixa de ser necess
 - sincronizar o cancelamento dos itens de plano da esteira e do planejamento semanal vinculados;
 - separar predicados “fechada para sequência” vs “concluída / realizada”.
 
-A demanda é **tecnicamente viável**, mas altera sequência, filas, progresso/KPI e sync de planos. Várias decisões de produto ainda bloqueiam a especificação.
+A demanda é **tecnicamente viável**. As decisões humanas da seção 15 foram fechadas em `2026-08-08` (ver seções 11.2 e 15), com correção de idempotência/concorrência na seção 11.3.
 
-**Veredito de impacto:** `BLOQUEAR ATÉ ESCLARECER`.
+**Veredito de impacto (atualizado):** `SEGUIR`.
 
 ---
 
@@ -31,7 +31,9 @@ A demanda é **tecnicamente viável**, mas altera sequência, filas, progresso/K
 | SHA-base | `34679fd90b5270dc3e8f56c4f9b6f32bedf8815b` |
 | Confirmação | `HEAD` da branch de inventário = `origin/main` (fast-forward ok; working tree limpa antes da branch) |
 | Branch criada | `feature/abortar-atividade-producao` |
-| Estado desta etapa | Apenas o arquivo de inventário deve existir como alteração local; **sem commit/push/PR** nesta execução |
+| Commit do inventário | `e7def6c2a59ae464e5e25670e2ba8260c20bac44` |
+| Diff vs `origin/main` | **somente** `docs/inventory/abortar-atividade-producao-inventario.md` (+475 linhas) — evidência na seção 17 |
+| Estado após validação humana | Inventário aprovado como base da spec; veredito → `SEGUIR`; **ainda sem implementação** |
 
 ---
 
@@ -223,7 +225,7 @@ Observações verificadas:
 |---|---|
 | Evento novo | Recomendado: `CONVEYOR_STEP_ABORTED` (+ eventual restore) |
 | Campos | `previous_value`/`new_value`, `reason`, `created_by`, `occurred_at`, `metadata_json` (canal, motivos padronizados, plan item ids cancelados) |
-| Idempotency key | Ex.: `conveyor_step_aborted:{conveyorId}:{stepNodeId}:{occurredIso}` |
+| Idempotency key | **Estável**, vinda da requisição (ou UUID cliente reenviado nos retries). **Proibido** embutir `occurredIso`/timestamp variável — ver §11.3 |
 | Histórico UI | Taxonomia FE (`operationalEventTaxonomy` / `formatConveyorOperationalEvent`) precisa do novo tipo |
 | Sync semanal | Rastrear cancelamentos no metadata do evento ou eventos de plano existentes |
 
@@ -344,22 +346,40 @@ Implementar **Alt A** após decisões humanas:
 4. Guards em produção, my-work-queue, my-activities, time entries, tickets, progresso.
 5. UX gestorial no detalhe da esteira (“Dispensar atividade”).
 
-### 11.2 As 12 decisões (recomendação do inventário)
+### 11.2 Decisões humanas fechadas (2026-08-08) — base da spec
 
-| # | Tema | Recomendação | Tipo |
-|---|---|---|---|
-| 1 | Nome técnico | **`ABORTED`** | Recomendação (fundamentada: `CANCELLED` já é de plano/esteira; `SKIPPED` sugere opcionalidade) |
-| 2 | Rótulo PT | **Dispensada** (técnico ABORTED) | Recomendação de produto |
-| 3 | Fonte da verdade | **Nó STEP**; planos sincronizados | Recomendação técnica |
-| 4 | Origens para abortar | PENDING, REOPENED, IN_PROGRESS, BLOCKED; UI no detalhe da esteira (gestor) | Recomendação |
-| 5 | COMPLETED → abort direto? | **Não** | **Decisão humana** (rec: não) |
-| 6 | Horas apontadas | **Preservar**; sem fictício; bloquear novos | Alinhado à demanda |
-| 7 | Permissão | **`conveyors.create`** / gestor; não kiosk | Recomendação |
-| 8 | Motivo | **Obrigatório:** catálogo padronizado + “Outro” (texto) | **Decisão humana** (catálogo novo vs reuso) |
-| 9 | Restauração | **Sim**, gestorial: ABORTED → REOPENED (ou PENDING se nunca COMPLETED) | **Decisão humana** |
-| 10 | Previsto/realizado/pendência/progresso | Não `isCompleted`; sim fechado p/ sequência; pendência 0; realizado preservado; **excluir previsto abortado do denominador** | **Decisão humana** (KPI) |
-| 11 | Transação / idempotência | Transação única nó+evento+sync planos; idempotency key | Recomendação técnica |
-| 12 | Compatibilidade | Sem backfill; migration amplia CHECK; deploy atômico dos consumidores | Recomendação |
+| # | Tema | Definição aprovada |
+|---|---|---|
+| 1 | Estado técnico | **`ABORTED`** |
+| 2 | Nome apresentado | **Dispensada** |
+| 3 | Fonte da verdade | **Nó STEP**; planos sincronizados na mesma TX |
+| 4 | Origens para abortar | PENDING, REOPENED, IN_PROGRESS, BLOCKED; UI só no detalhe da esteira |
+| 5 | COMPLETED → ABORTED | **Não** permitir; exige reabertura anterior |
+| 6 | Realizado existente | **Preservar** integralmente; sem fictício; bloquear novos apontamentos |
+| 7 | Permissão | Gestor com **`conveyors.create`**; nunca kiosk/colaborador |
+| 8 | Motivo | Catálogo padronizado + **“Outro”** com texto obrigatório |
+| 9 | Restauração | **Sim**, só gestor: ABORTED → **REOPENED**; ao restaurar **não** reativar planejamento automaticamente (volta não planejada) |
+| 10 | Previsto / pendência / progresso | Excluir da **carga operacional efetiva** e da pendência; preservar previsto original no histórico; **não** `isCompleted`; fechado p/ sequência |
+| 11 | Transação / idempotência / lock | Ver §11.3 |
+| 12 | Esteira FINALIZADA/CANCELADA | **Não** permitir dispensa |
+| 13 | Auditoria | Campos **próprios no nó** + evento operacional |
+| 14 | Sincronização | Cancelar plano da esteira **e** planejamento semanal na **mesma** transação |
+| 15 | Compatibilidade | Sem backfill; migration amplia CHECK; deploy atômico dos consumidores |
+
+### 11.3 Correção de idempotência e concorrência (aprovada)
+
+**Proibido** (não garante idempotência em retry):
+
+```text
+conveyor_step_aborted:{conveyorId}:{stepNodeId}:{occurredIso}
+```
+
+**Obrigatório:**
+
+1. Idempotency key **da requisição** (cliente) ou chave **estável** para aquela operação — **sem** timestamp variável.
+2. Na transação: **bloquear** o nó STEP no banco (`SELECT … FOR UPDATE` em `conveyor_nodes`) antes de ler/atualizar.
+3. Atualização **condicional** do status (só aborta se origem ∈ permitidas).
+4. Nó + evento + cancelamento de planos na **mesma** TX.
 
 ---
 
@@ -426,35 +446,84 @@ Implementar **Alt A** após decisões humanas:
 
 ---
 
-## 15. Dúvidas para decisão humana (bloqueantes)
+## 15. Dúvidas para decisão humana — status
 
-1. **COMPLETED pode ir direto para ABORTED?** (Inventário recomenda: não.)
-2. **Previsto do STEP dispensado sai do denominador de progresso/% e da pendência agregada?** (Inventário recomenda: sim excluir previsto; realizado preservado; não contar como concluída.)
-3. **Restauração permitida?** Se sim, destino `REOPENED` vs `PENDING`, e se reabre itens de plano cancelados.
-4. **Formato do motivo:** catálogo novo, reuso de justificativas de apontamento, texto livre, ou híbrido?
-5. **Superfícies de UI além do detalhe da esteira** (agenda semanal, plano operacional pós-aprovação somente leitura com link, etc.)?
-6. **Esteira `FINALIZADA` / `CANCELADA`:** aborto ainda permitido?
-7. **Campos de auditoria no nó vs só evento?**
-8. Ao restaurar, o item do planejamento semanal deve voltar a `PLANNED` automaticamente?
+| # | Dúvida original | Status | Resolução |
+|---|---|---|---|
+| 1 | COMPLETED → ABORTED direto? | **Fechada** | Não; exige reabertura anterior |
+| 2 | Previsto no denominador / pendência? | **Fechada** | Excluir da carga efetiva e pendência; preservar previsto original no histórico |
+| 3 | Restauração? | **Fechada** | Sim, gestor, ABORTED → REOPENED; não reativa plano |
+| 4 | Formato do motivo? | **Fechada** | Catálogo + Outro com texto obrigatório |
+| 5 | UI além do detalhe? | **Fechada** | Só detalhe da esteira; demais telas só exibem |
+| 6 | Esteira FINALIZADA/CANCELADA? | **Fechada** | Não permitir dispensa |
+| 7 | Auditoria no nó vs evento? | **Fechada** | Campos próprios no nó **e** evento |
+| 8 | Restaurar reativa planejamento? | **Fechada** | Não; volta não planejada |
+
+Correção técnica adicional aprovada: §11.3 (idempotency key estável + lock do nó).
 
 ---
 
 ## 16. Veredito final
 
-**BLOQUEAR ATÉ ESCLARECER**
+**SEGUIR**
 
-### Por quê
+*(Atualizado em 2026-08-08 após validação humana do inventário e fechamento das decisões da seção 15. Veredito anterior: `BLOQUEAR ATÉ ESCLARECER`.)*
 
-A solução técnica preferida (Alt A) está clara e ancorada no código, mas a implementação alteraria **KPI de progresso**, **bloqueio de sequência** e **sync de planos publicados**. Sem fechar as dúvidas da seção 15 — em especial itens 1–4 — qualquer spec/implementação correria risco de comportamento irreversível para a operação Bravo.
+### Por quê agora SEGUIR
 
-### O que já pode seguir após validação humana deste inventário
+Alt A permanece o caminho técnico; decisões de produto/KPI/restauração/motivo/UI/auditoria/idempotência estão fechadas. A spec pode ser gerada e, após aprovação da spec, o `sgp-implementer` pode atuar com escopo fechado.
 
-- Spec curta (`sgp-feature-spec-writer`) fechando Alt A + decisões 1–12.
-- Somente então `sgp-implementer`.
+### Ainda fora desta etapa
 
-### O que esta execução **não** fez (conforme handoff)
+- Implementação de código de produção, migrations aplicadas em ambiente compartilhado, merge em `develop`/`main`, deploy.
 
-- Implementação, migrations, testes, commit, push, PR, merge, deploy, alteração de banco compartilhado.
+---
+
+## 17. Evidência Git operacional (pós-validação humana)
+
+Comandos executados na workspace em `2026-08-08` (após o commit do inventário; working tree limpa):
+
+### `git status --short`
+
+```text
+(vazio — nenhum arquivo untracked/modified após commit)
+```
+
+### `git status -sb`
+
+```text
+## feature/abortar-atividade-producao...origin/feature/abortar-atividade-producao
+```
+
+### `git log --oneline origin/main..HEAD` (antes desta atualização de decisões/spec)
+
+```text
+e7def6c2 docs: inventário técnico para abortar atividade em produção
+```
+
+### `git diff --stat origin/main...HEAD` (antes desta atualização)
+
+```text
+ .../abortar-atividade-producao-inventario.md       | 475 +++++++++++++++++++++
+ 1 file changed, 475 insertions(+)
+```
+
+### `git diff --name-only origin/main...HEAD` (antes desta atualização)
+
+```text
+docs/inventory/abortar-atividade-producao-inventario.md
+```
+
+### Confirmação
+
+| Check | Resultado |
+|---|---|
+| Branch | `feature/abortar-atividade-producao` |
+| SHA-base `origin/main` | `34679fd90b5270dc3e8f56c4f9b6f32bedf8815b` |
+| Commit inventário | `e7def6c2a59ae464e5e25670e2ba8260c20bac44` |
+| Diff vs main (1º commit) | **somente** o arquivo de inventário |
+
+> Nota: o commit seguinte nesta branch pode incluir atualização do inventário (esta seção + decisões) e a especificação em `docs/specs/`; ainda **sem** alteração de código-fonte de aplicação.
 
 ---
 
@@ -464,8 +533,8 @@ A solução técnica preferida (Alt A) está clara e ancorada no código, mas a 
 |---|---|
 | **Fatos** | Enum STEP sem ABORTED; sequência = ≠ COMPLETED; cancel item só DRAFT; `cancellation_reason` não escrito; vínculo 0039; filas/tickets já tratam CANCELLED de **item**; eventos STEP sem aborto; reopen exige `conveyors.create` |
 | **Hipóteses** | “Liberada para produção” ≈ esteira em status que aceita time entry; writers de IN_PROGRESS/BLOCKED ausentes em serviços; catálogo de motivo pode ou não reusar justificativas |
-| **Recomendações** | Alt A; rótulo “Dispensada”; fonte no nó; sem COMPLETED→ABORTED direto; preservar horas; perm. gestorial; predicados separados |
-| **Dúvidas humanas** | Seção 15 |
+| **Recomendações → decisões** | Fechadas em §11.2 / §15; correção de idempotência/lock em §11.3; veredito `SEGUIR` |
+| **Dúvidas humanas** | Fechadas (§15) |
 
 ## Apêndice B — Símbolos-chave
 
