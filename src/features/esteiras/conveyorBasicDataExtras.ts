@@ -56,6 +56,14 @@ function parseWizardPrazoRawParts(prazo: string): { inicio: string | null; fim: 
   return { inicio, fim }
 }
 
+/** Extrai YYYY-MM-DD da string civil sem Date/UTC (evita deslocamento de dia). */
+function stripToCivilDate(raw: string | null): string {
+  if (!raw) return ''
+  const trimmed = raw.trim()
+  const m = /^(\d{4}-\d{2}-\d{2})/.exec(trimmed)
+  return m?.[1] ?? trimmed
+}
+
 export function stripWizardPlanningFromObservacoes(observacoes: string): string {
   return observacoes
     .replace(PLANEAMENTO_TEMPO_LINE_RE, '')
@@ -69,8 +77,8 @@ export function parseWizardExtrasFromPersisted(
   const prazo = dados.prazoEstimado ?? ''
   const { inicio, fim } = parseWizardPrazoRawParts(prazo)
   return {
-    inicioPrevisto: inicio ?? '',
-    fimPrevisto: fim ?? '',
+    inicioPrevisto: stripToCivilDate(inicio),
+    fimPrevisto: stripToCivilDate(fim),
   }
 }
 

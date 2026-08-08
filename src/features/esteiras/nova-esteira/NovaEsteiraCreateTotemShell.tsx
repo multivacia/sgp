@@ -357,7 +357,7 @@ export function NovaEsteiraCreateTotemShell(props: NovaEsteiraCreateTotemShellPr
             <label className="block text-sm">
               <span className="text-slate-400">Início previsto</span>
               <input
-                type="datetime-local"
+                type="date"
                 className="sgp-input-app mt-1 w-full px-3 py-2 text-slate-100"
                 value={extras.inicioPrevisto}
                 onChange={(ev) => setExtras((x) => ({ ...x, inicioPrevisto: ev.target.value }))}
@@ -366,7 +366,7 @@ export function NovaEsteiraCreateTotemShell(props: NovaEsteiraCreateTotemShellPr
             <label className="block text-sm">
               <span className="text-slate-400">Fim previsto</span>
               <input
-                type="datetime-local"
+                type="date"
                 className="sgp-input-app mt-1 w-full px-3 py-2 text-slate-100"
                 value={extras.fimPrevisto}
                 onChange={(ev) => setExtras((x) => ({ ...x, fimPrevisto: ev.target.value }))}

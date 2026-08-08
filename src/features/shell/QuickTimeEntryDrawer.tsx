@@ -953,9 +953,7 @@ export function QuickTimeEntryDrawer({
                         required={formRequiresOperationalJustification}
                         preferredCategory={
                           formNeedsJustification
-                            ? resolvePreferredJustificationCategory({
-                                requiresAllocationException: true,
-                              })
+                            ? null
                             : formNeedsOutOfSequence
                               ? resolvePreferredJustificationCategory({
                                   hasPreviousPendingStep: selected?.hasPreviousPendingStep,

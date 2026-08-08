@@ -76,6 +76,43 @@ import {
 } from './conveyorCreateDiagnostics.js'
 import { detectAndRecordConveyorDelayTransition } from './operational-events/conveyor-delay-events.service.js'
 
+const PRAZO_INICIO_RE = /In[ií]cio previsto:\s*(.+?)(?:\s*[·•|]\s*|$)/i
+const PRAZO_FIM_RE = /Fim previsto:\s*(.+)$/i
+
+/** Extrai YYYY-MM-DD de data civil (com ou sem horário) sem Date/UTC. */
+function extractCivilDateYmd(raw: string): string | null {
+  const m = /^(\d{4}-\d{2}-\d{2})(?:T\d{2}:\d{2}(?::\d{2})?)?/.exec(raw.trim())
+  return m?.[1] ?? null
+}
+
+/**
+ * Normaliza prazoEstimado do contrato wizard antes de gravar:
+ * início → YYYY-MM-DDT00:00:01 · término → YYYY-MM-DDT23:59:59.
+ * Preserva o formato "Início previsto: … · Fim previsto: …".
+ */
+function normalizePrazoEstimadoForPersistence(
+  prazoEstimado: string | undefined,
+): string | undefined {
+  if (prazoEstimado === undefined) return undefined
+  const trimmed = prazoEstimado.trim()
+  if (!trimmed) return prazoEstimado
+
+  const inicioRaw = trimmed.match(PRAZO_INICIO_RE)?.[1]?.trim() ?? null
+  const fimRaw = trimmed.match(PRAZO_FIM_RE)?.[1]?.trim() ?? null
+  if (!inicioRaw && !fimRaw) return prazoEstimado
+
+  const parts: string[] = []
+  if (inicioRaw) {
+    const civil = extractCivilDateYmd(inicioRaw)
+    parts.push(`Início previsto: ${civil ? `${civil}T00:00:01` : inicioRaw}`)
+  }
+  if (fimRaw) {
+    const civil = extractCivilDateYmd(fimRaw)
+    parts.push(`Fim previsto: ${civil ? `${civil}T23:59:59` : fimRaw}`)
+  }
+  return parts.join(' · ')
+}
+
 function emptyToNull(s: string | undefined): string | null {
   const t = (s ?? '').trim()
   return t === '' ? null : t
@@ -693,7 +730,7 @@ export async function serviceCreateConveyor(
       plate: emptyToNull(dados.placa),
       initial_notes: emptyToNull(stripConveyorPlanningTempoFromNotes(dados.observacoes)),
       responsible: emptyToNull(dados.responsavel),
-      estimated_deadline: emptyToNull(dados.prazoEstimado),
+      estimated_deadline: emptyToNull(normalizePrazoEstimadoForPersistence(dados.prazoEstimado)),
       priority,
       origin_register: body.originType,
       base_ref_snapshot: body.baseId ?? null,
@@ -811,7 +848,9 @@ export async function servicePatchConveyorDados(
     patch.responsible = emptyToNull(body.responsavel)
   }
   if (body.prazoEstimado !== undefined) {
-    patch.estimated_deadline = emptyToNull(body.prazoEstimado)
+    patch.estimated_deadline = emptyToNull(
+      normalizePrazoEstimadoForPersistence(body.prazoEstimado),
+    )
   }
   if (body.prioridade !== undefined && body.prioridade !== '') {
     patch.priority = normalizePriority(body.prioridade)

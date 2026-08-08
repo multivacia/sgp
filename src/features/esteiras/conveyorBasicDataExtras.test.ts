@@ -28,8 +28,8 @@ describe('conveyorBasicDataExtras', () => {
       prazoEstimado: 'Início previsto: 2026-04-01T08:00 · Fim previsto: 2026-04-10T18:00',
       observacoes: 'Contexto\n\n[Planeamento] Tempo total previsto: 480 min',
     })
-    expect(extras.inicioPrevisto).toBe('2026-04-01T08:00')
-    expect(extras.fimPrevisto).toBe('2026-04-10T18:00')
+    expect(extras.inicioPrevisto).toBe('2026-04-01')
+    expect(extras.fimPrevisto).toBe('2026-04-10')
   })
 
   it('monta payload com placa e não grava tempo manual nas observações', () => {
