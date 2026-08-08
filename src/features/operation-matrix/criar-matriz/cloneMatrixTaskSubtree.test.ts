@@ -93,6 +93,67 @@ describe('cloneTaskSubtreeUnderItem', () => {
         nodeType: 'ACTIVITY',
         teamIds: ['team-1'],
         sourceKey: 'activity-1',
+        defaultResponsibleId: 'collab-1',
+      }),
+    )
+  })
+
+  it('envia defaultResponsibleId null quando a atividade de origem não tem responsável', async () => {
+    const mockedCreate = vi.mocked(createMatrixNode)
+    mockedCreate
+      .mockResolvedValueOnce({ id: 'task-created' } as never)
+      .mockResolvedValueOnce({ id: 'activity-created' } as never)
+
+    await cloneTaskSubtreeUnderItem('item-1', {
+      id: 'task-2',
+      parent_id: null,
+      root_id: 'task-2',
+      node_type: 'TASK',
+      code: null,
+      name: 'Task',
+      description: null,
+      order_index: 0,
+      level_depth: 1,
+      is_active: true,
+      planned_minutes: null,
+      default_responsible_id: null,
+      team_ids: [],
+      required: true,
+      source_key: null,
+      metadata_json: null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      deleted_at: null,
+      children: [
+        {
+          id: 'activity-2',
+          parent_id: 'task-2',
+          root_id: 'task-2',
+          node_type: 'ACTIVITY',
+          code: null,
+          name: 'Activity sem responsável',
+          description: null,
+          order_index: 0,
+          level_depth: 2,
+          is_active: true,
+          planned_minutes: 20,
+          default_responsible_id: null,
+          team_ids: [],
+          required: true,
+          source_key: null,
+          metadata_json: null,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          deleted_at: null,
+          children: [],
+        },
+      ],
+    })
+
+    expect(mockedCreate).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        nodeType: 'ACTIVITY',
+        defaultResponsibleId: null,
       }),
     )
   })

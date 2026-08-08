@@ -14,9 +14,11 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { PageCanvas } from '../../components/ui/PageCanvas'
 import { SgpToast, type SgpToastVariant } from '../../components/ui/SgpToast'
 import type {
+  MatrixDuplicationWarning,
   MatrixNodeTreeApi,
   MatrixNodeType,
 } from '../../domain/operation-matrix/operation-matrix.types'
+import { MatrixDuplicationWarningsBanner } from './MatrixDuplicationWarningsBanner'
 import {
   isBlockingSeverity,
   reportClientError,
@@ -35,9 +37,9 @@ import {
 } from '../../services/operation-matrix/operationMatrixApiService'
 import { getCollaboratorsService } from '../../services/collaborators/collaboratorsServiceFactory'
 import type { Collaborator } from '../../domain/collaborators/collaborator.types'
-import type { Team } from '../../domain/teams/team.types'
+import type { Team, TeamMember } from '../../domain/teams/team.types'
 import { useShellFunction } from '../../lib/shell/shell-function-context'
-import { listTeams } from '../../services/teams/teamsApiService'
+import { listTeamMembers, listTeams } from '../../services/teams/teamsApiService'
 import { MatrixSelectionContextBar } from './MatrixSelectionContextBar'
 import { AlterarMatrizEstruturaDraftPanel } from './AlterarMatrizEstruturaDraftPanel'
 import { revisaoAlterarMatrizPendencias } from './operationMatrixEditorRevision'
@@ -54,6 +56,7 @@ import { OperationMatrixMetricsStrip } from './OperationMatrixMetricsStrip'
 import {
   buildMatrixTreeAggregateMaps,
   getBranchStats,
+  isEligibleActiveTeamMember,
   matrixActivityPrimaryTeamId,
   type MatrixTreeAggregateMaps,
 } from './matrixTreeAggregates'
@@ -192,6 +195,9 @@ export function OperationMatrixEditorPage() {
   const [teams, setTeams] = useState<Team[]>([])
   const [lastDeletedId, setLastDeletedId] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  const [duplicationWarnings, setDuplicationWarnings] = useState<
+    MatrixDuplicationWarning[]
+  >([])
 
   const [formName, setFormName] = useState('')
   const [formCode, setFormCode] = useState('')
@@ -200,6 +206,14 @@ export function OperationMatrixEditorPage() {
   const [formPlanned, setFormPlanned] = useState('')
   const [formTeamIds, setFormTeamIds] = useState<string[]>([])
   const [formRequired, setFormRequired] = useState(true)
+  const [formResponsibleId, setFormResponsibleId] = useState<string | null>(null)
+  /** true só quando a equipe foi trocada pelo usuário nesta sessão de edição — evita
+   * revalidar/limpar responsável de atividades legadas apenas por abrir o editor. */
+  const teamChangedByUserRef = useRef(false)
+  const [membersByTeam, setMembersByTeam] = useState<
+    Record<string, TeamMember[] | 'loading' | 'error'>
+  >({})
+  const requestedResponsibleTeamIdsRef = useRef<Set<string>>(new Set())
   const debouncedTreeSearch = ''
   const [reuseCatalogEntries, setReuseCatalogEntries] = useState<
     MatrixCatalogTaskEntry[]
@@ -405,6 +419,63 @@ export function OperationMatrixEditorPage() {
     return findNodeInTree(tree, selectedId)
   }, [tree, selectedId])
 
+  /**
+   * Não escreve `'loading'` de forma síncrona: a ausência da chave em `membersByTeam`
+   * já é tratada como "carregando" na leitura (evita setState síncrono dentro do efeito).
+   */
+  const fetchResponsibleTeamMembers = useCallback((teamId: string) => {
+    requestedResponsibleTeamIdsRef.current.add(teamId)
+    listTeamMembers(teamId)
+      .then((rows) => {
+        setMembersByTeam((prev) => ({ ...prev, [teamId]: rows }))
+      })
+      .catch(() => {
+        requestedResponsibleTeamIdsRef.current.delete(teamId)
+        setMembersByTeam((prev) => ({ ...prev, [teamId]: 'error' }))
+      })
+  }, [])
+
+  /** Equipe efetiva da ACTIVITY selecionada, conforme o formulário em edição. */
+  const activeFormTeamId =
+    selected?.node_type === 'ACTIVITY' ? (formTeamIds[0]?.trim() || null) : null
+
+  useEffect(() => {
+    if (activeFormTeamId && !requestedResponsibleTeamIdsRef.current.has(activeFormTeamId)) {
+      fetchResponsibleTeamMembers(activeFormTeamId)
+    }
+  }, [activeFormTeamId, fetchResponsibleTeamMembers])
+
+  const activeTeamMembersState = activeFormTeamId
+    ? (membersByTeam[activeFormTeamId] ?? 'loading')
+    : 'idle'
+
+  const eligibleResponsibleIds = useMemo(() => {
+    if (
+      activeTeamMembersState === 'idle' ||
+      activeTeamMembersState === 'loading' ||
+      activeTeamMembersState === 'error'
+    ) {
+      return null
+    }
+    return new Set(
+      activeTeamMembersState.filter(isEligibleActiveTeamMember).map((m) => m.collaboratorId),
+    )
+  }, [activeTeamMembersState])
+
+  /** Só revalida (e eventualmente limpa) o responsável quando o usuário troca a
+   * equipe nesta sessão — atividades legadas não são alteradas só por abrir o editor. */
+  useEffect(() => {
+    if (!teamChangedByUserRef.current) return
+    if (!activeFormTeamId) {
+      setFormResponsibleId(null)
+      return
+    }
+    if (!eligibleResponsibleIds) return
+    setFormResponsibleId((prev) =>
+      prev && !eligibleResponsibleIds.has(prev) ? null : prev,
+    )
+  }, [activeFormTeamId, eligibleResponsibleIds])
+
   const matrixEditorHasUnsavedChanges = useMemo(() => {
     if (!selected || loading || !tree) return false
     if (formName.trim() !== selected.name.trim()) return true
@@ -428,6 +499,7 @@ export function OperationMatrixEditorPage() {
       const formPrimary = (formTeamIds[0] ?? '').trim()
       if (selectedPrimary !== formPrimary) return true
       if (formRequired !== selected.required) return true
+      if ((selected.default_responsible_id ?? null) !== formResponsibleId) return true
     }
     return false
   }, [
@@ -441,6 +513,7 @@ export function OperationMatrixEditorPage() {
     formPlanned,
     formTeamIds,
     formRequired,
+    formResponsibleId,
   ])
 
   const matrixStructureDirty = useMemo(() => {
@@ -549,6 +622,8 @@ export function OperationMatrixEditorPage() {
     const tid = matrixActivityPrimaryTeamId(node)
     setFormTeamIds(tid ? [tid] : [])
     setFormRequired(node.required)
+    setFormResponsibleId(node.default_responsible_id ?? null)
+    teamChangedByUserRef.current = false
   }, [])
 
   useEffect(() => {
@@ -642,6 +717,7 @@ export function OperationMatrixEditorPage() {
         const primary = (formTeamIds[0] ?? '').trim()
         patch.teamIds = primary ? [primary] : []
         patch.required = formRequired
+        patch.defaultResponsibleId = formResponsibleId?.trim() || null
       }
       await patchMatrixNode(selected.id, patch)
       pushToast('Alterações salvas.')
@@ -781,10 +857,12 @@ export function OperationMatrixEditorPage() {
         .filter((c) => c.node_type === 'SECTOR')
         .map((c) => c.id),
     )
+    setDuplicationWarnings([])
     setBusy(true)
     try {
-      await duplicateMatrixNode(sectorId)
+      const { warnings } = await duplicateMatrixNode(sectorId)
       pushToast('Setor duplicado.')
+      setDuplicationWarnings(warnings)
       const newTree = await loadTree()
       if (!newTree) return
       const taskAfter = findNodeInTree(newTree, taskNode.id)
@@ -851,10 +929,12 @@ export function OperationMatrixEditorPage() {
         .filter((c) => c.node_type === 'ACTIVITY')
         .map((c) => c.id),
     )
+    setDuplicationWarnings([])
     setBusy(true)
     try {
-      await duplicateMatrixNode(activityId)
+      const { warnings } = await duplicateMatrixNode(activityId)
       pushToast('Atividade duplicada.')
+      setDuplicationWarnings(warnings)
       const newTree = await loadTree()
       if (!newTree) return
       const sectorAfter = findNodeInTree(newTree, sector.id)
@@ -949,10 +1029,12 @@ export function OperationMatrixEditorPage() {
         .filter((c) => c.node_type === 'TASK')
         .map((c) => c.id),
     )
+    setDuplicationWarnings([])
     setBusy(true)
     try {
-      await duplicateMatrixNode(taskId)
+      const { warnings } = await duplicateMatrixNode(taskId)
       pushToast('Duplicado.')
+      setDuplicationWarnings(warnings)
       const newTree = await loadTree()
       if (newTree) {
         const newTask = newTree.children.find(
@@ -1210,9 +1292,26 @@ export function OperationMatrixEditorPage() {
         formPlanned={formPlanned}
         setFormPlanned={setFormPlanned}
         formTeamIds={formTeamIds}
-        setFormTeamIds={setFormTeamIds}
+        setFormTeamIds={(v) => {
+          teamChangedByUserRef.current = true
+          setFormTeamIds(v)
+        }}
         formRequired={formRequired}
         setFormRequired={setFormRequired}
+        formResponsibleId={formResponsibleId}
+        setFormResponsibleId={setFormResponsibleId}
+        eligibleResponsibleIds={eligibleResponsibleIds}
+        responsibleTeamMembersState={
+          activeTeamMembersState === 'idle' ||
+          activeTeamMembersState === 'loading' ||
+          activeTeamMembersState === 'error'
+            ? activeTeamMembersState
+            : 'ready'
+        }
+        onRetryLoadResponsibleTeamMembers={() =>
+          activeFormTeamId && fetchResponsibleTeamMembers(activeFormTeamId)
+        }
+        collaboratorIdToName={collaboratorIdToName}
         teams={teams}
         teamIdSet={teamIdSet}
         busy={busy}
@@ -1454,6 +1553,11 @@ export function OperationMatrixEditorPage() {
           onDismiss={() => setToast(null)}
         />
       )}
+
+      <MatrixDuplicationWarningsBanner
+        warnings={duplicationWarnings}
+        onDismiss={() => setDuplicationWarnings([])}
+      />
 
       <div className="space-y-3">
         {lastDeletedId ? (

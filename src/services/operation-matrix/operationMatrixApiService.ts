@@ -1,15 +1,20 @@
 import { ApiError } from '../../lib/api/apiErrors'
-import { requestJson } from '../../lib/api/client'
+import { requestJson, requestJsonEnvelope } from '../../lib/api/client'
 import { getApiBaseUrl } from '../../lib/api/env'
 import type { MatrixSuggestionCatalogData } from '../../catalog/matrixSuggestion/types'
 import type {
   DuplicateMatrixItemSummary,
   MatrixDeleteResult,
+  MatrixDuplicationWarning,
   MatrixNodeApi,
   MatrixNodeTreeApi,
   MatrixNodeType,
   MatrixRestoreResult,
 } from '../../domain/operation-matrix/operation-matrix.types'
+
+function warningsFromMeta(meta: Record<string, unknown>): MatrixDuplicationWarning[] {
+  return Array.isArray(meta.warnings) ? (meta.warnings as MatrixDuplicationWarning[]) : []
+}
 
 const base = '/api/v1'
 
@@ -90,13 +95,19 @@ export async function getMatrixTree(itemId: string): Promise<MatrixNodeTreeApi> 
   )
 }
 
+export type DuplicateMatrixItemResult = {
+  data: DuplicateMatrixItemSummary
+  warnings: MatrixDuplicationWarning[]
+}
+
 export async function duplicateMatrixItem(
   itemId: string,
-): Promise<DuplicateMatrixItemSummary> {
-  return requestJson<DuplicateMatrixItemSummary>(
+): Promise<DuplicateMatrixItemResult> {
+  const { data, meta } = await requestJsonEnvelope<DuplicateMatrixItemSummary>(
     'POST',
     `${base}/operation-matrix/items/${encodeURIComponent(itemId)}/duplicate`,
   )
+  return { data, warnings: warningsFromMeta(meta) }
 }
 
 export type ExportMatrixItemToExcelOptions = {
@@ -221,13 +232,19 @@ export async function reorderMatrixNode(
   )
 }
 
+export type DuplicateMatrixNodeResult = {
+  data: MatrixNodeTreeApi
+  warnings: MatrixDuplicationWarning[]
+}
+
 export async function duplicateMatrixNode(
   id: string,
-): Promise<MatrixNodeTreeApi> {
-  return requestJson<MatrixNodeTreeApi>(
+): Promise<DuplicateMatrixNodeResult> {
+  const { data, meta } = await requestJsonEnvelope<MatrixNodeTreeApi>(
     'POST',
     `${base}/operation-matrix/nodes/${encodeURIComponent(id)}/duplicate`,
   )
+  return { data, warnings: warningsFromMeta(meta) }
 }
 
 export async function restoreMatrixNode(

@@ -14,6 +14,7 @@ import { sortMatrixChildNodes } from './cloneCatalogTaskSubtreeForDraft'
 import { matrixActivityPrimaryTeamId } from '../matrixTreeAggregates'
 import {
   reconcileEtapaCollaborators,
+  reconcileResponsibleOnTeamChange,
   type CriarMatrizManualEtapa,
 } from './criarMatrizManualDraft'
 import {
@@ -62,21 +63,35 @@ function activityToEtapa(node: MatrixNodeTreeApi): CriarMatrizManualEtapa {
   })
 }
 
+/**
+ * `previousTeamId` = equipe efetiva do nó antes desta edição. Esta tela não expõe
+ * campo de responsável nem carrega filiação de equipe — por isso só preserva
+ * `default_responsible_id` quando a equipe efetiva não muda de fato (correção do
+ * zeramento incondicional); numa troca real de equipe, limpa de forma conservadora
+ * (sem dado de elegibilidade disponível aqui para confirmar se ainda é válido).
+ */
 function applyEtapaToActivity(
   node: MatrixNodeTreeApi,
   et: CriarMatrizManualEtapa,
+  previousTeamId: string | null,
 ): MatrixNodeTreeApi {
   const r = reconcileEtapaCollaborators(et)
-  const teamPrimary = r.teamIds[0]
+  const teamPrimary = r.teamIds[0] ?? null
   const teamIds = teamPrimary ? [teamPrimary] : []
   const supportIds = r.collaboratorIds
+  const nextResponsibleId = reconcileResponsibleOnTeamChange({
+    previousTeamId,
+    nextTeamId: teamPrimary,
+    currentResponsibleId: node.default_responsible_id,
+    eligibleMemberIds: new Set<string>(),
+  })
   return {
     ...node,
     name: r.name.trim(),
     planned_minutes: r.plannedMinutes,
     planned_quantity: Math.max(1, Math.floor(r.plannedQuantity ?? 1)),
     team_ids: teamIds,
-    default_responsible_id: null,
+    default_responsible_id: nextResponsibleId,
     metadata_json: buildMatrixActivityMetadataJson(supportIds) ?? null,
   }
 }
@@ -512,12 +527,17 @@ export function CriarMatrizCatalogOpcaoDraftEditor({
                       patchTask(
                         updateNodeDeep(task, act.id, (n) => {
                           const cur = activityToEtapa(n)
-                          return applyEtapaToActivity(n, {
-                            ...cur,
-                            teamIds: v ? [v] : [],
-                            collaboratorIds: [],
-                            primaryCollaboratorId: null,
-                          })
+                          const previousTeamId = cur.teamIds[0] ?? null
+                          return applyEtapaToActivity(
+                            n,
+                            {
+                              ...cur,
+                              teamIds: v ? [v] : [],
+                              collaboratorIds: [],
+                              primaryCollaboratorId: null,
+                            },
+                            previousTeamId,
+                          )
                         }),
                       )
                     }}

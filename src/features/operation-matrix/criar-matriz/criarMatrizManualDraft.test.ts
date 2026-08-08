@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest'
 import {
   manualStructureIsNonEmpty,
   reconcileEtapaCollaborators,
+  reconcileManualOpcoesResponsiblesAgainstEligibility,
+  reconcileResponsibleOnTeamChange,
   validateManualOpcoesForSubmit,
   type CriarMatrizManualOpcao,
 } from './criarMatrizManualDraft'
@@ -83,7 +85,7 @@ describe('validateManualOpcoesForSubmit', () => {
     ).toBeNull()
   })
 
-  it('exige principal quando há mais do que um colaborador na atividade', () => {
+  it('responsável (principal) opcional: vários colaboradores sem principal não bloqueia submit', () => {
     expect(
       validateManualOpcoesForSubmit([
         baseOp({
@@ -105,7 +107,7 @@ describe('validateManualOpcoesForSubmit', () => {
           ],
         }),
       ]),
-    ).toMatch(/principal/i)
+    ).toBeNull()
   })
 
   it('aceita vários colaboradores com principal definido', () => {
@@ -164,5 +166,101 @@ describe('manualStructureIsNonEmpty', () => {
   it('detecta opções', () => {
     expect(manualStructureIsNonEmpty([baseOp()])).toBe(true)
     expect(manualStructureIsNonEmpty([])).toBe(false)
+  })
+})
+
+describe('reconcileManualOpcoesResponsiblesAgainstEligibility (equipe → responsável)', () => {
+  const TEAM_A = 'a1111111-1111-1111-1111-111111111111'
+  const TEAM_B = 'b2222222-2222-2222-2222-222222222222'
+  const RESP = 'c3333333-3333-3333-3333-333333333333'
+
+  function draftWithResponsible(teamId: string): CriarMatrizManualOpcao[] {
+    return [
+      baseOp({
+        areas: [
+          {
+            id: 'a1',
+            name: 'Área',
+            etapas: [
+              et('Etapa', {
+                id: 'e1',
+                teamIds: [teamId],
+                collaboratorIds: [RESP],
+                primaryCollaboratorId: RESP,
+              }),
+            ],
+          },
+        ],
+      }),
+    ]
+  }
+
+  it('reselecionar a mesma equipe (elegibilidade já conhecida) preserva o responsável', () => {
+    const opcoes = draftWithResponsible(TEAM_A)
+    const eligible = new Map([[TEAM_A, new Set([RESP])]])
+    const out = reconcileManualOpcoesResponsiblesAgainstEligibility(opcoes, eligible)
+    expect(out).toBe(opcoes)
+    expect(out[0]!.areas[0]!.etapas[0]!.primaryCollaboratorId).toBe(RESP)
+  })
+
+  it('trocar de equipe de fato e o responsável não ser membro da nova equipe limpa a seleção', () => {
+    const opcoes = draftWithResponsible(TEAM_B)
+    const eligible = new Map([[TEAM_B, new Set(['outro-id'])]])
+    const out = reconcileManualOpcoesResponsiblesAgainstEligibility(opcoes, eligible)
+    expect(out).not.toBe(opcoes)
+    expect(out[0]!.areas[0]!.etapas[0]!.primaryCollaboratorId).toBeNull()
+  })
+
+  it('equipe sem elegibilidade ainda carregada (mapa sem a chave) preserva o responsável até validar', () => {
+    const opcoes = draftWithResponsible(TEAM_A)
+    const out = reconcileManualOpcoesResponsiblesAgainstEligibility(opcoes, new Map())
+    expect(out).toBe(opcoes)
+    expect(out[0]!.areas[0]!.etapas[0]!.primaryCollaboratorId).toBe(RESP)
+  })
+})
+
+describe('reconcileResponsibleOnTeamChange', () => {
+  const RESP = 'c3333333-3333-3333-3333-333333333333'
+  const TEAM_A = 'a1111111-1111-1111-1111-111111111111'
+  const TEAM_B = 'b2222222-2222-2222-2222-222222222222'
+
+  it('reselecionar a mesma equipe preserva o responsável', () => {
+    const out = reconcileResponsibleOnTeamChange({
+      previousTeamId: TEAM_A,
+      nextTeamId: TEAM_A,
+      currentResponsibleId: RESP,
+      eligibleMemberIds: new Set(),
+    })
+    expect(out).toBe(RESP)
+  })
+
+  it('trocar de equipe de fato e responsável não elegível limpa a seleção', () => {
+    const out = reconcileResponsibleOnTeamChange({
+      previousTeamId: TEAM_A,
+      nextTeamId: TEAM_B,
+      currentResponsibleId: RESP,
+      eligibleMemberIds: new Set(),
+    })
+    expect(out).toBeNull()
+  })
+
+  it('trocar de equipe de fato mas responsável continua elegível na nova equipe preserva', () => {
+    const out = reconcileResponsibleOnTeamChange({
+      previousTeamId: TEAM_A,
+      nextTeamId: TEAM_B,
+      currentResponsibleId: RESP,
+      eligibleMemberIds: new Set([RESP]),
+    })
+    expect(out).toBe(RESP)
+  })
+
+  it('remover a equipe (sem equipe efetiva) limpa o responsável', () => {
+    const out = reconcileResponsibleOnTeamChange({
+      previousTeamId: TEAM_A,
+      nextTeamId: null,
+      currentResponsibleId: RESP,
+      eligibleMemberIds: new Set([RESP]),
+    })
+    expect(out).toBeNull()
   })
 })

@@ -219,6 +219,22 @@ describe('operationMatrixPreviewPersist', () => {
     ).toBe(true)
   })
 
+  it('planeja patch com defaultResponsibleId quando o responsável muda', () => {
+    const baseline = itemRoot([task('task-1', [sector('sector-1', [act('activity-1', 'sector-1')])])])
+    const working = patchActivityFieldsInTreeClone(baseline, 'activity-1', {
+      default_responsible_id: '550e8400-e29b-41d4-a716-446655440009',
+    })
+    const calls = planOperationMatrixPreviewApiPersist(baseline, working)
+    expect(
+      calls.some(
+        (call) =>
+          call.kind === 'patch' &&
+          call.id === 'activity-1' &&
+          call.input.defaultResponsibleId === '550e8400-e29b-41d4-a716-446655440009',
+      ),
+    ).toBe(true)
+  })
+
   it('planeja delete após create, patch e order para nós removidos localmente', () => {
     const baseline = itemRoot([task('task-1', [sector('sector-1', [act('activity-1', 'sector-1')])])])
     const working = removePreviewStructureNode(baseline, 'activity-1')

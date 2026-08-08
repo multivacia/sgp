@@ -33,6 +33,7 @@ function buildCreatePayload(
       nodeType: 'ACTIVITY',
       plannedMinutes: node.planned_minutes,
       teamIds: tid ? [tid] : [],
+      defaultResponsibleId: node.default_responsible_id ?? null,
     }
   }
 

@@ -196,6 +196,31 @@ describe('operationMatrixPreviewEdits', () => {
     expect(diffs[0]?.patch.team_ids).toEqual(['550e8400-e29b-41d4-a716-446655440001'])
   })
 
+  it('collectActivityFieldDiffs detecta mudança em default_responsible_id', () => {
+    const base = itemWithActivity(
+      act('a1', { planned_minutes: 10, default_responsible_id: null }),
+    )
+    const work = patchActivityFieldsInTreeClone(base, 'a1', {
+      default_responsible_id: '550e8400-e29b-41d4-a716-446655440002',
+    })
+    const diffs = collectActivityFieldDiffs(base, work)
+    expect(diffs).toHaveLength(1)
+    expect(diffs[0]?.patch.default_responsible_id).toBe(
+      '550e8400-e29b-41d4-a716-446655440002',
+    )
+  })
+
+  it('collectActivityFieldDiffs não acusa mudança quando default_responsible_id permanece igual', () => {
+    const base = itemWithActivity(
+      act('a1', {
+        planned_minutes: 10,
+        default_responsible_id: '550e8400-e29b-41d4-a716-446655440003',
+      }),
+    )
+    const work = patchActivityFieldsInTreeClone(base, 'a1', { planned_minutes: 10 })
+    expect(collectActivityFieldDiffs(base, work)).toEqual([])
+  })
+
   it('collectActivityFieldDiffs detecta mudança em team_ids (normaliza para uma equipe)', () => {
     const base = itemWithActivity(
       act('a1', { planned_minutes: 10, default_responsible_id: null, team_ids: [] }),

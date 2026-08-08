@@ -651,6 +651,8 @@ export function applyReviewDecisionsToDraftV11(
             __reviewMatchedMatrixNodeId: m.matchedMatrixNodeId,
             __reviewSelectedAlternativeMatrixNodeId: alt.matrixNodeId,
             __reviewFinalAction: 'SELECT_ALTERNATIVE',
+            __reviewPrimaryCollaboratorId: alt.collaboratorId ?? null,
+            __reviewPrimaryTeamId: alt.teamId ?? null,
           }),
         )
         continue
@@ -670,6 +672,8 @@ export function applyReviewDecisionsToDraftV11(
           __reviewPlanIndex: i,
           __reviewMatchedMatrixNodeId: m.matchedMatrixNodeId,
           __reviewFinalAction: 'ACCEPT_SUGGESTED',
+          __reviewPrimaryCollaboratorId: m.reusedStructure?.collaboratorId ?? null,
+          __reviewPrimaryTeamId: m.reusedStructure?.teamId ?? null,
         }),
       )
       continue

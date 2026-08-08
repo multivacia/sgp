@@ -124,6 +124,14 @@ export type MatrixSelectionContextBarProps = {
   setFormTeamIds: (v: string[]) => void
   formRequired: boolean
   setFormRequired: (v: boolean) => void
+  /** Responsável padrão (opcional) — só membro ativo da equipe selecionada é elegível. */
+  formResponsibleId: string | null
+  setFormResponsibleId: (v: string | null) => void
+  /** `null` = elegibilidade ainda não conhecida (carregando/erro/sem equipe). */
+  eligibleResponsibleIds: ReadonlySet<string> | null
+  responsibleTeamMembersState: 'idle' | 'loading' | 'error' | 'ready'
+  onRetryLoadResponsibleTeamMembers: () => void
+  collaboratorIdToName: ReadonlyMap<string, string>
   teams: Team[]
   teamIdSet: ReadonlySet<string>
   busy: boolean
@@ -192,6 +200,12 @@ export function MatrixSelectionContextBar({
   setFormTeamIds,
   formRequired,
   setFormRequired,
+  formResponsibleId,
+  setFormResponsibleId,
+  eligibleResponsibleIds,
+  responsibleTeamMembersState,
+  onRetryLoadResponsibleTeamMembers,
+  collaboratorIdToName,
   teams,
   teamIdSet,
   busy,
@@ -664,6 +678,58 @@ export function MatrixSelectionContextBar({
                   <p className="text-[10px] leading-snug text-slate-500">
                     Use uma equipe para função operacional (ex.: Ajudante, Costura ou Montagem).
                   </p>
+
+                  <label className="flex flex-col gap-0.5 text-[11px]">
+                    <span className="text-slate-500">Responsável (opcional)</span>
+                    <select
+                      value={formResponsibleId ?? ''}
+                      disabled={!formTeamIds[0] || responsibleTeamMembersState !== 'ready'}
+                      onChange={(e) => {
+                        const v = e.target.value.trim()
+                        setFormResponsibleId(v || null)
+                      }}
+                      className="sgp-input-app rounded-lg border border-white/10 bg-sgp-void/80 px-2 py-1.5 text-sm text-slate-200 disabled:opacity-50"
+                    >
+                      <option value="">— Nenhum —</option>
+                      {responsibleTeamMembersState === 'ready' && eligibleResponsibleIds
+                        ? [...eligibleResponsibleIds].map((cid) => (
+                            <option key={cid} value={cid}>
+                              {collaboratorIdToName.get(cid) ?? cid}
+                            </option>
+                          ))
+                        : null}
+                      {formResponsibleId && !eligibleResponsibleIds?.has(formResponsibleId) ? (
+                        <option value={formResponsibleId}>
+                          {collaboratorIdToName.get(formResponsibleId) ?? formResponsibleId}
+                        </option>
+                      ) : null}
+                    </select>
+                  </label>
+                  {!formTeamIds[0] ? (
+                    <p className="text-[11px] text-slate-500">
+                      Selecione uma equipe para poder indicar um responsável.
+                    </p>
+                  ) : responsibleTeamMembersState === 'loading' ? (
+                    <p className="text-[11px] text-slate-500">Carregando membros da equipe…</p>
+                  ) : responsibleTeamMembersState === 'error' ? (
+                    <p className="text-[11px] text-rose-300">
+                      Não foi possível carregar os membros da equipe.{' '}
+                      <button
+                        type="button"
+                        className="font-semibold underline"
+                        onClick={onRetryLoadResponsibleTeamMembers}
+                      >
+                        Tentar novamente
+                      </button>
+                    </p>
+                  ) : responsibleTeamMembersState === 'ready' &&
+                    eligibleResponsibleIds &&
+                    eligibleResponsibleIds.size === 0 ? (
+                    <p className="text-[11px] text-slate-500">
+                      Nenhum membro ativo nesta equipe.
+                    </p>
+                  ) : null}
+
                   <label className="flex flex-col gap-0.5 text-[11px]">
                     <span className="text-slate-500">Tempo previsto (min)</span>
                     <input

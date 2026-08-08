@@ -185,7 +185,9 @@ export type ArgosAlternativeMatrixCandidateV11 = {
   plannedMinutes?: number
   confidence: number
   matchReason: string
+  teamId?: string
   teamName?: string
+  collaboratorId?: string
   collaboratorName?: string
   matrixSubtree?: ArgosMatrixSubtreeV11
 }

@@ -36,3 +36,24 @@ export type DuplicateMatrixItemSummary = {
   name: string
   is_active: boolean
 }
+
+export type MatrixDuplicationWarningReason =
+  | 'RESPONSIBLE_INACTIVE'
+  | 'TEAM_MEMBERSHIP_INACTIVE'
+  | 'RESPONSIBLE_NOT_IN_TEAM'
+
+/**
+ * Aviso não bloqueante em `meta.warnings` de POST …/duplicate: a duplicação foi
+ * concluída, mas o responsável padrão da atividade de origem não pôde ser
+ * copiado (colaborador inativo, vínculo de equipe inativo, ou fora da equipe
+ * copiada) — espelha `MatrixDuplicationWarning` do backend.
+ */
+export type MatrixDuplicationWarning = {
+  code: 'MATRIX_ACTIVITY_RESPONSIBLE_NOT_COPIED'
+  sourceActivityId: string
+  duplicatedActivityId: string
+  activityName: string
+  sourceResponsibleId: string
+  reason: MatrixDuplicationWarningReason
+  message: string
+}
