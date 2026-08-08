@@ -4,6 +4,8 @@ import { AppError } from '../../shared/errors/AppError.js'
 import { resolveActivityPlannedQuantity } from '../../shared/activityOperationalQuantity.js'
 import { ErrorCodes } from '../../shared/errors/errorCodes.js'
 import type {
+  MatrixDuplicationWarning,
+  MatrixDuplicationWarningReason,
   MatrixNodeApi,
   MatrixNodeTreeApi,
   MatrixSuggestionCatalogApi,
@@ -17,7 +19,9 @@ import {
 } from './operation-matrix.export.js'
 import {
   buildNestedTree,
+  findCollaboratorBasicEligibility,
   findNodeRowById,
+  findTeamMembershipStatus,
   insertNode,
   labelCatalogRowToApi,
   listExistingTeamIds,
@@ -72,6 +76,70 @@ function normalizeActivityTeamIdsForSave(
   ids: readonly string[] | undefined,
 ): string[] {
   return normalizeUniqueIds(ids).slice(0, 1)
+}
+
+function sameIdSet(a: readonly string[], b: readonly string[]): boolean {
+  if (a.length !== b.length) return false
+  const sa = new Set(a)
+  return b.every((x) => sa.has(x))
+}
+
+const DEFAULT_RESPONSIBLE_INVALID_MESSAGE =
+  'O colaborador responsável deve ser um colaborador ativo e membro ativo da equipe informada.'
+
+type ResponsibleEvaluation =
+  | { valid: true }
+  | { valid: false; reason: MatrixDuplicationWarningReason }
+
+/**
+ * Regra única de elegibilidade do responsável padrão: colaborador existe, está ativo,
+ * e é membro ativo da (única) equipe efetiva da atividade.
+ */
+async function evaluateDefaultResponsible(
+  client: pg.Pool | pg.PoolClient,
+  responsibleId: string,
+  teamIds: readonly string[],
+): Promise<ResponsibleEvaluation> {
+  const collab = await findCollaboratorBasicEligibility(client, responsibleId)
+  if (!collab.exists || !collab.active) {
+    return { valid: false, reason: 'RESPONSIBLE_INACTIVE' }
+  }
+  const teamId = teamIds[0]
+  if (!teamId) {
+    return { valid: false, reason: 'RESPONSIBLE_NOT_IN_TEAM' }
+  }
+  const membership = await findTeamMembershipStatus(client, teamId, responsibleId)
+  if (!membership.exists) {
+    return { valid: false, reason: 'RESPONSIBLE_NOT_IN_TEAM' }
+  }
+  if (!membership.active) {
+    return { valid: false, reason: 'TEAM_MEMBERSHIP_INACTIVE' }
+  }
+  return { valid: true }
+}
+
+async function assertValidDefaultResponsible(
+  client: pg.Pool | pg.PoolClient,
+  responsibleId: string,
+  teamIds: readonly string[],
+): Promise<void> {
+  const result = await evaluateDefaultResponsible(client, responsibleId, teamIds)
+  if (!result.valid) {
+    throw new AppError(
+      DEFAULT_RESPONSIBLE_INVALID_MESSAGE,
+      422,
+      ErrorCodes.VALIDATION_ERROR,
+    )
+  }
+}
+
+async function isResponsibleValidForTeams(
+  client: pg.Pool | pg.PoolClient,
+  responsibleId: string,
+  teamIds: readonly string[],
+): Promise<boolean> {
+  const result = await evaluateDefaultResponsible(client, responsibleId, teamIds)
+  return result.valid
 }
 
 export async function serviceListRootItems(
@@ -250,47 +318,58 @@ export async function serviceCreateNode(
   }
   assertAllowedChild(parent.node_type, body.nodeType)
 
-  if (
-    body.nodeType === 'ACTIVITY' &&
-    body.defaultResponsibleId !== undefined
-  ) {
-    throw new AppError(
-      'Colaborador padrão não é mais usado em Atividades da Matriz. Use teamIds (equipe padrão).',
-      422,
-      ErrorCodes.VALIDATION_ERROR,
-    )
-  }
-
   const level_depth = parent.level_depth + 1
   const order_index =
     body.orderIndex ?? (await nextSiblingOrderIndex(pool, parent.id))
 
-  const row = await insertNode(pool, {
-    id,
-    parent_id: parent.id,
-    root_id: parent.root_id,
-    node_type: body.nodeType,
-    name: body.name.trim(),
-    code: empty(body.code),
-    description: empty(body.description),
-    order_index,
-    level_depth,
-    is_active: body.isActive ?? true,
-    planned_minutes: isActivity ? (body.plannedMinutes ?? null) : null,
-    planned_quantity: isActivity
-      ? resolveActivityPlannedQuantity(body.plannedQuantity)
-      : 1,
-    default_responsible_id: null,
-    required: body.required ?? true,
-    source_key: empty(body.sourceKey),
-    metadata_json: body.metadataJson ?? null,
-  })
   if (!isActivity) {
+    const row = await insertNode(pool, {
+      id,
+      parent_id: parent.id,
+      root_id: parent.root_id,
+      node_type: body.nodeType,
+      name: body.name.trim(),
+      code: empty(body.code),
+      description: empty(body.description),
+      order_index,
+      level_depth,
+      is_active: body.isActive ?? true,
+      planned_minutes: null,
+      planned_quantity: 1,
+      default_responsible_id: null,
+      required: body.required ?? true,
+      source_key: empty(body.sourceKey),
+      metadata_json: body.metadataJson ?? null,
+    })
     return rowToMatrixNodeApi(row)
   }
+
+  const responsibleId = body.defaultResponsibleId ?? null
+
   const client = await pool.connect()
   try {
     await client.query('BEGIN')
+    if (responsibleId !== null) {
+      await assertValidDefaultResponsible(client, responsibleId, teamIds)
+    }
+    const row = await insertNode(client, {
+      id,
+      parent_id: parent.id,
+      root_id: parent.root_id,
+      node_type: body.nodeType,
+      name: body.name.trim(),
+      code: empty(body.code),
+      description: empty(body.description),
+      order_index,
+      level_depth,
+      is_active: body.isActive ?? true,
+      planned_minutes: body.plannedMinutes ?? null,
+      planned_quantity: resolveActivityPlannedQuantity(body.plannedQuantity),
+      default_responsible_id: responsibleId,
+      required: body.required ?? true,
+      source_key: empty(body.sourceKey),
+      metadata_json: body.metadataJson ?? null,
+    })
     await replaceNodeTeamLinks(client, row.id, teamIds)
     await client.query('COMMIT')
   } catch (e) {
@@ -299,7 +378,7 @@ export async function serviceCreateNode(
   } finally {
     client.release()
   }
-  const fresh = await findNodeRowById(pool, row.id)
+  const fresh = await findNodeRowById(pool, id)
   if (!fresh) {
     throw new AppError('Nó não encontrado.', 404, ErrorCodes.NOT_FOUND)
   }
@@ -349,14 +428,6 @@ function patchBodyToDb(
     }
   }
 
-  if (isActivity && body.defaultResponsibleId !== undefined) {
-    throw new AppError(
-      'Colaborador padrão não é mais usado em Atividades da Matriz. Use teamIds (equipe padrão).',
-      422,
-      ErrorCodes.VALIDATION_ERROR,
-    )
-  }
-
   const p: PatchNodeDbInput = {}
   if (body.name !== undefined) p.name = body.name.trim()
   if (body.code !== undefined) p.code = empty(body.code)
@@ -383,10 +454,15 @@ export async function servicePatchNode(
   const existing = await findNodeRowById(pool, id)
   if (!existing) return null
 
-  const teamIds = normalizeActivityTeamIdsForSave(body.teamIds)
-  if (body.teamIds !== undefined && teamIds.length > 0) {
-    const existingTeamIds = await listExistingTeamIds(pool, teamIds)
-    if (existingTeamIds.size !== teamIds.length) {
+  const isActivity = existing.node_type === 'ACTIVITY'
+
+  const requestedTeamIds =
+    body.teamIds !== undefined
+      ? normalizeActivityTeamIdsForSave(body.teamIds)
+      : undefined
+  if (requestedTeamIds !== undefined && requestedTeamIds.length > 0) {
+    const existingTeamIds = await listExistingTeamIds(pool, requestedTeamIds)
+    if (existingTeamIds.size !== requestedTeamIds.length) {
       throw new AppError(
         'Um ou mais times vinculados não foram encontrados.',
         422,
@@ -396,27 +472,64 @@ export async function servicePatchNode(
   }
 
   const patch = patchBodyToDb(existing.node_type, body)
-  if (existing.node_type === 'ACTIVITY' && body.teamIds !== undefined) {
-    patch.default_responsible_id = null
+
+  if (!isActivity) {
+    const row = await updateNode(pool, id, patch)
+    return row ? rowToMatrixNodeApi(row) : null
   }
-  const row = await updateNode(pool, id, patch)
-  if (!row) return null
-  if (existing.node_type === 'ACTIVITY' && body.teamIds !== undefined) {
-    const client = await pool.connect()
-    try {
-      await client.query('BEGIN')
-      await replaceNodeTeamLinks(client, id, teamIds)
-      await client.query('COMMIT')
-    } catch (e) {
-      await client.query('ROLLBACK')
-      throw e
-    } finally {
-      client.release()
+
+  const persistedTeamIds = existing.team_ids ?? []
+  const effectiveTeamIds =
+    requestedTeamIds !== undefined ? requestedTeamIds : persistedTeamIds
+  const teamChanged =
+    requestedTeamIds !== undefined &&
+    !sameIdSet(requestedTeamIds, persistedTeamIds)
+
+  const client = await pool.connect()
+  try {
+    await client.query('BEGIN')
+
+    if (body.defaultResponsibleId !== undefined) {
+      // Responsável explicitamente informado neste request (id novo ou `null` para limpar).
+      if (body.defaultResponsibleId !== null) {
+        await assertValidDefaultResponsible(
+          client,
+          body.defaultResponsibleId,
+          effectiveTeamIds,
+        )
+      }
+      patch.default_responsible_id = body.defaultResponsibleId
+    } else if (teamChanged && existing.default_responsible_id) {
+      // Equipe mudou de fato e o responsável não foi tocado neste request:
+      // só limpa se o responsável persistido deixou de ser válido para a nova equipe.
+      const stillValid = await isResponsibleValidForTeams(
+        client,
+        existing.default_responsible_id,
+        effectiveTeamIds,
+      )
+      if (!stillValid) {
+        patch.default_responsible_id = null
+      }
     }
-    const fresh = await findNodeRowById(pool, id)
-    return fresh ? rowToMatrixNodeApi(fresh) : null
+
+    const row = await updateNode(client, id, patch)
+    if (!row) {
+      await client.query('ROLLBACK')
+      return null
+    }
+    if (requestedTeamIds !== undefined) {
+      await replaceNodeTeamLinks(client, id, requestedTeamIds)
+    }
+    await client.query('COMMIT')
+  } catch (e) {
+    await client.query('ROLLBACK')
+    throw e
+  } finally {
+    client.release()
   }
-  return rowToMatrixNodeApi(row)
+
+  const fresh = await findNodeRowById(pool, id)
+  return fresh ? rowToMatrixNodeApi(fresh) : null
 }
 
 export async function serviceDeleteNode(
@@ -460,12 +573,35 @@ export type DuplicateItemAsNewRootOptions = {
   newRootName?: string
 }
 
+export type MatrixDuplicationResult = {
+  tree: MatrixNodeTreeApi
+  warnings: MatrixDuplicationWarning[]
+}
+
+function buildResponsibleNotCopiedWarning(params: {
+  sourceActivityId: string
+  duplicatedActivityId: string
+  activityName: string
+  sourceResponsibleId: string
+  reason: MatrixDuplicationWarningReason
+}): MatrixDuplicationWarning {
+  return {
+    code: 'MATRIX_ACTIVITY_RESPONSIBLE_NOT_COPIED',
+    sourceActivityId: params.sourceActivityId,
+    duplicatedActivityId: params.duplicatedActivityId,
+    activityName: params.activityName,
+    sourceResponsibleId: params.sourceResponsibleId,
+    reason: params.reason,
+    message: `A atividade "${params.activityName}" foi duplicada sem responsável porque o colaborador configurado não pertence mais à equipe ou está inativo. Revise a atividade e selecione um responsável válido.`,
+  }
+}
+
 /** ITEM → nova matriz raiz completa (novo ITEM raiz). */
 export async function serviceDuplicateItemAsNewRoot(
   pool: pg.Pool,
   itemId: string,
   opts?: DuplicateItemAsNewRootOptions,
-): Promise<MatrixNodeTreeApi> {
+): Promise<MatrixDuplicationResult> {
   const rows = await listSubtreeRowsForCopy(pool, itemId)
   const root = rows.find((r) => r.node_type === 'ITEM' && r.parent_id === null)
   if (!root || root.id !== itemId) {
@@ -482,6 +618,7 @@ export async function serviceDuplicateItemAsNewRoot(
   }
 
   const newRootId = idMap.get(root.id)!
+  const warnings: MatrixDuplicationWarning[] = []
   const client = await pool.connect()
   try {
     await client.query('BEGIN')
@@ -495,6 +632,28 @@ export async function serviceDuplicateItemAsNewRoot(
         opts?.newRootName !== undefined
           ? opts.newRootName
           : r.name
+      const teamIdsForCopy = r.node_type === 'ACTIVITY' ? (r.team_ids ?? []) : []
+      let responsibleForCopy: string | null = null
+      if (r.node_type === 'ACTIVITY' && r.default_responsible_id) {
+        const evaluation = await evaluateDefaultResponsible(
+          client,
+          r.default_responsible_id,
+          teamIdsForCopy,
+        )
+        if (evaluation.valid) {
+          responsibleForCopy = r.default_responsible_id
+        } else {
+          warnings.push(
+            buildResponsibleNotCopiedWarning({
+              sourceActivityId: r.id,
+              duplicatedActivityId: newId,
+              activityName: r.name,
+              sourceResponsibleId: r.default_responsible_id,
+              reason: evaluation.reason,
+            }),
+          )
+        }
+      }
       const inserted = await insertNode(client, {
         id: newId,
         parent_id: newParentId,
@@ -508,14 +667,13 @@ export async function serviceDuplicateItemAsNewRoot(
         is_active: r.is_active,
         planned_minutes: r.planned_minutes,
         planned_quantity: r.planned_quantity ?? 1,
-        default_responsible_id:
-          r.node_type === 'ACTIVITY' ? null : r.default_responsible_id,
+        default_responsible_id: responsibleForCopy,
         required: r.required,
         source_key: r.source_key,
         metadata_json: r.metadata_json,
       })
       if (inserted.node_type === 'ACTIVITY') {
-        await replaceNodeTeamLinks(client, inserted.id, r.team_ids ?? [])
+        await replaceNodeTeamLinks(client, inserted.id, teamIdsForCopy)
       }
     }
     await client.query('COMMIT')
@@ -527,14 +685,14 @@ export async function serviceDuplicateItemAsNewRoot(
   }
 
   const outRows = await listTreeRowsByRootId(pool, newRootId)
-  return buildNestedTree(outRows)
+  return { tree: buildNestedTree(outRows), warnings }
 }
 
 /** Duplica matriz (ITEM raiz) com nome `Original (Cópia)` único e árvore operacional completa. */
 export async function serviceDuplicateMatrixItem(
   pool: pg.Pool,
   itemId: string,
-): Promise<MatrixNodeTreeApi> {
+): Promise<MatrixDuplicationResult> {
   const root = await findNodeRowById(pool, itemId)
   if (!root || root.node_type !== 'ITEM' || root.parent_id !== null) {
     throw new AppError(
@@ -556,7 +714,7 @@ export async function serviceDuplicateMatrixItem(
 export async function serviceDuplicateSubtreeUnderSameParent(
   pool: pg.Pool,
   nodeId: string,
-): Promise<MatrixNodeTreeApi> {
+): Promise<MatrixDuplicationResult> {
   const rows = await listSubtreeFromNode(pool, nodeId)
   if (rows.length === 0) {
     throw new AppError('Nó não encontrado.', 404, ErrorCodes.NOT_FOUND)
@@ -584,6 +742,7 @@ export async function serviceDuplicateSubtreeUnderSameParent(
     idMap.set(r.id, randomUUID())
   }
 
+  const warnings: MatrixDuplicationWarning[] = []
   const client = await pool.connect()
   try {
     await client.query('BEGIN')
@@ -601,6 +760,29 @@ export async function serviceDuplicateSubtreeUnderSameParent(
 
       const ord = i === 0 ? order_index : r.order_index
 
+      const teamIdsForCopy = r.node_type === 'ACTIVITY' ? (r.team_ids ?? []) : []
+      let responsibleForCopy: string | null = null
+      if (r.node_type === 'ACTIVITY' && r.default_responsible_id) {
+        const evaluation = await evaluateDefaultResponsible(
+          client,
+          r.default_responsible_id,
+          teamIdsForCopy,
+        )
+        if (evaluation.valid) {
+          responsibleForCopy = r.default_responsible_id
+        } else {
+          warnings.push(
+            buildResponsibleNotCopiedWarning({
+              sourceActivityId: r.id,
+              duplicatedActivityId: newId,
+              activityName: r.name,
+              sourceResponsibleId: r.default_responsible_id,
+              reason: evaluation.reason,
+            }),
+          )
+        }
+      }
+
       const inserted = await insertNode(client, {
         id: newId,
         parent_id: newParentId,
@@ -614,14 +796,13 @@ export async function serviceDuplicateSubtreeUnderSameParent(
         is_active: r.is_active,
         planned_minutes: r.planned_minutes,
         planned_quantity: r.planned_quantity ?? 1,
-        default_responsible_id:
-          r.node_type === 'ACTIVITY' ? null : r.default_responsible_id,
+        default_responsible_id: responsibleForCopy,
         required: r.required,
         source_key: r.source_key,
         metadata_json: r.metadata_json,
       })
       if (inserted.node_type === 'ACTIVITY') {
-        await replaceNodeTeamLinks(client, inserted.id, r.team_ids ?? [])
+        await replaceNodeTeamLinks(client, inserted.id, teamIdsForCopy)
       }
     }
     await client.query('COMMIT')
@@ -632,13 +813,16 @@ export async function serviceDuplicateSubtreeUnderSameParent(
     client.release()
   }
 
-  return buildNestedTree(await listTreeRowsByRootId(pool, source.root_id))
+  return {
+    tree: buildNestedTree(await listTreeRowsByRootId(pool, source.root_id)),
+    warnings,
+  }
 }
 
 export async function serviceDuplicate(
   pool: pg.Pool,
   nodeId: string,
-): Promise<MatrixNodeTreeApi> {
+): Promise<MatrixDuplicationResult> {
   const row = await findNodeRowById(pool, nodeId)
   if (!row) {
     throw new AppError('Nó não encontrado.', 404, ErrorCodes.NOT_FOUND)

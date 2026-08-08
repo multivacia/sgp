@@ -554,6 +554,97 @@ describe('matchOperationalItems — R6 S4 recall ILIKE + fallback', () => {
     expect(p.some((x) => /gti|gol|original|padrao/i.test(x))).toBe(false)
     expect(p.length).toBeGreaterThan(0)
   })
+
+  it('[AC15] alternativeCandidates (REVIEW_SIMILAR) propaga teamId/collaboratorId do candidato MATRIX_ACTIVITY', async () => {
+    const rows = [
+      {
+        matrixNodeId: 'o1-1111-1111-1111-111111111111',
+        activity: 'Revestimento ombreira traseira',
+        ...joins,
+        collaboratorId: 'c1-1111-1111-1111-111111111111',
+        collaboratorName: 'Colaborador Ombreira',
+        teamId: 't1-1111-1111-1111-111111111111',
+        teamName: 'Equipe Ombreira',
+      },
+      {
+        matrixNodeId: 'o2-1111-1111-1111-111111111111',
+        activity: 'Revestimento ombreira com aplique',
+        ...joins,
+        collaboratorId: 'c2-2222-2222-2222-222222222222',
+        collaboratorName: 'Colaborador Aplique',
+        teamId: 't2-2222-2222-2222-222222222222',
+        teamName: 'Equipe Aplique',
+      },
+    ]
+    const { matchingPlan: plan } = await matchOperationalItems({
+      pool: fakePool(rows),
+      serviceItems: [
+        {
+          description: 'OMBREIRA TRASEIRA GOL GTI/GTS + APLIQUES - REVESTIMENTO',
+        },
+      ],
+    })
+    expect(plan[0]?.suggestedAction).toBe('REVIEW_SIMILAR')
+    const alts = plan[0]?.alternativeCandidates ?? []
+    expect(alts.length).toBeGreaterThanOrEqual(1)
+    const alt = alts.find((a) => a.matrixNodeId === 'o2-1111-1111-1111-111111111111')
+    expect(alt).toBeDefined()
+    expect(alt?.kind).toBe('MATRIX_ACTIVITY')
+    expect(alt?.teamId).toBe('t2-2222-2222-2222-222222222222')
+    expect(alt?.teamName).toBe('Equipe Aplique')
+    expect(alt?.collaboratorId).toBe('c2-2222-2222-2222-222222222222')
+    expect(alt?.collaboratorName).toBe('Colaborador Aplique')
+  })
+
+  it('[AC15] alternativeCandidates (CREATE_NEW) propaga teamId/collaboratorId do candidato MATRIX_ACTIVITY', async () => {
+    const rows = [
+      {
+        matrixNodeId: 'cn-1111-1111-1111-111111111111',
+        activity: 'Revestimento de banco',
+        activityDescription: null,
+        plannedMinutes: 100,
+        collaboratorId: 'ccn-1111-1111-1111-111111111111',
+        collaboratorName: 'Colaborador Banco',
+        teamId: 'tcn-1111-1111-1111-111111111111',
+        teamName: 'Equipe Banco',
+        sector: 'Tapeçaria',
+        step: 'Geral',
+      },
+    ]
+    const { matchingPlan: plan } = await matchOperationalItems({
+      pool: fakePool(rows),
+      serviceItems: [
+        {
+          description: 'Revestimento de banco traseiro específico modelo raro',
+        },
+      ],
+    })
+    expect(plan[0]?.suggestedAction).toBe('CREATE_NEW')
+    const alts = plan[0]?.alternativeCandidates ?? []
+    expect(alts.length).toBeGreaterThanOrEqual(1)
+    const alt = alts.find((a) => a.matrixNodeId === 'cn-1111-1111-1111-111111111111')
+    expect(alt).toBeDefined()
+    expect(alt?.kind).toBe('MATRIX_ACTIVITY')
+    expect(alt?.teamId).toBe('tcn-1111-1111-1111-111111111111')
+    expect(alt?.teamName).toBe('Equipe Banco')
+    expect(alt?.collaboratorId).toBe('ccn-1111-1111-1111-111111111111')
+    expect(alt?.collaboratorName).toBe('Colaborador Banco')
+
+    const ingest = {
+      requestId: 'r-ac15',
+      correlationId: 'c-ac15',
+      status: 'partial' as const,
+      specialist: 'spec',
+      strategy: 'str',
+      document: {},
+      extractedFacts: [],
+      warnings: [],
+      confidence: null,
+      draft: null,
+      matchingPlan: plan,
+    }
+    expect(argosDocumentIngestResultSchema.safeParse(ingest).success).toBe(true)
+  })
 })
 
 describe('matchOperationalItems — R6 S8 matching hierárquico', () => {

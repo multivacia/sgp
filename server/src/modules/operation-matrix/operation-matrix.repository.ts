@@ -7,6 +7,8 @@ import type {
 } from './operation-matrix.dto.js'
 import { rowToMatrixNodeApi } from './operation-matrix.dto.js'
 
+type DbClient = pg.Pool | pg.PoolClient
+
 const baseSelect = `
   SELECT
     id, parent_id, root_id, node_type, code, name, description,
@@ -25,7 +27,7 @@ function isMissingRelationOrColumn(e: unknown): boolean {
 }
 
 async function fillTeamIdsForRows(
-  pool: pg.Pool,
+  pool: DbClient,
   rows: MatrixNodeRow[],
 ): Promise<MatrixNodeRow[]> {
   if (rows.length === 0) return rows
@@ -147,7 +149,7 @@ export async function listRootItems(
 }
 
 export async function findNodeRowById(
-  pool: pg.Pool,
+  pool: DbClient,
   id: string,
   opts?: { includeDeleted?: boolean },
 ): Promise<MatrixNodeRow | null> {
@@ -185,6 +187,57 @@ export async function collaboratorExists(
     [id],
   )
   return Boolean(r.rows[0])
+}
+
+export type CollaboratorBasicEligibility = {
+  exists: boolean
+  active: boolean
+}
+
+/** Colaborador existe (não removido) e está ativo (status ACTIVE + is_active). */
+export async function findCollaboratorBasicEligibility(
+  client: DbClient,
+  collaboratorId: string,
+): Promise<CollaboratorBasicEligibility> {
+  const r = await client.query<{
+    status: string
+    is_active: boolean
+    deleted_at: Date | null
+  }>(
+    `SELECT status, is_active, deleted_at FROM collaborators WHERE id = $1::uuid`,
+    [collaboratorId],
+  )
+  const row = r.rows[0]
+  if (!row) return { exists: false, active: false }
+  const active =
+    row.deleted_at == null &&
+    row.is_active &&
+    String(row.status).toUpperCase() === 'ACTIVE'
+  return { exists: true, active }
+}
+
+export type TeamMembershipStatus = {
+  exists: boolean
+  active: boolean
+}
+
+/** Vínculo do colaborador com a equipe (existe / está ativo — `team_members.is_active`). */
+export async function findTeamMembershipStatus(
+  client: DbClient,
+  teamId: string,
+  collaboratorId: string,
+): Promise<TeamMembershipStatus> {
+  const r = await client.query<{ is_active: boolean }>(
+    `SELECT is_active
+     FROM team_members
+     WHERE team_id = $1::uuid AND collaborator_id = $2::uuid
+     ORDER BY is_active DESC, updated_at DESC
+     LIMIT 1`,
+    [teamId, collaboratorId],
+  )
+  const row = r.rows[0]
+  if (!row) return { exists: false, active: false }
+  return { exists: true, active: Boolean(row.is_active) }
 }
 
 export async function listExistingTeamIds(
@@ -344,7 +397,7 @@ export type PatchNodeDbInput = {
 }
 
 export async function updateNode(
-  pool: pg.Pool,
+  pool: DbClient,
   id: string,
   patch: PatchNodeDbInput,
 ): Promise<MatrixNodeRow | null> {

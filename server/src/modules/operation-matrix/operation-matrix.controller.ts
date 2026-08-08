@@ -95,13 +95,16 @@ export async function postMatrixItemDuplicate(
 ): Promise<void> {
   const id = uuidParamSchema.parse(req.params.id)
   const pool = req.app.locals.pool as pg.Pool
-  const tree = await serviceDuplicateMatrixItem(pool, id)
+  const { tree, warnings } = await serviceDuplicateMatrixItem(pool, id)
   res.status(201).json(
-    ok({
-      id: tree.id,
-      name: tree.name,
-      is_active: tree.is_active,
-    }),
+    ok(
+      {
+        id: tree.id,
+        name: tree.name,
+        is_active: tree.is_active,
+      },
+      { warnings },
+    ),
   )
 }
 
@@ -159,8 +162,8 @@ export async function postMatrixNodeDuplicate(
 ): Promise<void> {
   const id = uuidParamSchema.parse(req.params.id)
   const pool = req.app.locals.pool as pg.Pool
-  const tree = await serviceDuplicate(pool, id)
-  res.status(201).json(ok(tree))
+  const { tree, warnings } = await serviceDuplicate(pool, id)
+  res.status(201).json(ok(tree, { warnings }))
 }
 
 export async function postMatrixNodeRestore(

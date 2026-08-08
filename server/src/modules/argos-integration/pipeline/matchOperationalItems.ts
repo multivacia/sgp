@@ -609,6 +609,11 @@ export type AlternativeMatrixCandidate = {
   confidence: number
   matchReason: string
   matrixSubtree?: MatrixSubtreeBuilt
+  /** Responsável/equipe padrão da atividade da Matriz (candidato `MATRIX_ACTIVITY`). */
+  collaboratorId?: string
+  collaboratorName?: string
+  teamId?: string
+  teamName?: string
 }
 
 function isRecoverableSchemaOrPermissionError(e: unknown): boolean {
@@ -1674,6 +1679,10 @@ function buildAlternativeCandidates(
         confidence: clampConfidence01(r.score),
         matchReason: `Alternativa (${r.score.toFixed(2)}): ${r.candidate.activity}`,
         ...(subtree ? { matrixSubtree: subtree } : {}),
+        collaboratorId: r.candidate.collaboratorId ?? undefined,
+        collaboratorName: r.candidate.collaboratorName ?? undefined,
+        teamId: r.candidate.teamId ?? undefined,
+        teamName: r.candidate.teamName ?? undefined,
       }
     })
 }
@@ -1710,6 +1719,10 @@ function collectCreateNewAlternatives(
       confidence: clampConfidence01(r.score),
       matchReason: `Alternativa (${r.score.toFixed(2)}): ${r.candidate.activity}`,
       ...(subtree ? { matrixSubtree: subtree } : {}),
+      collaboratorId: r.candidate.collaboratorId ?? undefined,
+      collaboratorName: r.candidate.collaboratorName ?? undefined,
+      teamId: r.candidate.teamId ?? undefined,
+      teamName: r.candidate.teamName ?? undefined,
     })
     if (out.length >= 3) break
   }

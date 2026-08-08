@@ -169,6 +169,10 @@ const alternativeMatrixCandidateSchema = z.object({
   confidence: z.number().min(0).max(1),
   matchReason: z.string(),
   matrixSubtree: matrixSubtreeSchema.optional(),
+  teamId: z.string().optional(),
+  teamName: z.string().optional(),
+  collaboratorId: z.string().optional(),
+  collaboratorName: z.string().optional(),
 })
 
 export const matchingPlanItemSchema = z
