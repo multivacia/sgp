@@ -12,6 +12,7 @@ import {
 } from '../../components/operational/JustificationSelect'
 import {
   buildTimeEntryPayload,
+  candidateNeedsOutOfSequenceJustification,
   emptyJustificationValue,
   type JustificationFieldValue,
 } from '../shell/quickTimeEntryDrawerLogic'
@@ -430,7 +431,7 @@ export function KioskOutraAtividadeFlow({ collaborator, onClose }: Props) {
                         }}
                       />
 
-                      {selected.requiresOutOfSequenceJustification ? (
+                      {candidateNeedsOutOfSequenceJustification(selected) ? (
                         <p className="rounded-xl border border-sky-400/25 bg-sky-500/10 px-4 py-3 text-sm text-sky-100">
                           Esta atividade está fora da sequência. A mesma
                           justificativa será usada para registrar a exceção de
