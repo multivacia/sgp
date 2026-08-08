@@ -4,43 +4,53 @@
 
 | Campo | Valor |
 |---|---|
-| Data da análise | 2026-08-08 |
-| Commit da `main` analisado | `34679fd90b5270dc3e8f56c4f9b6f32bedf8815b` (10/07/2026) |
+| Data da análise (v1) | 2026-08-08 |
+| Data desta revisão (v2) | 2026-08-08 |
+| Commit da `main` analisado (v1 e v2 — inalterado) | `34679fd90b5270dc3e8f56c4f9b6f32bedf8815b` (10/07/2026) |
 | Branch de análise | `docs/analise-responsavel-atividade-matriz` |
-| Escopo desta entrega | Somente análise de impacto (Etapa 1). Nenhum código, migration, teste funcional ou configuração foi alterado. |
+| Escopo desta entrega | Somente análise de impacto (Etapa 1), revisão v2. Nenhum código, migration, teste funcional ou configuração foi alterado. |
 | Autor | Claude Code, seguindo o fluxo `sgp-context-reader` → `sgp-impact-analyst` deste repositório |
+
+### 0.1 Histórico de revisões
+
+| Versão | Motivo | Principais mudanças |
+|---|---|---|
+| v1 | Entrega inicial (PR #12) | Primeira análise completa, 21 seções. |
+| v2 | Correção solicitada após revisão do time | (1) Reenquadramento da mudança como adição, não reversão; (2) reconfirmação do fluxo R6 com achado de gap real de código; (3) inclusão do fluxo de catálogo e varredura completa de caminhos de duplicação/clonagem; (4) estratégia de validação do PATCH revisada para estado final efetivo, atomicidade e mensagens de erro. |
 
 ---
 
 ## 1. Resumo executivo
 
-A infraestrutura de dados para "responsável por atividade" **já existe e nunca foi removida do schema** — ela foi **deliberadamente desativada no backend** (HTTP 422) em favor de "equipe padrão" via `team_ids`. Reabilitar o campo é tecnicamente barato em termos de schema (nenhuma migration é estritamente necessária para o caso básico), mas é uma **reversão explícita de uma decisão de produto registrada em código**, cuja mensagem de erro afirma: *"Colaborador padrão não é mais usado em Atividades da Matriz. Use teamIds (equipe padrão)."*
+A infraestrutura de dados para "responsável por atividade" **já existe e nunca foi removida do schema** — `matrix_nodes.default_responsible_id` está presente desde a migration original, mas hoje é **ativamente rejeitado** pelo backend (HTTP 422) em todo caminho de escrita de uma Atividade da Matriz.
 
-Essa decisão foi introduzida no commit `5af13dcc` ("Ajustes em Matriz", 14/05/2026), autoria `Gustavo Almeida <gustavoramosalmeida@gmail.com>` — o mesmo autor desta solicitação. Não há, no repositório, um registro do motivo de negócio por trás da descontinuação; fica como pergunta pendente a ser respondida antes da implementação (ver seção 20).
+**Correção em relação à v1:** esta mudança não é uma reversão da decisão de usar Equipe. A Equipe continua vinculada à Atividade da Matriz como está hoje; o Colaborador responsável é um campo **adicional e opcional**, cuja finalidade é evitar que o usuário precise reselecionar manualmente a mesma pessoa toda vez que uma nova Esteira é criada a partir da Matriz. A decisão histórica de descontinuar o campo (commit `5af13dcc`, "Ajustes em Matriz", 14/05/2026) permanece sem motivo registrado no repositório e deve ser tratada como contexto relevante — não como um veto à reintrodução do dado com um propósito diferente (valor inicial, não obrigatório).
 
-O maior risco técnico não é o dado em si, mas a **superfície fragmentada** em que a herança Matriz → Esteira precisaria ser implementada:
+Nesta revisão, três achados novos e factuais alteram partes do inventário original:
 
-- **Duas telas de Matriz** precisam de UI nova: o assistente de criação (`CriarMatrizEstruturaManual.tsx`) e o **editor de matriz já persistida** (`OperationMatrixEditorPage.tsx`) — esta segunda tela não constava na pista da análise preliminar e foi confirmada nesta análise.
-- **Dois fluxos de produção ativos e independentes** convertem Matriz em Esteira: a composição manual (`ConveyorCreateEditPage.tsx` → `NovaEsteiraComposicaoManual.tsx`, via `novaEsteiraDraftFromMatrix.ts` / `matrixToConveyorCreateInput.ts`) e a importação de documento — pipeline R6 (`NovaEsteiraPorDocumentoPage.tsx` → `draftToCreateConveyorInput.ts`, alimentado por `matchOperationalItems.ts`). Implementar a herança em apenas um deles produz comportamento inconsistente sem erro visível.
-- Existe um **efeito colateral latente e verificado**: o módulo de Planejamento Semanal (`conveyor-operational-plan.service.ts`) já tem um fallback dormente que lê `conveyor_nodes.default_responsible_id` como responsável padrão de um item de plano. Essa coluna é hoje sempre `null`; se a implementação decidir gravar o responsável herdado ali (em vez de exclusivamente em `conveyor_node_assignees`, a fonte de verdade documentada no próprio banco), o Planejamento Semanal muda de comportamento sem que isso tenha sido pedido.
+1. **Fluxo R6 (importação de documento): implementação real é parcial, não completa.** O backend do pipeline já lê e transporta `default_responsible_id` (e o `teamId` da equipe) corretamente em toda a cadeia de matching. O conversor de frontend (`draftToCreateConveyorInput.ts`) **já materializa** essa herança em `assignees` — mas **somente** quando o match reaproveita uma subárvore inteira (TASK/SECTOR). No caso mais comum, o match direto de uma Atividade isolada, o mesmo dado já disponível no plano de matching **é descartado silenciosamente** antes de chegar ao `POST /conveyors` — e isso já afeta também a herança de equipe hoje (não é um problema novo desta demanda, mas fica exposto por ela). Este ponto exige **implementação nova** no caminho de match direto, e **teste de regressão** no caminho de subárvore, que já funciona.
+2. **Fluxo de catálogo confirmado com dois problemas concretos**: (a) `CriarMatrizCatalogOpcaoDraftEditor.tsx` zera `default_responsible_id` incondicionalmente sempre que o `<select>` de equipe é tocado, mesmo sem mudança real de equipe; (b) `cloneMatrixTaskSubtree.ts` nunca envia `defaultResponsibleId` ao clonar uma subárvore de catálogo via API, então o dado é sempre perdido nesse caminho, independentemente da regra de negócio do backend.
+3. **A duplicação de Matriz/atividade/subárvore hoje zera o responsável deliberadamente** (tanto no backend quanto nos três caminhos de clonagem de frontend mapeados) — a decisão consolidada desta revisão é que isso deve **passar a preservar** equipe e responsável, o que é uma mudança de comportamento a implementar, não apenas confirmar.
+4. **O PATCH e o POST de nó hoje não são atômicos**: a atualização dos campos do nó roda fora de transação; a atualização dos vínculos de equipe roda depois, em uma transação separada. Isso precisa ser corrigido como parte da implementação da nova validação, para evitar estado parcial gravado (nó atualizado, vínculo de equipe/responsável não).
 
-Como **nenhuma Atividade de Matriz possui hoje responsável configurado** (todo caminho de escrita verificado zera ou rejeita o campo), tornar o responsável **obrigatório de forma imediata e sem transição** invalidaria 100% das atividades existentes.
+Como decisão consolidada desta revisão, **o responsável é opcional** (não obrigatório, sem `NOT NULL`, sem backfill) — isso elimina o risco de v1 sobre invalidar 100% das atividades existentes, mas não elimina a necessidade de validação correta quando o campo é informado.
 
-**Recomendação desta análise: SEGUIR COM AJUSTES** — condicionada a decisões de produto explícitas listadas na seção 20, antes de abrir a especificação de implementação.
+**Recomendação desta revisão: LIBERAR COM RESSALVAS** — condicionada às decisões e correções listadas na seção 20.
 
 ---
 
-## 2. Entendimento da regra de negócio
+## 2. Entendimento da regra de negócio (Etapa 1 — consolidada nesta revisão)
 
-- Cada Atividade da Matriz (`matrix_nodes` tipo `ACTIVITY`) continua associada a uma equipe (`team_ids`, hoje limitado a 1 na prática de aplicação).
-- A atividade passa a ter também um **colaborador responsável**, que deve ser colaborador **ativo** e **membro da equipe** selecionada na própria atividade.
-- Na UI, a equipe é selecionada antes do responsável; o campo de responsável lista somente colaboradores elegíveis da equipe selecionada.
-- Trocar a equipe limpa o responsável atual se ele não pertencer à nova equipe, exigindo nova seleção.
-- Atividades diferentes da mesma Matriz podem ter equipes e responsáveis diferentes (já é assim hoje para equipe; responsável seria por atividade, não por matriz).
-- Ao materializar uma Esteira a partir da Matriz, cada atividade gerada herda equipe **e** responsável configurados na Atividade da Matriz naquele momento.
-- Após a criação, Matriz e Esteira ficam independentes: alteração de responsável na Esteira não deve escrever de volta na Matriz; a Matriz não é afetada por edições feitas na Esteira.
-- Próximas Esteiras continuam usando o que estiver configurado na Matriz no momento de cada nova criação (não há vínculo retroativo).
-- **Fora de escopo desta análise (Etapa 2)**: impedir exclusão/inativação de colaborador que seja responsável em Matriz ou em Esteira aberta. Citada apenas como dependência futura/risco de integridade referencial (seção 15), sem entrar na estimativa da Etapa 1.
+1. Cada Atividade da Matriz continua associada à sua Equipe.
+2. A atividade poderá ter também um Colaborador responsável.
+3. Quando informado, o responsável deve ser um colaborador **ativo** e **membro ativo** da equipe associada à atividade.
+4. Ao criar uma Esteira a partir da Matriz, cada atividade herda: a Equipe configurada na Atividade da Matriz; e o Colaborador responsável configurado na Atividade da Matriz.
+5. Equipe e responsável são copiados **somente como valores iniciais** da nova Esteira.
+6. Qualquer alteração posterior de equipe ou responsável na Esteira **não** atualiza a Matriz de origem.
+7. Atividades antigas sem responsável continuam válidas.
+8. O responsável é **opcional** nesta etapa; não há preenchimento retroativo automático.
+
+**Fora de escopo desta análise (Etapa 2)**: impedir exclusão/inativação de colaborador que seja responsável em Matriz ou em Esteira aberta. Citada apenas como dependência futura/risco de integridade referencial (seção 15), sem entrar na estimativa da Etapa 1.
 
 ---
 
@@ -50,85 +60,105 @@ Como **nenhuma Atividade de Matriz possui hoje responsável configurado** (todo 
 
 | Tabela / coluna | Situação | Evidência |
 |---|---|---|
-| `matrix_nodes.default_responsible_id` | **Já existe**, UUID, FK `collaborators`, `ON DELETE SET NULL`, com índice. Nasceu na migration original, nunca foi removida. | `server/migrations/0003_matrix_nodes.sql:18,51` |
-| `matrix_node_assignment_teams` | Tabela de vínculo N:N matriz-atividade ↔ equipe, soft delete. Representa "equipe da atividade" hoje. **Sem `UNIQUE` de banco** limitando a 1 equipe ativa por atividade — o limite de "só 1" é imposto apenas na camada de aplicação. | `server/migrations/0021_matrix_node_assignment_teams.sql` |
-| `teams` / `team_members` | Equipe ↔ colaborador via tabela de vínculo, com `is_active`, `is_primary`, índice único de "1 principal ativo por equipe". | `server/migrations/0016_teams_and_permissions.sql` |
-| `conveyor_nodes.default_responsible_id` | Mesmo padrão legado da Matriz, também sempre `null` hoje. Comentário de migration afirma explicitamente que é mantida "por compatibilidade" e que a fonte de verdade é `conveyor_node_assignees`. | `server/migrations/0005_conveyors_and_nodes.sql:82`; `server/migrations/0006_conveyor_assignees_and_time_entries.sql:1-4` |
-| `conveyor_node_assignees` | Fonte de verdade real de alocação por STEP. Suporta `assignment_type` `COLLABORATOR`/`TEAM` coexistindo no mesmo STEP; só 1 `COLLABORATOR is_primary=TRUE` por STEP; `TEAM` nunca é principal. | `server/migrations/0006_...sql`; `server/migrations/0023_conveyor_assignees_team_support.sql:26-53` |
-| Trigger de apontamento | `fn_validate_conveyor_time_entry_row` permite apontamento se o colaborador é membro ativo do time alocado no assignee do STEP. | `server/migrations/0029_conveyor_time_entry_team_assignee_validation.sql` |
+| `matrix_nodes.default_responsible_id` | Já existe, UUID, FK `collaborators`, `ON DELETE SET NULL`, com índice. Nasceu na migration original, nunca foi removida. Nulável — compatível com "opcional" da regra consolidada sem qualquer alteração de schema. | `server/migrations/0003_matrix_nodes.sql:18,51` |
+| `matrix_node_assignment_teams` | Tabela de vínculo N:N atividade ↔ equipe, soft delete. Índice único é `(matrix_node_id, team_id) WHERE deleted_at IS NULL` — impede duplicar o mesmo `team_id` ativo no mesmo nó, mas **não impede** múltiplas equipes distintas ativas simultaneamente no schema. | `server/migrations/0021_matrix_node_assignment_teams.sql:10-12` |
+| `teams` / `team_members` | Equipe ↔ colaborador via tabela de vínculo, com `is_active`, `is_primary`. | `server/migrations/0016_teams_and_permissions.sql` |
+| `conveyor_node_assignees` | Fonte de verdade de alocação por STEP na Esteira; suporta `COLLABORATOR` + `TEAM` coexistindo, com `is_primary` exclusivo de `COLLABORATOR`. | `server/migrations/0006_conveyor_assignees_and_time_entries.sql`; `0023_conveyor_assignees_team_support.sql:26-53` |
+| `conveyor_nodes.default_responsible_id` | Coluna legada, sempre `null` hoje; decisão consolidada é mantê-la assim (ver seção 8). | `server/migrations/0005_conveyors_and_nodes.sql:82` |
 
-**Conclusão de banco:** não é necessária nenhuma migration para reintroduzir o campo básico na Matriz — a coluna e o índice já existem. Migration só seria necessária se a decisão de produto for (a) tornar o campo `NOT NULL` no banco, ou (b) alterar `matrix_node_assignment_teams` para impor unicidade de equipe por atividade no nível de schema (não obrigatório pela demanda, mas relevante registrar como pré-condição implícita hoje só garantida em aplicação).
+**Conclusão de banco (reconfirmada):** nenhuma migration é necessária para o caso básico. O campo já é nulável no schema, condizente com "responsável opcional".
 
-### 3.2 Backend — `operation-matrix` (rejeição ativa do campo)
+**Correção sobre o modelo de equipe (item 4 da solicitação de ajuste):** o código **impõe hoje, na camada de aplicação, no máximo 1 equipe ativa por atividade** — não é uma coincidência de uso, é uma regra imposta em **dois pontos redundantes**:
+- `operation-matrix.service.ts` — `normalizeActivityTeamIdsForSave(...)`: `return normalizeUniqueIds(ids).slice(0, 1)` corta a lista para 1 elemento antes mesmo de chegar ao repository.
+- `operation-matrix.repository.ts:302-330` (`replaceNodeTeamLinks`), comentário explícito: *"No máximo 1 equipe padrão por atividade (1ª id válida na ordem recebida)"* — o loop faz `break` após a primeira id válida.
 
-Módulo: `server/src/modules/operation-matrix/`.
+Não há `CHECK`/`UNIQUE` de banco que imponha esse limite — é uma regra só de aplicação (dupla, mas só de aplicação). O contrato Zod (`teamIds: z.array(z.string().uuid()).optional()`) não tem `.max(1)`, e não foi encontrado nenhum teste, comentário ou consumidor que dependa de múltiplas equipes simultâneas — todo o código (service, repository, frontend) trata o valor implicitamente como singular (`teamIds[0]`, `matrixActivityPrimaryTeamId`).
 
-- **Contrato Zod** (`operation-matrix.schemas.ts:22-38,89-104`) já aceita `defaultResponsibleId` em nós `ACTIVITY`, tanto em `POST` quanto em `PATCH`.
-- **Service rejeita em runtime**, independentemente do schema permitir:
-  - Criação: `operation-matrix.service.ts:253-262` — se `nodeType === 'ACTIVITY'` e `defaultResponsibleId !== undefined`, lança `AppError('Colaborador padrão não é mais usado em Atividades da Matriz. Use teamIds (equipe padrão).', 422, VALIDATION_ERROR)`.
-  - Patch: mesma rejeição em `patchBodyToDb`, `operation-matrix.service.ts:329-334,352-358`.
-  - `servicePatchNode` (`:386-401`): quando `teamIds` de uma `ACTIVITY` é alterado, o próprio patch força `default_responsible_id = null`.
-  - Duplicação de item como nova raiz (`serviceDuplicateItemAsNewRoot`, `:511-512`) e duplicação de subárvore (`serviceDuplicateSubtreeUnderSameParent`, `:617-618`): para `ACTIVITY`, o responsável é **sempre nulado** na cópia; `team_ids` **é** copiado.
-- **Repository** (`operation-matrix.repository.ts`):
-  - `collaboratorExists` (`:179-188`) existe como helper mas **não é chamado em nenhum lugar** do módulo — código morto, aparentemente preparado para validação futura.
-  - `replaceNodeTeamLinks` (`:302-330`) impõe no máximo 1 equipe por `ACTIVITY` (para no primeiro id), apesar do contrato `team_ids: string[]` sugerir múltiplas.
-  - `listExistingTeamIds` (`:190-202`) valida apenas que o `team_id` existe em `teams` — **não valida `is_active`** da equipe.
+**Implicação para a regra "responsável pertence à equipe da atividade":** como hoje só existe 1 equipe ativa por atividade na prática (imposta em aplicação), a validação "responsável é membro ativo da equipe" pode ser implementada de forma direta contra essa única `team_id`, sem ambiguidade. **Decisão de produto a registrar explicitamente** (não presumir silenciosamente): se o modelo de "1 equipe" permanece uma garantia de aplicação apenas, ou se deve virar uma garantia de schema (`UNIQUE` ativo por `matrix_node_id`) antes ou junto desta implementação — esta análise não decide isso por conta própria, apenas expõe que a garantia atual não é de banco.
 
-### 3.3 Backend — `teams` (reaproveitável)
+### 3.2 Backend — `operation-matrix` (rejeição ativa do campo, reconfirmado sem mudanças em relação à v1)
 
-- `GET /teams/:teamId/members` **existe e funciona** (`teams.routes.ts:30-34`, guardado por `teams.view`), retornando apenas membros com `team_members.is_active = TRUE` (`teams.service.ts:88-97`). Hoje só é consumido por `EquipeDetalhePage.tsx` (gestão de equipes) — nenhum fluxo de Matriz ou Esteira o usa.
-- Padrão de "colaborador ativo" já implementado e reaproveitável: `assertCollaboratorActiveForNewMembership` (`teams.service.ts:99-113`) + `findCollaboratorEligibility` (`teams.repository.ts:218-234`), que checa `deleted_at IS NULL`, `is_active`, `status === 'ACTIVE'`.
+- Contrato Zod já aceita `defaultResponsibleId` em `ACTIVITY` (`operation-matrix.schemas.ts:33,98`).
+- Service rejeita com 422/VALIDATION_ERROR em criação (`operation-matrix.service.ts:253-262`) e patch (`:329-334,352-358`), com a mensagem *"Colaborador padrão não é mais usado em Atividades da Matriz. Use teamIds (equipe padrão)."*
+- `servicePatchNode` (`:386-401`) zera `default_responsible_id` sempre que `teamIds` muda.
+- **Novo achado (item 3 da solicitação — duplicação):** o zeramento na duplicação é ainda mais amplo do que descrito na v1. Tanto `serviceDuplicateItemAsNewRoot` (`:511-512`) quanto `serviceDuplicateSubtreeUnderSameParent` (`:617-618`) zeram `default_responsible_id` para `ACTIVITY` **incondicionalmente**, mesmo copiando `team_ids` e `metadata_json` integralmente. Isso é uma escolha deliberada e consistente de código (mesma lógica nos dois métodos), não um esquecimento pontual — mas contraria a decisão consolidada desta revisão de que duplicação deve **preservar** equipe e responsável (ver seção 13).
 
-### 3.4 Frontend — Matriz
+### 3.3 Frontend — Matriz (telas de criação e edição, reconfirmado)
 
-- **Criação** (`src/features/operation-matrix/criar-matriz/CriarMatrizEstruturaManual.tsx`): já existe UI de "Equipe de execução" (checkboxes) e "Colaboradores" (multi-select com rádio "Principal") por atividade — **mas os dois seletores são independentes**: a lista de colaboradores não é filtrada pela equipe selecionada (`:401-453`).
-  - `createManualMatrixStructure.ts:38-57` envia ao backend `teamIds` (máx. 1) e `metadataJson` com `supportIds` = todos os colaboradores selecionados — **sem marcar quem era o "Principal"**. O `primaryCollaboratorId` é descartado no envio.
-  - `criarMatrizManualDraft.ts:12-13` traz um comentário afirmando que o principal "também é persistido como `defaultResponsibleId`" — **isso é falso frente ao código atual**; é débito de documentação/UX órfã.
-  - `createManualMatrixStructure.test.ts:42,51-56` usa `primaryCollaboratorId` num fixture mas **não asserta** que ele chega ao payload de `defaultResponsibleId` — condizente com o fato de o dado ser descartado.
-- **Edição de matriz já persistida** (`src/features/operation-matrix/OperationMatrixEditorPage.tsx`, rota ativa em `src/routes/AppRoutes.tsx:246`): edita `name`/`plannedMinutes`/`teamIds`/`required` de `ACTIVITY` (`:625-645`) — **não tem nenhum campo de responsável**. Esta tela não constava na pista da análise preliminar; é confirmada aqui como segunda superfície de UI a alterar.
-- `operationMatrixPreviewPersist.ts` (outro caminho de patch, usado em reconciliação/import) também só trata `plannedMinutes`/`teamIds`/`required`/`orderIndex`/`name`.
-- `matrixTreeAggregates.ts:26` já trata `default_responsible_id` como legado que "não conta" nos agregados de "atividade sem equipe padrão" — o próprio código já assume a coluna como morta.
-- `metadata_json.sgp.matrixActivityCollaborators.v1` (`matrixActivityCollaboratorsMeta.ts`) é hoje o único lugar onde colaboradores ficam de fato associados a uma `ACTIVITY` da Matriz, sem marcação de "principal".
+- `CriarMatrizEstruturaManual.tsx` e `OperationMatrixEditorPage.tsx` seguem como na v1: sem filtro dependente equipe→responsável; a segunda sem nenhum campo de responsável.
 
-### 3.5 Frontend — Esteira a partir de Matriz
+### 3.4 Novo — Fluxo de catálogo (item 3 da solicitação de ajuste)
 
-Existem **dois fluxos de produção ativos e independentes**:
+**`src/features/operation-matrix/criar-matriz/CriarMatrizCatalogOpcaoDraftEditor.tsx`** — tela de criação/reutilização de opção a partir do catálogo de tarefas:
+- `activityToEtapa` (`:51-63`) nunca lê `node.default_responsible_id` — não há UI para o campo nesta tela.
+- `applyEtapaToActivity` (`:65-82`), acionado pelo `onChange` do `<select>` de "Equipe padrão" (`:507-537`), grava `default_responsible_id: null` **incondicionalmente a cada edição de equipe**, mesmo quando a equipe selecionada não muda de fato (ex.: reabrir e confirmar o mesmo valor). `team_ids` e `metadata_json.supportIds` são preservados/reescritos pela mesma função.
+- **Comportamento a corrigir**: o zeramento deveria ocorrer apenas quando a equipe realmente muda e o responsável anterior deixa de pertencer a ela — hoje é incondicional, um efeito colateral não intencional do fluxo atual (coerente com o fato de o campo nunca ser exibido/editável nesta tela).
 
-1. **Composição manual**: `ConveyorCreateEditPage.tsx` → `NovaEsteiraComposicaoManual.tsx`, usando `buildManualConveyorInput`/`manualAssigneeRowsToApi` de `matrixToConveyorCreateInput.ts` no submit (`ConveyorCreateEditPage.tsx:598-608,626`).
-   - **Há herança parcial hoje**: `matrixActivityToInitialAllocRows` (`novaEsteiraDraftFromMatrix.ts:19-34`) já lê `matrixActivityPrimaryTeamId` (primeiro `team_ids` da atividade) e pré-preenche uma linha `TEAM` na alocação inicial da esteira ao trazer uma tarefa/atividade da matriz para a composição (`matrixTaskSubtreeToManualDraft`, mesmo arquivo, usado em `ConveyorCreateEditPage.tsx:418-434,452,468`). **Não há herança de responsável** (o conceito não existe hoje do lado backend da Matriz). Essa linha pré-preenchida é livremente editável pelo usuário antes de submeter — não é um vínculo travado.
-2. **Importação de documento (pipeline R6)**: `NovaEsteiraPorDocumentoPage.tsx` (rota `ImportarOsPage`, `src/routes/AppRoutes.tsx:9,92`) → `draftToCreateConveyorInput.ts`, alimentado por `document-draft.schemas.ts:134-136` e `matchOperationalItems.ts:377-379,561-563`, que já trafegam `teamId`/`defaultResponsibleId` em estruturas de matching — lógica própria e paralela à do fluxo manual.
+**`src/features/operation-matrix/criar-matriz/cloneCatalogTaskSubtreeForDraft.ts`** (`cloneTaskSubtreeWithNewIds`, `:16-49`) — clonagem client-side (sem chamada de API) que alimenta o rascunho editável da tela acima. O `rebuild` (`:31-46`) copia o nó por spread (`{ ...node, id: newId, ... }`), então `default_responsible_id`, `team_ids` e `metadata_json` são preservados **implicitamente**, sem tratamento explícito por nome de campo.
 
-Um terceiro conversor, `mapNovaEsteiraSnapshotToCreateConveyorInput.ts`, **não é usado em nenhum ponto de produção** além do próprio teste (confirmado por busca textual em `src/`) e não monta `assignees` — não é caminho ativo hoje, mas ficaria inconsistente se algum dia for religado.
+**`src/features/operation-matrix/criar-matriz/cloneMatrixTaskSubtree.ts`** (`cloneTaskSubtreeUnderItem`, `:54-70`) — mecanismo diferente e confirmado como existente (a busca inicial por nome exato de arquivo teve falso-negativo; localizado por conteúdo): percorre a subárvore em DFS e faz `POST /operation-matrix/nodes` nó a nó via `createMatrixNode`. O payload de cada `ACTIVITY` (`buildCreatePayload`, `:29-37`) inclui `teamIds` (só o primeiro) e `metadataJson`, mas **nunca inclui a chave `defaultResponsibleId`** — o campo simplesmente não é enviado, então o resultado é sempre `null` no backend (sem gerar 422, porque o campo nem chega no payload). Chamado a partir de `OperationMatrixNewPage.tsx:396` (assistente de nova matriz) e `OperationMatrixEditorPage.tsx:1021` ("adicionar tarefa a partir do catálogo" em matriz já persistida) — dois pontos de produção ativos.
 
-- Backend: `materializeConveyorOptions` (`conveyors.service.ts:479-587`) recebe `assignees[]` já prontos no payload `POST /conveyors` (`conveyors.schemas.ts:251-262`) e grava em `conveyor_node_assignees` (`:567-583`). `conveyor_nodes.default_responsible_id` é **sempre `null`** na criação (`:504,531,558`).
-- `matrixRootItemId` é gravado apenas para auditoria/rastreio (`conveyors.schemas.ts:258-259`), não como vínculo funcional contínuo — condizente com a exigência de independência pós-criação.
+**Conclusão do fluxo de catálogo:** hoje o responsável é perdido de forma consistente em todo o caminho de catálogo → matriz persistida (via `cloneMatrixTaskSubtree.ts`), e é preservado de forma acidental/implícita apenas no rascunho client-side que ainda não foi submetido (via `cloneCatalogTaskSubtreeForDraft.ts`). Ambos precisam de tratamento explícito na implementação.
 
-### 3.6 Duplicação de Matriz / subárvore
+### 3.5 Varredura completa de duplicação/clonagem (item 3 da solicitação de ajuste)
 
-- `POST /operation-matrix/items/:id/duplicate` e `POST /operation-matrix/nodes/:id/duplicate` (`operation-matrix.routes.ts:41,54`), implementados por `serviceDuplicateItemAsNewRoot`/`serviceDuplicateMatrixItem`/`serviceDuplicateSubtreeUnderSameParent`/`serviceDuplicate` em `operation-matrix.service.ts:464-650`.
-- Em ambos os casos, para `ACTIVITY`: `default_responsible_id` é sempre nulado na cópia; `team_ids` **é** copiado; `metadata_json` (que carrega os `supportIds`) **é** copiado integralmente.
-- Frontend: botão "Duplicar matriz" em `OperationMatrixListPage.tsx:190,197,400` (com log de auditoria `matrix_item_duplicate`).
+Nenhum caminho ativo adicional foi encontrado além dos já citados. Lista consolidada e definitiva:
 
-### 3.7 Consumidores operacionais
+| # | Caminho | Tipo | Trata `default_responsible_id` hoje? |
+|---|---|---|---|
+| 1 | `operation-matrix.service.ts` → `serviceDuplicateItemAsNewRoot` (backend, `POST /items/:id/duplicate`) | Duplicar Matriz inteira | Zera sempre para `ACTIVITY` |
+| 2 | `operation-matrix.service.ts` → `serviceDuplicateSubtreeUnderSameParent` (backend, `POST /nodes/:id/duplicate`) | Duplicar subárvore/atividade sob o mesmo pai | Zera sempre para `ACTIVITY` |
+| 3 | `cloneCatalogTaskSubtreeForDraft.ts` → `cloneTaskSubtreeWithNewIds` (frontend, client-only) | Clonar subárvore de catálogo dentro do rascunho de opção | Preserva implicitamente (spread) |
+| 4 | `cloneMatrixTaskSubtree.ts` → `cloneTaskSubtreeUnderItem` (frontend, via POSTs sequenciais) | Clonar subárvore de catálogo para matriz nova/persistida | Sempre perde (campo nunca enviado) |
 
-- `my-work-queue-step-assignees.repository.ts:15-109` (`buildConveyorStepOwnershipIndex`) já implementa, do lado da **Esteira**, um `UNION`/dedupe entre colaborador atribuído diretamente e colaborador que é membro ativo de um time atribuído ao mesmo STEP — esse é o padrão de dedupe que a pista da análise preliminar mencionava; ele existe, mas só do lado Esteira.
-- `production-plan-assignee.ts:33-83` (Modo Fábrica) cria um assignee "de apoio" sob demanda quando um colaborador logado via PIN está no plano semanal publicado mas ainda não tem alocação formal.
-- **Efeito colateral verificado**: `conveyor-operational-plan.service.ts:243-274,328-355` já tem um fallback que, ao criar um item de plano sem `plannedCollaboratorId` explícito, usa `stepDefaults.defaultResponsibleId` — que vem de `conveyor_nodes.default_responsible_id`. Como essa coluna é sempre `null` hoje, esse fallback é código morto na prática atual, mas passaria a ser ativado se a implementação decidir gravar o responsável herdado nessa coluna legada em vez de usar exclusivamente `conveyor_node_assignees`.
-- `my-activities`, `kiosk`, `dashboard`, `operational-planning`: nenhum consumidor lê `default_responsible_id` de Matriz ou Esteira diretamente; toda leitura de "quem está alocado" passa por `conveyor_node_assignees` (+ `team_members` quando aplicável).
+Pontos de chamada de UI confirmados para os itens 1–2 (via `duplicateMatrixItem`/`duplicateMatrixNode` do `operationMatrixApiService.ts`): botão "Duplicar matriz" em `OperationMatrixListPage.tsx:190,197,400`; duplicar setor/atividade/tarefa em `OperationMatrixEditorPage.tsx:786,856,954`. Componentes de apresentação (`TaskCard.tsx`, `TaskCompositionPanel.tsx`, `ActivityRowCompact.tsx`, `NovaMatrizEstruturaDraftPanel.tsx`) recebem o handler por prop e não chamam a API diretamente.
 
-### 3.8 Permissões
+### 3.6 Fluxo R6 — reconfirmação factual detalhada (item 2 da solicitação de ajuste)
 
-- `operation_matrix.view` / `operation_matrix.manage` protegem toda a gestão de estrutura de Matriz (não há permissão específica para "gerir responsável" separada).
-- `teams.view` / `teams.manage_members` protegem `teams.routes.ts`, incluindo `GET .../members`.
-- `conveyors.manage_assignments` protege alocação por STEP na Esteira.
-- Nenhuma permissão nova parece necessária: os endpoints que passariam a aceitar `defaultResponsibleId` já são protegidos pela mesma permissão (`operation_matrix.manage`) que já protege `teamIds` hoje.
+**Resultado da reconfirmação: parcialmente válido.** O backend está pronto; o frontend só completa a cadeia em um dos dois caminhos de match possíveis.
 
-### 3.9 Testes existentes
+**Backend — confirmado, já lê e transporta o dado:**
+- `matchOperationalItems.ts` lê `default_responsible_id` em 4 queries SQL (`:642,696,740,800`, ex.: `act.default_responsible_id::text AS "collaboratorId"` com `JOIN collaborators` para o nome), propaga para `MatrixMatchCandidate.collaboratorId` (`:279`) e, em candidatos de subárvore, para `MatrixSubtreeBuiltActivity.defaultResponsibleId` (`:561-562`).
+- No plano de matching final, `reusedStructure.collaboratorId`/`collaboratorName` é preenchido a partir do candidato vencedor **para qualquer tipo de nó** (`:1893-1894`) — mas candidatos sintéticos agregados de TASK/SECTOR têm `collaboratorId: null` hardcoded na origem (`:1366,1397`), então só um match direto em `ACTIVITY` carrega um valor real de colaborador ali.
+- `document-draft.schemas.ts` transporta o campo no contrato: `defaultResponsibleId` na subárvore (`:134`) e `collaboratorId` em `reusedStructure` (`:194`).
 
-- `server/src/tests/operation-matrix.test.ts` **não cobre** a rejeição 422 atual de `defaultResponsibleId` — não há teste de regressão que sinalize a remoção dessa regra.
-- `teams.test.ts:97-113` cobre `GET /api/v1/teams/:id/members`.
-- `conveyor-assignments.integration.test.ts`, `conveyor-assignments-http.integration.test.ts` cobrem alocação por STEP na Esteira.
-- Frontend: `matrixToConveyorCreateInput.test.ts`, `novaEsteiraDraftFromMatrix.test.ts`, `criarMatrizManualDraft.test.ts`, `matrixActivityCollaboratorsMeta.test.ts`, `createManualMatrixStructure.test.ts` — nenhum cobre filtro de colaborador elegível por equipe, nem herança de responsável (porque o conceito não existe hoje no lado ativo do código).
+**Frontend (`draftToCreateConveyorInput.ts`) — a cadeia se completa só na expansão de subárvore:**
+- `applyReviewDecisionsToDraftV11` grava `__reviewPrimaryCollaboratorId: act.defaultResponsibleId ?? null` **apenas** nos ramos de expansão de subárvore (`shouldExpandSubtree` verdadeiro — match em TASK/SECTOR que materializa várias atividades de uma vez): ramo TASK (`:592-594`) e ramo SECTOR (`:622-624`). Este caminho **já funciona** ponta a ponta.
+- Nos dois ramos de **match direto em uma Atividade isolada** — `dec === 'SELECT_ALTERNATIVE'` (`:635-657`) e `dec === 'ACCEPT_SUGGESTED'` (`:658-676`), que é o caso mais frequente de uso do R6 (item de serviço da OS → atividade específica da Matriz) — o código **nunca lê** `m.reusedStructure.collaboratorId` nem `m.reusedStructure.teamId`, apesar de o dado já estar disponível no plano de matching. `withReviewStepMeta` desses ramos não grava `__reviewPrimaryCollaboratorId`/`__reviewPrimaryTeamId`/`__reviewTeamAssignments`.
+- `readReviewStepMeta` (`:229-263`) usa `null`/`undefined` como default quando esses campos estão ausentes → `buildAssigneesFromStepMeta`/`buildValidStepAssigneesFromMatrixActivity` (`:85-128,265-272`) retornam array vazio → o mapeamento final cai no fallback de `assignees` originais do draft (vazio para itens recém-extraídos da OS) → **a esteira nasce sem equipe nem responsável herdados nesse caminho**, mesmo já existindo o dado no backend.
+
+**Classificação correta (correção ao enquadramento pedido na solicitação):**
+- Caminho de expansão de subárvore (TASK/SECTOR): **teste de regressão** — já implementado, precisa apenas de cobertura de teste específica para não quebrar com a mudança de backend.
+- Caminho de match direto em Atividade isolada (`SELECT_ALTERNATIVE`/`ACCEPT_SUGGESTED`): **alteração necessária** — gap de código pré-existente, independente desta demanda (afeta hoje inclusive a herança de **equipe**, não só de responsável), que precisa ser corrigido para que a herança funcione no caso mais comum de uso do R6. Isso aumenta o escopo de trabalho do fluxo R6 em relação ao estimado na v1, que tratava o ponto inteiro como "só verificação de compatibilidade".
+
+### 3.7 PATCH — estado final efetivo e atomicidade (item 4 da solicitação de ajuste)
+
+**Estado final efetivo, hoje inexistente porque o 422 interrompe antes:**
+- Como todo PATCH com `defaultResponsibleId` definido é rejeitado antes de qualquer gravação, a pergunta "o código considera `team_ids` já persistidos ao validar só o responsável" é hoje inaplicável na prática — o fluxo nunca chega lá.
+- Tecnicamente, `existing` (carregado via `findNodeRowById`, que já inclui `team_ids` preenchido) **já está disponível em memória** dentro de `servicePatchNode` no ponto em que a validação seria executada — ou seja, calcular o "estado final efetivo" (`body.teamIds` se enviado, senão `existing.team_ids` já persistido) não exige nenhuma query adicional, é reaproveitamento direto do dado já carregado.
+- **Requisito para a implementação (não presumir o oposto):** o endpoint não deve exigir reenvio de `teamIds` quando o usuário altera só `defaultResponsibleId` — a validação deve montar o conjunto de equipes vigente como `body.teamIds !== undefined ? body.teamIds : existing.team_ids`, e validar o responsável contra esse conjunto final.
+
+**Atomicidade — confirmado como NÃO atômica hoje, e isso precisa ser corrigido como parte da implementação, não é um detalhe menor:**
+- Em `servicePatchNode`, `updateNode(pool, id, patch)` roda **fora de transação**, direto no `pool` (`:402`). Só depois, se `teamIds` foi enviado, abre-se uma transação separada (`pool.connect(); BEGIN; replaceNodeTeamLinks; COMMIT`, `:405-415`). Se essa segunda transação falhar, a atualização dos campos do nó **permanece gravada** — não há rollback conjunto.
+- Mesmo padrão em `serviceCreateNode`: `insertNode` roda fora de transação (`:268-287`); o vínculo de equipe é criado depois, em transação própria (`:291-301`). Se falhar, o nó `ACTIVITY` já foi criado sem equipe.
+- Em contraste, os fluxos de **duplicação** (`serviceDuplicateItemAsNewRoot`, `serviceDuplicateSubtreeUnderSameParent`) já são atômicos de fato — todo o laço de inserção roda dentro de um único `BEGIN...COMMIT`.
+- Não existe helper de transação compartilhado em `server/src/shared/` — cada função do módulo gerencia `BEGIN`/`COMMIT`/`ROLLBACK` manualmente.
+- **Requisito para a implementação:** ao adicionar a validação/gravação de `defaultResponsibleId`, a atualização do nó, dos vínculos de equipe e a validação do responsável devem passar a ocorrer **dentro de uma única transação** (mesmo padrão já usado nos fluxos de duplicação), evitando o estado hoje possível de "nó atualizado, equipe/responsável não".
+
+**Código HTTP e mensagem — padrão já estabelecido no módulo, a reaproveitar:**
+- Violação de regra de negócio → `AppError(<mensagem>, 422, ErrorCodes.VALIDATION_ERROR)` — mesmo padrão usado hoje para a rejeição atual do campo e para "times inexistentes" (`'Um ou mais times vinculados não foram encontrados.'`).
+- Entidade principal não encontrada → 404/NOT_FOUND (usado só para o próprio recurso, não para dados referenciados inválidos).
+- **Recomendação de mensagem**, consistente com o padrão observado: 422/VALIDATION_ERROR com texto como *"O colaborador responsável deve ser um colaborador ativo e membro ativo da equipe informada."*, tanto em criação quanto em patch.
+
+**Risco de concorrência (reafirmado da v1, agora ligado à atomicidade):** a composição da equipe pode mudar entre o carregamento do formulário e o submit. Mitigação: revalidar sempre no backend, dentro da mesma transação da escrita (nunca aceitar apenas o que o frontend enviou como pré-validado) — o mesmo padrão de `assertCollaboratorActiveForNewMembership`/`findCollaboratorEligibility` já usado em `teams.service.ts`.
+
+### 3.8 Consumidores operacionais, permissões, testes existentes
+
+Sem mudanças em relação à v1 — reconfirmado, nenhum novo achado nesta revisão:
+- `my-work-queue-step-assignees.repository.ts` já faz dedupe colaborador-direto vs. membro-de-equipe do lado da Esteira.
+- Fallback dormente em `conveyor-operational-plan.service.ts:328-355` (`stepDefaults.defaultResponsibleId`) continua condicionado a `conveyor_nodes.default_responsible_id` nunca ser preenchido — decisão consolidada de manter essa coluna sempre `null` neutraliza esse risco (ver seção 8).
+- `operation_matrix.manage`/`teams.view`/`conveyors.manage_assignments` seguem suficientes; nenhuma permissão nova necessária.
+- Nenhum teste de regressão existente cobre a rejeição 422 atual.
 
 ---
 
@@ -136,27 +166,39 @@ Um terceiro conversor, `mapNovaEsteiraSnapshotToCreateConveyorInput.ts`, **não 
 
 ```
 Matriz (matrix_nodes: ITEM → TASK → SECTOR → ACTIVITY)
-  ACTIVITY.team_ids  (matrix_node_assignment_teams) ── único hoje, usado
-  ACTIVITY.default_responsible_id ── coluna existe, sempre NULL (rejeitada no service)
-  ACTIVITY.metadata_json.sgp.matrixActivityCollaborators.v1.supportIds ── "apoios" sem marcação de principal
+  ACTIVITY.team_ids            ── 1 equipe (imposto em aplicação, 2x redundante), usado
+  ACTIVITY.default_responsible_id ── existe no schema, sempre NULL (rejeitado no service)
+  ACTIVITY.metadata_json.supportIds ── "apoios" sem marcação de principal
 
-        │  (conversão acontece no FRONTEND, não no backend)
+        │ (conversão acontece no FRONTEND — 2 fluxos independentes)
         ▼
-┌───────────────────────────┬─────────────────────────────────┐
-│ Fluxo manual                │ Fluxo documento (R6)             │
-│ novaEsteiraDraftFromMatrix   │ matchOperationalItems.ts         │
-│ matrixToConveyorCreateInput  │ draftToCreateConveyorInput.ts    │
-│ herda hoje: team_ids (só)    │ já trafega teamId/defaultResp.   │
-└───────────────────────────┴─────────────────────────────────┘
+┌────────────────────────────┬──────────────────────────────────────┐
+│ Fluxo manual                  │ Fluxo documento (R6)                   │
+│ novaEsteiraDraftFromMatrix     │ matchOperationalItems.ts (backend, OK)  │
+│ matrixToConveyorCreateInput    │ draftToCreateConveyorInput.ts (frontend)│
+│ herda hoje: team_ids (só)      │  ├─ expansão de subárvore: OK (team+resp)│
+│                                │  └─ match direto de ACTIVITY: NÃO herda │
+│                                │      (nem team, nem responsável) — GAP  │
+└────────────────────────────┴──────────────────────────────────────┘
         │
         ▼
 POST /conveyors → materializeConveyorOptions (conveyors.service.ts)
-  conveyor_nodes.default_responsible_id ── sempre NULL (legado morto)
-  conveyor_node_assignees ── fonte de verdade real (COLLABORATOR + TEAM, is_primary)
+  conveyor_nodes.default_responsible_id ── mantém-se sempre NULL (decisão consolidada)
+  conveyor_node_assignees ── fonte de verdade (COLLABORATOR isPrimary=true + TEAM)
         │
         ▼
-Consumidores: my-work-queue (dedupe via UNION), production (fallback de plano),
-conveyor-operational-plan (fallback dormente em default_responsible_id — RISCO)
+Consumidores: my-work-queue (dedupe via UNION, sem mudança),
+production (sem mudança), conveyor-operational-plan (fallback permanece inativo)
+```
+
+Fluxo de catálogo (paralelo à criação/edição de Matriz):
+```
+Catálogo de tarefas
+  │
+  ├─ cloneCatalogTaskSubtreeForDraft.ts (client-side) ── preserva implicitamente
+  │     └─ CriarMatrizCatalogOpcaoDraftEditor.tsx ── zera ao tocar seletor de equipe (bug a corrigir)
+  │
+  └─ cloneMatrixTaskSubtree.ts (via POST sequencial ao backend) ── sempre perde o campo (nunca envia)
 ```
 
 ---
@@ -165,19 +207,20 @@ conveyor-operational-plan (fallback dormente em default_responsible_id — RISCO
 
 | Camada | Impacto |
 |---|---|
-| Banco de dados | Nenhuma migration obrigatória para o caso básico (coluna já existe). Migration só se obrigatoriedade `NOT NULL` ou constraint de equipe única forem decididas. |
-| Backend — `operation-matrix` | Remover as duas rejeições 422 e o zeramento forçado em patch/duplicação; adicionar validação nova "responsável ativo e membro da equipe informada". |
-| Backend — `teams` | Nenhuma alteração funcional; reaproveitar `findCollaboratorEligibility`/`GET /teams/:teamId/members` como referência de padrão. |
-| Backend — `conveyors` | Decisão de design: herdar via `conveyor_node_assignees` (recomendado) sem tocar `conveyor_nodes.default_responsible_id`. |
-| Backend — `conveyor-operational-plan` | Deve ser revisado explicitamente para não reativar o fallback dormente sem decisão consciente. |
-| Backend — `argos-integration` (R6) | `matchOperationalItems.ts`/`document-draft.schemas.ts` já trafegam campos relacionados; precisa de verificação de compatibilidade na fase de especificação. |
-| Frontend — Matriz | Duas telas (`CriarMatrizEstruturaManual.tsx`, `OperationMatrixEditorPage.tsx`) + `operationMatrixPreviewPersist.ts` precisam de campo de responsável dependente de equipe. |
-| Frontend — Nova Esteira (manual) | `novaEsteiraDraftFromMatrix.ts`/`matrixToConveyorCreateInput.ts` precisam herdar responsável junto com equipe. |
-| Frontend — Nova Esteira (documento/R6) | `draftToCreateConveyorInput.ts` precisa de tratamento equivalente, separado do fluxo manual. |
+| Banco de dados | Nenhuma migration obrigatória. Campo já nulável, compatível com "opcional". |
+| Backend — `operation-matrix` | Remover as duas rejeições 422; nova validação "responsável ativo + membro da equipe final efetiva"; corrigir zeramento incondicional em patch/duplicação para preservar quando aplicável; **tornar create/patch atômicos** (mudança adicional necessária, não só validação nova). |
+| Backend — `teams` | Nenhuma alteração funcional; reaproveitar padrão de "colaborador ativo". |
+| Backend — `conveyors` | Confirmar/manter `conveyor_nodes.default_responsible_id` sempre `null`; herança via `conveyor_node_assignees`. |
+| Backend — `conveyor-operational-plan` | Nenhuma alteração necessária, dado que a coluna legada permanece `null`; teste de regressão recomendado mesmo assim. |
+| Backend — `argos-integration` (R6) | **Alteração necessária** (não só verificação) no ramo de match direto de `draftToCreateConveyorInput.ts`, para ler `reusedStructure.collaboratorId`/`teamId` como já é feito no ramo de subárvore. Teste de regressão no ramo de subárvore, que já funciona. |
+| Frontend — Matriz (2 telas) | Campo de responsável dependente de equipe em `CriarMatrizEstruturaManual.tsx` e `OperationMatrixEditorPage.tsx`. |
+| Frontend — Catálogo | Corrigir zeramento incondicional em `CriarMatrizCatalogOpcaoDraftEditor.tsx`; incluir `defaultResponsibleId` no payload de `cloneMatrixTaskSubtree.ts`. |
+| Frontend — Duplicação | Nenhuma alteração de frontend adicional além dos pontos de catálogo — os botões de duplicar já chamam a API existente; a mudança de comportamento (preservar responsável) é inteiramente do lado backend para os caminhos 1 e 2 da tabela da seção 3.5. |
+| Frontend — Nova Esteira (manual e documento) | Herdar responsável junto com equipe nos dois conversores; no caso do documento, depende da correção do backend/frontend do R6 descrita acima. |
 | Permissões | Nenhuma nova permissão necessária. |
-| Consumidores operacionais | Nenhuma alteração funcional esperada em `my-work-queue`, `kiosk`, `dashboard`, `production`, desde que a herança use `conveyor_node_assignees` e não a coluna legada. |
-| Testes | Cobertura nova obrigatória nos módulos acima; nenhum teste de regressão existente cobre a regra atual que será removida. |
-| Documentação | Este arquivo; `CLAUDE.md` (seção de features/backlog) precisaria de atualização futura na implementação. |
+| Consumidores operacionais | Sem alteração funcional esperada. |
+| Testes | Cobertura nova nos módulos acima; ver matriz de testes na seção 16. |
+| Documentação | Este arquivo; `CLAUDE.md` a atualizar ao final da implementação (fora desta Etapa 1). |
 
 ---
 
@@ -185,105 +228,101 @@ conveyor-operational-plan (fallback dormente em default_responsible_id — RISCO
 
 | Arquivo | Alteração prevista |
 |---|---|
-| `server/src/modules/operation-matrix/operation-matrix.service.ts` | Remover rejeições 422 (criação e patch); remover zeramento forçado em `servicePatchNode`, `serviceDuplicateItemAsNewRoot`, `serviceDuplicateSubtreeUnderSameParent`; adicionar validação de pertencimento e ativo. |
-| `server/src/modules/operation-matrix/operation-matrix.schemas.ts` | Ajustar regra de `superRefine` se for necessário exigir `teamIds` junto com `defaultResponsibleId`. |
-| `server/src/modules/operation-matrix/operation-matrix.repository.ts` | Nova query de validação (responsável ativo + membro da equipe); decidir sobre `collaboratorExists` código morto. |
-| `server/src/modules/conveyors/conveyors.service.ts` | Confirmar/registrar decisão de manter `conveyor_nodes.default_responsible_id` sempre `null` e herdar só via `conveyor_node_assignees`. |
-| `server/src/modules/conveyor-operational-plan/conveyor-operational-plan.service.ts` | Revisão explícita do fallback em `stepDefaults.defaultResponsibleId` (linhas ~243-274, ~328-355). |
-| `server/src/modules/argos-integration/pipeline/matchOperationalItems.ts`, `document-draft.schemas.ts` | Verificação de compatibilidade do campo `defaultResponsibleId`/`collaboratorId` já trafegado no matching R6. |
+| `server/src/modules/operation-matrix/operation-matrix.service.ts` | Remover rejeições 422; nova validação de pertencimento/ativo considerando estado final efetivo; preservar responsável em duplicação (não mais zerar incondicionalmente); tornar create/patch atômicos (envolver update do nó + vínculos de equipe + validação de responsável em uma única transação). |
+| `server/src/modules/operation-matrix/operation-matrix.schemas.ts` | Revisar `superRefine` se necessário para o novo comportamento (não deve exigir `teamIds` quando só `defaultResponsibleId` é enviado). |
+| `server/src/modules/operation-matrix/operation-matrix.repository.ts` | Nova query de validação (responsável ativo + membro da equipe final efetiva). |
+| `server/src/modules/conveyors/conveyors.service.ts` | Confirmar manutenção de `conveyor_nodes.default_responsible_id` sempre `null`. |
+| `server/src/modules/argos-integration/pipeline/matchOperationalItems.ts` | Nenhuma alteração necessária — já lê e transporta o dado corretamente. |
+| `src/features/documentos/nova-esteira-documento/draftToCreateConveyorInput.ts` | **Alteração necessária**: nos ramos `SELECT_ALTERNATIVE`/`ACCEPT_SUGGESTED`, ler `m.reusedStructure.collaboratorId`/`teamId` e gravar `__reviewPrimaryCollaboratorId`/`__reviewPrimaryTeamId`, como já ocorre nos ramos de expansão de subárvore. |
 | `src/domain/operation-matrix/operation-matrix.types.ts` | Já expõe `default_responsible_id`; revisar tipagem/uso. |
-| `src/features/operation-matrix/criar-matriz/CriarMatrizEstruturaManual.tsx` | Filtro de colaborador dependente da equipe selecionada; enviar `defaultResponsibleId` real ao invés de descartar o "Principal". |
+| `src/features/operation-matrix/criar-matriz/CriarMatrizEstruturaManual.tsx` | Filtro de colaborador dependente da equipe; enviar `defaultResponsibleId` real. |
 | `src/features/operation-matrix/criar-matriz/createManualMatrixStructure.ts` | Incluir `defaultResponsibleId` no payload de criação. |
-| `src/features/operation-matrix/criar-matriz/criarMatrizManualDraft.ts` | Corrigir/realinhar comentário e lógica de reconciliação com o comportamento real. |
 | `src/features/operation-matrix/OperationMatrixEditorPage.tsx` | Novo campo de responsável dependente de equipe na edição de matriz persistida. |
 | `src/features/operation-matrix/operationMatrixPreviewPersist.ts` | Incluir `defaultResponsibleId` no diff de patch. |
-| `src/features/operation-matrix/matrixTreeAggregates.ts` | Decidir se agregados passam a considerar responsável (hoje ignora deliberadamente). |
+| `src/features/operation-matrix/criar-matriz/CriarMatrizCatalogOpcaoDraftEditor.tsx` | Corrigir `applyEtapaToActivity` para zerar o responsável apenas quando a equipe muda de fato e o responsável deixa de pertencer a ela — não a cada edição de equipe. |
+| `src/features/operation-matrix/criar-matriz/cloneMatrixTaskSubtree.ts` | Incluir `defaultResponsibleId` em `buildCreatePayload`, hoje ausente. |
 | `src/features/esteiras/nova-esteira/novaEsteiraDraftFromMatrix.ts` | Herdar responsável junto com `matrixActivityPrimaryTeamId`. |
 | `src/features/esteiras/nova-esteira/matrixToConveyorCreateInput.ts` | Herdar responsável no mapeamento de `assignees`. |
-| `src/features/documentos/nova-esteira-documento/draftToCreateConveyorInput.ts` | Tratamento equivalente para o fluxo de importação de documento (R6). |
-| `server/src/tests/operation-matrix.test.ts` (+ testes locais do módulo) | Novos casos: aceitar responsável válido, rejeitar responsável fora da equipe/inativo, comportamento na troca de equipe e na duplicação. |
-| `server/src/tests/conveyor-operational-plan.*.test.ts` | Confirmar que o fallback dormente permanece inativo (ou cobrir novo comportamento, se decidido o contrário). |
+| `server/src/tests/operation-matrix.test.ts` (+ testes locais do módulo) | Ver matriz de testes (seção 16). |
+| `server/src/tests/conveyor-operational-plan.*.test.ts` | Confirmar que o fallback dormente permanece inativo. |
 | `src/features/esteiras/nova-esteira/novaEsteiraDraftFromMatrix.test.ts`, `matrixToConveyorCreateInput.test.ts` | Casos de herança de responsável. |
-| `src/features/operation-matrix/criar-matriz/createManualMatrixStructure.test.ts`, `criarMatrizManualDraft.test.ts` | Atualizar para cobrir envio real de `defaultResponsibleId`. |
-| `CLAUDE.md` | Atualização de inventário de features, se e quando a implementação for concluída (fora desta Etapa 1). |
+| `src/features/documentos/nova-esteira-documento/draftToCreateConveyorInput.test.ts` (localizar/criar) | Teste de regressão do ramo de subárvore + teste novo do ramo de match direto. |
+| `src/features/operation-matrix/criar-matriz/createManualMatrixStructure.test.ts`, `criarMatrizManualDraft.test.ts`, `CriarMatrizCatalogOpcaoDraftEditor.test.ts` (se existir) | Atualizar/criar para cobrir envio real de `defaultResponsibleId` e correção do zeramento condicional. |
+| `CLAUDE.md` | Atualização de inventário de features, ao final da implementação. |
 
 ---
 
 ## 7. Necessidade de migração e estratégia para dados legados
 
-- **Não é necessária migration para o caso básico** — `matrix_nodes.default_responsible_id` já existe com índice desde a migration `0003`.
-- Toda Atividade de Matriz hoje tem `default_responsible_id = NULL` (confirmado por leitura de todo caminho de escrita do backend, que sempre zera ou rejeita o campo). Isso é fortemente sustentado por evidência de código, mas não foi confirmado por consulta em banco real (fora do escopo desta análise — nenhuma query foi executada). Recomenda-se essa checagem (`SELECT count(*) FROM matrix_nodes WHERE node_type='ACTIVITY' AND default_responsible_id IS NOT NULL`) em HML/PRD antes de decidir sobre obrigatoriedade.
-- Como não há dado de origem, **obrigatoriedade em nível de banco (`NOT NULL`) exigiria backfill sem fonte confiável** — rota de alto risco, não recomendada para a Etapa 1.
-- Estratégia recomendada (a validar na especificação): obrigatoriedade **de aplicação**, não de banco — bloquear/exigir no formulário e na validação de service para escrita nova, permitindo que atividades legadas sem responsável continuem existindo até serem editadas (padrão já usado para "atividade sem equipe padrão" em `matrixTreeAggregates.ts`).
+- **Não é necessária migration.** A coluna já existe, com índice, e já é nulável — compatível diretamente com "responsável opcional" da regra consolidada.
+- Decisão consolidada: **sem `NOT NULL`, sem backfill, sem preenchimento retroativo automático.** Atividades antigas sem responsável continuam válidas indefinidamente.
+- A integridade "responsável pertence à equipe" será garantida **somente na aplicação** (validação de service, revalidada a cada escrita), consistente com o fato de que o próprio limite de "1 equipe por atividade" já é hoje garantido apenas em aplicação, não em schema.
 
 ---
 
 ## 8. Regras e validações de backend necessárias
 
-1. Remover as duas rejeições 422 atuais (criação e patch) para `defaultResponsibleId` em `ACTIVITY`.
-2. Nova validação de service: se `defaultResponsibleId` informado, verificar que o colaborador está ativo (`deleted_at IS NULL`, `is_active`, `status='ACTIVE'` — reaproveitar o padrão de `teams.repository.findCollaboratorEligibility`) **e** que ele é membro ativo (`team_members.is_active = TRUE`) de **alguma** das `team_ids` submetidas junto na mesma requisição — a validação deve olhar o payload final da requisição, não o estado salvo anteriormente, para evitar janelas de inconsistência dentro do mesmo request.
-3. Revalidação sempre no backend, nunca confiar apenas na lista carregada no frontend (mitiga condição de corrida — ver seção 9).
-4. Ao alterar `teamIds` de uma atividade via `PATCH` sem informar `defaultResponsibleId` explicitamente, decidir e implementar de forma explícita: manter o comportamento atual de limpar automaticamente o responsável quando ele não pertence à nova equipe (coerente com a regra de negócio pedida), em vez do zeramento incondicional atual.
-5. Decidir e documentar o comportamento de duplicação (hoje sempre zera `default_responsible_id`; a demanda não especifica se deve preservar).
-6. Backend deve seguir sendo a autoridade final: qualquer filtro de UI é cosmético, a garantia é a validação de service.
+1. Remover as duas rejeições 422 atuais para `defaultResponsibleId` em `ACTIVITY`.
+2. Nova validação: se `defaultResponsibleId` informado (em criação ou patch), verificar que o colaborador está ativo (reaproveitando o padrão de `teams.repository.findCollaboratorEligibility`) **e** que é membro ativo do **estado final efetivo de equipe da atividade** — `body.teamIds` se enviado no mesmo request, senão os `team_ids` já persistidos (`existing.team_ids`, já disponível em memória em `servicePatchNode` sem query adicional).
+3. **Não exigir reenvio de `teamIds`** quando o usuário altera apenas `defaultResponsibleId` — é um requisito explícito da regra consolidada, não uma opção.
+4. Quando `teamIds` é alterado e o responsável atual deixa de ser membro da nova equipe, limpar automaticamente o responsável (comportamento já existente hoje de forma incondicional; deve passar a ser condicional — só limpa se de fato deixou de pertencer).
+5. **Tornar a operação atômica**: update do nó + `replaceNodeTeamLinks` + validação/gravação do responsável devem ocorrer dentro de uma única transação (`BEGIN...COMMIT`), tanto em `serviceCreateNode` quanto em `servicePatchNode` — hoje nenhum dos dois é atômico (ver seção 3.7); os fluxos de duplicação já são atômicos e servem de referência de padrão.
+6. **Preservar equipe e responsável na duplicação** (item/subárvore) — mudança de comportamento em relação ao zeramento incondicional atual. Recomendação desta análise (decisão de produto a confirmar): revalidar o responsável copiado no momento da duplicação, já que a composição da equipe pode ter mudado desde a última gravação da atividade original; se inválido, zerar silenciosamente em vez de bloquear a duplicação.
+7. Código HTTP e mensagem: manter o padrão do módulo — 422/VALIDATION_ERROR com mensagem de negócio clara (ex.: *"O colaborador responsável deve ser um colaborador ativo e membro ativo da equipe informada."*).
+8. Backend continua como autoridade final: qualquer filtro de UI é cosmético.
 
 ---
 
 ## 9. Condição de corrida — composição da equipe entre consulta e gravação
 
-A equipe pode perder o colaborador escolhido como responsável entre o carregamento do formulário (quando a lista de membros elegíveis é buscada via `GET /teams/:teamId/members`) e o submit do formulário. Mitigação: a validação de pertencimento e "ativo" descrita na seção 8 deve ser **sempre reexecutada no momento do `POST`/`PATCH`** contra o estado atual do banco, nunca aceitando apenas o que o frontend enviou como já validado. Isso é o mesmo padrão que `assertCollaboratorActiveForNewMembership` já aplica em `teams.service.ts` para adição de membro a uma equipe — não é um padrão novo a inventar, é reaproveitável.
+Mitigação inalterada em relação à v1, agora explicitamente ligada ao requisito de atomicidade da seção 8: a validação de pertencimento e "ativo" deve ser **sempre reexecutada dentro da mesma transação do `POST`/`PATCH`**, contra o estado atual do banco, nunca aceitando apenas o que o frontend enviou como já validado.
 
 ---
 
 ## 10. Alterações de frontend e UX
 
-- **Seleção dependente Equipe → Responsável**: ao selecionar/alterar a equipe de uma atividade, o campo de responsável deve (a) ficar desabilitado até uma equipe ser escolhida, (b) carregar a lista de membros elegíveis via `GET /teams/:teamId/members` (endpoint já existente, hoje não usado por Matriz), (c) limpar a seleção atual de responsável se ele não constar na nova lista quando a equipe é trocada.
-- Isso precisa ser implementado em **duas telas**: assistente de criação (`CriarMatrizEstruturaManual.tsx`) e editor de matriz persistida (`OperationMatrixEditorPage.tsx`) — hoje só a primeira tem qualquer UI relacionada, e mesmo essa é funcionalmente quebrada (ver seção 3.4).
-- Decisão de produto pendente: unificar o conceito de "responsável" com os "apoios" já existentes em `metadata_json.sgp.matrixActivityCollaborators.v1` (responsável = um apoio marcado como principal) ou manter os dois campos paralelos e independentes (ver seção 20).
-- Tela de revisão do wizard (`CriarMatrizEtapaRevisao.tsx`) e visualização read-only de catálogo (`MatrixCatalogReadonlyDetails.tsx`) já leem `default_responsible_id` para exibição — passam a exibir dado real em vez de sempre vazio, sem necessidade de alteração estrutural, apenas validação de que o valor exibido bate com o persistido.
+- Seleção dependente Equipe → Responsável nas duas telas de Matriz (`CriarMatrizEstruturaManual.tsx`, `OperationMatrixEditorPage.tsx`), usando `GET /teams/:teamId/members`.
+- **Novo, incorporado nesta revisão:** corrigir `CriarMatrizCatalogOpcaoDraftEditor.tsx` para não zerar o responsável a cada edição de equipe quando a equipe não muda de fato.
+- Decisão consolidada: manter o modelo atual de "apoios" — responsável em `default_responsible_id`, demais colaboradores em `metadata_json.supportIds` — sem unificação dos dois conceitos nesta etapa.
+- Estados de carregamento, ausência de membros elegíveis (equipe sem colaborador ativo) e mensagens de validação devem ser tratados explicitamente nas telas listadas.
 
 ---
 
 ## 11. Fluxo de herança Matriz → Esteira
 
-- Deve ser implementado **nos dois fluxos de produção ativos**:
-  1. Manual: `novaEsteiraDraftFromMatrix.ts` (`matrixActivityToInitialAllocRows`) deve herdar `default_responsible_id` junto com `team_ids`, adicionando uma linha `COLLABORATOR isPrimary=true` além da linha `TEAM` já herdada hoje.
-  2. Documento/R6: `draftToCreateConveyorInput.ts`, alimentado por `matchOperationalItems.ts`, precisa de tratamento equivalente — hoje já trafega campos relacionados (`teamId`/`defaultResponsibleId` nas estruturas de matching), mas seu comportamento exato quanto à origem desses valores precisa ser confirmado na fase de especificação (não aprofundado a nível de linha nesta análise, por proporcionalidade).
-- **Decisão de design necessária**: o responsável herdado deve ser materializado em `conveyor_node_assignees` (`assignment_type='COLLABORATOR', is_primary=true`), **não** em `conveyor_nodes.default_responsible_id` — para não reativar o fallback dormente do Planejamento Semanal (ver seção 15) e para manter consistência com a arquitetura já documentada no banco ("fonte de verdade = `conveyor_node_assignees`").
-- Em ambos os fluxos, a linha herdada deve continuar **editável pelo usuário antes do submit** (mesmo comportamento já existente para a herança parcial de equipe hoje).
+- **Fluxo manual**: `novaEsteiraDraftFromMatrix.ts` deve herdar `default_responsible_id` junto com `team_ids`.
+- **Fluxo documento (R6)**: depende da correção descrita na seção 3.6 — sem ela, a herança não funciona no caso de match direto de Atividade isolada (o mais comum), mesmo já existindo o dado no backend.
+- Decisão consolidada: herança materializada **exclusivamente** em `conveyor_node_assignees` (`COLLABORATOR isPrimary=true` para o responsável, `TEAM` para a equipe), mantendo `conveyor_nodes.default_responsible_id` sempre `null`, salvo evidência técnica contrária — nenhuma evidência contrária foi encontrada nesta revisão.
+- Em ambos os fluxos, a linha herdada permanece editável pelo usuário antes do submit.
 
 ---
 
 ## 12. Comprovação da independência Matriz × Esteira após a criação
 
-- Já é o comportamento hoje para outros campos herdados (nome, `planned_minutes`, `required`, `source_key`): a Esteira grava seus próprios valores em `conveyor_nodes`/`conveyor_node_assignees` no momento do `POST /conveyors`; nenhuma referência funcional contínua é mantida — `matrixRootItemId` é gravado apenas para auditoria/rastreio, não como vínculo de sincronização.
-- A mesma arquitetura se aplica naturalmente ao responsável: uma vez gravado em `conveyor_node_assignees` no momento da criação, alterações posteriores nesse registro (via `conveyors.manage_assignments`) não têm nenhum caminho de escrita de volta a `matrix_nodes` — não existe, hoje, nenhuma rotina que escreva da Esteira para a Matriz.
-- Prova recomendada em teste automatizado: criar Esteira a partir de Matriz com responsável X; alterar o responsável na Esteira para Y; reconsultar a Atividade da Matriz de origem e confirmar que `default_responsible_id` continua X. Depois, alterar o responsável na Matriz para Z e criar uma segunda Esteira a partir da mesma Matriz; confirmar que a nova Esteira nasce com Z, e que a primeira Esteira permanece com Y.
+Inalterado em relação à v1 — nenhum caminho de escrita da Esteira para a Matriz foi encontrado em nenhuma revisão. Prova recomendada em teste automatizado: criar Esteira a partir de Matriz com responsável X; alterar o responsável na Esteira para Y; reconsultar a Atividade da Matriz de origem e confirmar que `default_responsible_id` continua X; alterar o responsável na Matriz para Z e criar uma segunda Esteira, confirmando que a nova nasce com Z e a primeira permanece com Y.
 
 ---
 
-## 13. Efeitos nos fluxos de criação, edição, preview e duplicação
+## 13. Efeitos nos fluxos de criação, edição, preview, catálogo e duplicação
 
-| Fluxo | Efeito |
+| Fluxo | Efeito (revisado) |
 |---|---|
-| Criação de Matriz (wizard manual) | Passa a enviar `defaultResponsibleId` real; UI precisa de filtro dependente. |
-| Edição de Matriz persistida | Novo campo antes inexistente (`OperationMatrixEditorPage.tsx`). |
-| Preview/reconciliação de import | `operationMatrixPreviewPersist.ts` precisa incluir o campo no diff calculado. |
-| Duplicação de item/subárvore | Comportamento hoje é zerar; precisa de decisão explícita de produto (preservar ou zerar — não especificado na demanda). |
-| Criação de Esteira (manual) | Herdar responsável junto com equipe, editável antes do submit. |
-| Criação de Esteira (documento/R6) | Tratamento equivalente e independente do fluxo manual. |
-| Edição de Esteira já criada | Sem mudança de comportamento — continua usando `conveyor_node_assignees` normalmente, sem qualquer escrita de volta à Matriz. |
+| Criação de Matriz (wizard manual) | Enviar `defaultResponsibleId` real; UI com filtro dependente. |
+| Edição de Matriz persistida | Novo campo antes inexistente. |
+| Preview/reconciliação de import | Incluir campo no diff calculado. |
+| **Catálogo — criação/reutilização de opção** | Corrigir zeramento incondicional em `CriarMatrizCatalogOpcaoDraftEditor.tsx`. |
+| **Catálogo — clonagem client-side** | Já preserva implicitamente; confirmar que isso é intencional e coberto por teste. |
+| **Catálogo — clonagem via API (`cloneMatrixTaskSubtree.ts`)** | Incluir `defaultResponsibleId` no payload, hoje ausente. |
+| Duplicação de item/subárvore (backend) | Mudar de "zera incondicionalmente" para "preserva, com revalidação". |
+| Criação de Esteira (manual) | Herdar responsável junto com equipe. |
+| Criação de Esteira (documento/R6) | Herdar apenas após correção do ramo de match direto em `draftToCreateConveyorInput.ts`. |
+| Edição de Esteira já criada | Sem mudança — `conveyor_node_assignees` normalmente, sem escrita de volta à Matriz. |
 
 ---
 
 ## 14. Impactos nos consumidores operacionais
 
-- **Fila operacional / Minha Fila / Minhas Atividades**: nenhum impacto funcional esperado, desde que a herança grave em `conveyor_node_assignees` — o dedupe já existente (`buildConveyorStepOwnershipIndex`) continua válido sem alteração.
-- **Kiosk**: nenhum impacto direto identificado; consome os mesmos índices de ownership da Esteira.
-- **Planejamento semanal**: **risco concreto**, ver seção 15 — precisa de decisão explícita para não reativar comportamento dormente.
-- **Produção (Modo Fábrica)**: `production-plan-assignee.ts` já lida com assignee "de apoio" a partir do plano publicado; compatível sem alteração, desde que a fonte de verdade continue sendo `conveyor_node_assignees`.
-- **Relatórios/Dashboard**: nenhum consumo direto de `default_responsible_id` identificado hoje; sem impacto imediato, mas pode ser uma oportunidade de produto futura (fora do escopo desta demanda).
-- **Permissões**: sem necessidade de novo código de permissão.
+Inalterado em relação à v1: sem impacto funcional esperado em fila operacional, kiosk, produção ou dashboard, desde que a herança grave exclusivamente em `conveyor_node_assignees` (decisão consolidada da seção 11). O fallback dormente do Planejamento Semanal permanece inativo sob essa decisão.
 
 ---
 
@@ -291,119 +330,152 @@ A equipe pode perder o colaborador escolhido como responsável entre o carregame
 
 | Risco | Severidade | Mitigação |
 |---|---|---|
-| Reversão de decisão de produto anterior (422 foi introduzido deliberadamente em `5af13dcc`, "Ajustes em Matriz", 14/05/2026, mesmo autor desta demanda) sem registro do motivo original no repositório | Alta | Confirmar com quem decidiu (ou revisitar histórico fora do código) por que o campo foi descontinuado antes de reverter, para não reintroduzir o problema que motivou a mudança |
-| Fragmentação: herança precisa ser replicada em 2 fluxos de produção (manual e documento/R6); risco de esquecer um e gerar esteiras sem responsável herdado dependendo da origem | Alta | Especificação deve listar os dois fluxos como itens obrigatórios de implementação e teste, não só o fluxo manual |
-| Duas telas de Matriz precisam de UI nova; a segunda (`OperationMatrixEditorPage.tsx`) não constava na pista original | Média | Confirmar escopo de UI incluindo explicitamente esta tela na especificação |
-| Obrigatoriedade imediata quebra 100% das atividades de matriz existentes (nenhuma tem responsável hoje); sem dado de origem para backfill | Alta | Obrigatoriedade de aplicação (não de banco), sem `NOT NULL`; saneamento incremental via edição manual, sem bloqueio retroativo |
-| Corrida entre validação "responsável pertence à equipe" no carregamento do formulário e a composição real no momento do submit | Média | Revalidação obrigatória no backend a cada `POST`/`PATCH`, nunca confiar só no frontend |
-| Reativação acidental do fallback dormente do Planejamento Semanal (`conveyor-operational-plan.service.ts:352-355`) se o responsável herdado for gravado em `conveyor_nodes.default_responsible_id` em vez de `conveyor_node_assignees` | Alta | Especificação deve decidir explicitamente: herança grava só em `conveyor_node_assignees`, mantendo a coluna legada sempre `null` |
-| Ausência de teste de regressão cobrindo a rejeição 422 atual — remoção da regra não tem nenhum teste existente que sinalize a mudança | Baixa/Média | Adicionar teste explícito do novo comportamento (aceitação + validação de pertencimento) antes de remover a regra antiga |
-| `matrix_node_assignment_teams` sem `UNIQUE` de banco para "1 equipe por atividade" — a demanda assume equipe única; se essa suposição de aplicação falhar por bug futuro, "a equipe da atividade" fica ambígua | Baixa | Não introduzido por esta demanda; registrar como pré-condição implícita a documentar |
-| Duplicidade: colaborador responsável direto também membro da equipe alocada no mesmo STEP da Esteira | Baixa | Já resolvido do lado Esteira hoje via `UNION`/dedupe em `my-work-queue-step-assignees.repository.ts` — nenhum trabalho novo necessário aqui, apenas confirmar que a herança usa o mesmo modelo `conveyor_node_assignees` |
-| **Etapa 2 (fora do escopo desta análise)**: nada impede hoje excluir/inativar colaborador que seja responsável em Matriz ou Esteira aberta; introduzir "responsável obrigatório" torna esse buraco de integridade referencial mais visível operacionalmente | A avaliar na Etapa 2 | Citada apenas como dependência futura, não incorporada à estimativa ou ao plano desta Etapa 1 |
+| Fluxo R6 — ramo de match direto de Atividade isolada não herda equipe nem responsável hoje, mesmo com o dado disponível no backend (gap pré-existente, exposto por esta demanda) | Alta | Corrigir `draftToCreateConveyorInput.ts` para ler `reusedStructure.collaboratorId`/`teamId` nos ramos `SELECT_ALTERNATIVE`/`ACCEPT_SUGGESTED`, com teste de regressão cobrindo os dois ramos (subárvore e direto) |
+| `serviceCreateNode`/`servicePatchNode` não são atômicos hoje — risco de estado parcial (nó atualizado, equipe/responsável não) ao introduzir a nova validação | Média/Alta | Envolver update do nó + vínculos de equipe + validação de responsável em transação única, seguindo o padrão já usado nos fluxos de duplicação |
+| Duplicação de matriz/atividade/subárvore precisa passar a preservar responsável, mas a composição da equipe pode ter mudado desde a gravação original | Média | Revalidar o responsável copiado no momento da duplicação; zerar silenciosamente se inválido, sem bloquear a operação |
+| `cloneMatrixTaskSubtree.ts` nunca envia `defaultResponsibleId` — perda silenciosa e consistente no caminho catálogo → matriz persistida | Média | Incluir o campo no payload de `buildCreatePayload`, com a mesma validação de pertencimento aplicada no create direto |
+| `CriarMatrizCatalogOpcaoDraftEditor.tsx` zera o responsável a cada edição de equipe, mesmo sem mudança real | Baixa/Média | Corrigir a condição para só zerar quando a equipe efetivamente muda e o responsável deixa de pertencer a ela |
+| Corrida entre validação "responsável pertence à equipe" no carregamento do formulário e a composição real no momento do submit | Média | Revalidação obrigatória no backend, dentro da mesma transação da escrita |
+| Ausência de teste de regressão cobrindo a rejeição 422 atual | Baixa/Média | Adicionar teste explícito do novo comportamento antes de remover a regra antiga |
+| `matrix_node_assignment_teams` sem `UNIQUE` de banco para "1 equipe por atividade" — garantia hoje só de aplicação | Baixa | Não introduzido por esta demanda; registrar como pré-condição implícita a documentar, decisão de reforçar em schema fica em aberto |
+| **Etapa 2 (fora do escopo desta análise)**: nada impede hoje excluir/inativar colaborador que seja responsável em Matriz ou Esteira aberta | A avaliar na Etapa 2 | Citada apenas como dependência futura, não incorporada à estimativa desta Etapa 1 |
 
 ---
 
-## 16. Plano de testes automatizados e manuais
+## 16. Matriz de testes
 
-### Automatizados
+### Automatizados — backend `operation-matrix`
 
-- Backend `operation-matrix`: criação/patch de `ACTIVITY` com responsável válido pertencente à equipe (sucesso); responsável fora da equipe (rejeição); responsável inativo/soft-deleted (rejeição); troca de `teamIds` limpando responsável incompatível.
-- Backend: comportamento de duplicação de item/subárvore quanto ao responsável (a decidir se preserva ou zera, e testar o que for decidido).
-- Backend `conveyor-operational-plan`: teste explícito confirmando que o fallback de `plannedCollaboratorId` a partir de `conveyor_nodes.default_responsible_id` **não** é acionado após a mudança (a menos que decidido o contrário).
-- Frontend `novaEsteiraDraftFromMatrix.test.ts`: herança de responsável junto com equipe.
-- Frontend `matrixToConveyorCreateInput.test.ts`: payload final com `assignees` incluindo `COLLABORATOR isPrimary=true` + `TEAM` para a mesma atividade.
-- Frontend/documento: teste equivalente para `draftToCreateConveyorInput.ts` (fluxo R6).
-- Frontend: filtro de colaborador elegível por equipe selecionada, em ambas as telas de Matriz.
-- Frontend: limpeza de responsável ao trocar equipe (comportamento hoje só existe no backend).
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 1 | Responsável ativo, membro da equipe informada | Aceito (create/patch) |
+| 2 | Colaborador ativo, mas não membro da equipe informada | Rejeitado — 422/VALIDATION_ERROR |
+| 3 | Colaborador inativo (mesmo que membro da equipe) | Rejeitado — 422/VALIDATION_ERROR |
+| 4 | Vínculo de equipe inativo (`team_members.is_active = false`) para o colaborador informado | Rejeitado — 422/VALIDATION_ERROR |
+| 5 | Atividade sem responsável (campo omitido/`null`) | Aceito, sem erro — responsável é opcional |
+| 6 | PATCH enviando só `defaultResponsibleId`, sem reenviar `teamIds` | Validado contra `team_ids` já persistidos; aceito se membro |
+| 7 | PATCH enviando `teamIds` e `defaultResponsibleId` juntos | Validado de forma atômica contra o `teamIds` do próprio request |
+| 8 | Troca de equipe que invalida o responsável atual (sem informar novo responsável) | Responsável limpo automaticamente |
+| 9 | Troca de equipe que mantém o responsável atual válido | Responsável preservado (não deve zerar incondicionalmente) |
+| 10 | Duplicação de Matriz (item raiz) com atividade que tem responsável válido | Responsável preservado na cópia |
+| 11 | Duplicação/clonagem de atividade ou subárvore com responsável que não é mais válido para a equipe copiada | Responsável zerado silenciosamente na cópia, sem bloquear a duplicação |
+| 12 | Falha simulada na etapa de vínculo de equipe durante um PATCH que também altera `defaultResponsibleId` | Nó não deve ficar parcialmente atualizado — rollback completo (teste de atomicidade) |
+
+### Automatizados — criação/reutilização por catálogo
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 13 | Criar/reutilizar opção de catálogo trocando a equipe sem alterar o responsável de fato | Responsável não é zerado indevidamente |
+| 14 | Clonar subárvore de catálogo para matriz nova/persistida via `cloneMatrixTaskSubtree.ts` | `defaultResponsibleId` incluído no payload e preservado no backend, quando válido |
+
+### Automatizados — materialização Matriz → Esteira
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 15 | Materialização via fluxo manual, atividade com equipe e responsável configurados | `conveyor_node_assignees` recebe `TEAM` + `COLLABORATOR isPrimary=true` |
+| 16 | Materialização via fluxo documento (R6), match por expansão de subárvore | Herança funciona (teste de regressão do comportamento já existente) |
+| 17 | Materialização via fluxo documento (R6), match direto de Atividade isolada | Herança funciona **após a correção** — teste novo, hoje falharia |
+| 18 | Colaborador responsável também é membro da equipe alocada no mesmo STEP | Sem duplicidade operacional — dedupe já existente do lado Esteira cobre o caso |
+| 19 | Alterar responsável na Esteira após a criação | `matrix_nodes.default_responsible_id` da Matriz de origem permanece inalterado |
+| 20 | Criar segunda Esteira após alterar o responsável na Matriz | Nova Esteira reflete o valor atualizado; Esteira anterior não é afetada |
 
 ### Manuais
 
-- Criar atividade de matriz com equipe X; tentar selecionar responsável fora de X (deve bloquear/filtrar).
-- Trocar a equipe de uma atividade existente com responsável já definido; confirmar limpeza e exigência de nova seleção.
-- Materializar Esteira a partir de Matriz com equipe+responsável; confirmar herança e que editar o responsável na Esteira depois não altera a Matriz.
-- Criar uma segunda Esteira a partir da mesma Matriz após alterar o responsável nela; confirmar que a nova Esteira reflete o valor atualizado.
-- Repetir o fluxo de materialização pelo caminho de importação de documento (R6), não só pela composição manual.
+- Repetir os cenários 15–20 na interface, incluindo o caminho de importação de documento (não só composição manual).
 - Validar em `OperationMatrixEditorPage.tsx` (edição de matriz persistida), não só no assistente de criação.
+- Validar em `CriarMatrizCatalogOpcaoDraftEditor.tsx` o comportamento corrigido de não zerar o responsável sem necessidade.
 - Testar remoção do único membro elegível da equipe entre abertura do formulário e submit (corrida).
-- Validar que Kiosk, Minha Fila e Modo Fábrica continuam funcionando sem regressão para esteiras criadas antes e depois da mudança.
+- Validar que Kiosk, Minha Fila e Modo Fábrica continuam funcionando sem regressão.
 
-### Testes de regressão para fluxos não diretamente alterados (recomendado pelo critério de qualidade da análise)
+### Regressão para fluxos não diretamente alterados
 
-- Fluxo completo de criação de Esteira sem passar por Matriz (composição 100% manual), para garantir que a ausência de responsável de origem não quebra nada.
-- Apontamento (`conveyor_time_entries`) por colaborador membro de equipe alocada, sem responsável direto — deve continuar funcionando via o trigger já existente.
-- Pipeline R6 completo (parsing → matching → draft) para matrizes/documentos sem nenhum candidato com responsável, garantindo que o novo campo não é assumido como obrigatório onde não é aplicável.
+- Criação de Esteira 100% manual, sem passar por Matriz.
+- Apontamento por colaborador membro de equipe alocada, sem responsável direto.
+- Pipeline R6 completo para matrizes/documentos sem nenhum candidato com responsável configurado.
 
 ---
 
 ## 17. Critérios de aceite sugeridos
 
-1. `POST`/`PATCH` de `ACTIVITY` da Matriz aceita `defaultResponsibleId` quando o colaborador é ativo e membro de uma das `teamIds` submetidas na mesma requisição; rejeita com erro claro caso contrário.
-2. Trocar `teamIds` de uma `ACTIVITY` sem informar novo `defaultResponsibleId` compatível limpa o responsável anterior quando ele não pertence à nova equipe.
-3. `CriarMatrizEstruturaManual.tsx` e `OperationMatrixEditorPage.tsx` exigem equipe antes de habilitar o campo de responsável, e listam apenas membros elegíveis da equipe selecionada (via `GET /teams/:teamId/members`).
-4. Materializar Esteira a partir de Matriz (fluxo manual e fluxo documento/R6) grava o responsável herdado em `conveyor_node_assignees` como `COLLABORATOR isPrimary=true`, junto com a equipe já herdada como `TEAM`.
-5. Alterar o responsável de uma atividade em uma Esteira já criada não altera `matrix_nodes.default_responsible_id` da Matriz de origem, em nenhuma circunstância.
-6. Criar uma nova Esteira a partir de uma Matriz cujo responsável foi alterado desde a última materialização usa o valor atual da Matriz, sem afetar esteiras já existentes.
-7. Atividades de Matriz legadas sem responsável continuam funcionando normalmente em todos os fluxos (não há bloqueio retroativo).
-8. `conveyor-operational-plan.service.ts` não muda de comportamento para esteiras cujo responsável foi herdado da Matriz, a menos que essa mudança seja explicitamente decidida e testada.
-9. Duplicação de item/subárvore de Matriz segue o comportamento decidido na especificação (preservar ou zerar responsável), documentado e testado.
+1. `POST`/`PATCH` de `ACTIVITY` aceita `defaultResponsibleId` quando o colaborador é ativo e membro do estado final efetivo de equipe da atividade (persistido + submetido no mesmo request); rejeita com 422/VALIDATION_ERROR caso contrário.
+2. PATCH de só `defaultResponsibleId`, sem reenviar `teamIds`, funciona corretamente contra a equipe já persistida.
+3. Update do nó, vínculos de equipe e validação/gravação do responsável ocorrem em uma única transação atômica.
+4. Trocar `teamIds` sem informar novo responsável compatível limpa o responsável anterior somente quando ele de fato deixa de pertencer à nova equipe.
+5. `CriarMatrizEstruturaManual.tsx` e `OperationMatrixEditorPage.tsx` exigem equipe antes de habilitar o campo de responsável, e listam apenas membros elegíveis.
+6. `CriarMatrizCatalogOpcaoDraftEditor.tsx` não zera o responsável quando a equipe selecionada não muda de fato.
+7. `cloneMatrixTaskSubtree.ts` preserva `defaultResponsibleId` ao clonar subárvore de catálogo para matriz nova/persistida.
+8. Duplicação de item/subárvore de Matriz preserva equipe e responsável, revalidando o responsável contra a equipe copiada.
+9. Materialização de Esteira a partir de Matriz grava o responsável em `conveyor_node_assignees` como `COLLABORATOR isPrimary=true`, junto com a equipe como `TEAM`, tanto no fluxo manual quanto no fluxo documento (R6), incluindo o caminho de match direto de Atividade isolada.
+10. Alterar o responsável de uma atividade em uma Esteira já criada não altera `matrix_nodes.default_responsible_id` da Matriz de origem.
+11. Atividades de Matriz sem responsável continuam funcionando normalmente em todos os fluxos.
+12. `conveyor-operational-plan.service.ts` não muda de comportamento (fallback dormente permanece inativo).
 
 ---
 
 ## 18. Plano de implementação em ordem segura (referência para a especificação — não implementado nesta entrega)
 
-1. Resolver as decisões de produto pendentes da seção 20 (em especial: motivo da descontinuação original; unificação ou não com `supportIds`; confirmação de gravação exclusiva em `conveyor_node_assignees`).
-2. Backend `operation-matrix`: nova validação de pertencimento/ativo; remoção das rejeições 422; ajuste de comportamento em patch e duplicação — com testes automatizados cobrindo cada regra antes de remover a regra antiga.
-3. Backend `teams`: nenhuma alteração funcional, apenas confirmação de que `GET /teams/:teamId/members` atende ao caso de uso sem mudança de contrato.
-4. Frontend Matriz: `CriarMatrizEstruturaManual.tsx` (corrigir envio real do campo) e `OperationMatrixEditorPage.tsx` (novo campo), com filtro dependente Equipe → Responsável.
-5. Frontend Esteira: `novaEsteiraDraftFromMatrix.ts`/`matrixToConveyorCreateInput.ts` (fluxo manual) e `draftToCreateConveyorInput.ts` (fluxo documento/R6) — herança para `conveyor_node_assignees`.
-6. Backend `conveyor-operational-plan`: confirmação/teste de que o fallback dormente permanece inativo (ou implementação consciente do novo comportamento, se decidido).
-7. Testes de regressão nos consumidores operacionais (fila, kiosk, produção) e no pipeline R6.
-8. Atualização de `CLAUDE.md` e documentação de produto relacionada, ao final da implementação.
-9. Etapa 2 (bloqueio de exclusão/inativação de colaborador referenciado) permanece como item separado, fora desta sequência.
+1. Backend `operation-matrix`: nova validação (estado final efetivo), atomicidade de create/patch, remoção das rejeições 422, comportamento de preservação em duplicação — com testes automatizados antes de remover a regra antiga.
+2. Backend R6 (`draftToCreateConveyorInput.ts`): correção do ramo de match direto de Atividade isolada, com teste de regressão do ramo de subárvore em paralelo.
+3. Frontend Matriz: `CriarMatrizEstruturaManual.tsx`, `OperationMatrixEditorPage.tsx`, `CriarMatrizCatalogOpcaoDraftEditor.tsx`, `cloneMatrixTaskSubtree.ts` — filtro dependente e correções de zeramento indevido.
+4. Frontend Esteira: `novaEsteiraDraftFromMatrix.ts`/`matrixToConveyorCreateInput.ts` (fluxo manual) — herança para `conveyor_node_assignees`.
+5. Testes de regressão nos consumidores operacionais e no pipeline R6 completo.
+6. Atualização de `CLAUDE.md` ao final da implementação.
+7. Etapa 2 (bloqueio de exclusão/inativação de colaborador referenciado) permanece item separado, fora desta sequência.
 
 ---
 
-## 19. Estimativa de esforço detalhada por camada e total
+## 19. Estimativa revisada de esforço por camada e total
 
-Estimativa qualitativa (ordem de grandeza), dada a natureza exploratória desta análise — não há levantamento de pontos de história ou calendário do projeto disponível para calibrar dias exatos:
-
-| Camada | Esforço estimado | Justificativa |
+| Camada | Esforço estimado (revisado) | Justificativa |
 |---|---|---|
-| Banco de dados | Nenhum a Muito baixo | Nenhuma migration obrigatória; eventual constraint de equipe única seria opcional |
-| Backend `operation-matrix` (validação, remoção de rejeições, ajustes de patch/duplicação) | Médio | Lógica de validação nova + reavaliação de 4 pontos de código já mapeados; risco de detalhes na duplicação |
-| Backend `conveyors`/`conveyor-operational-plan` | Baixo a Médio | Principalmente decisão de design + teste de não-regressão do fallback dormente |
-| Backend `argos-integration` (R6) | Médio | Depende de confirmação ainda pendente sobre como `defaultResponsibleId` já trafega no matching |
-| Frontend Matriz (2 telas) | Médio a Alto | Duas telas distintas, uma delas sem nenhuma UI equivalente hoje (`OperationMatrixEditorPage.tsx`); precisa de componente de seleção dependente reutilizável |
-| Frontend Esteira (2 fluxos) | Médio a Alto | Dois conversores independentes a alterar e testar separadamente |
-| Testes automatizados (todas as camadas) | Médio | Nenhum teste de regressão existente cobre a regra a ser removida; cobertura nova precisa ser construída do zero |
-| Testes manuais/validação operacional | Baixo a Médio | Checklist já delineado na seção 16 |
-| **Total estimado (Etapa 1)** | **Médio a Alto** | Concentrado em frontend (2 telas × 2 fluxos) e na necessidade de decisões de produto antes de iniciar; backend é o componente mais barato tecnicamente por já ter a base de dados pronta |
-
-Recomenda-se que a especificação (próxima etapa, `sgp-feature-spec-writer`) refine esta estimativa em pontos/dias reais após as decisões da seção 20 estarem fechadas, pois parte do esforço de frontend depende diretamente de escolhas ainda não tomadas (unificação com `supportIds`, comportamento de duplicação).
+| Banco de dados | Nenhum | Confirmado sem migration necessária |
+| Backend `operation-matrix` (validação, atomicidade, duplicação) | Médio a Alto | Cresceu em relação à v1: além da validação nova, exige refatorar create/patch para atomicidade (gap pré-existente que precisa ser corrigido junto) |
+| Backend R6 (`draftToCreateConveyorInput.ts`) | Médio | Cresceu em relação à v1: não é mais "só verificação", é correção de um gap de código real no ramo de match direto |
+| Backend `conveyors`/`conveyor-operational-plan` | Baixo | Sem mudança de código, só teste de confirmação |
+| Frontend Matriz (2 telas + catálogo) | Médio a Alto | Cresceu em relação à v1: inclui agora a correção de `CriarMatrizCatalogOpcaoDraftEditor.tsx` e `cloneMatrixTaskSubtree.ts`, além das 2 telas já previstas |
+| Frontend Esteira (2 fluxos) | Médio | Fluxo manual é trabalho novo direto; fluxo R6 depende da correção de backend acima, mas o frontend do R6 em si (leitura do plano) é o que muda |
+| Testes automatizados | Médio a Alto | Matriz de 20 casos novos (seção 16), nenhum coberto hoje |
+| Testes manuais/validação operacional | Baixo a Médio | Checklist já delineado |
+| **Total estimado (Etapa 1, revisado)** | **Médio a Alto** | Maior que a estimativa da v1: os achados de R6 (gap real, não só verificação) e de atomicidade (refatoração necessária, não só validação nova) aumentam o esforço de backend previsto |
 
 ---
 
 ## 20. Dependências, dúvidas ou decisões pendentes
 
-1. **Por que a rejeição 422 foi introduzida** (commit `5af13dcc`, "Ajustes em Matriz", 14/05/2026)? Não há registro de motivo de negócio no repositório. Precisa de confirmação antes de reverter, para não reintroduzir o problema que motivou a descontinuação original.
-2. O "responsável" desta demanda deve **reaproveitar o conceito de "apoios"** já persistido em `metadata_json.sgp.matrixActivityCollaborators.v1` (responsável = um apoio marcado como principal), ou são **dois campos paralelos e independentes**? Impacta diretamente o desenho de UI e de payload.
-3. Herança para Esteira: confirmar a decisão de gravar **exclusivamente em `conveyor_node_assignees`**, mantendo `conveyor_nodes.default_responsible_id` sempre `null` — esta análise recomenda essa rota, mas é uma decisão de arquitetura a ser formalmente aprovada.
-4. **Obrigatoriedade**: aceitar que o campo comece como obrigatório apenas para escrita nova (soft, sem `NOT NULL` de banco, sem bloqueio retroativo de atividades legadas), ou exigir algum mecanismo de saneamento/transição mais formal?
-5. O pipeline R6 (`matchOperationalItems.ts`) precisa da mesma regra "responsável pertence à equipe" no momento do matching, ou ali o campo é apenas um valor de exibição herdado de rodada anterior? Não confirmado nesta análise a nível de linha — precisa de leitura dedicada na especificação.
-6. **Duplicação de Matriz** (item raiz ou subárvore): o responsável deve ser preservado na cópia (como hoje ocorre com `teamIds`) ou zerado (como ocorre hoje com `default_responsible_id`)? A demanda não especifica.
-7. Há necessidade de **auditoria** (quem alterou o responsável de uma atividade de matriz, quando) equivalente ao que já existe para ciclo de vida de Esteiras? Não solicitado explicitamente na demanda, mas coerente com o padrão de governança do projeto (backlog P0 já menciona auditoria admin como prioridade).
-8. Confirmar em **HML/PRD** (fora do escopo desta análise, que não executou queries) que de fato nenhuma Atividade de Matriz tem hoje `default_responsible_id` preenchido, antes de fechar a estratégia de dados legados.
-9. **Etapa 2** (bloqueio de exclusão/inativação de colaborador responsável): registrada aqui apenas como dependência futura e risco de integridade referencial; não deve ser incorporada à estimativa nem ao plano de implementação da Etapa 1, conforme instrução do solicitante.
+As decisões abaixo já foram consolidadas nesta revisão e constam registradas ao longo do documento; seguem citadas aqui para referência única:
+
+| Tema | Decisão consolidada | Onde está refletida |
+|---|---|---|
+| Obrigatoriedade | Responsável opcional; quando informado, deve ser colaborador ativo e membro ativo da equipe da atividade | Seções 2, 7, 8 |
+| Dados existentes | Atividades antigas continuam válidas sem responsável; sem `NOT NULL`, backfill ou preenchimento automático | Seção 7 |
+| Colaboradores de apoio | Manter modelo atual: responsável em `default_responsible_id`, demais em `supportIds` | Seção 10 |
+| Materialização na Esteira | `conveyor_node_assignees` como `COLLABORATOR isPrimary=true` | Seção 11 |
+| Campo legado da Esteira | `conveyor_nodes.default_responsible_id` permanece sempre `null` — nenhuma evidência técnica contrária encontrada | Seção 11 |
+| Equipe na Esteira | Mantida a alocação `TEAM` já prevista no modelo | Seção 11 |
+| Duplicação e cópia | Passa a preservar equipe e responsável, com revalidação | Seções 8, 13, 15 |
+| Independência | Alterações na Esteira não atualizam a Matriz | Seção 12 |
+| Auditoria específica | Fora desta etapa | — |
+| Exclusão/inativação | Fora desta etapa (Etapa 2) | Seção 2, 15 |
+
+Ainda em aberto, sem decisão registrada em nenhuma revisão:
+
+1. **Motivo original da rejeição 422** (commit `5af13dcc`, 14/05/2026): não há registro de negócio no repositório. Não bloqueia a liberação desta revisão, dado que o enquadramento foi corrigido (adição, não reversão), mas continua recomendado confirmar informalmente com quem tomou a decisão, para não reintroduzir um problema operacional que a motivou.
+2. **Modelo de "1 equipe por atividade"**: hoje é garantia só de aplicação (dupla, mas sem `CHECK`/`UNIQUE` de banco). Esta análise não decide se deve virar garantia de schema — fica registrado como ponto em aberto, sem bloquear a implementação da Etapa 1 (a validação de pertencimento funciona corretamente mesmo com a garantia atual sendo só de aplicação).
+3. Confirmar em HML/PRD, fora do escopo desta análise (não executa queries), que nenhuma Atividade de Matriz tem hoje `default_responsible_id` preenchido — evidência de código é forte, mas não substitui confirmação em banco real antes do deploy.
 
 ---
 
 ## 21. Recomendação final
 
-**SEGUIR COM AJUSTES.**
+**LIBERAR COM RESSALVAS.**
 
-A base técnica é sólida: a coluna já existe no banco, o modelo `conveyor_node_assignees` já suporta o cenário-alvo (equipe + responsável coexistindo no mesmo STEP), e o padrão de validação "colaborador ativo e membro da equipe" já existe em outro módulo (`teams`) e pode ser reaproveitado quase diretamente. Não há bloqueio técnico que justifique `NÃO SEGUIR`.
+A base técnica permanece sólida: nenhuma migration necessária, modelo de `conveyor_node_assignees` já adequado, e o enquadramento corrigido (adição opcional, não reversão de decisão de produto) remove o principal risco de governança levantado na v1.
 
-No entanto, a demanda não deve ser tratada como uma mudança pontual em um único arquivo. Ela toca, no mínimo, duas telas de Matriz, dois conversores de produção Matriz → Esteira, e tem um efeito colateral concreto e verificado sobre o Planejamento Semanal que precisa de decisão explícita antes da implementação. Além disso, é uma **reversão de uma decisão de produto documentada em código**, cujo motivo original não está registrado no repositório.
+As ressalvas para liberação são técnicas e específicas, não mais de produto:
 
-Recomenda-se que a especificação (próxima etapa, `sgp-feature-spec-writer`) só seja aberta depois que as decisões pendentes da seção 20 — em particular os itens 1, 2 e 3 — estejam respondidas, para evitar retrabalho de UI e de arquitetura de dados durante a implementação.
+1. O escopo de backend é maior do que estimado na v1 — inclui corrigir a falta de atomicidade em `serviceCreateNode`/`servicePatchNode`, hoje um gap pré-existente que fica mais arriscado ao se adicionar a nova validação.
+2. O fluxo R6 precisa de correção de código real no ramo de match direto de Atividade isolada, não apenas de teste de regressão — sem essa correção, a herança de responsável (e de equipe) não funciona no caso mais comum de uso do R6.
+3. O fluxo de catálogo tem dois pontos concretos a corrigir (`CriarMatrizCatalogOpcaoDraftEditor.tsx`, `cloneMatrixTaskSubtree.ts`) para que equipe e responsável não sejam perdidos silenciosamente.
+4. A decisão de preservar responsável na duplicação exige revalidação no momento da cópia, não apenas copiar o valor.
+
+Nenhum desses pontos é um bloqueio de arquitetura — todos têm caminho de implementação claro e evidenciado neste relatório. A especificação (próxima etapa) pode ser aberta com este relatório como base, desde que os itens 1–4 acima sejam incorporados ao escopo fechado da implementação, e não tratados como trabalho posterior "de ajuste fino".
