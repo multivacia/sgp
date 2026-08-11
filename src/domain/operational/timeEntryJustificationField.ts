@@ -14,7 +14,7 @@ export const emptyJustificationFieldValue = (): JustificationFieldValue => ({
 
 export const OPERATIONAL_JUSTIFICATION_MESSAGES = {
   label: 'Justificativa operacional',
-  placeholder: 'Selecione uma justificativa',
+  placeholder: 'Selecione uma justificativa...',
   complementLabel: 'Complemento',
   complementHelp:
     'Informe um complemento quando necessário para explicar o contexto operacional.',
