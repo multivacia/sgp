@@ -19,6 +19,7 @@ import { useAuth } from '../../lib/use-auth'
 import { mapOperationalStatusToUi } from '../../lib/backlog/mapConveyorListToBacklog'
 import { useRegisterTransientContext } from '../../lib/shell/transient-context'
 import {
+  abortConveyorStep,
   createConveyor,
   getConveyorById,
   getConveyorOperationalEvents,
@@ -26,6 +27,11 @@ import {
   patchConveyorDados,
   patchConveyorStructure,
 } from '../../services/conveyors/conveyorsApiService'
+import { canAbortStep } from '../../domain/conveyors/stepOperationalStatus'
+import {
+  type StepAbortReasonCode,
+} from '../../domain/conveyors/stepAbortReasons'
+import { AbortConveyorStepDialog } from './AbortConveyorStepDialog'
 import { createCollaboratorsApiService } from '../../services/collaborators/collaboratorsApiService'
 import { listTeams } from '../../services/teams/teamsApiService'
 import { getMatrixTree, listMatrixItems } from '../../services/operation-matrix/operationMatrixApiService'
@@ -36,6 +42,7 @@ import {
   validateManualStepAssignees,
   validateManualStructure,
   type ManualOptionDraft,
+  type ManualStepDraft,
   type NovaEsteiraAlocacaoLinha,
 } from './nova-esteira/matrixToConveyorCreateInput'
 import { NovaEsteiraCatalogoPanel } from './nova-esteira/NovaEsteiraCatalogoPanel'
@@ -208,6 +215,15 @@ export function ConveyorCreateEditPage({ mode }: { mode: Mode }) {
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [dupHint, setDupHint] = useState<string | null>(null)
   const [estruturaHint, setEstruturaHint] = useState<string | null>(null)
+  const [abortDialog, setAbortDialog] = useState<{
+    stepId: string
+    stepName: string
+  } | null>(null)
+  const [abortReasonCode, setAbortReasonCode] =
+    useState<StepAbortReasonCode>('NAO_MAIS_NECESSARIA')
+  const [abortReasonText, setAbortReasonText] = useState('')
+  const [stepAbortingId, setStepAbortingId] = useState<string | null>(null)
+  const [stepAbortError, setStepAbortError] = useState<string | null>(null)
   const manualRootsRef = useRef(manualRoots)
   manualRootsRef.current = manualRoots
 
@@ -227,6 +243,7 @@ export function ConveyorCreateEditPage({ mode }: { mode: Mode }) {
   }, [responsaveis, dados.colaboradorId, dados.responsavel])
 
   const canChangePipelineStatus = can('conveyors.edit_status')
+  const canAlterConveyor = can('conveyors.create')
 
   const applyLoadedDetail = useCallback((loadedDetail: ConveyorDetail) => {
     const dd = detailToDados(loadedDetail)
@@ -589,6 +606,74 @@ export function ConveyorCreateEditPage({ mode }: { mode: Mode }) {
     ],
   )
 
+  const canAbortManualStep = useCallback(
+    (step: ManualStepDraft) => {
+      if (!step.operationalStatus) return false
+      return canAbortStep(
+        { operationalStatus: step.operationalStatus },
+        canAlterConveyor,
+      )
+    },
+    [canAlterConveyor],
+  )
+
+  const handleRequestAbortStep = useCallback(
+    (step: { stepNodeId: string; stepName: string }) => {
+      setStepAbortError(null)
+      setAbortReasonCode('NAO_MAIS_NECESSARIA')
+      setAbortReasonText('')
+      setAbortDialog({ stepId: step.stepNodeId, stepName: step.stepName })
+    },
+    [],
+  )
+
+  const handleConfirmAbortStep = useCallback(async () => {
+    if (!detailId?.trim() || !abortDialog) return
+    if (abortReasonCode === 'OUTRO' && !abortReasonText.trim()) {
+      setStepAbortError('Informe o texto do motivo quando selecionar Outro.')
+      return
+    }
+    const stepId = abortDialog.stepId
+    setStepAbortingId(stepId)
+    setStepAbortError(null)
+    try {
+      await abortConveyorStep(
+        detailId.trim(),
+        stepId,
+        {
+          reasonCode: abortReasonCode,
+          reasonText: abortReasonCode === 'OUTRO' ? abortReasonText.trim() : null,
+        },
+        { idempotencyKey: crypto.randomUUID() },
+      )
+      const refreshed = await getConveyorById(detailId.trim())
+      applyLoadedDetail(refreshed)
+      setAbortDialog(null)
+      setAbortReasonCode('NAO_MAIS_NECESSARIA')
+      setAbortReasonText('')
+      setRouteToast('Atividade dispensada.')
+    } catch (e) {
+      const n = reportClientError(e, {
+        module: 'esteiras',
+        action: 'alterar_esteira_step_abort',
+        route: pathname,
+        entityId: detailId,
+      })
+      if (isBlockingSeverity(n.severity)) presentBlocking(n)
+      else setStepAbortError(n.userMessage || 'Não foi possível dispensar a atividade.')
+    } finally {
+      setStepAbortingId(null)
+    }
+  }, [
+    abortDialog,
+    abortReasonCode,
+    abortReasonText,
+    applyLoadedDetail,
+    detailId,
+    pathname,
+    presentBlocking,
+  ])
+
   async function handleSubmit() {
     if (shouldValidateStructureOnSubmit({ mode, hasStructureChanges })) {
       const s = validateManualStructure(manualRoots)
@@ -724,6 +809,22 @@ export function ConveyorCreateEditPage({ mode }: { mode: Mode }) {
           onDismiss={() => setRouteToast(null)}
         />
       ) : null}
+      <AbortConveyorStepDialog
+        open={Boolean(abortDialog)}
+        stepName={abortDialog?.stepName ?? ''}
+        reasonCode={abortReasonCode}
+        reasonText={abortReasonText}
+        busy={Boolean(stepAbortingId)}
+        onChangeReasonCode={setAbortReasonCode}
+        onChangeReasonText={setAbortReasonText}
+        onCancel={() => {
+          if (stepAbortingId) return
+          setAbortDialog(null)
+          setAbortReasonText('')
+          setStepAbortError(null)
+        }}
+        onConfirm={() => void handleConfirmAbortStep()}
+      />
       <div className="mx-auto max-w-[1600px] pb-12">
       <header className="rounded-2xl border border-white/[0.08] bg-gradient-to-r from-sgp-void via-sgp-navy-deep/80 to-sgp-void px-4 py-4 shadow-inner ring-1 ring-white/[0.04] sm:px-5">
         <p className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-sgp-gold">
@@ -916,6 +1017,9 @@ export function ConveyorCreateEditPage({ mode }: { mode: Mode }) {
             {structureEditLocked ? (
               <SgpInlineBanner variant="neutral" message={STRUCTURE_TAB_BLOCKED_UX_MESSAGE} />
             ) : null}
+            {stepAbortError ? (
+              <SgpInlineBanner variant="error" message={stepAbortError} />
+            ) : null}
             <div className="flex flex-col gap-5 xl:grid xl:grid-cols-[minmax(0,15rem)_minmax(0,1fr)] xl:items-start xl:gap-4">
               <button
                 type="button"
@@ -948,7 +1052,7 @@ export function ConveyorCreateEditPage({ mode }: { mode: Mode }) {
               </aside>
 
               <main
-                className={`min-h-[320px] min-w-0 rounded-2xl border border-white/[0.08] bg-white/[0.03] p-4 xl:max-h-[calc(100vh-10rem)] xl:overflow-y-auto ${structureEditLocked ? 'pointer-events-none opacity-75' : ''}`}
+                className="min-h-[320px] min-w-0 rounded-2xl border border-white/[0.08] bg-white/[0.03] p-4 xl:max-h-[calc(100vh-10rem)] xl:overflow-y-auto"
                 aria-disabled={structureEditLocked}
                 onDragOver={(e) => {
                   if (structureEditLocked) return
@@ -980,6 +1084,14 @@ export function ConveyorCreateEditPage({ mode }: { mode: Mode }) {
                     teamLoading={teamLoading}
                     teamError={teamError}
                     variant="totem"
+                    readOnly={structureEditLocked}
+                    canAbortStep={
+                      structureEditLocked ? canAbortManualStep : undefined
+                    }
+                    onRequestAbortStep={
+                      structureEditLocked ? handleRequestAbortStep : undefined
+                    }
+                    abortingStepId={stepAbortingId}
                   />
                 </div>
               </main>

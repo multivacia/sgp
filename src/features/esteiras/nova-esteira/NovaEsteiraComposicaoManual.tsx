@@ -51,6 +51,19 @@ type Props = {
   teamError: string | null
   /** `rascunho`: fluxo clássico (ex.: edição). `totem`: criação notebook-first — cartões fechados por defeito. */
   variant?: 'default' | 'rascunho' | 'totem'
+  /**
+   * Somente leitura: a navegação (expandir/recolher tarefa e setor) continua livre,
+   * mas nenhum controlo de mutação de estrutura ou alocação fica disponível.
+   * Usado em esteira já em produção, onde a estrutura não pode mais ser trocada.
+   */
+  readOnly?: boolean
+  /**
+   * Ação de domínio permitida mesmo em readOnly (Dispensar atividade).
+   * Quando omitido, o botão não é exibido.
+   */
+  onRequestAbortStep?: (step: { stepNodeId: string; stepName: string }) => void
+  canAbortStep?: (step: ManualStepDraft) => boolean
+  abortingStepId?: string | null
 }
 
 export function NovaEsteiraComposicaoManual({
@@ -65,13 +78,27 @@ export function NovaEsteiraComposicaoManual({
   teamLoading,
   teamError,
   variant = 'default',
+  readOnly = false,
+  onRequestAbortStep,
+  canAbortStep,
+  abortingStepId = null,
 }: Props) {
   const totem = variant === 'totem'
   const rascunho = variant === 'rascunho' || totem
   const areaLabel = 'Setor'
   const reorderBtnClass =
     'rounded border border-white/10 px-1.5 py-0.5 text-[10px] text-slate-400 hover:border-white/20 disabled:pointer-events-none disabled:opacity-35'
+  const lockedFieldClass = 'disabled:cursor-not-allowed disabled:opacity-60'
+  const lockedActionClass = 'disabled:cursor-not-allowed disabled:opacity-45'
   const [openAreasByOption, setOpenAreasByOption] = useState<Record<string, string[]>>({})
+  const [openOptionKeys, setOpenOptionKeys] = useState<string[]>([])
+
+  function handleOptionToggle(opKey: string, open: boolean) {
+    setOpenOptionKeys((prev) => {
+      if (open) return prev.includes(opKey) ? prev : [...prev, opKey]
+      return prev.filter((k) => k !== opKey)
+    })
+  }
 
   function linhaType(l: Linha): 'COLLABORATOR' | 'TEAM' {
     return l.type === 'TEAM' ? 'TEAM' : 'COLLABORATOR'
@@ -96,7 +123,13 @@ export function NovaEsteiraComposicaoManual({
   }
 
   function patchRoots(fn: (prev: ManualOptionDraft[]) => ManualOptionDraft[]) {
+    if (readOnly) return
     onChangeRoots(fn(roots))
+  }
+
+  function patchAlocacoes(fn: SetStateAction<Record<string, Linha[]>>) {
+    if (readOnly) return
+    onChangeAlocacoes(fn)
   }
 
   function addOption() {
@@ -167,7 +200,7 @@ export function NovaEsteiraComposicaoManual({
 
   function removeOption(opKey: string) {
     patchRoots((prev) => prev.filter((o) => o.key !== opKey))
-    onChangeAlocacoes((a) => {
+    patchAlocacoes((a) => {
       const next = { ...a }
       const removed = roots.find((o) => o.key === opKey)
       if (!removed) return next
@@ -203,7 +236,7 @@ export function NovaEsteiraComposicaoManual({
     const op = roots.find((o) => o.key === opKey)
     const ar = op?.areas.find((a) => a.key === areaKey)
     if (ar) {
-      onChangeAlocacoes((a) => {
+      patchAlocacoes((a) => {
         const next = { ...a }
         for (const st of ar.steps) delete next[st.key]
         return next
@@ -258,7 +291,7 @@ export function NovaEsteiraComposicaoManual({
         }
       }),
     )
-    onChangeAlocacoes((a) => {
+    patchAlocacoes((a) => {
       const next = { ...a }
       delete next[stepKey]
       return next
@@ -303,7 +336,7 @@ export function NovaEsteiraComposicaoManual({
   }
 
   function assignCollaboratorToStep(stepKey: string, collaboratorId: string) {
-    onChangeAlocacoes((prev) => {
+    patchAlocacoes((prev) => {
       const cur = prev[stepKey] ?? []
       const hasCollaborator = cur.some((x) => linhaType(x) === 'COLLABORATOR')
       return {
@@ -317,7 +350,7 @@ export function NovaEsteiraComposicaoManual({
   }
 
   function assignTeamToStep(stepKey: string, teamId: string) {
-    onChangeAlocacoes((prev) => {
+    patchAlocacoes((prev) => {
       const cur = prev[stepKey] ?? []
       return {
         ...prev,
@@ -330,7 +363,7 @@ export function NovaEsteiraComposicaoManual({
   }
 
   function removeLinha(stepKey: string, index: number) {
-    onChangeAlocacoes((prev) => {
+    patchAlocacoes((prev) => {
       const cur = [...(prev[stepKey] ?? [])]
       cur.splice(index, 1)
       return { ...prev, [stepKey]: normalizePrimaryRows(cur) }
@@ -377,8 +410,9 @@ export function NovaEsteiraComposicaoManual({
               </p>
               <button
                 type="button"
+                disabled={readOnly}
                 onClick={() => onChangeRoots([createInitialManualOption(1)])}
-                className="sgp-cta-primary mt-4"
+                className="sgp-cta-primary mt-4 disabled:pointer-events-none disabled:opacity-45"
               >
                 Adicionar primeira tarefa
               </button>
@@ -398,8 +432,9 @@ export function NovaEsteiraComposicaoManual({
                     </span>
                   </span>
                   <input
-                    className="mt-1 w-full rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-slate-100"
+                    className={`mt-1 w-full rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-slate-100 ${lockedFieldClass}`}
                     value={op.titulo}
+                    disabled={readOnly}
                     onChange={(ev) => updateOptionTitulo(op.key, ev.target.value)}
                     placeholder="Ex.: Revisão completa"
                   />
@@ -411,7 +446,8 @@ export function NovaEsteiraComposicaoManual({
                         type="button"
                         aria-label="Subir"
                         className={reorderBtnClass}
-                        disabled={oi === 0}
+                        disabled={readOnly || oi === 0}
+                        aria-disabled={readOnly || oi === 0}
                         onClick={() => moveOption(op.key, -1)}
                       >
                         ↑
@@ -420,7 +456,8 @@ export function NovaEsteiraComposicaoManual({
                         type="button"
                         aria-label="Descer"
                         className={reorderBtnClass}
-                        disabled={oi === roots.length - 1}
+                        disabled={readOnly || oi === roots.length - 1}
+                        aria-disabled={readOnly || oi === roots.length - 1}
                         onClick={() => moveOption(op.key, 1)}
                       >
                         ↓
@@ -430,7 +467,9 @@ export function NovaEsteiraComposicaoManual({
                   {(rascunho || roots.length > 1) && (
                     <button
                       type="button"
-                      className="text-xs font-semibold text-rose-300/90"
+                      className={`text-xs font-semibold text-rose-300/90 ${lockedActionClass}`}
+                      disabled={readOnly}
+                      aria-disabled={readOnly}
                       onClick={() => removeOption(op.key)}
                     >
                       {totem ? 'Remover da esteira' : 'Remover tarefa'}
@@ -449,8 +488,9 @@ export function NovaEsteiraComposicaoManual({
                   <label className="block min-w-[200px] flex-1 text-sm">
                     <span className="text-slate-500">Nome da tarefa</span>
                     <input
-                      className="mt-1 w-full rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-slate-100"
+                      className={`mt-1 w-full rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-slate-100 ${lockedFieldClass}`}
                       value={op.titulo}
+                      disabled={readOnly}
                       onChange={(ev) =>
                         updateOptionTitulo(op.key, ev.target.value)
                       }
@@ -487,8 +527,9 @@ export function NovaEsteiraComposicaoManual({
                           {areaLabel} {ai + 1}
                         </span>
                         <input
-                          className="mt-1 w-full rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-slate-100"
+                          className={`mt-1 w-full rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-slate-100 ${lockedFieldClass}`}
                           value={ar.titulo}
+                          disabled={readOnly}
                           onChange={(ev) =>
                             updateAreaTitulo(op.key, ar.key, ev.target.value)
                           }
@@ -515,7 +556,8 @@ export function NovaEsteiraComposicaoManual({
                               type="button"
                               aria-label="Subir"
                               className={reorderBtnClass}
-                              disabled={ai === 0}
+                              disabled={readOnly || ai === 0}
+                              aria-disabled={readOnly || ai === 0}
                               onClick={() => moveArea(op.key, ar.key, -1)}
                             >
                               ↑
@@ -524,7 +566,8 @@ export function NovaEsteiraComposicaoManual({
                               type="button"
                               aria-label="Descer"
                               className={reorderBtnClass}
-                              disabled={ai === op.areas.length - 1}
+                              disabled={readOnly || ai === op.areas.length - 1}
+                              aria-disabled={readOnly || ai === op.areas.length - 1}
                               onClick={() => moveArea(op.key, ar.key, 1)}
                             >
                               ↓
@@ -534,7 +577,9 @@ export function NovaEsteiraComposicaoManual({
                         {op.areas.length > 1 && (
                           <button
                             type="button"
-                            className="pt-6 text-xs text-rose-300/90 sm:pt-1"
+                            className={`pt-6 text-xs text-rose-300/90 sm:pt-1 ${lockedActionClass}`}
+                            disabled={readOnly}
+                            aria-disabled={readOnly}
                             onClick={() => removeArea(op.key, ar.key)}
                           >
                             Remover setor
@@ -564,8 +609,9 @@ export function NovaEsteiraComposicaoManual({
                                   Atividade {si + 1}
                                 </span>
                                 <input
-                                  className="mt-1 w-full rounded border border-white/10 bg-black/40 px-2 py-1.5 text-slate-100"
+                                  className={`mt-1 w-full rounded border border-white/10 bg-black/40 px-2 py-1.5 text-slate-100 ${lockedFieldClass}`}
                                   value={st.titulo}
+                                  disabled={readOnly}
                                   onChange={(ev) =>
                                     updateStep(op.key, ar.key, st.key, {
                                       titulo: ev.target.value,
@@ -595,8 +641,9 @@ export function NovaEsteiraComposicaoManual({
                                 <input
                                   type="number"
                                   min={0}
-                                  className="mt-1 w-full rounded border border-white/10 bg-black/40 px-2 py-1.5 tabular-nums text-slate-100"
+                                  className={`mt-1 w-full rounded border border-white/10 bg-black/40 px-2 py-1.5 tabular-nums text-slate-100 ${lockedFieldClass}`}
                                   value={st.plannedMinutes}
+                                  disabled={readOnly}
                                   onChange={(ev) =>
                                     updateStep(op.key, ar.key, st.key, {
                                       plannedMinutes: Number(ev.target.value) || 0,
@@ -610,7 +657,8 @@ export function NovaEsteiraComposicaoManual({
                                     type="button"
                                     aria-label="Subir"
                                     className={reorderBtnClass}
-                                    disabled={si === 0}
+                                    disabled={readOnly || si === 0}
+                                    aria-disabled={readOnly || si === 0}
                                     onClick={() =>
                                       moveStep(op.key, ar.key, st.key, -1)
                                     }
@@ -621,7 +669,8 @@ export function NovaEsteiraComposicaoManual({
                                     type="button"
                                     aria-label="Descer"
                                     className={reorderBtnClass}
-                                    disabled={si === ar.steps.length - 1}
+                                    disabled={readOnly || si === ar.steps.length - 1}
+                                    aria-disabled={readOnly || si === ar.steps.length - 1}
                                     onClick={() =>
                                       moveStep(op.key, ar.key, st.key, 1)
                                     }
@@ -633,7 +682,9 @@ export function NovaEsteiraComposicaoManual({
                               {ar.steps.length > 1 && (
                                 <button
                                   type="button"
-                                  className="shrink-0 pb-0.5 text-xs text-rose-300/90"
+                                  className={`shrink-0 pb-0.5 text-xs text-rose-300/90 ${lockedActionClass}`}
+                                  disabled={readOnly}
+                                  aria-disabled={readOnly}
                                   onClick={() =>
                                     removeStep(op.key, ar.key, st.key)
                                   }
@@ -643,8 +694,31 @@ export function NovaEsteiraComposicaoManual({
                               )}
                             </div>
 
+                            {readOnly &&
+                            onRequestAbortStep &&
+                            canAbortStep?.(st) ? (
+                              <div className="mt-3">
+                                <button
+                                  type="button"
+                                  disabled={abortingStepId === st.key}
+                                  className="rounded-lg border border-rose-400/30 bg-rose-500/10 px-3 py-1.5 text-xs font-semibold text-rose-100 hover:bg-rose-500/15 disabled:opacity-50"
+                                  onClick={() =>
+                                    onRequestAbortStep({
+                                      stepNodeId: st.key,
+                                      stepName: st.titulo.trim() || `Atividade ${si + 1}`,
+                                    })
+                                  }
+                                >
+                                  {abortingStepId === st.key
+                                    ? 'Dispensando…'
+                                    : 'Dispensar atividade'}
+                                </button>
+                              </div>
+                            ) : null}
+
                             <StepAssignmentStrip
                               stepKey={st.key}
+                              readOnly={readOnly}
                               linhas={linhas}
                               colabList={colabList}
                               teamList={teamList}
@@ -665,8 +739,10 @@ export function NovaEsteiraComposicaoManual({
                     {areaOpen ? (
                     <button
                       type="button"
+                      disabled={readOnly}
+                      aria-disabled={readOnly}
                       onClick={() => addStep(op.key, ar.key)}
-                      className="mt-3 text-xs font-bold text-sgp-gold"
+                      className={`mt-3 text-xs font-bold text-sgp-gold ${lockedActionClass}`}
                     >
                       + Atividade neste setor
                     </button>
@@ -677,8 +753,10 @@ export function NovaEsteiraComposicaoManual({
 
               <button
                 type="button"
+                disabled={readOnly}
+                aria-disabled={readOnly}
                 onClick={() => addArea(op.key)}
-                className="mt-4 text-xs font-bold text-sgp-gold"
+                className={`mt-4 text-xs font-bold text-sgp-gold ${lockedActionClass}`}
               >
                 + Setor nesta tarefa
               </button>
@@ -716,11 +794,16 @@ export function NovaEsteiraComposicaoManual({
               const status = !stOk ? 'Incompleto' : !asOk ? 'Equipe a rever' : 'Completo'
               return (
                 <li key={op.key} className="list-none">
-                  <details className="group rounded-2xl border border-white/[0.08] bg-white/[0.03] open:pb-5">
+                  <details
+                    className="group rounded-2xl border border-white/[0.08] bg-white/[0.03] open:pb-5"
+                    onToggle={(e) => handleOptionToggle(op.key, e.currentTarget.open)}
+                  >
                     <summary
-                      draggable
-                      onDragStart={onDragStartDraft}
-                      className="cursor-grab list-none px-4 py-3 active:cursor-grabbing sm:px-5 sm:py-3.5 [&::-webkit-details-marker]:hidden"
+                      draggable={!readOnly}
+                      onDragStart={readOnly ? undefined : onDragStartDraft}
+                      className={`list-none px-4 py-3 sm:px-5 sm:py-3.5 [&::-webkit-details-marker]:hidden ${
+                        readOnly ? 'cursor-pointer' : 'cursor-grab active:cursor-grabbing'
+                      }`}
                     >
                       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                         <div className="min-w-0 flex-1">
@@ -760,7 +843,8 @@ export function NovaEsteiraComposicaoManual({
                                 draggable={false}
                                 aria-label="Subir"
                                 className={reorderBtnClass}
-                                disabled={oi === 0}
+                                disabled={readOnly || oi === 0}
+                                aria-disabled={readOnly || oi === 0}
                                 onClick={(e) => {
                                   e.preventDefault()
                                   e.stopPropagation()
@@ -774,7 +858,8 @@ export function NovaEsteiraComposicaoManual({
                                 draggable={false}
                                 aria-label="Descer"
                                 className={reorderBtnClass}
-                                disabled={oi === roots.length - 1}
+                                disabled={readOnly || oi === roots.length - 1}
+                                aria-disabled={readOnly || oi === roots.length - 1}
                                 onClick={(e) => {
                                   e.preventDefault()
                                   e.stopPropagation()
@@ -788,7 +873,9 @@ export function NovaEsteiraComposicaoManual({
                           <button
                             type="button"
                             draggable={false}
-                            className="text-[11px] font-semibold text-rose-300/90"
+                            disabled={readOnly}
+                            aria-disabled={readOnly}
+                            className={`text-[11px] font-semibold text-rose-300/90 ${lockedActionClass}`}
                             onClick={(e) => {
                               e.preventDefault()
                               e.stopPropagation()
@@ -797,7 +884,9 @@ export function NovaEsteiraComposicaoManual({
                           >
                             Remover da esteira
                           </button>
-                          <span className="text-[11px] font-semibold text-sgp-gold/90">Expandir</span>
+                          <span className="text-[11px] font-semibold text-sgp-gold/90">
+                            {openOptionKeys.includes(op.key) ? 'Recolher' : 'Expandir'}
+                          </span>
                         </div>
                       </div>
                     </summary>
@@ -822,9 +911,11 @@ export function NovaEsteiraComposicaoManual({
                     className="group rounded-2xl border border-white/[0.08] bg-white/[0.03] open:pb-5"
                   >
                     <summary
-                      draggable
-                      onDragStart={onDragStartDraft}
-                      className="cursor-grab active:cursor-grabbing list-none px-5 py-4 [&::-webkit-details-marker]:hidden"
+                      draggable={!readOnly}
+                      onDragStart={readOnly ? undefined : onDragStartDraft}
+                      className={`list-none px-5 py-4 [&::-webkit-details-marker]:hidden ${
+                        readOnly ? 'cursor-pointer' : 'cursor-grab active:cursor-grabbing'
+                      }`}
                     >
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <span className="min-w-0 flex-1 truncate font-heading text-base text-slate-100">
@@ -843,7 +934,8 @@ export function NovaEsteiraComposicaoManual({
                                 draggable={false}
                                 aria-label="Subir"
                                 className={reorderBtnClass}
-                                disabled={oi === 0}
+                                disabled={readOnly || oi === 0}
+                                aria-disabled={readOnly || oi === 0}
                                 onClick={(e) => {
                                   e.preventDefault()
                                   e.stopPropagation()
@@ -857,7 +949,8 @@ export function NovaEsteiraComposicaoManual({
                                 draggable={false}
                                 aria-label="Descer"
                                 className={reorderBtnClass}
-                                disabled={oi === roots.length - 1}
+                                disabled={readOnly || oi === roots.length - 1}
+                                aria-disabled={readOnly || oi === roots.length - 1}
                                 onClick={(e) => {
                                   e.preventDefault()
                                   e.stopPropagation()
@@ -895,7 +988,13 @@ export function NovaEsteiraComposicaoManual({
       )}
 
       {roots.length > 0 && !totem ? (
-        <button type="button" onClick={addOption} className="text-sm font-bold text-sgp-gold">
+        <button
+          type="button"
+          disabled={readOnly}
+          aria-disabled={readOnly}
+          onClick={addOption}
+          className={`text-sm font-bold text-sgp-gold ${lockedActionClass}`}
+        >
           {rascunho ? '+ Tarefa em branco' : '+ Outra tarefa'}
         </button>
       ) : null}
@@ -911,6 +1010,7 @@ function getInitials(name: string): string {
 
 type StepAssignmentStripProps = {
   stepKey: string
+  readOnly: boolean
   linhas: Linha[]
   colabList: Collaborator[]
   teamList: Team[]
@@ -926,6 +1026,7 @@ type StepAssignmentStripProps = {
 
 function StepAssignmentStrip({
   stepKey,
+  readOnly,
   linhas,
   colabList,
   teamList,
@@ -994,12 +1095,19 @@ function StepAssignmentStrip({
               <button
                 key={`${stepKey}-colab-${idx}`}
                 type="button"
-                title={`${fullName}${ln.isPrimary ? ' · Principal' : ''} — clique para remover`}
+                title={
+                  readOnly
+                    ? `${fullName}${ln.isPrimary ? ' · Principal' : ''}`
+                    : `${fullName}${ln.isPrimary ? ' · Principal' : ''} — clique para remover`
+                }
+                disabled={readOnly}
+                aria-disabled={readOnly}
                 onClick={() => onRemove(idx)}
                 className={[
                   'flex h-7 w-7 shrink-0 items-center justify-center rounded-full',
                   'bg-[var(--void,#050a12)] text-[11px] font-bold text-sgp-gold',
                   'transition-opacity hover:opacity-60',
+                  'disabled:cursor-not-allowed disabled:hover:opacity-100',
                   ln.isPrimary
                     ? 'ring-2 ring-[var(--gold,#c9a227)]'
                     : 'ring-1 ring-white/20',
@@ -1018,9 +1126,15 @@ function StepAssignmentStrip({
               {team?.name ?? 'Time'}
               <button
                 type="button"
-                title={`Remover ${team?.name ?? 'time'}`}
+                title={
+                  readOnly
+                    ? `${team?.name ?? 'Time'}`
+                    : `Remover ${team?.name ?? 'time'}`
+                }
+                disabled={readOnly}
+                aria-disabled={readOnly}
                 onClick={() => onRemove(idx)}
-                className="ml-0.5 leading-none text-blue-300/50 hover:text-rose-300"
+                className="ml-0.5 leading-none text-blue-300/50 hover:text-rose-300 disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:text-blue-300/50"
               >
                 ×
               </button>
@@ -1032,8 +1146,10 @@ function StepAssignmentStrip({
           <button
             type="button"
             title="Adicionar colaborador ou time"
-            disabled={colabLoading || teamLoading || !canAdd}
+            disabled={readOnly || colabLoading || teamLoading || !canAdd}
+            aria-disabled={readOnly || colabLoading || teamLoading || !canAdd}
             onClick={() => {
+              if (readOnly) return
               const next = !showPopover
               if (next) setSearch('')
               setShowPopover(next)
@@ -1043,7 +1159,7 @@ function StepAssignmentStrip({
             +
           </button>
 
-          {showPopover && (
+          {showPopover && !readOnly ? (
             <div className="absolute left-0 top-9 z-50 w-80 rounded-xl border border-white/10 bg-[var(--navy,#101824)] shadow-2xl">
               <div className="px-2 pt-2 pb-1">
                 <input
@@ -1102,7 +1218,7 @@ function StepAssignmentStrip({
                 )}
               </div>
             </div>
-          )}
+          ) : null}
         </div>
       </div>
     </div>
