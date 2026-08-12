@@ -67,18 +67,24 @@ describe('conveyorBasicDataExtras', () => {
 
   it('separa início e fim na consulta com formatação pt-BR', () => {
     const display = parseWizardPrazoForDisplay(
-      'Início previsto: 2026-04-01T08:00 · Fim previsto: 2026-04-10T18:00',
+      'Início previsto: 2026-04-01T00:00:01.000Z · Fim previsto: 2026-04-10T23:59:59.000Z',
     )
-    expect(display.inicioPrevisto).toMatch(/01\/04\/2026/)
-    expect(display.fimPrevisto).toMatch(/10\/04\/2026/)
-    expect(display.prazoLegado).toBeNull()
+
+    expect(display).toEqual({
+      inicioPrevisto: '01/04/2026',
+      fimPrevisto: '10/04/2026',
+      prazoLegado: null,
+    })
   })
 
   it('mapeia prazo ISO legado para fim previsto na consulta', () => {
     const display = parseWizardPrazoForDisplay('2026-04-10T12:00:00.000Z')
-    expect(display.inicioPrevisto).toBeNull()
-    expect(display.fimPrevisto).toMatch(/10\/04\/2026/)
-    expect(display.prazoLegado).toBeNull()
+
+    expect(display).toEqual({
+      inicioPrevisto: null,
+      fimPrevisto: '10/04/2026',
+      prazoLegado: null,
+    })
   })
 
   it('remove linha de planeamento das observações exibidas', () => {
