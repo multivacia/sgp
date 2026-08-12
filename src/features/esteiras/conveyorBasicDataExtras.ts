@@ -12,39 +12,36 @@ const PLANEAMENTO_TEMPO_LINE_RE =
 const WIZARD_INICIO_RE = /In[ií]cio previsto:\s*(.+?)(?:\s*[·•|]\s*|$)/i
 const WIZARD_FIM_RE = /Fim previsto:\s*(.+)$/i
 
-export function formatPrazoDateTimeForDisplay(value: string | null | undefined): string | null {
+export function formatPrazoDateTimeForDisplay(
+  value: string | null | undefined,
+): string | null {
   const trimmed = (value ?? '').trim()
   if (!trimmed) return null
 
+  // Datas de planejamento são civis: não devem mudar conforme o fuso horário.
+  const isoDate = /^(\d{4})-(\d{2})-(\d{2})(?:T.*)?$/.exec(trimmed)
+  if (isoDate) {
+    const year = Number(isoDate[1])
+    const month = Number(isoDate[2])
+    const day = Number(isoDate[3])
+    const validated = new Date(Date.UTC(year, month - 1, day))
+
+    if (
+      validated.getUTCFullYear() === year &&
+      validated.getUTCMonth() === month - 1 &&
+      validated.getUTCDate() === day
+    ) {
+      return `${isoDate[3]}/${isoDate[2]}/${isoDate[1]}`
+    }
+  }
+
   const parsed = parseFlexibleDeadlineToDate(trimmed)
   if (parsed) {
-    return parsed.toLocaleString('pt-BR', {
+    return parsed.toLocaleDateString('pt-BR', {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
     })
-  }
-
-  const local = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(trimmed)
-  if (local) {
-    const d = new Date(
-      Number(local[1]),
-      Number(local[2]) - 1,
-      Number(local[3]),
-      Number(local[4]),
-      Number(local[5]),
-    )
-    if (!Number.isNaN(d.getTime())) {
-      return d.toLocaleString('pt-BR', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-      })
-    }
   }
 
   return trimmed
