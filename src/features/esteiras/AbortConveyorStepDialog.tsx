@@ -10,6 +10,7 @@ type Props = {
   reasonCode: StepAbortReasonCode
   reasonText: string
   busy: boolean
+  error?: string | null
   onChangeReasonCode: (code: StepAbortReasonCode) => void
   onChangeReasonText: (text: string) => void
   onCancel: () => void
@@ -26,6 +27,7 @@ export function AbortConveyorStepDialog({
   reasonCode,
   reasonText,
   busy,
+  error = null,
   onChangeReasonCode,
   onChangeReasonText,
   onCancel,
@@ -86,6 +88,14 @@ export function AbortConveyorStepDialog({
               placeholder="Motivo da dispensa…"
             />
           </label>
+        ) : null}
+        {error ? (
+          <p
+            className="mt-4 rounded-xl border border-rose-500/30 bg-rose-500/[0.08] px-3 py-2 text-sm text-rose-100/95"
+            role="alert"
+          >
+            {error}
+          </p>
         ) : null}
         <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end sm:gap-3">
           <button

@@ -218,6 +218,7 @@ export function ConveyorCreateEditPage({ mode }: { mode: Mode }) {
   const [abortDialog, setAbortDialog] = useState<{
     stepId: string
     stepName: string
+    idempotencyKey: string
   } | null>(null)
   const [abortReasonCode, setAbortReasonCode] =
     useState<StepAbortReasonCode>('NAO_MAIS_NECESSARIA')
@@ -622,7 +623,11 @@ export function ConveyorCreateEditPage({ mode }: { mode: Mode }) {
       setStepAbortError(null)
       setAbortReasonCode('NAO_MAIS_NECESSARIA')
       setAbortReasonText('')
-      setAbortDialog({ stepId: step.stepNodeId, stepName: step.stepName })
+      setAbortDialog({
+        stepId: step.stepNodeId,
+        stepName: step.stepName,
+        idempotencyKey: crypto.randomUUID(),
+      })
     },
     [],
   )
@@ -637,20 +642,20 @@ export function ConveyorCreateEditPage({ mode }: { mode: Mode }) {
     setStepAbortingId(stepId)
     setStepAbortError(null)
     try {
-      await abortConveyorStep(
+      const aborted = await abortConveyorStep(
         detailId.trim(),
         stepId,
         {
           reasonCode: abortReasonCode,
           reasonText: abortReasonCode === 'OUTRO' ? abortReasonText.trim() : null,
         },
-        { idempotencyKey: crypto.randomUUID() },
+        { idempotencyKey: abortDialog.idempotencyKey },
       )
-      const refreshed = await getConveyorById(detailId.trim())
-      applyLoadedDetail(refreshed)
+      applyLoadedDetail(aborted.data)
       setAbortDialog(null)
       setAbortReasonCode('NAO_MAIS_NECESSARIA')
       setAbortReasonText('')
+      setStepAbortError(null)
       setRouteToast('Atividade dispensada.')
     } catch (e) {
       const n = reportClientError(e, {
@@ -815,8 +820,15 @@ export function ConveyorCreateEditPage({ mode }: { mode: Mode }) {
         reasonCode={abortReasonCode}
         reasonText={abortReasonText}
         busy={Boolean(stepAbortingId)}
-        onChangeReasonCode={setAbortReasonCode}
-        onChangeReasonText={setAbortReasonText}
+        error={stepAbortError}
+        onChangeReasonCode={(code) => {
+          setStepAbortError(null)
+          setAbortReasonCode(code)
+        }}
+        onChangeReasonText={(text) => {
+          setStepAbortError(null)
+          setAbortReasonText(text)
+        }}
         onCancel={() => {
           if (stepAbortingId) return
           setAbortDialog(null)
@@ -1016,9 +1028,6 @@ export function ConveyorCreateEditPage({ mode }: { mode: Mode }) {
           <section className="space-y-4">
             {structureEditLocked ? (
               <SgpInlineBanner variant="neutral" message={STRUCTURE_TAB_BLOCKED_UX_MESSAGE} />
-            ) : null}
-            {stepAbortError ? (
-              <SgpInlineBanner variant="error" message={stepAbortError} />
             ) : null}
             <div className="flex flex-col gap-5 xl:grid xl:grid-cols-[minmax(0,15rem)_minmax(0,1fr)] xl:items-start xl:gap-4">
               <button

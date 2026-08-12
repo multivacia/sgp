@@ -301,10 +301,12 @@ function EsteiraDetalheBasicoReal({ id }: { id: string | undefined }) {
   const [abortDialog, setAbortDialog] = useState<{
     stepId: string
     stepName: string
+    idempotencyKey: string
   } | null>(null)
   const [abortReasonCode, setAbortReasonCode] =
     useState<StepAbortReasonCode>('NAO_MAIS_NECESSARIA')
   const [abortReasonText, setAbortReasonText] = useState('')
+  const [stepAbortError, setStepAbortError] = useState<string | null>(null)
   const [stepRestoringId, setStepRestoringId] = useState<string | null>(null)
   const [completeOosDialog, setCompleteOosDialog] = useState<{
     stepId: string
@@ -480,33 +482,40 @@ function EsteiraDetalheBasicoReal({ id }: { id: string | undefined }) {
   const handleConfirmAbortStep = useCallback(async () => {
     if (!detail?.id || !abortDialog) return
     if (abortReasonCode === 'OUTRO' && !abortReasonText.trim()) {
-      setLoadError('Informe o texto do motivo quando selecionar Outro.')
+      setStepAbortError('Informe o texto do motivo quando selecionar Outro.')
       return
     }
     const stepId = abortDialog.stepId
     setStepAbortingId(stepId)
+    setStepAbortError(null)
     try {
-      await abortConveyorStep(
+      const aborted = await abortConveyorStep(
         detail.id,
         stepId,
         {
           reasonCode: abortReasonCode,
           reasonText: abortReasonCode === 'OUTRO' ? abortReasonText.trim() : null,
         },
-        { idempotencyKey: crypto.randomUUID() },
+        { idempotencyKey: abortDialog.idempotencyKey },
       )
-      const [dNext, evNext, wNext] = await Promise.all([
-        getConveyorById(detail.id),
-        getConveyorOperationalEvents(detail.id, { limit: operationalEventsLimit }),
-        getConveyorNodeWorkload(detail.id).catch(() => null),
-      ])
-      setDetail(dNext)
-      setOperationalEvents(evNext.data)
-      if (wNext) setNodeWorkload(wNext)
+      setDetail(aborted.data)
       setAbortDialog(null)
       setAbortReasonCode('NAO_MAIS_NECESSARIA')
       setAbortReasonText('')
+      setStepAbortError(null)
       setRouteToast('Atividade dispensada.')
+
+      // Refresh auxiliar: falha aqui não desfaz a dispensa já concluída.
+      try {
+        const [evNext, wNext] = await Promise.all([
+          getConveyorOperationalEvents(detail.id, { limit: operationalEventsLimit }),
+          getConveyorNodeWorkload(detail.id).catch(() => null),
+        ])
+        setOperationalEvents(evNext.data)
+        if (wNext) setNodeWorkload(wNext)
+      } catch {
+        /* soft-fail pós-sucesso */
+      }
     } catch (e) {
       const n = reportClientError(e, {
         module: 'esteiras',
@@ -517,7 +526,7 @@ function EsteiraDetalheBasicoReal({ id }: { id: string | undefined }) {
       if (isBlockingSeverity(n.severity)) {
         presentBlocking(n)
       } else {
-        setLoadError(n.userMessage || 'Não foi possível dispensar a atividade.')
+        setStepAbortError(n.userMessage || 'Não foi possível dispensar a atividade.')
       }
     } finally {
       setStepAbortingId(null)
@@ -998,11 +1007,20 @@ function EsteiraDetalheBasicoReal({ id }: { id: string | undefined }) {
         reasonCode={abortReasonCode}
         reasonText={abortReasonText}
         busy={Boolean(stepAbortingId)}
-        onChangeReasonCode={setAbortReasonCode}
-        onChangeReasonText={setAbortReasonText}
+        error={stepAbortError}
+        onChangeReasonCode={(code) => {
+          setStepAbortError(null)
+          setAbortReasonCode(code)
+        }}
+        onChangeReasonText={(text) => {
+          setStepAbortError(null)
+          setAbortReasonText(text)
+        }}
         onCancel={() => {
+          if (stepAbortingId) return
           setAbortDialog(null)
           setAbortReasonText('')
+          setStepAbortError(null)
         }}
         onConfirm={() => void handleConfirmAbortStep()}
       />
@@ -1573,9 +1591,14 @@ function EsteiraDetalheBasicoReal({ id }: { id: string | undefined }) {
                                     }
                                     className="rounded-lg border border-rose-400/30 bg-rose-500/10 px-3 py-1.5 text-xs font-semibold text-rose-100 hover:bg-rose-500/15 disabled:opacity-50"
                                     onClick={() => {
+                                      setStepAbortError(null)
                                       setAbortReasonCode('NAO_MAIS_NECESSARIA')
                                       setAbortReasonText('')
-                                      setAbortDialog({ stepId: st.id, stepName: st.name })
+                                      setAbortDialog({
+                                        stepId: st.id,
+                                        stepName: st.name,
+                                        idempotencyKey: crypto.randomUUID(),
+                                      })
                                     }}
                                   >
                                     Dispensar
