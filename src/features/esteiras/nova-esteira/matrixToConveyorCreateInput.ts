@@ -1,4 +1,5 @@
 import type {
+  ConveyorNodeStepOperationalStatus,
   ConveyorSourceOrigin,
   CreateConveyorDados,
   CreateConveyorInput,
@@ -203,6 +204,11 @@ export type ManualStepDraft = {
   plannedQuantity?: number
   /** Lineage de atividade — propagado até conveyor_nodes.source_key (STEP). */
   sourceKey?: string | null
+  /**
+   * Status operacional do STEP no detalhe da esteira (modo edit).
+   * Ausente em rascunhos de criação; usado só para ações de domínio (ex.: dispensar).
+   */
+  operationalStatus?: ConveyorNodeStepOperationalStatus
 }
 
 export function buildManualConveyorInput(

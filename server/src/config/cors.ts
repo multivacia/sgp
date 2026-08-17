@@ -5,6 +5,11 @@ export function corsOptions(origin: string): CorsOptions {
     origin,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-User-Email'],
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'X-User-Email',
+      'Idempotency-Key',
+    ],
   }
 }

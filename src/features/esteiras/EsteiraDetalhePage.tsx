@@ -25,11 +25,10 @@ import {
   stepOperationalStatusLabel,
 } from '../../domain/conveyors/stepOperationalStatus'
 import {
-  STEP_ABORT_REASON_CODES,
-  STEP_ABORT_REASON_LABELS,
   type StepAbortReasonCode,
   stepAbortReasonLabel,
 } from '../../domain/conveyors/stepAbortReasons'
+import { AbortConveyorStepDialog } from './AbortConveyorStepDialog'
 import type { ConveyorNodeWorkload } from '../../domain/conveyors/conveyorNodeWorkload.types'
 import type { ConveyorOperationalEvent } from '../../domain/conveyors/conveyorOperationalEvents.types'
 import { ConveyorOperationalEventsTimeline } from './ConveyorOperationalEventsTimeline'
@@ -302,10 +301,12 @@ function EsteiraDetalheBasicoReal({ id }: { id: string | undefined }) {
   const [abortDialog, setAbortDialog] = useState<{
     stepId: string
     stepName: string
+    idempotencyKey: string
   } | null>(null)
   const [abortReasonCode, setAbortReasonCode] =
     useState<StepAbortReasonCode>('NAO_MAIS_NECESSARIA')
   const [abortReasonText, setAbortReasonText] = useState('')
+  const [stepAbortError, setStepAbortError] = useState<string | null>(null)
   const [stepRestoringId, setStepRestoringId] = useState<string | null>(null)
   const [completeOosDialog, setCompleteOosDialog] = useState<{
     stepId: string
@@ -481,33 +482,40 @@ function EsteiraDetalheBasicoReal({ id }: { id: string | undefined }) {
   const handleConfirmAbortStep = useCallback(async () => {
     if (!detail?.id || !abortDialog) return
     if (abortReasonCode === 'OUTRO' && !abortReasonText.trim()) {
-      setLoadError('Informe o texto do motivo quando selecionar Outro.')
+      setStepAbortError('Informe o texto do motivo quando selecionar Outro.')
       return
     }
     const stepId = abortDialog.stepId
     setStepAbortingId(stepId)
+    setStepAbortError(null)
     try {
-      await abortConveyorStep(
+      const aborted = await abortConveyorStep(
         detail.id,
         stepId,
         {
           reasonCode: abortReasonCode,
           reasonText: abortReasonCode === 'OUTRO' ? abortReasonText.trim() : null,
         },
-        { idempotencyKey: crypto.randomUUID() },
+        { idempotencyKey: abortDialog.idempotencyKey },
       )
-      const [dNext, evNext, wNext] = await Promise.all([
-        getConveyorById(detail.id),
-        getConveyorOperationalEvents(detail.id, { limit: operationalEventsLimit }),
-        getConveyorNodeWorkload(detail.id).catch(() => null),
-      ])
-      setDetail(dNext)
-      setOperationalEvents(evNext.data)
-      if (wNext) setNodeWorkload(wNext)
+      setDetail(aborted.data)
       setAbortDialog(null)
       setAbortReasonCode('NAO_MAIS_NECESSARIA')
       setAbortReasonText('')
+      setStepAbortError(null)
       setRouteToast('Atividade dispensada.')
+
+      // Refresh auxiliar: falha aqui não desfaz a dispensa já concluída.
+      try {
+        const [evNext, wNext] = await Promise.all([
+          getConveyorOperationalEvents(detail.id, { limit: operationalEventsLimit }),
+          getConveyorNodeWorkload(detail.id).catch(() => null),
+        ])
+        setOperationalEvents(evNext.data)
+        if (wNext) setNodeWorkload(wNext)
+      } catch {
+        /* soft-fail pós-sucesso */
+      }
     } catch (e) {
       const n = reportClientError(e, {
         module: 'esteiras',
@@ -518,7 +526,7 @@ function EsteiraDetalheBasicoReal({ id }: { id: string | undefined }) {
       if (isBlockingSeverity(n.severity)) {
         presentBlocking(n)
       } else {
-        setLoadError(n.userMessage || 'Não foi possível dispensar a atividade.')
+        setStepAbortError(n.userMessage || 'Não foi possível dispensar a atividade.')
       }
     } finally {
       setStepAbortingId(null)
@@ -993,87 +1001,29 @@ function EsteiraDetalheBasicoReal({ id }: { id: string | undefined }) {
           </div>
         </div>
       ) : null}
-      {abortDialog ? (
-        <div
-          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/55 p-4 backdrop-blur-[2px]"
-          role="dialog"
-          aria-modal
-          aria-labelledby="abort-step-title"
-          onClick={() => {
-            if (stepAbortingId) return
-            setAbortDialog(null)
-            setAbortReasonText('')
-          }}
-        >
-          <div
-            className="w-full max-w-md rounded-2xl border border-white/[0.1] bg-gradient-to-b from-sgp-app-panel/95 to-sgp-app-panel-deep/98 p-6 shadow-[0_24px_80px_-24px_rgba(0,0,0,0.85)] ring-1 ring-white/[0.05]"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h2
-              id="abort-step-title"
-              className="font-heading text-lg font-bold tracking-tight text-slate-50"
-            >
-              Dispensar atividade?
-            </h2>
-            <p className="mt-3 text-sm leading-relaxed text-slate-400">
-              A atividade <span className="text-slate-200">{abortDialog.stepName}</span> deixa de bloquear a
-              sequência e some das filas apontáveis. Horas já apontadas são preservadas. Não é conclusão.
-            </p>
-            <label className="mt-4 block text-xs font-semibold uppercase tracking-wide text-slate-500">
-              Motivo
-              <select
-                value={abortReasonCode}
-                disabled={Boolean(stepAbortingId)}
-                onChange={(e) =>
-                  setAbortReasonCode(e.target.value as StepAbortReasonCode)
-                }
-                className="mt-2 w-full rounded-xl border border-white/12 bg-white/[0.04] px-3 py-2 text-sm text-slate-100 focus:border-sgp-gold/35 focus:outline-none focus:ring-1 focus:ring-sgp-gold/25 disabled:opacity-50"
-              >
-                {STEP_ABORT_REASON_CODES.map((code) => (
-                  <option key={code} value={code}>
-                    {STEP_ABORT_REASON_LABELS[code]}
-                  </option>
-                ))}
-              </select>
-            </label>
-            {abortReasonCode === 'OUTRO' ? (
-              <label className="mt-3 block text-xs font-semibold uppercase tracking-wide text-slate-500">
-                Descreva o motivo
-                <textarea
-                  value={abortReasonText}
-                  onChange={(e) => setAbortReasonText(e.target.value)}
-                  maxLength={2000}
-                  rows={3}
-                  disabled={Boolean(stepAbortingId)}
-                  className="mt-2 w-full resize-y rounded-xl border border-white/12 bg-white/[0.04] px-3 py-2 text-sm text-slate-100 placeholder:text-slate-600 focus:border-sgp-gold/35 focus:outline-none focus:ring-1 focus:ring-sgp-gold/25 disabled:opacity-50"
-                  placeholder="Motivo da dispensa…"
-                />
-              </label>
-            ) : null}
-            <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end sm:gap-3">
-              <button
-                type="button"
-                disabled={Boolean(stepAbortingId)}
-                onClick={() => {
-                  setAbortDialog(null)
-                  setAbortReasonText('')
-                }}
-                className="rounded-xl border border-white/12 bg-white/[0.04] px-4 py-2.5 text-sm font-semibold text-slate-200 transition hover:border-sgp-gold/30 hover:bg-white/[0.07] disabled:opacity-50"
-              >
-                Cancelar
-              </button>
-              <button
-                type="button"
-                disabled={Boolean(stepAbortingId)}
-                onClick={() => void handleConfirmAbortStep()}
-                className="rounded-xl border border-rose-400/35 bg-rose-500/10 px-4 py-2.5 text-sm font-bold text-rose-100 shadow-inner transition hover:border-rose-400/50 hover:bg-rose-500/[0.14] disabled:opacity-50"
-              >
-                {stepAbortingId ? 'Dispensando…' : 'Confirmar dispensa'}
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
+      <AbortConveyorStepDialog
+        open={Boolean(abortDialog)}
+        stepName={abortDialog?.stepName ?? ''}
+        reasonCode={abortReasonCode}
+        reasonText={abortReasonText}
+        busy={Boolean(stepAbortingId)}
+        error={stepAbortError}
+        onChangeReasonCode={(code) => {
+          setStepAbortError(null)
+          setAbortReasonCode(code)
+        }}
+        onChangeReasonText={(text) => {
+          setStepAbortError(null)
+          setAbortReasonText(text)
+        }}
+        onCancel={() => {
+          if (stepAbortingId) return
+          setAbortDialog(null)
+          setAbortReasonText('')
+          setStepAbortError(null)
+        }}
+        onConfirm={() => void handleConfirmAbortStep()}
+      />
       {completeOosDialog ? (
         <div
           className="fixed inset-0 z-[60] flex items-center justify-center bg-black/55 p-4 backdrop-blur-[2px]"
@@ -1641,9 +1591,14 @@ function EsteiraDetalheBasicoReal({ id }: { id: string | undefined }) {
                                     }
                                     className="rounded-lg border border-rose-400/30 bg-rose-500/10 px-3 py-1.5 text-xs font-semibold text-rose-100 hover:bg-rose-500/15 disabled:opacity-50"
                                     onClick={() => {
+                                      setStepAbortError(null)
                                       setAbortReasonCode('NAO_MAIS_NECESSARIA')
                                       setAbortReasonText('')
-                                      setAbortDialog({ stepId: st.id, stepName: st.name })
+                                      setAbortDialog({
+                                        stepId: st.id,
+                                        stepName: st.name,
+                                        idempotencyKey: crypto.randomUUID(),
+                                      })
                                     }}
                                   >
                                     Dispensar
