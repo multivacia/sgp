@@ -4,6 +4,7 @@ import {
   operationalPlanningBacklogConveyorStatusSql,
   operationalPlanningBacklogExcludeConveyorPlanItemsSql,
   operationalPlanningBacklogExcludeEmProducaoWithActivePlanSql,
+  operationalPlanningBacklogExcludeWeeklyPlanItemsSql,
 } from './operational-planning.backlog-eligibility.js'
 import { sqlConveyorStepPlannedTotalMinutes } from '../../shared/activityOperationalQuantity.js'
 import {
@@ -736,6 +737,40 @@ export async function isConveyorPlanItemLinkedElsewhere(
   return Boolean(r.rows[0])
 }
 
+export async function isActivityPlannedInOtherWeeklyPlan(
+  pool: pg.Pool | pg.PoolClient,
+  conveyorId: string,
+  activityNodeId: string,
+  excludeWorkPlanIds?: string | readonly string[],
+): Promise<boolean> {
+  const excludes = excludeWorkPlanIds
+    ? Array.isArray(excludeWorkPlanIds)
+      ? [...excludeWorkPlanIds]
+      : [excludeWorkPlanIds]
+    : []
+  const r = await pool.query<{ id: string }>(
+    `
+    SELECT owpi.id::text
+    FROM operational_work_plan_items owpi
+    INNER JOIN operational_work_plans owp
+      ON owp.id = owpi.work_plan_id
+      AND owp.deleted_at IS NULL
+      AND owp.status IN ('DRAFT', 'PUBLISHED')
+    WHERE owpi.deleted_at IS NULL
+      AND owpi.status <> 'CANCELLED'
+      AND owpi.conveyor_id = $1::uuid
+      AND owpi.activity_node_id = $2::uuid
+      AND (
+        cardinality($3::uuid[]) = 0
+        OR owpi.work_plan_id <> ALL($3::uuid[])
+      )
+    LIMIT 1
+    `,
+    [conveyorId, activityNodeId, excludes],
+  )
+  return Boolean(r.rows[0])
+}
+
 export type PlanItemEnrichedRow = {
   id: string
   conveyor_id: string
@@ -1065,6 +1100,7 @@ export async function listOperationalPlanningBacklog(
       AND step.is_active = TRUE
       AND step.operational_status IS DISTINCT FROM 'COMPLETED'
       ${operationalPlanningBacklogExcludeConveyorPlanItemsSql('step', 'cv')}
+      ${operationalPlanningBacklogExcludeWeeklyPlanItemsSql('step', 'cv')}
       ${operationalPlanningBacklogExcludeEmProducaoWithActivePlanSql('cv')}
       AND ($1::uuid IS NULL OR cv.id = $1::uuid)
       AND (

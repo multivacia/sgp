@@ -135,6 +135,7 @@ describe('operational planning revision flow', () => {
       is_active: true,
       operational_status: 'PENDING',
     })
+    vi.spyOn(repo, 'isActivityPlannedInOtherWeeklyPlan').mockResolvedValue(false)
     vi.spyOn(repo, 'listExecutionOutsidePlanEntriesForWeek').mockResolvedValue([])
     vi.spyOn(repo, 'listEnrichedItemsForWorkPlan').mockResolvedValue([])
 
@@ -176,6 +177,7 @@ describe('operational planning revision flow', () => {
       is_active: true,
       operational_status: 'PENDING',
     })
+    vi.spyOn(repo, 'isActivityPlannedInOtherWeeklyPlan').mockResolvedValue(false)
     vi.spyOn(repo, 'listExecutionOutsidePlanEntriesForWeek').mockResolvedValue([])
     vi.spyOn(repo, 'listEnrichedItemsForWorkPlan').mockResolvedValue([])
 
@@ -286,6 +288,7 @@ describe('operational planning revision flow', () => {
       is_active: true,
       operational_status: 'PENDING',
     })
+    vi.spyOn(repo, 'isActivityPlannedInOtherWeeklyPlan').mockResolvedValue(false)
     vi.spyOn(repo, 'listExecutionOutsidePlanEntriesForWeek').mockResolvedValue([])
     vi.spyOn(repo, 'listEnrichedItemsForWorkPlan').mockResolvedValue([])
 
@@ -323,6 +326,7 @@ describe('operational planning revision flow', () => {
       is_active: true,
       operational_status: 'PENDING',
     })
+    vi.spyOn(repo, 'isActivityPlannedInOtherWeeklyPlan').mockResolvedValue(false)
     vi.spyOn(repo, 'listExecutionOutsidePlanEntriesForWeek').mockResolvedValue([])
     vi.spyOn(repo, 'listEnrichedItemsForWorkPlan').mockResolvedValue([])
 
@@ -379,6 +383,7 @@ describe('operational planning revision flow', () => {
       is_active: true,
       operational_status: 'PENDING',
     })
+    vi.spyOn(repo, 'isActivityPlannedInOtherWeeklyPlan').mockResolvedValue(false)
     vi.spyOn(repo, 'listExecutionOutsidePlanEntriesForWeek').mockResolvedValue([])
     mockWeekCapacity()
 

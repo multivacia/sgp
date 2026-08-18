@@ -32,6 +32,7 @@ import {
   insertOperationalWorkPlan,
   insertWorkPlanItems,
   listWorkPlanItemInsertsForPlan,
+  isActivityPlannedInOtherWeeklyPlan,
   isConveyorPlanItemLinkedElsewhere,
   listEnrichedItemsForWorkPlan,
   listExecutionOutsidePlanEntriesForWeek,
@@ -590,6 +591,20 @@ async function validatePlanItems(
           ErrorCodes.CONFLICT,
         )
       }
+    }
+
+    const plannedElsewhere = await isActivityPlannedInOtherWeeklyPlan(
+      pool,
+      it.conveyorId,
+      it.activityNodeId,
+      excludeWorkPlanIds,
+    )
+    if (plannedElsewhere) {
+      throw new AppError(
+        'Atividade já está planejada em outro plano semanal.',
+        409,
+        ErrorCodes.CONFLICT,
+      )
     }
   }
 }
