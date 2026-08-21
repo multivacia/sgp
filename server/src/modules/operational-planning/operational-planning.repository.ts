@@ -268,6 +268,7 @@ export async function listWorkPlanItemInsertsForPlan(
     FROM operational_work_plan_items
     WHERE work_plan_id = $1::uuid
       AND deleted_at IS NULL
+      AND status <> 'CANCELLED'
     ORDER BY planned_date, assigned_collaborator_id NULLS LAST, planned_order
     `,
     [workPlanId],
@@ -353,6 +354,183 @@ export async function deleteItemsForWorkPlan(
   await client.query(`DELETE FROM operational_work_plan_items WHERE work_plan_id = $1::uuid`, [
     workPlanId,
   ])
+}
+
+export type ActiveWorkPlanItemRow = {
+  id: string
+  conveyorId: string
+  activityNodeId: string
+  status: string
+  assignedCollaboratorId: string | null
+  assignedTeamId: string | null
+  plannedDate: string
+  plannedOrder: number
+  plannedMinutes: number | null
+  notes: string | null
+  conveyorOperationalPlanItemId: string | null
+}
+
+export async function listActiveWeekPlanActivityKeys(
+  pool: pg.Pool | pg.PoolClient,
+  workPlanIds: readonly string[],
+): Promise<Array<{ conveyorId: string; activityNodeId: string }>> {
+  if (workPlanIds.length === 0) return []
+  const r = await pool.query<{ conveyor_id: string; activity_node_id: string }>(
+    `
+    SELECT DISTINCT
+      owpi.conveyor_id::text AS conveyor_id,
+      owpi.activity_node_id::text AS activity_node_id
+    FROM operational_work_plan_items owpi
+    INNER JOIN operational_work_plans owp ON owp.id = owpi.work_plan_id
+    WHERE owpi.work_plan_id = ANY($1::uuid[])
+      AND owpi.deleted_at IS NULL
+      AND owpi.status <> 'CANCELLED'
+      AND owp.deleted_at IS NULL
+      AND owp.status IN ('DRAFT', 'PUBLISHED')
+    `,
+    [workPlanIds],
+  )
+  return r.rows.map((row) => ({
+    conveyorId: row.conveyor_id,
+    activityNodeId: row.activity_node_id,
+  }))
+}
+
+export async function listActiveWorkPlanItemsForPlan(
+  pool: pg.Pool | pg.PoolClient,
+  workPlanId: string,
+): Promise<ActiveWorkPlanItemRow[]> {
+  const r = await pool.query<{
+    id: string
+    conveyor_id: string
+    activity_node_id: string
+    status: string
+    assigned_collaborator_id: string | null
+    assigned_team_id: string | null
+    planned_date: string
+    planned_order: number
+    planned_minutes: number | null
+    notes: string | null
+    conveyor_operational_plan_item_id: string | null
+  }>(
+    `
+    SELECT
+      id::text,
+      conveyor_id::text,
+      activity_node_id::text,
+      status::text,
+      assigned_collaborator_id::text,
+      assigned_team_id::text,
+      planned_date::text,
+      planned_order,
+      planned_minutes,
+      notes,
+      conveyor_operational_plan_item_id::text
+    FROM operational_work_plan_items
+    WHERE work_plan_id = $1::uuid
+      AND deleted_at IS NULL
+      AND status <> 'CANCELLED'
+    ORDER BY planned_date, planned_order
+    `,
+    [workPlanId],
+  )
+  return r.rows.map((row) => ({
+    id: row.id,
+    conveyorId: row.conveyor_id,
+    activityNodeId: row.activity_node_id,
+    status: row.status,
+    assignedCollaboratorId: row.assigned_collaborator_id,
+    assignedTeamId: row.assigned_team_id,
+    plannedDate: row.planned_date.trim(),
+    plannedOrder: row.planned_order,
+    plannedMinutes: row.planned_minutes,
+    notes: row.notes,
+    conveyorOperationalPlanItemId: row.conveyor_operational_plan_item_id,
+  }))
+}
+
+/**
+ * Item ativo da atividade na semana (draft∪published).
+ * Prefere DRAFT sobre PUBLISHED quando ambos existem.
+ */
+export async function findActiveWeekPlanItemByActivity(
+  pool: pg.Pool | pg.PoolClient,
+  workPlanIds: readonly string[],
+  conveyorId: string,
+  activityNodeId: string,
+): Promise<ActiveWorkPlanItemRow | null> {
+  if (workPlanIds.length === 0) return null
+  const r = await pool.query<{
+    id: string
+    conveyor_id: string
+    activity_node_id: string
+    status: string
+    assigned_collaborator_id: string | null
+    assigned_team_id: string | null
+    planned_date: string
+    planned_order: number
+    planned_minutes: number | null
+    notes: string | null
+    conveyor_operational_plan_item_id: string | null
+  }>(
+    `
+    SELECT
+      owpi.id::text,
+      owpi.conveyor_id::text,
+      owpi.activity_node_id::text,
+      owpi.status::text,
+      owpi.assigned_collaborator_id::text,
+      owpi.assigned_team_id::text,
+      owpi.planned_date::text,
+      owpi.planned_order,
+      owpi.planned_minutes,
+      owpi.notes,
+      owpi.conveyor_operational_plan_item_id::text
+    FROM operational_work_plan_items owpi
+    INNER JOIN operational_work_plans owp ON owp.id = owpi.work_plan_id
+    WHERE owpi.work_plan_id = ANY($1::uuid[])
+      AND owpi.deleted_at IS NULL
+      AND owpi.status <> 'CANCELLED'
+      AND owp.deleted_at IS NULL
+      AND owpi.conveyor_id = $2::uuid
+      AND owpi.activity_node_id = $3::uuid
+    ORDER BY
+      CASE owp.status WHEN 'DRAFT' THEN 0 ELSE 1 END,
+      owpi.updated_at DESC
+    LIMIT 1
+    `,
+    [workPlanIds, conveyorId, activityNodeId],
+  )
+  const row = r.rows[0]
+  if (!row) return null
+  return {
+    id: row.id,
+    conveyorId: row.conveyor_id,
+    activityNodeId: row.activity_node_id,
+    status: row.status,
+    assignedCollaboratorId: row.assigned_collaborator_id,
+    assignedTeamId: row.assigned_team_id,
+    plannedDate: row.planned_date.trim(),
+    plannedOrder: row.planned_order,
+    plannedMinutes: row.planned_minutes,
+    notes: row.notes,
+    conveyorOperationalPlanItemId: row.conveyor_operational_plan_item_id,
+  }
+}
+
+export async function deleteItemsForWorkPlanExcept(
+  client: pg.PoolClient,
+  workPlanId: string,
+  keepItemIds: readonly string[],
+): Promise<void> {
+  if (keepItemIds.length === 0) {
+    await deleteItemsForWorkPlan(client, workPlanId)
+    return
+  }
+  await client.query(
+    `DELETE FROM operational_work_plan_items WHERE work_plan_id = $1::uuid AND id <> ALL($2::uuid[])`,
+    [workPlanId, keepItemIds],
+  )
 }
 
 export async function listWorkPlanItemLinks(

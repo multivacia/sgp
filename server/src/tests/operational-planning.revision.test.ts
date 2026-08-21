@@ -50,6 +50,11 @@ const SAVE_BODY = {
   ],
 }
 
+function mockReplaceBaseline(): void {
+  vi.spyOn(repo, 'listActiveWeekPlanActivityKeys').mockResolvedValue([])
+  vi.spyOn(repo, 'listActiveWorkPlanItemsForPlan').mockResolvedValue([])
+}
+
 describe('operational planning revision flow', () => {
   afterEach(() => {
     vi.restoreAllMocks()
@@ -125,6 +130,7 @@ describe('operational planning revision flow', () => {
       planRow({ id: 'pub-1', status: 'PUBLISHED' }),
     )
     vi.spyOn(repo, 'insertOperationalWorkPlan').mockResolvedValue('draft-new')
+    mockReplaceBaseline()
     vi.spyOn(repo, 'deleteItemsForWorkPlan').mockResolvedValue(undefined)
     vi.spyOn(repo, 'insertWorkPlanItems').mockResolvedValue([{ id: 'item-1', conveyorOperationalPlanItemId: null }])
     vi.spyOn(repo, 'touchOperationalWorkPlanUpdatedAt').mockResolvedValue(undefined)
@@ -167,6 +173,7 @@ describe('operational planning revision flow', () => {
       planRow({ id: 'pub-1', status: 'PUBLISHED' }),
     )
     const insertSpy = vi.spyOn(repo, 'insertOperationalWorkPlan')
+    mockReplaceBaseline()
     vi.spyOn(repo, 'deleteItemsForWorkPlan').mockResolvedValue(undefined)
     vi.spyOn(repo, 'insertWorkPlanItems').mockResolvedValue([{ id: 'item-1', conveyorOperationalPlanItemId: null }])
     vi.spyOn(repo, 'touchOperationalWorkPlanUpdatedAt').mockResolvedValue(undefined)
@@ -278,6 +285,7 @@ describe('operational planning revision flow', () => {
       planRow({ id: 'pub-1', status: 'PUBLISHED' }),
     )
     const insertSpy = vi.spyOn(repo, 'insertOperationalWorkPlan')
+    mockReplaceBaseline()
     vi.spyOn(repo, 'deleteItemsForWorkPlan').mockResolvedValue(undefined)
     vi.spyOn(repo, 'insertWorkPlanItems').mockResolvedValue([{ id: 'item-1', conveyorOperationalPlanItemId: null }])
     vi.spyOn(repo, 'touchOperationalWorkPlanUpdatedAt').mockResolvedValue(undefined)
@@ -316,6 +324,7 @@ describe('operational planning revision flow', () => {
     vi.spyOn(repo, 'findDraftOperationalWorkPlanByWeekStart').mockResolvedValue(null)
     vi.spyOn(repo, 'insertOperationalWorkPlan').mockResolvedValue('draft-after-repub')
     vi.spyOn(repo, 'listWorkPlanItemInsertsForPlan').mockResolvedValue([])
+    mockReplaceBaseline()
     vi.spyOn(repo, 'deleteItemsForWorkPlan').mockResolvedValue(undefined)
     vi.spyOn(repo, 'insertWorkPlanItems').mockResolvedValue([{ id: 'item-1', conveyorOperationalPlanItemId: null }])
     vi.spyOn(repo, 'touchOperationalWorkPlanUpdatedAt').mockResolvedValue(undefined)
@@ -373,6 +382,7 @@ describe('operational planning revision flow', () => {
     vi.spyOn(repo, 'softDeleteOperationalWorkPlanWithItems').mockResolvedValue(undefined)
     vi.spyOn(conveyorRepo, 'linkConveyorPlanItemToWorkPlanItem').mockResolvedValue('plan-cv')
     vi.spyOn(refreshSync, 'refreshConveyorOperationalPlanSyncStatusByItemIds').mockResolvedValue(undefined)
+    mockReplaceBaseline()
     vi.spyOn(repo, 'deleteItemsForWorkPlan').mockResolvedValue(undefined)
     vi.spyOn(repo, 'insertWorkPlanItems').mockResolvedValue([{ id: 'item-1', conveyorOperationalPlanItemId: null }])
     vi.spyOn(repo, 'touchOperationalWorkPlanUpdatedAt').mockResolvedValue(undefined)

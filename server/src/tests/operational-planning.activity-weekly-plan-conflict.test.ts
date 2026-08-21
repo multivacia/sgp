@@ -55,6 +55,11 @@ function mockValidStep(): void {
   })
 }
 
+function mockReplaceBaseline(): void {
+  vi.spyOn(repo, 'listActiveWeekPlanActivityKeys').mockResolvedValue([])
+  vi.spyOn(repo, 'listActiveWorkPlanItemsForPlan').mockResolvedValue([])
+}
+
 function mockSaveTransactionPool(): pg.Pool {
   const pool = { connect: vi.fn() } as unknown as pg.Pool
   const client = {
@@ -75,6 +80,7 @@ describe('atividade já planejada em outro plano semanal', () => {
     vi.spyOn(repo, 'findDraftOperationalWorkPlanByWeekStart').mockResolvedValue(null)
     vi.spyOn(repo, 'findPublishedOperationalWorkPlanByWeekStart').mockResolvedValue(null)
     mockValidStep()
+    mockReplaceBaseline()
     vi.spyOn(repo, 'isActivityPlannedInOtherWeeklyPlan').mockResolvedValue(true)
 
     await expect(serviceSaveOperationalWeekPlan(pool, ACTOR, SAVE_BODY)).rejects.toMatchObject({
@@ -91,6 +97,7 @@ describe('atividade já planejada em outro plano semanal', () => {
     )
     vi.spyOn(repo, 'findPublishedOperationalWorkPlanByWeekStart').mockResolvedValue(null)
     mockValidStep()
+    mockReplaceBaseline()
     const conflictSpy = vi
       .spyOn(repo, 'isActivityPlannedInOtherWeeklyPlan')
       .mockResolvedValue(false)
@@ -124,6 +131,7 @@ describe('atividade já planejada em outro plano semanal', () => {
       planRow({ id: 'pub-1', status: 'PUBLISHED' }),
     )
     mockValidStep()
+    mockReplaceBaseline()
     const conflictSpy = vi
       .spyOn(repo, 'isActivityPlannedInOtherWeeklyPlan')
       .mockResolvedValue(false)
@@ -188,6 +196,7 @@ describe('atividade já planejada em outro plano semanal', () => {
     vi.spyOn(repo, 'findDraftOperationalWorkPlanByWeekStart').mockResolvedValue(null)
     vi.spyOn(repo, 'findPublishedOperationalWorkPlanByWeekStart').mockResolvedValue(null)
     mockValidStep()
+    mockReplaceBaseline()
     vi.spyOn(repo, 'isActivityPlannedInOtherWeeklyPlan').mockResolvedValue(false)
 
     const body = {
