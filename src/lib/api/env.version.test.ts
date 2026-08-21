@@ -37,7 +37,7 @@ describe('frontend version metadata', () => {
   it('prioriza overrides Vite para ambiente e build metadata', () => {
     ;(globalThis as TestGlobal).__SGP_APP_BASE_METADATA__ = {
       product: 'SGP+',
-      version: '1.8.3',
+      version: '1.8.4',
       releaseName: 'Correção visual light-executive + identificação de versão',
     }
     vi.stubEnv('VITE_APP_VERSION', '1.8.4-rc.1')
@@ -48,7 +48,7 @@ describe('frontend version metadata', () => {
 
     expect(resolveFrontendVersionMetadata()).toEqual({
       product: 'SGP+',
-      version: '1.8.3-rc.1',
+      version: '1.8.4-rc.1',
       releaseName: 'rc-kiosk-contrast',
       environment: 'homologation',
       environmentLabel: 'Homologação',
