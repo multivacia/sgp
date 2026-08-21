@@ -21,13 +21,13 @@ describe('frontend version metadata', () => {
   it('usa app-version.json como base segura', () => {
     ;(globalThis as TestGlobal).__SGP_APP_BASE_METADATA__ = {
       product: 'SGP+',
-      version: '1.8.3',
+      version: '1.8.4',
       releaseName: 'Correção visual light-executive + identificação de versão',
     }
     const metadata = resolveFrontendVersionMetadata()
 
     expect(metadata.product).toBe('SGP+')
-    expect(metadata.version).toBe('1.8.3')
+    expect(metadata.version).toBe('1.8.4')
     expect(metadata.releaseName).toBe('Correção visual light-executive + identificação de versão')
     expect(metadata.environment).toBe('development')
     expect(metadata.commitSha).toBe('local')
@@ -40,7 +40,7 @@ describe('frontend version metadata', () => {
       version: '1.8.3',
       releaseName: 'Correção visual light-executive + identificação de versão',
     }
-    vi.stubEnv('VITE_APP_VERSION', '1.8.3-rc.1')
+    vi.stubEnv('VITE_APP_VERSION', '1.8.4-rc.1')
     vi.stubEnv('VITE_APP_RELEASE_NAME', 'rc-kiosk-contrast')
     vi.stubEnv('VITE_APP_ENV', 'homologation')
     vi.stubEnv('VITE_GIT_SHA', 'fedcba987654')

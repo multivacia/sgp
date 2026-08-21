@@ -94,7 +94,7 @@ describe('AppSidebar', () => {
       }),
     )
 
-    expect(html).toContain('SGP+ v1.8.3 · Produção')
+    expect(html).toContain('SGP+ v1.8.4 · Produção')
     expect(html).toContain('data-version-placement="sidebar"')
   })
 })
