@@ -165,3 +165,32 @@ export function validateCompleteOutOfSequenceJustification(
   }
   return null
 }
+
+/** Placeholder do select de descrição no apontamento extra esteira. */
+export const EXTRA_TIME_ENTRY_DESCRIPTION_PLACEHOLDER = 'Selecione um motivo...' as const
+
+/**
+ * Resolve a seleção de descrição após (re)carregar o catálogo.
+ * Nunca pré-seleciona o primeiro item; mantém prev só se ainda existir na lista.
+ */
+export function resolveExtraDescriptionSelectionAfterLoad(
+  prev: string,
+  rows: ReadonlyArray<{ id: string }>,
+): string {
+  if (prev && rows.some((item) => item.id === prev)) return prev
+  return ''
+}
+
+/** Envio do apontamento extra exige motivo escolhido e minutos > 0. */
+export function canSubmitExtraTimeEntry(input: {
+  descriptionId: string
+  minutesValid: boolean
+  submitting?: boolean
+  unavailable?: boolean
+}): boolean {
+  if (input.submitting) return false
+  if (input.unavailable) return false
+  if (!input.descriptionId.trim()) return false
+  if (!input.minutesValid) return false
+  return true
+}

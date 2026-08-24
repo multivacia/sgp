@@ -32,12 +32,15 @@ import {
 import {
   buildTimeEntryPayload,
   canShowSaveAndCompleteButton,
+  canSubmitExtraTimeEntry,
   candidateNeedsJustification,
   candidateNeedsOutOfSequenceJustification,
   candidateRequiresOperationalJustification,
   emptyJustificationValue,
+  EXTRA_TIME_ENTRY_DESCRIPTION_PLACEHOLDER,
   QUICK_TIME_ENTRY_ERRORS,
   QUICK_TIME_ENTRY_TOAST,
+  resolveExtraDescriptionSelectionAfterLoad,
   resolveTimeEntrySuccessToast,
   validateCompleteOutOfSequenceJustification,
   validateTimeEntryForm,
@@ -208,11 +211,7 @@ export function QuickTimeEntryDrawer({
     try {
       const rows = await listExtraTimeEntryDescriptions()
       setExtraDescriptions(rows)
-      if (rows.length > 0) {
-        setExtraDescriptionId((prev) => prev || rows[0].id)
-      } else {
-        setExtraDescriptionId('')
-      }
+      setExtraDescriptionId((prev) => resolveExtraDescriptionSelectionAfterLoad(prev, rows))
     } catch (e) {
       const n = reportClientError(e, {
         module: 'shell',
@@ -484,7 +483,7 @@ export function QuickTimeEntryDrawer({
       return
     }
     if (!extraDescriptionId) {
-      setExtraSubmitError('Selecione uma descrição.')
+      setExtraSubmitError(EXTRA_TIME_ENTRY_DESCRIPTION_PLACEHOLDER)
       return
     }
     if (!extraMinutesValid) {
@@ -501,6 +500,7 @@ export function QuickTimeEntryDrawer({
         notes: extraNotes.trim() || undefined,
       })
       pushToast('Apontamento extra esteira registado com sucesso.', 'success')
+      setExtraDescriptionId('')
       setExtraMinutesStr('30')
       setExtraNotes('')
       await loadExtraEntries()
@@ -1048,6 +1048,9 @@ export function QuickTimeEntryDrawer({
                       className="mt-1.5 w-full rounded-xl border border-[color:var(--semantic-border-glass-strong)] bg-sgp-app-panel-deep/90 px-3 py-2 text-sm text-slate-200 outline-none focus:ring-2 focus:ring-sgp-blue-bright/25"
                       disabled={extraDescriptionsLoading || extraDescriptions.length === 0}
                     >
+                      <option value="" disabled>
+                        {EXTRA_TIME_ENTRY_DESCRIPTION_PLACEHOLDER}
+                      </option>
                       {extraDescriptions.map((d) => (
                         <option key={d.id} value={d.id}>
                           {d.description}
@@ -1113,10 +1116,12 @@ export function QuickTimeEntryDrawer({
                       className="sgp-cta-primary w-full justify-center py-2 text-sm disabled:pointer-events-none disabled:opacity-50"
                       onClick={() => void saveExtra()}
                       disabled={
-                        extraSubmitting ||
-                        !extraMinutesValid ||
-                        !extraDescriptionId ||
-                        Boolean(extraUnavailableReason)
+                        !canSubmitExtraTimeEntry({
+                          descriptionId: extraDescriptionId,
+                          minutesValid: extraMinutesValid,
+                          submitting: extraSubmitting,
+                          unavailable: Boolean(extraUnavailableReason),
+                        })
                       }
                     >
                       {extraSubmitting ? 'A guardar…' : 'Salvar apontamento'}

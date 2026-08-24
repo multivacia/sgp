@@ -4,9 +4,12 @@ import {
   buildTimeEntryPayload,
   canShowCompleteActivityButton,
   canShowSaveAndCompleteButton,
+  canSubmitExtraTimeEntry,
   candidateNeedsOutOfSequenceJustification,
   candidateRequiresOperationalJustification,
   emptyJustificationValue,
+  EXTRA_TIME_ENTRY_DESCRIPTION_PLACEHOLDER,
+  resolveExtraDescriptionSelectionAfterLoad,
   resolveTimeEntrySuccessToast,
   validateCompleteOutOfSequenceJustification,
   validateTimeEntryForm,
@@ -201,5 +204,63 @@ describe('quickTimeEntryDrawerLogic', () => {
         }),
       ),
     ).toBe(false)
+  })
+
+  describe('apontamento extra — seleção de motivo sem pré-seleção', () => {
+    const rows = [
+      { id: 'desc-1', description: 'Reunião diária' },
+      { id: 'desc-2', description: 'Treinamento' },
+    ]
+
+    it('lista carregada sem escolha anterior permanece vazia', () => {
+      expect(resolveExtraDescriptionSelectionAfterLoad('', rows)).toBe('')
+    })
+
+    it('não escolhe automaticamente o primeiro motivo', () => {
+      expect(resolveExtraDescriptionSelectionAfterLoad('', rows)).not.toBe(rows[0].id)
+    })
+
+    it('mantém escolha anterior válida após recarregar', () => {
+      expect(resolveExtraDescriptionSelectionAfterLoad('desc-2', rows)).toBe('desc-2')
+    })
+
+    it('descarta escolha anterior removida da lista', () => {
+      expect(resolveExtraDescriptionSelectionAfterLoad('desc-gone', rows)).toBe('')
+    })
+
+    it('lista vazia resulta em seleção vazia', () => {
+      expect(resolveExtraDescriptionSelectionAfterLoad('desc-1', [])).toBe('')
+      expect(resolveExtraDescriptionSelectionAfterLoad('', [])).toBe('')
+    })
+
+    it('sem motivo selecionado não permite envio', () => {
+      expect(
+        canSubmitExtraTimeEntry({
+          descriptionId: '',
+          minutesValid: true,
+        }),
+      ).toBe(false)
+    })
+
+    it('com motivo e minutos válidos permite envio', () => {
+      expect(
+        canSubmitExtraTimeEntry({
+          descriptionId: 'desc-1',
+          minutesValid: true,
+        }),
+      ).toBe(true)
+    })
+
+    it('após salvar a seleção deve ser limpa (estado vazio)', () => {
+      const afterSave = resolveExtraDescriptionSelectionAfterLoad('', rows)
+      expect(afterSave).toBe('')
+      expect(EXTRA_TIME_ENTRY_DESCRIPTION_PLACEHOLDER).toBe('Selecione um motivo...')
+    })
+
+    it('ao reabrir, placeholder é o estado inicial vazio', () => {
+      const reopened = resolveExtraDescriptionSelectionAfterLoad('', rows)
+      expect(reopened).toBe('')
+      expect(EXTRA_TIME_ENTRY_DESCRIPTION_PLACEHOLDER).toBe('Selecione um motivo...')
+    })
   })
 })
