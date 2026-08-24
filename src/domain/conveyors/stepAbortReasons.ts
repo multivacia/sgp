@@ -1,35 +1,63 @@
-/**
- * Catálogo mínimo de motivos de dispensa (espelho FE do backend).
- * Sem CRUD admin nesta entrega.
- */
+export type StepAbortReasonStatusFilter = 'active' | 'inactive' | 'all'
 
-export const STEP_ABORT_REASON_CODES = [
-  'NAO_MAIS_NECESSARIA',
-  'SUBSTITUIDA_POR_OUTRA',
-  'ERRO_DE_PLANEJAMENTO',
-  'SOLICITACAO_CLIENTE',
-  'OUTRO',
-] as const
-
-export type StepAbortReasonCode = (typeof STEP_ABORT_REASON_CODES)[number]
-
-export const STEP_ABORT_REASON_LABELS: Record<StepAbortReasonCode, string> = {
-  NAO_MAIS_NECESSARIA: 'Não é mais necessária',
-  SUBSTITUIDA_POR_OUTRA: 'Substituída por outra atividade',
-  ERRO_DE_PLANEJAMENTO: 'Erro de planejamento / escopo',
-  SOLICITACAO_CLIENTE: 'Solicitação do cliente',
-  OUTRO: 'Outro',
+export type StepAbortReason = {
+  code: string
+  label: string
+  description: string | null
+  requiresComplement: boolean
+  sortOrder: number
+  isActive: boolean
+  createdAt: string
+  updatedAt: string
 }
 
-export function stepAbortReasonLabel(code: string | null | undefined): string {
-  if (!code) return ''
-  if ((STEP_ABORT_REASON_CODES as readonly string[]).includes(code)) {
-    return STEP_ABORT_REASON_LABELS[code as StepAbortReasonCode]
-  }
-  return code
+export type StepAbortReasonOption = {
+  code: string
+  label: string
+  description: string | null
+  requiresComplement: boolean
+  sortOrder: number
+}
+
+export type CreateStepAbortReasonInput = {
+  code: string
+  label: string
+  description?: string | null
+  requiresComplement?: boolean
+  sortOrder?: number
+  isActive?: boolean
+}
+
+export type UpdateStepAbortReasonInput = {
+  label?: string
+  description?: string | null
+  requiresComplement?: boolean
+  sortOrder?: number
+  isActive?: boolean
 }
 
 export type AbortConveyorStepBody = {
-  reasonCode: StepAbortReasonCode
+  reasonCode: string
   reasonText?: string | null
+}
+
+/**
+ * Exibe rótulo histórico de dispensa.
+ * Prioriza snapshot; fallback seguro para código legado sem inventar labels hard-coded.
+ */
+export function stepAbortReasonDisplayLabel(input: {
+  code?: string | null
+  labelSnapshot?: string | null
+  eventReasonLabel?: string | null
+}): string {
+  const snap = input.labelSnapshot?.trim()
+  if (snap) return snap
+  const fromEvent = input.eventReasonLabel?.trim()
+  if (fromEvent) return fromEvent
+  return input.code?.trim() ?? ''
+}
+
+/** @deprecated Preferir stepAbortReasonDisplayLabel com snapshot. */
+export function stepAbortReasonLabel(code: string | null | undefined): string {
+  return stepAbortReasonDisplayLabel({ code })
 }

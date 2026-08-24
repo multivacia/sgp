@@ -51,23 +51,66 @@ describe('predicados STEP', () => {
 })
 
 describe('resolveStepAbortReason', () => {
-  it('aceita catálogo sem texto', () => {
-    const r = resolveStepAbortReason({ reasonCode: 'NAO_MAIS_NECESSARIA' })
+  it('aceita catálogo ativo sem texto', () => {
+    const r = resolveStepAbortReason({
+      reasonCode: 'NAO_MAIS_NECESSARIA',
+      catalog: {
+        code: 'NAO_MAIS_NECESSARIA',
+        label: 'Não é mais necessária',
+        requires_complement: false,
+        is_active: true,
+      },
+    })
     expect(r.ok).toBe(true)
     if (r.ok) {
       expect(r.value.reasonCode).toBe('NAO_MAIS_NECESSARIA')
       expect(r.value.reasonText).toBeNull()
+      expect(r.value.reasonLabel).toBe('Não é mais necessária')
     }
   })
 
-  it('OUTRO exige texto', () => {
-    expect(resolveStepAbortReason({ reasonCode: 'OUTRO', reasonText: '  ' }).ok).toBe(false)
-    const r = resolveStepAbortReason({ reasonCode: 'OUTRO', reasonText: ' Cliente pediu ' })
+  it('exige complemento quando requires_complement', () => {
+    expect(
+      resolveStepAbortReason({
+        reasonCode: 'OUTRO',
+        reasonText: '  ',
+        catalog: {
+          code: 'OUTRO',
+          label: 'Outro',
+          requires_complement: true,
+          is_active: true,
+        },
+      }).ok,
+    ).toBe(false)
+    const r = resolveStepAbortReason({
+      reasonCode: 'CUSTOM_X',
+      reasonText: ' Cliente pediu ',
+      catalog: {
+        code: 'CUSTOM_X',
+        label: 'Custom',
+        requires_complement: true,
+        is_active: true,
+      },
+    })
     expect(r.ok).toBe(true)
     if (r.ok) expect(r.value.reasonText).toBe('Cliente pediu')
   })
 
-  it('rejeita código fora do catálogo', () => {
-    expect(resolveStepAbortReason({ reasonCode: 'XYZ' }).ok).toBe(false)
+  it('rejeita motivo inexistente ou inativo', () => {
+    expect(
+      resolveStepAbortReason({ reasonCode: 'XYZ', catalog: null }).ok,
+    ).toBe(false)
+    expect(
+      resolveStepAbortReason({
+        reasonCode: 'OUTRO',
+        reasonText: 'x',
+        catalog: {
+          code: 'OUTRO',
+          label: 'Outro',
+          requires_complement: true,
+          is_active: false,
+        },
+      }).ok,
+    ).toBe(false)
   })
 })

@@ -303,3 +303,12 @@ export {
   patchTimeEntryJustificationActivate,
   patchTimeEntryJustificationDeactivate,
 } from './time-entry-justifications.controller.js'
+
+export {
+  getStepAbortReasons,
+  postStepAbortReason,
+  patchStepAbortReason,
+  patchStepAbortReasonActivate,
+  patchStepAbortReasonDeactivate,
+  getActiveStepAbortReasonsForSelection,
+} from './step-abort-reasons.controller.js'

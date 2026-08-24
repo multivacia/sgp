@@ -20,6 +20,7 @@ export type LockedStepNodeRow = {
   aborted_by: string | null
   abort_reason_code: string | null
   abort_reason_text: string | null
+  abort_reason_label_snapshot: string | null
 }
 
 /**
@@ -62,6 +63,7 @@ export async function lockConveyorAndStepForUpdate(
     aborted_by: string | null
     abort_reason_code: string | null
     abort_reason_text: string | null
+    abort_reason_label_snapshot: string | null
   }>(
     `SELECT
        id::text,
@@ -73,7 +75,8 @@ export async function lockConveyorAndStepForUpdate(
        aborted_at,
        aborted_by::text,
        abort_reason_code,
-       abort_reason_text
+       abort_reason_text,
+       abort_reason_label_snapshot
      FROM conveyor_nodes
     WHERE id = $1::uuid
       AND conveyor_id = $2::uuid
@@ -108,6 +111,7 @@ export async function lockConveyorAndStepForUpdate(
       aborted_by: row.aborted_by,
       abort_reason_code: row.abort_reason_code,
       abort_reason_text: row.abort_reason_text,
+      abort_reason_label_snapshot: row.abort_reason_label_snapshot,
     },
   }
 }

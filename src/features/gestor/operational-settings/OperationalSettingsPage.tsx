@@ -31,9 +31,16 @@ import {
 } from '../../../services/admin/operationalSettingsApiService'
 import { ExtraTimeEntryDescriptionsTab } from './ExtraTimeEntryDescriptionsTab'
 import { TimeEntryJustificationsTab } from './TimeEntryJustificationsTab'
+import { StepAbortReasonsTab } from './StepAbortReasonsTab'
 import { OperationalCapacityTab } from './capacity/OperationalCapacityTab'
 
-type TabId = 'sectors' | 'roles' | 'capacity' | 'extraTimeDescriptions' | 'timeEntryJustifications'
+type TabId =
+  | 'sectors'
+  | 'roles'
+  | 'capacity'
+  | 'extraTimeDescriptions'
+  | 'timeEntryJustifications'
+  | 'stepAbortReasons'
 
 type ToastState = { message: string; variant: SgpToastVariant } | null
 
@@ -191,6 +198,17 @@ export function OperationalSettingsPage() {
         >
           Justificativas operacionais
         </button>
+        <button
+          type="button"
+          onClick={() => setTab('stepAbortReasons')}
+          className={`rounded-lg px-4 py-2 text-sm font-bold transition ${
+            tab === 'stepAbortReasons'
+              ? 'bg-sgp-gold/15 text-sgp-gold ring-1 ring-sgp-gold/35'
+              : 'text-slate-400 hover:bg-white/[0.04]'
+          }`}
+        >
+          Motivos de dispensa
+        </button>
       </div>
 
       {tab === 'capacity' ? (
@@ -199,6 +217,8 @@ export function OperationalSettingsPage() {
         <ExtraTimeEntryDescriptionsTab onError={govErr} onToast={pushToast} />
       ) : tab === 'timeEntryJustifications' ? (
         <TimeEntryJustificationsTab onError={govErr} onToast={pushToast} />
+      ) : tab === 'stepAbortReasons' ? (
+        <StepAbortReasonsTab onError={govErr} onToast={pushToast} />
       ) : tab === 'sectors' ? (
         <section className="mt-6">
           <div className="sgp-panel sgp-panel-hover">

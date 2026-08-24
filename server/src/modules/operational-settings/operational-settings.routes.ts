@@ -21,6 +21,11 @@ import {
   patchTimeEntryJustification,
   patchTimeEntryJustificationActivate,
   patchTimeEntryJustificationDeactivate,
+  getStepAbortReasons,
+  postStepAbortReason,
+  patchStepAbortReason,
+  patchStepAbortReasonActivate,
+  patchStepAbortReasonDeactivate,
   patchOperationalCollaboratorRole,
   patchOperationalSector,
   postOperationalCollaboratorRole,
@@ -123,6 +128,32 @@ export function operationalSettingsRouter(): Router {
     '/admin/operational-settings/time-entry-justifications/:id/deactivate',
     ...ap(m),
     asyncRoute(patchTimeEntryJustificationDeactivate),
+  )
+
+  r.get(
+    '/admin/operational-settings/step-abort-reasons',
+    ...ap(m),
+    asyncRoute(getStepAbortReasons),
+  )
+  r.post(
+    '/admin/operational-settings/step-abort-reasons',
+    ...ap(m),
+    asyncRoute(postStepAbortReason),
+  )
+  r.patch(
+    '/admin/operational-settings/step-abort-reasons/:code/activate',
+    ...ap(m),
+    asyncRoute(patchStepAbortReasonActivate),
+  )
+  r.patch(
+    '/admin/operational-settings/step-abort-reasons/:code/deactivate',
+    ...ap(m),
+    asyncRoute(patchStepAbortReasonDeactivate),
+  )
+  r.patch(
+    '/admin/operational-settings/step-abort-reasons/:code',
+    ...ap(m),
+    asyncRoute(patchStepAbortReason),
   )
 
   return r

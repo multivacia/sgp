@@ -24,10 +24,7 @@ import {
   isStepOperationallyCompleted,
   stepOperationalStatusLabel,
 } from '../../domain/conveyors/stepOperationalStatus'
-import {
-  type StepAbortReasonCode,
-  stepAbortReasonLabel,
-} from '../../domain/conveyors/stepAbortReasons'
+import { stepAbortReasonDisplayLabel } from '../../domain/conveyors/stepAbortReasons'
 import { AbortConveyorStepDialog } from './AbortConveyorStepDialog'
 import type { ConveyorNodeWorkload } from '../../domain/conveyors/conveyorNodeWorkload.types'
 import type { ConveyorOperationalEvent } from '../../domain/conveyors/conveyorOperationalEvents.types'
@@ -303,9 +300,6 @@ function EsteiraDetalheBasicoReal({ id }: { id: string | undefined }) {
     stepName: string
     idempotencyKey: string
   } | null>(null)
-  const [abortReasonCode, setAbortReasonCode] =
-    useState<StepAbortReasonCode>('NAO_MAIS_NECESSARIA')
-  const [abortReasonText, setAbortReasonText] = useState('')
   const [stepAbortError, setStepAbortError] = useState<string | null>(null)
   const [stepRestoringId, setStepRestoringId] = useState<string | null>(null)
   const [completeOosDialog, setCompleteOosDialog] = useState<{
@@ -479,67 +473,56 @@ function EsteiraDetalheBasicoReal({ id }: { id: string | undefined }) {
     reopenNote,
   ])
 
-  const handleConfirmAbortStep = useCallback(async () => {
-    if (!detail?.id || !abortDialog) return
-    if (abortReasonCode === 'OUTRO' && !abortReasonText.trim()) {
-      setStepAbortError('Informe o texto do motivo quando selecionar Outro.')
-      return
-    }
-    const stepId = abortDialog.stepId
-    setStepAbortingId(stepId)
-    setStepAbortError(null)
-    try {
-      const aborted = await abortConveyorStep(
-        detail.id,
-        stepId,
-        {
-          reasonCode: abortReasonCode,
-          reasonText: abortReasonCode === 'OUTRO' ? abortReasonText.trim() : null,
-        },
-        { idempotencyKey: abortDialog.idempotencyKey },
-      )
-      setDetail(aborted.data)
-      setAbortDialog(null)
-      setAbortReasonCode('NAO_MAIS_NECESSARIA')
-      setAbortReasonText('')
+  const handleConfirmAbortStep = useCallback(
+    async (payload: { reasonCode: string; reasonText: string | null }) => {
+      if (!detail?.id || !abortDialog) return
+      const stepId = abortDialog.stepId
+      setStepAbortingId(stepId)
       setStepAbortError(null)
-      setRouteToast('Atividade dispensada.')
-
-      // Refresh auxiliar: falha aqui não desfaz a dispensa já concluída.
       try {
-        const [evNext, wNext] = await Promise.all([
-          getConveyorOperationalEvents(detail.id, { limit: operationalEventsLimit }),
-          getConveyorNodeWorkload(detail.id).catch(() => null),
-        ])
-        setOperationalEvents(evNext.data)
-        if (wNext) setNodeWorkload(wNext)
-      } catch {
-        /* soft-fail pós-sucesso */
+        const aborted = await abortConveyorStep(
+          detail.id,
+          stepId,
+          {
+            reasonCode: payload.reasonCode,
+            reasonText: payload.reasonText,
+          },
+          { idempotencyKey: abortDialog.idempotencyKey },
+        )
+        setDetail(aborted.data)
+        setAbortDialog(null)
+        setStepAbortError(null)
+        setRouteToast('Atividade dispensada.')
+
+        // Refresh auxiliar: falha aqui não desfaz a dispensa já concluída.
+        try {
+          const [evNext, wNext] = await Promise.all([
+            getConveyorOperationalEvents(detail.id, { limit: operationalEventsLimit }),
+            getConveyorNodeWorkload(detail.id).catch(() => null),
+          ])
+          setOperationalEvents(evNext.data)
+          if (wNext) setNodeWorkload(wNext)
+        } catch {
+          /* soft-fail pós-sucesso */
+        }
+      } catch (e) {
+        const n = reportClientError(e, {
+          module: 'esteiras',
+          action: 'step_abort',
+          route: location.pathname,
+          entityId: detail.id,
+        })
+        if (isBlockingSeverity(n.severity)) {
+          presentBlocking(n)
+        } else {
+          setStepAbortError(n.userMessage || 'Não foi possível dispensar a atividade.')
+        }
+      } finally {
+        setStepAbortingId(null)
       }
-    } catch (e) {
-      const n = reportClientError(e, {
-        module: 'esteiras',
-        action: 'step_abort',
-        route: location.pathname,
-        entityId: detail.id,
-      })
-      if (isBlockingSeverity(n.severity)) {
-        presentBlocking(n)
-      } else {
-        setStepAbortError(n.userMessage || 'Não foi possível dispensar a atividade.')
-      }
-    } finally {
-      setStepAbortingId(null)
-    }
-  }, [
-    abortDialog,
-    abortReasonCode,
-    abortReasonText,
-    detail,
-    location.pathname,
-    operationalEventsLimit,
-    presentBlocking,
-  ])
+    },
+    [abortDialog, detail, location.pathname, operationalEventsLimit, presentBlocking],
+  )
 
   const handleConfirmRestoreAbortedStep = useCallback(
     async (stepId: string) => {
@@ -1004,25 +987,14 @@ function EsteiraDetalheBasicoReal({ id }: { id: string | undefined }) {
       <AbortConveyorStepDialog
         open={Boolean(abortDialog)}
         stepName={abortDialog?.stepName ?? ''}
-        reasonCode={abortReasonCode}
-        reasonText={abortReasonText}
         busy={Boolean(stepAbortingId)}
         error={stepAbortError}
-        onChangeReasonCode={(code) => {
-          setStepAbortError(null)
-          setAbortReasonCode(code)
-        }}
-        onChangeReasonText={(text) => {
-          setStepAbortError(null)
-          setAbortReasonText(text)
-        }}
         onCancel={() => {
           if (stepAbortingId) return
           setAbortDialog(null)
-          setAbortReasonText('')
           setStepAbortError(null)
         }}
-        onConfirm={() => void handleConfirmAbortStep()}
+        onConfirm={(payload) => void handleConfirmAbortStep(payload)}
       />
       {completeOosDialog ? (
         <div
@@ -1522,7 +1494,10 @@ function EsteiraDetalheBasicoReal({ id }: { id: string | undefined }) {
                                   <span
                                     className="rounded-md border border-slate-400/35 bg-slate-500/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-slate-100"
                                     title={[
-                                      stepAbortReasonLabel(st.abortReasonCode),
+                                      stepAbortReasonDisplayLabel({
+                                        code: st.abortReasonCode,
+                                        labelSnapshot: st.abortReasonLabelSnapshot,
+                                      }),
                                       st.abortReasonText,
                                       st.abortedByName,
                                       st.abortedAt
@@ -1592,8 +1567,6 @@ function EsteiraDetalheBasicoReal({ id }: { id: string | undefined }) {
                                     className="rounded-lg border border-rose-400/30 bg-rose-500/10 px-3 py-1.5 text-xs font-semibold text-rose-100 hover:bg-rose-500/15 disabled:opacity-50"
                                     onClick={() => {
                                       setStepAbortError(null)
-                                      setAbortReasonCode('NAO_MAIS_NECESSARIA')
-                                      setAbortReasonText('')
                                       setAbortDialog({
                                         stepId: st.id,
                                         stepName: st.name,

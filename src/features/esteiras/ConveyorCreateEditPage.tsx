@@ -28,9 +28,6 @@ import {
   patchConveyorStructure,
 } from '../../services/conveyors/conveyorsApiService'
 import { canAbortStep } from '../../domain/conveyors/stepOperationalStatus'
-import {
-  type StepAbortReasonCode,
-} from '../../domain/conveyors/stepAbortReasons'
 import { AbortConveyorStepDialog } from './AbortConveyorStepDialog'
 import { createCollaboratorsApiService } from '../../services/collaborators/collaboratorsApiService'
 import { listTeams } from '../../services/teams/teamsApiService'
@@ -220,9 +217,6 @@ export function ConveyorCreateEditPage({ mode }: { mode: Mode }) {
     stepName: string
     idempotencyKey: string
   } | null>(null)
-  const [abortReasonCode, setAbortReasonCode] =
-    useState<StepAbortReasonCode>('NAO_MAIS_NECESSARIA')
-  const [abortReasonText, setAbortReasonText] = useState('')
   const [stepAbortingId, setStepAbortingId] = useState<string | null>(null)
   const [stepAbortError, setStepAbortError] = useState<string | null>(null)
   const manualRootsRef = useRef(manualRoots)
@@ -621,8 +615,6 @@ export function ConveyorCreateEditPage({ mode }: { mode: Mode }) {
   const handleRequestAbortStep = useCallback(
     (step: { stepNodeId: string; stepName: string }) => {
       setStepAbortError(null)
-      setAbortReasonCode('NAO_MAIS_NECESSARIA')
-      setAbortReasonText('')
       setAbortDialog({
         stepId: step.stepNodeId,
         stepName: step.stepName,
@@ -632,52 +624,41 @@ export function ConveyorCreateEditPage({ mode }: { mode: Mode }) {
     [],
   )
 
-  const handleConfirmAbortStep = useCallback(async () => {
-    if (!detailId?.trim() || !abortDialog) return
-    if (abortReasonCode === 'OUTRO' && !abortReasonText.trim()) {
-      setStepAbortError('Informe o texto do motivo quando selecionar Outro.')
-      return
-    }
-    const stepId = abortDialog.stepId
-    setStepAbortingId(stepId)
-    setStepAbortError(null)
-    try {
-      const aborted = await abortConveyorStep(
-        detailId.trim(),
-        stepId,
-        {
-          reasonCode: abortReasonCode,
-          reasonText: abortReasonCode === 'OUTRO' ? abortReasonText.trim() : null,
-        },
-        { idempotencyKey: abortDialog.idempotencyKey },
-      )
-      applyLoadedDetail(aborted.data)
-      setAbortDialog(null)
-      setAbortReasonCode('NAO_MAIS_NECESSARIA')
-      setAbortReasonText('')
+  const handleConfirmAbortStep = useCallback(
+    async (payload: { reasonCode: string; reasonText: string | null }) => {
+      if (!detailId?.trim() || !abortDialog) return
+      const stepId = abortDialog.stepId
+      setStepAbortingId(stepId)
       setStepAbortError(null)
-      setRouteToast('Atividade dispensada.')
-    } catch (e) {
-      const n = reportClientError(e, {
-        module: 'esteiras',
-        action: 'alterar_esteira_step_abort',
-        route: pathname,
-        entityId: detailId,
-      })
-      if (isBlockingSeverity(n.severity)) presentBlocking(n)
-      else setStepAbortError(n.userMessage || 'Não foi possível dispensar a atividade.')
-    } finally {
-      setStepAbortingId(null)
-    }
-  }, [
-    abortDialog,
-    abortReasonCode,
-    abortReasonText,
-    applyLoadedDetail,
-    detailId,
-    pathname,
-    presentBlocking,
-  ])
+      try {
+        const aborted = await abortConveyorStep(
+          detailId.trim(),
+          stepId,
+          {
+            reasonCode: payload.reasonCode,
+            reasonText: payload.reasonText,
+          },
+          { idempotencyKey: abortDialog.idempotencyKey },
+        )
+        applyLoadedDetail(aborted.data)
+        setAbortDialog(null)
+        setStepAbortError(null)
+        setRouteToast('Atividade dispensada.')
+      } catch (e) {
+        const n = reportClientError(e, {
+          module: 'esteiras',
+          action: 'alterar_esteira_step_abort',
+          route: pathname,
+          entityId: detailId,
+        })
+        if (isBlockingSeverity(n.severity)) presentBlocking(n)
+        else setStepAbortError(n.userMessage || 'Não foi possível dispensar a atividade.')
+      } finally {
+        setStepAbortingId(null)
+      }
+    },
+    [abortDialog, applyLoadedDetail, detailId, pathname, presentBlocking],
+  )
 
   async function handleSubmit() {
     if (shouldValidateStructureOnSubmit({ mode, hasStructureChanges })) {
@@ -817,25 +798,14 @@ export function ConveyorCreateEditPage({ mode }: { mode: Mode }) {
       <AbortConveyorStepDialog
         open={Boolean(abortDialog)}
         stepName={abortDialog?.stepName ?? ''}
-        reasonCode={abortReasonCode}
-        reasonText={abortReasonText}
         busy={Boolean(stepAbortingId)}
         error={stepAbortError}
-        onChangeReasonCode={(code) => {
-          setStepAbortError(null)
-          setAbortReasonCode(code)
-        }}
-        onChangeReasonText={(text) => {
-          setStepAbortError(null)
-          setAbortReasonText(text)
-        }}
         onCancel={() => {
           if (stepAbortingId) return
           setAbortDialog(null)
-          setAbortReasonText('')
           setStepAbortError(null)
         }}
-        onConfirm={() => void handleConfirmAbortStep()}
+        onConfirm={(payload) => void handleConfirmAbortStep(payload)}
       />
       <div className="mx-auto max-w-[1600px] pb-12">
       <header className="rounded-2xl border border-white/[0.08] bg-gradient-to-r from-sgp-void via-sgp-navy-deep/80 to-sgp-void px-4 py-4 shadow-inner ring-1 ring-white/[0.04] sm:px-5">

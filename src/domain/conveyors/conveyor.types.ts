@@ -181,6 +181,7 @@ export type ConveyorStructureStep = {
   abortedByName?: string | null
   abortReasonCode?: string | null
   abortReasonText?: string | null
+  abortReasonLabelSnapshot?: string | null
 }
 
 export type ConveyorStructureArea = {

@@ -2,6 +2,7 @@ import type pg from 'pg'
 import { AppError } from '../../shared/errors/AppError.js'
 import { ErrorCodes } from '../../shared/errors/errorCodes.js'
 import { appUserHasPermission } from '../permissions/permissions.repository.js'
+import { findActiveStepAbortReasonByCode } from '../operational-settings/step-abort-reasons.repository.js'
 import { serviceCreateConveyorOperationalEvent } from './operational-events/conveyor-operational-events.service.js'
 import { getConveyorOperationalEventByIdempotencyKey } from './operational-events/conveyor-operational-events.repository.js'
 import type { ConveyorOperationalEventRow } from './operational-events/conveyor-operational-events.types.js'
@@ -60,8 +61,8 @@ function assertConveyorAllowsAbort(status: string): void {
 }
 
 function cancellationReasonForAbort(reason: ResolvedStepAbortReason): string {
-  if (reason.reasonCode === 'OUTRO') {
-    return `STEP_ABORTED:OUTRO:${reason.reasonText ?? ''}`
+  if (reason.reasonText) {
+    return `STEP_ABORTED:${reason.reasonCode}:${reason.reasonText}`
   }
   return `STEP_ABORTED:${reason.reasonCode}`
 }
@@ -270,15 +271,6 @@ export async function serviceAbortConveyorStep(
 ): Promise<{ detail: ConveyorDetailApi; idempotent: boolean }> {
   await assertCanAbortOrRestore(pool, input.actorAppUserId)
 
-  const reasonResolved = resolveStepAbortReason({
-    reasonCode: input.reasonCode,
-    reasonText: input.reasonText,
-  })
-  if (!reasonResolved.ok) {
-    throw new AppError(reasonResolved.message, 400, ErrorCodes.VALIDATION_ERROR)
-  }
-  const reason = reasonResolved.value
-
   const client = await pool.connect()
   let idempotent = false
   try {
@@ -291,8 +283,9 @@ export async function serviceAbortConveyorStep(
 
     const current: ConveyorNodeStepOperationalStatusDb = step.operational_status ?? 'PENDING'
 
-    // Replay comprovado é resolvido antes do estado da esteira: se a operação já foi
-    // aplicada, finalizar a esteira depois não pode transformar a repetição em erro.
+    // Replay comprovado é resolvido antes do estado da esteira e antes da validação
+    // do catálogo: se a operação já foi aplicada, desativar o motivo depois não pode
+    // transformar a repetição idempotente em erro.
     const idempotency = await resolveStepAbortIdempotencyReplay(client, {
       idempotencyKey: input.idempotencyKey,
       expectedEventType: 'CONVEYOR_STEP_ABORTED',
@@ -324,6 +317,18 @@ export async function serviceAbortConveyorStep(
         )
       }
 
+      const catalog = await findActiveStepAbortReasonByCode(client, input.reasonCode.trim())
+      const reasonResolved = resolveStepAbortReason({
+        reasonCode: input.reasonCode,
+        reasonText: input.reasonText,
+        catalog,
+        requireActive: true,
+      })
+      if (!reasonResolved.ok) {
+        throw new AppError(reasonResolved.message, 400, ErrorCodes.VALIDATION_ERROR)
+      }
+      const reason = reasonResolved.value
+
       const occurredIso = new Date().toISOString()
       const updated = await updateConveyorNodeStepAborted(
         client,
@@ -334,6 +339,7 @@ export async function serviceAbortConveyorStep(
           aborted_by: input.actorAppUserId,
           abort_reason_code: reason.reasonCode,
           abort_reason_text: reason.reasonText,
+          abort_reason_label_snapshot: reason.reasonLabel,
           expectedStatuses: STEP_ABORT_ALLOWED_ORIGINS,
         },
       )
@@ -366,6 +372,8 @@ export async function serviceAbortConveyorStep(
           stepNodeId: input.stepNodeId,
           reasonCode: reason.reasonCode,
           reasonText: reason.reasonText,
+          reasonLabel: reason.reasonLabel,
+          reasonLabelSnapshot: reason.reasonLabel,
           previousOperationalStatus: current,
           conveyorPlanItemIdsCancelled: cancelled.conveyorPlanItemIds,
           workPlanItemIdsCancelled: cancelled.workPlanItemIds,
@@ -468,6 +476,7 @@ export async function serviceRestoreAbortedConveyorStep(
         abortedBy: step.aborted_by,
         abortReasonCode: step.abort_reason_code,
         abortReasonText: step.abort_reason_text,
+        abortReasonLabelSnapshot: step.abort_reason_label_snapshot,
       }
 
       const occurredIso = new Date().toISOString()

@@ -40,6 +40,10 @@ const conveyorsServiceMocks = vi.hoisted(() => ({
   mapDetailRowToApi: vi.fn(),
 }))
 
+const stepAbortReasonsRepoMocks = vi.hoisted(() => ({
+  findActiveStepAbortReasonByCode: vi.fn(),
+}))
+
 vi.mock(
   '../modules/conveyors/operational-events/conveyor-operational-events.repository.js',
   async () => {
@@ -108,6 +112,16 @@ vi.mock('../modules/conveyors/conveyors.service.js', async () => {
     ...actual,
     loadConveyorStructureWithAssignees: conveyorsServiceMocks.loadConveyorStructureWithAssignees,
     mapDetailRowToApi: conveyorsServiceMocks.mapDetailRowToApi,
+  }
+})
+
+vi.mock('../modules/operational-settings/step-abort-reasons.repository.js', async () => {
+  const actual = await vi.importActual<
+    typeof import('../modules/operational-settings/step-abort-reasons.repository.js')
+  >('../modules/operational-settings/step-abort-reasons.repository.js')
+  return {
+    ...actual,
+    findActiveStepAbortReasonByCode: stepAbortReasonsRepoMocks.findActiveStepAbortReasonByCode,
   }
 })
 
@@ -288,10 +302,23 @@ describe('abort/restore liberam o PoolClient antes de carregar o detalhe', () =>
     conveyorsRepoMocks.updateConveyorNodeStepRestoreAborted.mockReset()
     conveyorsServiceMocks.loadConveyorStructureWithAssignees.mockReset()
     conveyorsServiceMocks.mapDetailRowToApi.mockReset()
+    stepAbortReasonsRepoMocks.findActiveStepAbortReasonByCode.mockReset()
 
     permissionsMocks.appUserHasPermission.mockResolvedValue(true)
     conveyorsRepoMocks.updateConveyorNodeStepAborted.mockResolvedValue(true)
     conveyorsRepoMocks.updateConveyorNodeStepRestoreAborted.mockResolvedValue(true)
+    stepAbortReasonsRepoMocks.findActiveStepAbortReasonByCode.mockImplementation(
+      async (_q: unknown, code: string) => ({
+        code,
+        label: code === 'OUTRO' ? 'Outro' : 'Motivo teste',
+        description: null,
+        requires_complement: code === 'OUTRO',
+        sort_order: 10,
+        is_active: true,
+        created_at: new Date(),
+        updated_at: new Date(),
+      }),
+    )
     eventsServiceMocks.createEvent.mockImplementation(
       async (_q: unknown, payload: { eventType: string }) => ({
         created: true,
@@ -328,6 +355,7 @@ describe('abort/restore liberam o PoolClient antes de carregar o detalhe', () =>
         aborted_by: null,
         abort_reason_code: null,
         abort_reason_text: null,
+        abort_reason_label_snapshot: null,
       },
     })
   }
@@ -498,6 +526,7 @@ describe('abort/restore liberam o PoolClient antes de carregar o detalhe', () =>
         aborted_by: null,
         abort_reason_code: null,
         abort_reason_text: null,
+        abort_reason_label_snapshot: null,
       },
     })
     eventsRepoMocks.getByIdempotencyKey.mockResolvedValue(eventRow())
@@ -529,6 +558,7 @@ describe('abort/restore liberam o PoolClient antes de carregar o detalhe', () =>
         aborted_by: null,
         abort_reason_code: null,
         abort_reason_text: null,
+        abort_reason_label_snapshot: null,
       },
     })
     eventsRepoMocks.getByIdempotencyKey.mockResolvedValue(null)

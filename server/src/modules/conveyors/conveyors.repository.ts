@@ -92,6 +92,7 @@ export type ConveyorNodeFlatRow = {
   aborted_by_email: string | null
   abort_reason_code: string | null
   abort_reason_text: string | null
+  abort_reason_label_snapshot: string | null
 }
 
 /** Atualização atómica de status + completed_at (modo calculado no serviço). */
@@ -210,6 +211,7 @@ export async function listConveyorNodesByConveyorId(
     aborted_by_email: string | null
     abort_reason_code: string | null
     abort_reason_text: string | null
+    abort_reason_label_snapshot: string | null
   }>(
     `
     SELECT
@@ -229,7 +231,8 @@ export async function listConveyorNodesByConveyorId(
       cn.aborted_by::text,
       au_abort.email AS aborted_by_email,
       cn.abort_reason_code,
-      cn.abort_reason_text
+      cn.abort_reason_text,
+      cn.abort_reason_label_snapshot
     FROM conveyor_nodes cn
     LEFT JOIN app_users au ON au.id = cn.operational_completed_by
     LEFT JOIN app_users au_abort ON au_abort.id = cn.aborted_by
@@ -257,6 +260,7 @@ export async function listConveyorNodesByConveyorId(
     aborted_by_email: row.aborted_by_email,
     abort_reason_code: row.abort_reason_code,
     abort_reason_text: row.abort_reason_text,
+    abort_reason_label_snapshot: row.abort_reason_label_snapshot,
   }))
 }
 
@@ -366,6 +370,7 @@ export async function updateConveyorNodeStepAborted(
     aborted_by: string
     abort_reason_code: string
     abort_reason_text: string | null
+    abort_reason_label_snapshot: string
     /** Origens permitidas — update condicional sob lock. */
     expectedStatuses: readonly ConveyorNodeStepOperationalStatusDb[]
   },
@@ -377,12 +382,13 @@ export async function updateConveyorNodeStepAborted(
        aborted_by = $4::uuid,
        abort_reason_code = $5::varchar,
        abort_reason_text = $6::text,
+       abort_reason_label_snapshot = $7::text,
        updated_at = now()
      WHERE id = $2::uuid
        AND conveyor_id = $1::uuid
        AND deleted_at IS NULL
        AND node_type = 'STEP'
-       AND operational_status = ANY($7::varchar[])
+       AND operational_status = ANY($8::varchar[])
      RETURNING id::text`,
     [
       conveyorId,
@@ -391,6 +397,7 @@ export async function updateConveyorNodeStepAborted(
       fields.aborted_by,
       fields.abort_reason_code,
       fields.abort_reason_text,
+      fields.abort_reason_label_snapshot,
       [...fields.expectedStatuses],
     ],
   )
@@ -410,6 +417,7 @@ export async function updateConveyorNodeStepRestoreAborted(
        aborted_by = NULL,
        abort_reason_code = NULL,
        abort_reason_text = NULL,
+       abort_reason_label_snapshot = NULL,
        updated_at = now()
      WHERE id = $2::uuid
        AND conveyor_id = $1::uuid

@@ -319,6 +319,7 @@ export function buildConveyorStructureFromNodes(
                 abortedByName: st.aborted_by_email?.trim() || null,
                 abortReasonCode: st.abort_reason_code,
                 abortReasonText: st.abort_reason_text,
+                abortReasonLabelSnapshot: st.abort_reason_label_snapshot,
               }
             }),
         })),

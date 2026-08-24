@@ -238,11 +238,50 @@ export function getSafeOperationalEventNotePreview(event: ConveyorOperationalEve
 
 /** Motivo técnico curto para exibição amigável (evita mostrar códigos crus como única linha). */
 export function formatOperationalEventReasonLine(event: ConveyorOperationalEvent): string | null {
+  const meta = event.metadataJson
+  if (meta && typeof meta === 'object') {
+    const m = meta as {
+      reasonLabelSnapshot?: unknown
+      reasonLabel?: unknown
+      reasonText?: unknown
+      previousAbort?: {
+        abortReasonLabelSnapshot?: unknown
+        abortReasonCode?: unknown
+        abortReasonText?: unknown
+      }
+    }
+    const snap =
+      (typeof m.reasonLabelSnapshot === 'string' && m.reasonLabelSnapshot.trim()) ||
+      (typeof m.reasonLabel === 'string' && m.reasonLabel.trim()) ||
+      null
+    if (snap) {
+      const text =
+        typeof m.reasonText === 'string' && m.reasonText.trim() ? m.reasonText.trim() : null
+      return text ? `${snap} — ${text}` : snap
+    }
+    const prev = m.previousAbort
+    if (prev && typeof prev === 'object') {
+      const prevSnap =
+        (typeof prev.abortReasonLabelSnapshot === 'string' &&
+          prev.abortReasonLabelSnapshot.trim()) ||
+        (typeof prev.abortReasonCode === 'string' && prev.abortReasonCode.trim()) ||
+        null
+      if (prevSnap) {
+        const text =
+          typeof prev.abortReasonText === 'string' && prev.abortReasonText.trim()
+            ? prev.abortReasonText.trim()
+            : null
+        return text ? `Dispensa anterior: ${prevSnap} — ${text}` : `Dispensa anterior: ${prevSnap}`
+      }
+    }
+  }
+
   const r = (event.reason ?? '').trim()
   if (!r) return null
   const u = r.toUpperCase()
   if (u === 'EXPLICITLY_COMPLETED') return 'Conclusão registrada manualmente.'
   if (u === 'EXPLICITLY_REOPENED') return 'Reabertura registrada manualmente.'
+  if (u === 'EXPLICITLY_RESTORED_FROM_ABORTED') return 'Restauração explícita de dispensa.'
   if (u === 'DEADLINE_EXCEEDED_WITH_PENDING_WORK') return 'Prazo estimado ultrapassado com trabalho pendente.'
   if (u === 'ON_TIME') return 'Dentro do prazo.'
   if (u === 'NO_PENDING_WORK') return 'Sem trabalho pendente.'
