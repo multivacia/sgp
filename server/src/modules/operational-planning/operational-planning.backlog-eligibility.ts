@@ -41,6 +41,26 @@ export function operationalPlanningBacklogExcludeConveyorPlanItemsSql(
       )`
 }
 
+/** Fragmento SQL: STEPs já vinculados a item de plano semanal ativo (DRAFT/PUBLISHED). */
+export function operationalPlanningBacklogExcludeWeeklyPlanItemsSql(
+  stepAlias = 'step',
+  conveyorAlias = 'cv',
+): string {
+  return `
+      AND NOT EXISTS (
+        SELECT 1
+        FROM operational_work_plan_items owpi
+        INNER JOIN operational_work_plans owp
+          ON owp.id = owpi.work_plan_id
+          AND owp.deleted_at IS NULL
+          AND owp.status IN ('DRAFT', 'PUBLISHED')
+        WHERE owpi.deleted_at IS NULL
+          AND owpi.status <> 'CANCELLED'
+          AND owpi.activity_node_id = ${stepAlias}.id
+          AND owpi.conveyor_id = ${conveyorAlias}.id
+      )`
+}
+
 /**
  * Esteira EM_ANDAMENTO com plano operacional ativo segue fluxo novo
  * (Aguardando encaixe / semana), não o backlog legado.

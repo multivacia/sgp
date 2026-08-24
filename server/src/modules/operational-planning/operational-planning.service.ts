@@ -24,14 +24,20 @@ import {
 import { refreshConveyorOperationalPlanSyncStatusByItemIds } from '../conveyor-operational-plan/refreshConveyorOperationalPlanSyncStatus.js'
 import {
   deleteItemsForWorkPlan,
+  deleteItemsForWorkPlanExcept,
   findDraftOperationalWorkPlanByWeekStart,
   findEditableOperationalWorkPlanForWeek,
   findOperationalWorkPlanById,
   findOperationalWorkPlanByIdIncludingDeleted,
   findPublishedOperationalWorkPlanByWeekStart,
+  findActiveWeekPlanItemByActivity,
   insertOperationalWorkPlan,
   insertWorkPlanItems,
+  listActiveWeekPlanActivityKeys,
+  listActiveWorkPlanItemsForPlan,
   listWorkPlanItemInsertsForPlan,
+  type OperationalWorkPlanItemInsert,
+  isActivityPlannedInOtherWeeklyPlan,
   isConveyorPlanItemLinkedElsewhere,
   listEnrichedItemsForWorkPlan,
   listExecutionOutsidePlanEntriesForWeek,
@@ -493,6 +499,14 @@ async function validatePlanItems(
 ): Promise<void> {
   if (!body.items.length) return
 
+  const excludeIds = excludeWorkPlanIds
+    ? [...(Array.isArray(excludeWorkPlanIds) ? excludeWorkPlanIds : [excludeWorkPlanIds])]
+    : []
+  const preexistingKeys = await listActiveWeekPlanActivityKeys(pool, excludeIds)
+  const preexistingSet = new Set(
+    preexistingKeys.map((k) => `${k.conveyorId}:${k.activityNodeId}`),
+  )
+
   const seenActivity = new Set<string>()
   const seenConveyorPlanItem = new Set<string>()
   for (const it of body.items) {
@@ -541,11 +555,24 @@ async function validatePlanItems(
     if (row.conveyor_operational_status === 'FINALIZADA') {
       throw new AppError('Esteira concluída não aceita planejamento.', 400, ErrorCodes.VALIDATION_ERROR)
     }
+
+    const activityKey = `${it.conveyorId}:${it.activityNodeId}`
+    const isPreexisting = preexistingSet.has(activityKey)
+
     if (row.operational_status === 'COMPLETED') {
-      throw new AppError('Atividade já concluída não pode ser planejada.', 400, ErrorCodes.VALIDATION_ERROR)
+      if (!isPreexisting) {
+        throw new AppError(
+          'Atividade já concluída não pode ser planejada.',
+          400,
+          ErrorCodes.VALIDATION_ERROR,
+        )
+      }
+      // Pré-existente COMPLETED: permite no payload; pula COP e 409 (exclude já cobre).
+      continue
     }
 
-    if (it.conveyorOperationalPlanItemId) {
+    // COP de novo encaixe só para itens que ainda não estão no plano alvo/semana.
+    if (it.conveyorOperationalPlanItemId && !isPreexisting) {
       const copItem = await loadConveyorPlanItemForFactoryLink(
         pool,
         it.conveyorOperationalPlanItemId,
@@ -591,6 +618,20 @@ async function validatePlanItems(
         )
       }
     }
+
+    const plannedElsewhere = await isActivityPlannedInOtherWeeklyPlan(
+      pool,
+      it.conveyorId,
+      it.activityNodeId,
+      excludeWorkPlanIds,
+    )
+    if (plannedElsewhere) {
+      throw new AppError(
+        'Atividade já está planejada em outro plano semanal.',
+        409,
+        ErrorCodes.CONFLICT,
+      )
+    }
   }
 }
 
@@ -598,12 +639,59 @@ async function replaceWeekPlanItems(
   client: pg.PoolClient,
   planId: string,
   body: SaveOperationalWeekPlanBody,
+  weekPlanIdsForLookup: readonly string[] = [],
 ): Promise<void> {
-  await deleteItemsForWorkPlan(client, planId)
-  await insertWorkPlanItems(
-    client,
-    planId,
-    body.items.map((it) => ({
+  const existing = await listActiveWorkPlanItemsForPlan(client, planId)
+  const preserveIds: string[] = []
+  const preserveKeys = new Set<string>()
+
+  for (const item of existing) {
+    const step = await loadStepForPlanningValidation(client, item.conveyorId, item.activityNodeId)
+    if (step?.operational_status === 'COMPLETED') {
+      preserveIds.push(item.id)
+      preserveKeys.add(`${item.conveyorId}:${item.activityNodeId}`)
+    }
+  }
+
+  if (preserveIds.length === 0) {
+    await deleteItemsForWorkPlan(client, planId)
+  } else {
+    await deleteItemsForWorkPlanExcept(client, planId, preserveIds)
+  }
+
+  const toInsert: OperationalWorkPlanItemInsert[] = []
+  for (const it of body.items) {
+    const activityKey = `${it.conveyorId}:${it.activityNodeId}`
+    if (preserveKeys.has(activityKey)) continue
+
+    const step = await loadStepForPlanningValidation(client, it.conveyorId, it.activityNodeId)
+    if (step?.operational_status === 'COMPLETED') {
+      // COMPLETED só no published (ou outro plano da semana): copiar source, nunca o payload mutável.
+      const source = await findActiveWeekPlanItemByActivity(
+        client,
+        weekPlanIdsForLookup,
+        it.conveyorId,
+        it.activityNodeId,
+      )
+      if (!source?.assignedCollaboratorId) {
+        // Sem source ou sem colaborador: seed já filtraria; não inserir via payload.
+        continue
+      }
+      toInsert.push({
+        conveyorId: source.conveyorId,
+        activityNodeId: source.activityNodeId,
+        assignedCollaboratorId: source.assignedCollaboratorId,
+        assignedTeamId: source.assignedTeamId,
+        plannedDate: source.plannedDate,
+        plannedOrder: source.plannedOrder,
+        plannedMinutes: source.plannedMinutes,
+        notes: source.notes,
+        conveyorOperationalPlanItemId: source.conveyorOperationalPlanItemId,
+      })
+      continue
+    }
+
+    toInsert.push({
       conveyorId: it.conveyorId,
       activityNodeId: it.activityNodeId,
       assignedCollaboratorId: it.assignedCollaboratorId,
@@ -613,8 +701,11 @@ async function replaceWeekPlanItems(
       plannedMinutes: it.plannedMinutes ?? null,
       notes: it.notes ?? null,
       conveyorOperationalPlanItemId: it.conveyorOperationalPlanItemId ?? null,
-    })),
-  )
+    })
+  }
+  if (toInsert.length > 0) {
+    await insertWorkPlanItems(client, planId, toInsert)
+  }
 }
 
 async function reconcileConveyorLinksForPublishedPlan(
@@ -784,7 +875,7 @@ export async function serviceSaveOperationalWeekPlan(
       `,
       [planId, body.weekEndDate],
     )
-    await replaceWeekPlanItems(client, planId, body)
+    await replaceWeekPlanItems(client, planId, body, excludeIds)
     await touchOperationalWorkPlanUpdatedAt(client, planId)
 
     await client.query('COMMIT')
@@ -838,7 +929,7 @@ export async function servicePatchOperationalWeekPlan(
         [targetPlanId, body.weekEndDate],
       )
     }
-    await replaceWeekPlanItems(client, targetPlanId, body)
+    await replaceWeekPlanItems(client, targetPlanId, body, excludeIds)
     await touchOperationalWorkPlanUpdatedAt(client, targetPlanId)
     await client.query('COMMIT')
   } catch (e) {

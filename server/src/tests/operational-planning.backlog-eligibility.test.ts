@@ -6,6 +6,7 @@ import {
   operationalPlanningBacklogConveyorStatusSql,
   operationalPlanningBacklogExcludeConveyorPlanItemsSql,
   operationalPlanningBacklogExcludeEmProducaoWithActivePlanSql,
+  operationalPlanningBacklogExcludeWeeklyPlanItemsSql,
 } from '../modules/operational-planning/operational-planning.backlog-eligibility.js'
 import { listOperationalPlanningBacklog } from '../modules/operational-planning/operational-planning.repository.js'
 import { serviceListOperationalPlanningBacklog } from '../modules/operational-planning/operational-planning.service.js'
@@ -39,6 +40,17 @@ describe('operational planning backlog eligibility SQL', () => {
     expect(sql).toContain('conveyor_operational_plans')
   })
 
+  it('excludes STEPs already present in active weekly work plans', () => {
+    const sql = operationalPlanningBacklogExcludeWeeklyPlanItemsSql()
+    expect(sql).toContain('operational_work_plan_items')
+    expect(sql).toContain('operational_work_plans')
+    expect(sql).toContain('deleted_at IS NULL')
+    expect(sql).toContain("status <> 'CANCELLED'")
+    expect(sql).toContain('DRAFT')
+    expect(sql).toContain('PUBLISHED')
+    expect(sql).not.toContain("owp.status <> 'CANCELLED'")
+  })
+
   it('listOperationalPlanningBacklog query applies eligibility filters', async () => {
     const query = vi.fn().mockResolvedValue({ rows: [] })
     const mockPool = { query } as unknown as pg.Pool
@@ -53,6 +65,8 @@ describe('operational planning backlog eligibility SQL', () => {
     expect(sql).toContain('AGUARDANDO_PLANEJAMENTO')
     expect(sql).toContain('FINALIZADA')
     expect(sql).toContain('conveyor_operational_plan_items')
+    expect(sql).toContain('operational_work_plan_items')
+    expect(sql).toContain('operational_work_plans')
     expect(sql).toContain("operational_status = 'EM_ANDAMENTO'")
     expect(sql).toContain("step.operational_status IS DISTINCT FROM 'COMPLETED'")
   })
