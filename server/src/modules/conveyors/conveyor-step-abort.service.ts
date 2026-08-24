@@ -2,7 +2,7 @@ import type pg from 'pg'
 import { AppError } from '../../shared/errors/AppError.js'
 import { ErrorCodes } from '../../shared/errors/errorCodes.js'
 import { appUserHasPermission } from '../permissions/permissions.repository.js'
-import { findActiveStepAbortReasonByCode } from '../operational-settings/step-abort-reasons.repository.js'
+import { findStepAbortReasonByCode } from '../operational-settings/step-abort-reasons.repository.js'
 import { serviceCreateConveyorOperationalEvent } from './operational-events/conveyor-operational-events.service.js'
 import { getConveyorOperationalEventByIdempotencyKey } from './operational-events/conveyor-operational-events.repository.js'
 import type { ConveyorOperationalEventRow } from './operational-events/conveyor-operational-events.types.js'
@@ -317,7 +317,7 @@ export async function serviceAbortConveyorStep(
         )
       }
 
-      const catalog = await findActiveStepAbortReasonByCode(client, input.reasonCode.trim())
+      const catalog = await findStepAbortReasonByCode(client, input.reasonCode.trim())
       const reasonResolved = resolveStepAbortReason({
         reasonCode: input.reasonCode,
         reasonText: input.reasonText,

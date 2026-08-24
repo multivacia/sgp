@@ -113,4 +113,34 @@ describe('step abort reasons service', () => {
       code: ErrorCodes.NOT_FOUND,
     })
   })
+
+  it('violação UNIQUE 23505 concorrente → 409', async () => {
+    vi.spyOn(repo, 'findStepAbortReasonByCode').mockResolvedValue(null)
+    const err = Object.assign(new Error('duplicate key value violates unique constraint'), {
+      code: '23505',
+    })
+    vi.spyOn(repo, 'insertStepAbortReason').mockRejectedValue(err)
+    await expect(
+      serviceCreateStepAbortReason({} as pg.Pool, {
+        code: 'RACE_CODE',
+        label: 'Race',
+      }),
+    ).rejects.toMatchObject<AppError>({
+      statusCode: 409,
+      code: ErrorCodes.CONFLICT,
+      message: 'Já existe um motivo de dispensa com este código.',
+    })
+  })
+
+  it('erro de banco diferente de 23505 não é mascarado como 409', async () => {
+    vi.spyOn(repo, 'findStepAbortReasonByCode').mockResolvedValue(null)
+    const err = Object.assign(new Error('connection failure'), { code: '08006' })
+    vi.spyOn(repo, 'insertStepAbortReason').mockRejectedValue(err)
+    await expect(
+      serviceCreateStepAbortReason({} as pg.Pool, {
+        code: 'CONN_FAIL',
+        label: 'X',
+      }),
+    ).rejects.toMatchObject({ code: '08006' })
+  })
 })

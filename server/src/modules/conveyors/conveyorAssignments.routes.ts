@@ -2,7 +2,6 @@ import { Router } from 'express'
 import { asyncRoute } from '../../shared/asyncRoute.js'
 import { requireAuth } from '../auth/auth.middleware.js'
 import { requirePermission } from '../permissions/permissions.middleware.js'
-import { getActiveStepAbortReasonsForSelection } from '../operational-settings/step-abort-reasons.controller.js'
 import {
   deleteConveyorStepAssignee,
   deleteConveyorStepTimeEntry,
@@ -21,13 +20,6 @@ const auth = [requireAuth()]
 
 export function conveyorAssignmentsRouter(): Router {
   const r = Router()
-  // Rota estática antes de :conveyorId para evitar colisão com parâmetros dinâmicos.
-  r.get(
-    '/conveyors/step-abort-reasons',
-    requireAuth(),
-    requirePermission('conveyors.create'),
-    asyncRoute(getActiveStepAbortReasonsForSelection),
-  )
   r.patch(
     '/conveyors/:conveyorId/steps/:stepNodeId/completion',
     requireAuth(),

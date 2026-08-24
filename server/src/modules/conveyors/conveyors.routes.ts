@@ -12,6 +12,7 @@ import { postConveyor } from './conveyors.controller.js'
 import { getConveyorById } from './conveyors.detail.controller.js'
 import { getConveyorNodeWorkload } from './conveyors.nodeWorkload.controller.js'
 import { getConveyors } from './conveyors.list.controller.js'
+import { getActiveStepAbortReasonsForSelection } from '../operational-settings/step-abort-reasons.controller.js'
 import {
   patchConveyorDados,
   patchConveyorStructure,
@@ -35,6 +36,13 @@ export function conveyorsRouter(env: Env): Router {
   registerConveyorOperationalPlanRoutes(r)
   const uploadDraft = documentDraftMulter(env)
   r.get('/conveyors', ...auth, asyncRoute(getConveyors))
+  // Estática antes de /conveyors/:id — evita capturar "step-abort-reasons" como UUID.
+  r.get(
+    '/conveyors/step-abort-reasons',
+    requireAuth(),
+    requirePermission('conveyors.create'),
+    asyncRoute(getActiveStepAbortReasonsForSelection),
+  )
   r.patch(
     '/conveyors/:id/status',
     requireAuth(),

@@ -1,6 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { StepAbortReasonOption } from '../../domain/conveyors/stepAbortReasons'
 import { listActiveStepAbortReasonsForSelection } from '../../services/conveyors/stepAbortReasonsSelectionApiService'
+import {
+  abortDialogCanConfirm,
+  abortDialogConfirmPayload,
+  abortDialogPlaceholderLabel,
+  abortDialogRequiresComplement,
+} from './abortConveyorStepDialogLogic'
 
 type Props = {
   open: boolean
@@ -53,24 +59,23 @@ export function AbortConveyorStepDialog({
     void loadReasons()
   }, [open, loadReasons])
 
-  const selected = useMemo(
-    () => reasons.find((r) => r.code === reasonCode) ?? null,
+  const requiresComplement = useMemo(
+    () => abortDialogRequiresComplement(reasons, reasonCode),
     [reasons, reasonCode],
   )
-
-  const requiresComplement = Boolean(selected?.requiresComplement)
 
   useEffect(() => {
     if (!requiresComplement) setReasonText('')
   }, [requiresComplement])
 
-  const canConfirm =
-    !busy &&
-    !loadingReasons &&
-    !loadError &&
-    reasons.length > 0 &&
-    Boolean(reasonCode) &&
-    (!requiresComplement || reasonText.trim().length > 0)
+  const canConfirm = abortDialogCanConfirm({
+    busy,
+    loadingReasons,
+    loadError,
+    reasons,
+    reasonCode,
+    reasonText,
+  })
 
   if (!open) return null
 
@@ -108,9 +113,7 @@ export function AbortConveyorStepDialog({
             onChange={(e) => setReasonCode(e.target.value)}
             className="mt-2 w-full rounded-xl border border-white/12 bg-white/[0.04] px-3 py-2 text-sm text-slate-100 focus:border-sgp-gold/35 focus:outline-none focus:ring-1 focus:ring-sgp-gold/25 disabled:opacity-50"
           >
-            <option value="">
-              {loadingReasons ? 'Carregando motivos…' : 'Selecione um motivo...'}
-            </option>
+            <option value="">{abortDialogPlaceholderLabel(loadingReasons)}</option>
             {reasons.map((r) => (
               <option key={r.code} value={r.code}>
                 {r.label}
@@ -161,10 +164,13 @@ export function AbortConveyorStepDialog({
             type="button"
             disabled={!canConfirm}
             onClick={() =>
-              onConfirm({
-                reasonCode,
-                reasonText: requiresComplement ? reasonText.trim() : null,
-              })
+              onConfirm(
+                abortDialogConfirmPayload({
+                  reasons,
+                  reasonCode,
+                  reasonText,
+                }),
+              )
             }
             className="rounded-xl border border-rose-400/35 bg-rose-500/10 px-4 py-2.5 text-sm font-bold text-rose-100 shadow-inner transition hover:border-rose-400/50 hover:bg-rose-500/[0.14] disabled:opacity-50"
           >

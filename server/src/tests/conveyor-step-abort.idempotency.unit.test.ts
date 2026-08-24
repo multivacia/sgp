@@ -41,7 +41,7 @@ const conveyorsServiceMocks = vi.hoisted(() => ({
 }))
 
 const stepAbortReasonsRepoMocks = vi.hoisted(() => ({
-  findActiveStepAbortReasonByCode: vi.fn(),
+  findStepAbortReasonByCode: vi.fn(),
 }))
 
 vi.mock(
@@ -121,7 +121,7 @@ vi.mock('../modules/operational-settings/step-abort-reasons.repository.js', asyn
   >('../modules/operational-settings/step-abort-reasons.repository.js')
   return {
     ...actual,
-    findActiveStepAbortReasonByCode: stepAbortReasonsRepoMocks.findActiveStepAbortReasonByCode,
+    findStepAbortReasonByCode: stepAbortReasonsRepoMocks.findStepAbortReasonByCode,
   }
 })
 
@@ -302,12 +302,12 @@ describe('abort/restore liberam o PoolClient antes de carregar o detalhe', () =>
     conveyorsRepoMocks.updateConveyorNodeStepRestoreAborted.mockReset()
     conveyorsServiceMocks.loadConveyorStructureWithAssignees.mockReset()
     conveyorsServiceMocks.mapDetailRowToApi.mockReset()
-    stepAbortReasonsRepoMocks.findActiveStepAbortReasonByCode.mockReset()
+    stepAbortReasonsRepoMocks.findStepAbortReasonByCode.mockReset()
 
     permissionsMocks.appUserHasPermission.mockResolvedValue(true)
     conveyorsRepoMocks.updateConveyorNodeStepAborted.mockResolvedValue(true)
     conveyorsRepoMocks.updateConveyorNodeStepRestoreAborted.mockResolvedValue(true)
-    stepAbortReasonsRepoMocks.findActiveStepAbortReasonByCode.mockImplementation(
+    stepAbortReasonsRepoMocks.findStepAbortReasonByCode.mockImplementation(
       async (_q: unknown, code: string) => ({
         code,
         label: code === 'OUTRO' ? 'Outro' : 'Motivo teste',

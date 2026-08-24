@@ -14,6 +14,12 @@ import {
   type StepAbortReasonRow,
 } from './step-abort-reasons.repository.js'
 
+function isUniqueViolation(error: unknown): boolean {
+  if (!error || typeof error !== 'object') return false
+  const e = error as { code?: string }
+  return e.code === '23505'
+}
+
 export async function serviceListStepAbortReasons(
   pool: pg.Pool,
   input: { q?: string; status: 'active' | 'inactive' | 'all' },
@@ -49,8 +55,7 @@ export async function serviceCreateStepAbortReason(
       isActive: body.isActive ?? true,
     })
   } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e)
-    if (msg.includes('chk_conveyor_step_abort_reasons_code_format') || msg.includes('23505')) {
+    if (isUniqueViolation(e)) {
       throw new AppError(
         'Já existe um motivo de dispensa com este código.',
         409,
