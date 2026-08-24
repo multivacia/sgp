@@ -105,8 +105,10 @@ describe('resolveAppVersionMetadata', () => {
     )
 
     expect(metadata.product).toBe('SGP+')
-    expect(metadata.version).toBe('1.8.4')
-    expect(metadata.releaseName).toBe('Correção visual light-executive + identificação de versão')
+    expect(metadata.version).toBe('1.9.0')
+    expect(metadata.releaseName).toBe(
+      'Dispensa de atividades, catálogo de motivos e melhorias operacionais',
+    )
     expect(metadata.environment).toBe('development')
     expect(metadata.commit).toBe('local')
     expect(metadata.buildTime).toBeNull()
