@@ -1,11 +1,11 @@
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type pg from 'pg'
 import { AppError } from '../shared/errors/AppError.js'
 import { ErrorCodes } from '../shared/errors/errorCodes.js'
 import * as repo from '../modules/operational-planning/operational-planning.repository.js'
+import * as capacityMatrix from '../modules/operational-planning/buildCapacityByCollaboratorDay.js'
 import * as conveyorRepo from '../modules/conveyor-operational-plan/conveyor-operational-plan.repository.js'
 import * as refreshSync from '../modules/conveyor-operational-plan/refreshConveyorOperationalPlanSyncStatus.js'
-import * as operationalSettings from '../modules/operational-settings/operational-settings.service.js'
 import {
   servicePatchOperationalWeekPlan,
   servicePublishOperationalWeekPlan,
@@ -102,6 +102,11 @@ function activePlanItem(
 }
 
 describe('COMPLETED STEP preserve no replace seletivo', () => {
+  beforeEach(() => {
+    vi.spyOn(capacityMatrix, 'listActiveCollaboratorIdsForPlanningBoard').mockResolvedValue([])
+    vi.spyOn(capacityMatrix, 'buildCapacityByCollaboratorDay').mockResolvedValue([])
+  })
+
   afterEach(() => {
     vi.restoreAllMocks()
   })
@@ -299,7 +304,8 @@ describe('COMPLETED STEP preserve no replace seletivo', () => {
       .mockResolvedValueOnce(planRow({ id: 'pub-old', status: 'PUBLISHED' }))
       .mockResolvedValue(planRow({ id: 'draft-1', status: 'PUBLISHED' }))
     vi.spyOn(repo, 'listExecutionOutsidePlanEntriesForWeek').mockResolvedValue([])
-    vi.spyOn(operationalSettings, 'serviceResolveCollaboratorDailyCapacity').mockResolvedValue(480)
+    vi.spyOn(capacityMatrix, 'listActiveCollaboratorIdsForPlanningBoard').mockResolvedValue([])
+    vi.spyOn(capacityMatrix, 'buildCapacityByCollaboratorDay').mockResolvedValue([])
     vi.spyOn(conveyorRepo, 'loadConveyorPlanItemsForWeekSync').mockResolvedValue(new Map())
     vi.spyOn(refreshSync, 'refreshConveyorOperationalPlanSyncStatusByItemIds').mockResolvedValue(
       undefined,

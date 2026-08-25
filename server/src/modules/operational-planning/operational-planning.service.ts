@@ -4,7 +4,10 @@ import { ErrorCodes } from '../../shared/errors/errorCodes.js'
 import { analyzeConveyorActivitySequence } from '../conveyors/conveyorActivitySequence.logic.js'
 import type { SequenceAnalysisNode } from '../conveyors/conveyorActivitySequence.logic.js'
 import { listConveyorNodesForSequenceAnalysis } from '../conveyors/conveyors.repository.js'
-import { serviceResolveCollaboratorDailyCapacity } from '../operational-settings/operational-settings.service.js'
+import {
+  buildCapacityByCollaboratorDay,
+  listActiveCollaboratorIdsForPlanningBoard,
+} from './buildCapacityByCollaboratorDay.js'
 import type {
   ApplyConveyorPlanSyncField,
   ApplyConveyorPlanToWeekItemBody,
@@ -269,48 +272,6 @@ async function mapWeekPlanItemsToApi(
   })
 }
 
-async function buildCapacityByCollaboratorDay(
-  pool: pg.Pool,
-  items: PlanItemEnrichedRow[],
-): Promise<
-  Array<{
-    collaboratorId: string
-    date: string
-    capacityMinutes: number
-    plannedMinutes: number
-  }>
-> {
-  const pairs = new Map<string, { collaboratorId: string; date: string }>()
-  for (const it of items) {
-    if (!it.assigned_collaborator_id) continue
-    const k = `${it.assigned_collaborator_id}|${it.planned_date}`
-    pairs.set(k, { collaboratorId: it.assigned_collaborator_id, date: it.planned_date })
-  }
-  const out: Array<{
-    collaboratorId: string
-    date: string
-    capacityMinutes: number
-    plannedMinutes: number
-  }> = []
-  for (const { collaboratorId, date } of pairs.values()) {
-    const cap = await serviceResolveCollaboratorDailyCapacity(pool, collaboratorId, date)
-    const plannedSum = items
-      .filter(
-        (i) =>
-          i.assigned_collaborator_id === collaboratorId && i.planned_date === date,
-      )
-      .reduce((s, i) => s + Math.max(0, Number(i.planned_minutes ?? 0) || 0), 0)
-    out.push({
-      collaboratorId,
-      date,
-      capacityMinutes: cap.resolvedDailyMinutes,
-      plannedMinutes: plannedSum,
-    })
-  }
-  out.sort((a, b) => a.date.localeCompare(b.date) || a.collaboratorId.localeCompare(b.collaboratorId))
-  return out
-}
-
 function buildWeekRevisionMeta(
   draftRow: OperationalWorkPlanRow | null,
   publishedRow: OperationalWorkPlanRow | null,
@@ -393,6 +354,16 @@ export async function serviceGetOperationalPlanningWeek(
   const executionOutsidePlanSummary = buildExecutionOutsidePlanSummary(executionOutsidePlanRows)
   const executionOutsidePlanEntries = executionOutsidePlanRows.map(mapExecutionOutsidePlanEntryToApi)
 
+  const activeCollaboratorIds = await listActiveCollaboratorIdsForPlanningBoard(pool)
+  const items = editableRow
+    ? await listEnrichedItemsForWorkPlan(pool, editableRow.id)
+    : []
+  const capacityByCollaboratorDay = await buildCapacityByCollaboratorDay(pool, {
+    items,
+    weekdayDates,
+    collaboratorIds: activeCollaboratorIds,
+  })
+
   if (!editableRow) {
     return {
       hasPlan: false,
@@ -400,14 +371,12 @@ export async function serviceGetOperationalPlanningWeek(
       revision,
       plan: null,
       summary: { plannedMinutes: 0, plannedItems: 0, collaboratorsCount: 0 },
-      capacityByCollaboratorDay: [],
+      capacityByCollaboratorDay,
       executionOutsidePlanSummary,
       executionOutsidePlanEntries,
     }
   }
 
-  const items = await listEnrichedItemsForWorkPlan(pool, editableRow.id)
-  const capacityByCollaboratorDay = await buildCapacityByCollaboratorDay(pool, items)
   const mappedItems = await mapWeekPlanItemsToApi(pool, items)
 
   return mapPlanRowToWeekResponse(

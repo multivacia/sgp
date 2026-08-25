@@ -1,11 +1,11 @@
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type pg from 'pg'
 import { AppError } from '../shared/errors/AppError.js'
 import { ErrorCodes } from '../shared/errors/errorCodes.js'
 import * as repo from '../modules/operational-planning/operational-planning.repository.js'
+import * as capacityMatrix from '../modules/operational-planning/buildCapacityByCollaboratorDay.js'
 import * as conveyorRepo from '../modules/conveyor-operational-plan/conveyor-operational-plan.repository.js'
 import * as refreshSync from '../modules/conveyor-operational-plan/refreshConveyorOperationalPlanSyncStatus.js'
-import * as operationalSettings from '../modules/operational-settings/operational-settings.service.js'
 import {
   serviceGetOperationalPlanningWeek,
   servicePatchOperationalWeekPlan,
@@ -56,17 +56,61 @@ function mockReplaceBaseline(): void {
 }
 
 describe('operational planning revision flow', () => {
+  beforeEach(() => {
+    vi.spyOn(capacityMatrix, 'listActiveCollaboratorIdsForPlanningBoard').mockResolvedValue([])
+    vi.spyOn(capacityMatrix, 'buildCapacityByCollaboratorDay').mockResolvedValue([])
+  })
+
   afterEach(() => {
     vi.restoreAllMocks()
   })
 
   function mockWeekCapacity(): void {
-    vi.spyOn(operationalSettings, 'serviceResolveCollaboratorDailyCapacity').mockResolvedValue(480)
+    vi.spyOn(capacityMatrix, 'listActiveCollaboratorIdsForPlanningBoard').mockResolvedValue([])
+    vi.spyOn(capacityMatrix, 'buildCapacityByCollaboratorDay').mockResolvedValue([])
     vi.spyOn(conveyorRepo, 'loadConveyorPlanItemsForWeekSync').mockResolvedValue(new Map())
   }
 
+  it('serviceGetOperationalPlanningWeek sem plano salvo devolve capacidade dos colaboradores ativos', async () => {
+    const pool = {} as pg.Pool
+    const capacityRows = [
+      {
+        collaboratorId: 'col-1',
+        date: '2026-05-11',
+        capacityMinutes: 480,
+        plannedMinutes: 0,
+      },
+      {
+        collaboratorId: 'col-1',
+        date: '2026-05-12',
+        capacityMinutes: 360,
+        plannedMinutes: 0,
+      },
+    ]
+    vi.spyOn(repo, 'findDraftOperationalWorkPlanByWeekStart').mockResolvedValue(null)
+    vi.spyOn(repo, 'findPublishedOperationalWorkPlanByWeekStart').mockResolvedValue(null)
+    vi.spyOn(repo, 'listExecutionOutsidePlanEntriesForWeek').mockResolvedValue([])
+    vi.spyOn(capacityMatrix, 'listActiveCollaboratorIdsForPlanningBoard').mockResolvedValue(['col-1'])
+    vi.spyOn(capacityMatrix, 'buildCapacityByCollaboratorDay').mockResolvedValue(capacityRows)
+
+    const out = await serviceGetOperationalPlanningWeek(pool, WEEK_START)
+
+    expect(out.hasPlan).toBe(false)
+    expect(out.plan).toBeNull()
+    expect(out.capacityByCollaboratorDay).toEqual(capacityRows)
+    expect(capacityMatrix.buildCapacityByCollaboratorDay).toHaveBeenCalledWith(
+      pool,
+      expect.objectContaining({
+        items: [],
+        collaboratorIds: ['col-1'],
+        weekdayDates: expect.arrayContaining([WEEK_START, WEEK_END]),
+      }),
+    )
+  })
+
   it('serviceGetOperationalPlanningWeek retorna DRAFT editável quando coexistem PUBLISHED e DRAFT', async () => {
     const pool = {} as pg.Pool
+    mockWeekCapacity()
     vi.spyOn(repo, 'findDraftOperationalWorkPlanByWeekStart').mockResolvedValue(
       planRow({ id: 'draft-1', status: 'DRAFT' }),
     )
@@ -89,6 +133,7 @@ describe('operational planning revision flow', () => {
 
   it('serviceGetOperationalPlanningWeek usa PUBLISHED para execução fora do plano quando há revisão', async () => {
     const pool = {} as pg.Pool
+    mockWeekCapacity()
     vi.spyOn(repo, 'findDraftOperationalWorkPlanByWeekStart').mockResolvedValue(
       planRow({ id: 'draft-1', status: 'DRAFT' }),
     )

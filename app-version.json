@@ -1,7 +1,7 @@
 {
   "product": "SGP+",
-  "version": "1.9.2",
-  "releaseName": "Correção da justificativa operacional no apontamento",
+  "version": "1.9.3",
+  "releaseName": "Alerta de capacidade operacional no planejamento semanal",
   "releaseDate": "2026-08-25",
   "channel": "production"
 }

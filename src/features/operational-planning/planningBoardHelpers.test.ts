@@ -5,6 +5,7 @@ import {
   formatPlanningCapacityExceededMessage,
   formatPlanningMinutes,
   resolvePlanningCapacityState,
+  sumPlanningItemMinutes,
 } from './planningBoardHelpers'
 
 type Item = {
@@ -155,5 +156,25 @@ describe('resolvePlanningCapacityState', () => {
 describe('formatPlanningCapacityExceededMessage', () => {
   it('inclui excesso formatado', () => {
     expect(formatPlanningCapacityExceededMessage(510, 480)).toBe('Capacidade excedida em 30min')
+  })
+
+  it('formata excesso de 60 minutos como 1h', () => {
+    expect(formatPlanningCapacityExceededMessage(540, 480)).toBe('Capacidade excedida em 1h')
+  })
+})
+
+describe('alerta imediato no rascunho com capacityMinutes da API', () => {
+  it('com capacityRow disponível, draft acima do limite fica over_capacity', () => {
+    const draftPlanned = sumPlanningItemMinutes([
+      { plannedMinutes: 300, status: 'PLANNED' },
+      { plannedMinutes: 240, status: 'PLANNED' },
+    ])
+    expect(draftPlanned).toBe(540)
+    expect(resolvePlanningCapacityState(draftPlanned, 480)).toBe('over_capacity')
+  })
+
+  it('ao reduzir draft para o limite, alerta some', () => {
+    expect(resolvePlanningCapacityState(540, 360)).toBe('over_capacity')
+    expect(resolvePlanningCapacityState(360, 360)).toBe('normal')
   })
 })

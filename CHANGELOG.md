@@ -1,5 +1,19 @@
 # CHANGELOG
 
+## SGP+ v1.9.3 — 2026-08-25
+
+Tipo: Evolução operacional / Planejamento semanal
+
+Inclui:
+
+- Alerta visual quando o planejamento diário excede a capacidade
+  operacional do colaborador.
+- Capacidade disponível desde a criação de um novo planejamento,
+  antes do primeiro salvamento.
+- Aplicação dos ajustes individuais de capacidade conforme a vigência.
+- Planejamento e publicação continuam permitidos mesmo acima da
+  capacidade.
+
 ## SGP+ v1.9.2 — 2026-08-25
 
 Tipo: Correção operacional / Apontamento de horas
