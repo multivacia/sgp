@@ -384,3 +384,31 @@ export async function serviceResolveCollaboratorDailyCapacity(
     source: resolved.source,
   }
 }
+
+export async function serviceResolveCollaboratorExplicitDailyCapacity(
+  pool: pg.Pool,
+  collaboratorId: string,
+  date?: string,
+): Promise<{
+  collaboratorId: string
+  date: string
+  defaultDailyMinutes: number | null
+  overrideDailyMinutes: number | null
+  explicitDailyMinutes: number | null
+  source: 'override' | 'default' | 'fallback'
+}> {
+  const refDate = date ?? new Date().toISOString().slice(0, 10)
+  const resolved = await resolveCollaboratorDailyCapacityMinutes(
+    pool,
+    collaboratorId,
+    refDate,
+  )
+  return {
+    collaboratorId,
+    date: refDate,
+    defaultDailyMinutes: resolved.defaultDailyMinutes,
+    overrideDailyMinutes: resolved.overrideDailyMinutes,
+    explicitDailyMinutes: resolved.overrideDailyMinutes ?? resolved.defaultDailyMinutes ?? null,
+    source: resolved.source,
+  }
+}

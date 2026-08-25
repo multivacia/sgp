@@ -4,7 +4,10 @@ import { ErrorCodes } from '../../shared/errors/errorCodes.js'
 import { analyzeConveyorActivitySequence } from '../conveyors/conveyorActivitySequence.logic.js'
 import type { SequenceAnalysisNode } from '../conveyors/conveyorActivitySequence.logic.js'
 import { listConveyorNodesForSequenceAnalysis } from '../conveyors/conveyors.repository.js'
-import { serviceResolveCollaboratorDailyCapacity } from '../operational-settings/operational-settings.service.js'
+import {
+  serviceResolveCollaboratorDailyCapacity,
+  serviceResolveCollaboratorExplicitDailyCapacity,
+} from '../operational-settings/operational-settings.service.js'
 import type {
   ApplyConveyorPlanSyncField,
   ApplyConveyorPlanToWeekItemBody,
@@ -70,6 +73,11 @@ import {
   mapExecutionOutsidePlanEntryToApi,
 } from './operational-planning.execution-outside-plan.js'
 import { mergeWeekActivityItems } from './operational-planning.week-activity.js'
+import {
+  buildOperationalPlanningCapacityBlock,
+  type CollaboratorPlanningCapacitySummary,
+  type OperationalPlanningCapacityBlock,
+} from './operational-planning.capacity.js'
 
 function todayIsoLocal(): string {
   const t = new Date()
@@ -156,6 +164,10 @@ export type OperationalPlanningWeekResponse = {
     capacityMinutes: number
     plannedMinutes: number
   }>
+  capacity: {
+    summary: OperationalPlanningCapacityBlock['summary']
+    collaborators: CollaboratorPlanningCapacitySummary[]
+  }
   executionOutsidePlanSummary: {
     totalMinutes: number
     entriesCount: number
@@ -311,6 +323,69 @@ async function buildCapacityByCollaboratorDay(
   return out
 }
 
+function isActiveCapacitySummaryItem(
+  item: PlanItemEnrichedRow,
+  weekdayDatesSet: ReadonlySet<string>,
+): item is PlanItemEnrichedRow & { assigned_collaborator_id: string } {
+  const collaboratorId = item.assigned_collaborator_id?.trim()
+  if (!collaboratorId) return false
+  if (!weekdayDatesSet.has(item.planned_date)) return false
+  const status = item.status?.trim().toUpperCase()
+  return status !== 'CANCELLED' && status !== 'REMOVED'
+}
+
+async function buildOperationalPlanningCapacity(
+  pool: pg.Pool,
+  items: PlanItemEnrichedRow[],
+  weekdayDates: readonly string[],
+): Promise<OperationalPlanningCapacityBlock> {
+  const weekdayDatesSet = new Set(weekdayDates)
+  const collaboratorIds = [
+    ...new Set(
+      items
+        .filter((item) => isActiveCapacitySummaryItem(item, weekdayDatesSet))
+        .map((item) => item.assigned_collaborator_id.trim()),
+    ),
+  ]
+
+  if (collaboratorIds.length === 0) {
+    return buildOperationalPlanningCapacityBlock({
+      weekdayDates,
+      items: [],
+      explicitCapacityByCollaboratorDay: [],
+    })
+  }
+
+  const explicitCapacityByCollaboratorDay = await Promise.all(
+    collaboratorIds.flatMap((collaboratorId) =>
+      weekdayDates.map(async (date) => {
+        const capacity = await serviceResolveCollaboratorExplicitDailyCapacity(
+          pool,
+          collaboratorId,
+          date,
+        )
+        return {
+          collaboratorId,
+          date,
+          explicitDailyMinutes: capacity.explicitDailyMinutes,
+        }
+      }),
+    ),
+  )
+
+  return buildOperationalPlanningCapacityBlock({
+    weekdayDates,
+    items: items.map((item) => ({
+      collaboratorId: item.assigned_collaborator_id,
+      collaboratorName: item.assigned_collaborator_name,
+      plannedDate: item.planned_date,
+      plannedMinutes: item.planned_minutes,
+      status: item.status,
+    })),
+    explicitCapacityByCollaboratorDay,
+  })
+}
+
 function buildWeekRevisionMeta(
   draftRow: OperationalWorkPlanRow | null,
   publishedRow: OperationalWorkPlanRow | null,
@@ -333,6 +408,7 @@ function mapPlanRowToWeekResponse(
   weekdayDates: readonly string[],
   revision: OperationalPlanningWeekRevisionMeta,
   capacityByCollaboratorDay: OperationalPlanningWeekResponse['capacityByCollaboratorDay'],
+  capacity: OperationalPlanningWeekResponse['capacity'],
   executionOutsidePlanSummary: OperationalPlanningWeekResponse['executionOutsidePlanSummary'],
   executionOutsidePlanEntries: OperationalPlanningWeekResponse['executionOutsidePlanEntries'],
   mappedItems: Awaited<ReturnType<typeof mapWeekPlanItemsToApi>>,
@@ -364,6 +440,7 @@ function mapPlanRowToWeekResponse(
       collaboratorsCount: collabIds.size,
     },
     capacityByCollaboratorDay,
+    capacity,
     executionOutsidePlanSummary,
     executionOutsidePlanEntries,
   }
@@ -401,6 +478,11 @@ export async function serviceGetOperationalPlanningWeek(
       plan: null,
       summary: { plannedMinutes: 0, plannedItems: 0, collaboratorsCount: 0 },
       capacityByCollaboratorDay: [],
+      capacity: buildOperationalPlanningCapacityBlock({
+        weekdayDates,
+        items: [],
+        explicitCapacityByCollaboratorDay: [],
+      }),
       executionOutsidePlanSummary,
       executionOutsidePlanEntries,
     }
@@ -408,6 +490,7 @@ export async function serviceGetOperationalPlanningWeek(
 
   const items = await listEnrichedItemsForWorkPlan(pool, editableRow.id)
   const capacityByCollaboratorDay = await buildCapacityByCollaboratorDay(pool, items)
+  const capacity = await buildOperationalPlanningCapacity(pool, items, weekdayDates)
   const mappedItems = await mapWeekPlanItemsToApi(pool, items)
 
   return mapPlanRowToWeekResponse(
@@ -418,6 +501,7 @@ export async function serviceGetOperationalPlanningWeek(
     weekdayDates,
     revision,
     capacityByCollaboratorDay,
+    capacity,
     executionOutsidePlanSummary,
     executionOutsidePlanEntries,
     mappedItems,
