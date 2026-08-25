@@ -14,6 +14,7 @@ import {
   structureNamesSignature,
   validatePreviewActivityTree,
 } from './operationMatrixPreviewEdits'
+import { resolveActivityTeamAndResponsiblePatch } from './matrixPreviewResponsibleLogic'
 import {
   appendPreviewPendingStructureNode,
   removePreviewStructureNode,
@@ -196,18 +197,100 @@ describe('operationMatrixPreviewEdits', () => {
     expect(diffs[0]?.patch.team_ids).toEqual(['550e8400-e29b-41d4-a716-446655440001'])
   })
 
-  it('collectActivityFieldDiffs detecta mudança em default_responsible_id', () => {
+  it('collectActivityFieldDiffs detecta remoção do responsável (null)', () => {
     const base = itemWithActivity(
-      act('a1', { planned_minutes: 10, default_responsible_id: null }),
+      act('a1', {
+        planned_minutes: 10,
+        default_responsible_id: '550e8400-e29b-41d4-a716-446655440002',
+        team_ids: ['550e8400-e29b-41d4-a716-446655440001'],
+      }),
+    )
+    const work = patchActivityFieldsInTreeClone(base, 'a1', {
+      default_responsible_id: null,
+    })
+    const diffs = collectActivityFieldDiffs(base, work)
+    expect(diffs).toHaveLength(1)
+    expect(diffs[0]?.patch.default_responsible_id).toBeNull()
+    expect(diffs[0]?.patch.team_ids).toEqual([
+      '550e8400-e29b-41d4-a716-446655440001',
+    ])
+  })
+
+  it('alterar só o responsável não altera equipe nem tempo', () => {
+    const team = '550e8400-e29b-41d4-a716-446655440001'
+    const base = itemWithActivity(
+      act('a1', {
+        planned_minutes: 10,
+        default_responsible_id: null,
+        team_ids: [team],
+      }),
     )
     const work = patchActivityFieldsInTreeClone(base, 'a1', {
       default_responsible_id: '550e8400-e29b-41d4-a716-446655440002',
     })
+    const node = work.children[0]!.children[0]!.children[0]!
+    expect(node.planned_minutes).toBe(10)
+    expect(node.team_ids).toEqual([team])
+    expect(node.default_responsible_id).toBe('550e8400-e29b-41d4-a716-446655440002')
+  })
+
+  it('validatePreviewActivityTree não exige responsável', () => {
+    const tree = itemWithActivity(
+      act('a1', {
+        planned_minutes: 10,
+        default_responsible_id: null,
+        team_ids: ['550e8400-e29b-41d4-a716-446655440001'],
+      }),
+    )
+    expect(validatePreviewActivityTree(tree)).toEqual({ ok: true })
+  })
+
+  it('troca de equipe no rascunho zera responsável de forma atômica', () => {
+    const teamOld = '550e8400-e29b-41d4-a716-446655440001'
+    const teamNew = '550e8400-e29b-41d4-a716-446655440099'
+    const respShared = '550e8400-e29b-41d4-a716-446655440002'
+    const base = itemWithActivity(
+      act('a1', {
+        planned_minutes: 10,
+        default_responsible_id: respShared,
+        team_ids: [teamOld],
+      }),
+    )
+    const resolved = resolveActivityTeamAndResponsiblePatch({
+      previousTeamId: teamOld,
+      nextTeamId: teamNew,
+      currentResponsibleId: respShared,
+    })
+    const work = patchActivityFieldsInTreeClone(base, 'a1', {
+      team_ids: resolved.teamIds,
+      default_responsible_id: resolved.defaultResponsibleId,
+    })
+    const node = work.children[0]!.children[0]!.children[0]!
+    expect(node.team_ids).toEqual([teamNew])
+    expect(node.default_responsible_id).toBeNull()
     const diffs = collectActivityFieldDiffs(base, work)
     expect(diffs).toHaveLength(1)
-    expect(diffs[0]?.patch.default_responsible_id).toBe(
-      '550e8400-e29b-41d4-a716-446655440002',
+    expect(diffs[0]?.patch.team_ids).toEqual([teamNew])
+    expect(diffs[0]?.patch.default_responsible_id).toBeNull()
+  })
+
+  it('após troca de equipe, seleção posterior de responsável da nova equipe é válida', () => {
+    const teamNew = '550e8400-e29b-41d4-a716-446655440099'
+    const respNew = '550e8400-e29b-41d4-a716-446655440088'
+    const afterTeamChange = itemWithActivity(
+      act('a1', {
+        planned_minutes: 10,
+        default_responsible_id: null,
+        team_ids: [teamNew],
+      }),
     )
+    const withResp = patchActivityFieldsInTreeClone(afterTeamChange, 'a1', {
+      default_responsible_id: respNew,
+    })
+    const node = withResp.children[0]!.children[0]!.children[0]!
+    expect(node.team_ids).toEqual([teamNew])
+    expect(node.default_responsible_id).toBe(respNew)
+    expect(validatePreviewActivityTree(withResp)).toEqual({ ok: true })
   })
 
   it('collectActivityFieldDiffs não acusa mudança quando default_responsible_id permanece igual', () => {

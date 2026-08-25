@@ -10,8 +10,14 @@ import {
   isApiNotFound,
   patchMatrixNode,
 } from '../../services/operation-matrix/operationMatrixApiService'
-import { listTeams } from '../../services/teams/teamsApiService'
+import { listTeamMembers, listTeams } from '../../services/teams/teamsApiService'
 import { buildMatrixTreeAggregateMaps } from './matrixTreeAggregates'
+import {
+  eligibleResponsibleIdsFromMembers,
+  reconcileResponsibleWhenMembersReady,
+  resolveActivityTeamAndResponsiblePatch,
+  type PreviewTeamMembersState,
+} from './matrixPreviewResponsibleLogic'
 import {
   buildOperationMatrixMacroPreviewModel,
   type OperationMatrixMacroPreviewModel,
@@ -65,6 +71,11 @@ export function useOperationMatrixPreview(params: {
   const [treeState, setTreeState] = useState<TreeState>({ status: 'loading' })
   const [teams, setTeams] = useState<Team[]>([])
   const [teamsLoadFailed, setTeamsLoadFailed] = useState(false)
+  const [membersByTeam, setMembersByTeam] = useState<
+    Record<string, PreviewTeamMembersState>
+  >({})
+  const membersByTeamRef = useRef(membersByTeam)
+  membersByTeamRef.current = membersByTeam
 
   const [workingTree, setWorkingTree] = useState<MatrixNodeTreeApi | null>(null)
   const workingTreeRef = useRef<MatrixNodeTreeApi | null>(null)
@@ -103,6 +114,47 @@ export function useOperationMatrixPreview(params: {
     for (const t of teams) m.set(t.id, t.name)
     return m
   }, [teams])
+
+  const ensureTeamMembers = useCallback((teamId: string) => {
+    const tid = teamId.trim()
+    if (!tid) return
+    const cur = membersByTeamRef.current[tid]
+    if (cur?.status === 'loading' || cur?.status === 'ready') return
+
+    setMembersByTeam((prev) => ({ ...prev, [tid]: { status: 'loading' } }))
+    void listTeamMembers(tid)
+      .then((members) => {
+        setMembersByTeam((prev) => ({
+          ...prev,
+          [tid]: { status: 'ready', members },
+        }))
+      })
+      .catch(() => {
+        setMembersByTeam((prev) => ({
+          ...prev,
+          [tid]: { status: 'error' },
+        }))
+      })
+  }, [])
+
+  const retryTeamMembers = useCallback((teamId: string) => {
+    const tid = teamId.trim()
+    if (!tid) return
+    setMembersByTeam((prev) => ({ ...prev, [tid]: { status: 'loading' } }))
+    void listTeamMembers(tid)
+      .then((members) => {
+        setMembersByTeam((prev) => ({
+          ...prev,
+          [tid]: { status: 'ready', members },
+        }))
+      })
+      .catch(() => {
+        setMembersByTeam((prev) => ({
+          ...prev,
+          [tid]: { status: 'error' },
+        }))
+      })
+  }, [])
 
   useEffect(() => {
     if (!itemId) {
@@ -225,6 +277,67 @@ export function useOperationMatrixPreview(params: {
 
   workingTreeRef.current = workingTree
 
+  // Prefetch membros das equipes usadas nas atividades (cache por equipe).
+  useEffect(() => {
+    if (!workingTree) return
+    const teamIds = new Set<string>()
+    const walk = (n: MatrixNodeTreeApi) => {
+      if (n.node_type === 'ACTIVITY') {
+        const tid = n.team_ids?.[0]?.trim()
+        if (tid) teamIds.add(tid)
+      }
+      for (const c of n.children) walk(c)
+    }
+    walk(workingTree)
+    for (const tid of teamIds) ensureTeamMembers(tid)
+  }, [workingTree, ensureTeamMembers])
+
+  // Após membros ready: limpa responsável incompatível (sem limpar enquanto loading).
+  useEffect(() => {
+    const readyEntries = Object.entries(membersByTeam).filter(
+      (entry): entry is [string, Extract<PreviewTeamMembersState, { status: 'ready' }>] =>
+        entry[1].status === 'ready',
+    )
+    if (readyEntries.length === 0) return
+
+    const eligibleByTeam = new Map<string, Set<string>>()
+    for (const [tid, state] of readyEntries) {
+      eligibleByTeam.set(tid, eligibleResponsibleIdsFromMembers(state.members))
+    }
+
+    setWorkingTree((prev) => {
+      if (!prev) return prev
+      const clearIds: string[] = []
+      const walk = (n: MatrixNodeTreeApi) => {
+        if (n.node_type === 'ACTIVITY') {
+          const tid = n.team_ids?.[0]?.trim() || null
+          const resp = n.default_responsible_id ?? null
+          if (tid && resp) {
+            const eligible = eligibleByTeam.get(tid)
+            if (eligible) {
+              const nextResp = reconcileResponsibleWhenMembersReady({
+                teamId: tid,
+                currentResponsibleId: resp,
+                eligibleMemberIds: eligible,
+              })
+              if (nextResp !== resp) clearIds.push(n.id)
+            }
+          }
+        }
+        for (const c of n.children) walk(c)
+      }
+      walk(prev)
+      if (clearIds.length === 0) return prev
+      let next = prev
+      for (const id of clearIds) {
+        next = patchActivityFieldsInTreeClone(next, id, {
+          default_responsible_id: null,
+        })
+      }
+      return next
+    })
+  }, [membersByTeam])
+
   const model: OperationMatrixMacroPreviewModel | null = useMemo(() => {
     if (!workingTree || treeState.status !== 'ready') return null
     const maps = buildMatrixTreeAggregateMaps(workingTree, teamIdSet)
@@ -244,26 +357,55 @@ export function useOperationMatrixPreview(params: {
       patch: Partial<{
         plannedMinutes: number | null
         teamIds: string[]
+        defaultResponsibleId: string | null
       }>,
     ) => {
       setWorkingTree((prev) => {
         if (!prev) return prev
+        const node = findNodeInTree(prev, activityId)
+        if (!node || node.node_type !== 'ACTIVITY') return prev
+
         const dbPatch: Partial<{
           planned_minutes: number | null
           team_ids: string[]
+          default_responsible_id: string | null
         }> = {}
+
         if (patch.plannedMinutes !== undefined) {
           dbPatch.planned_minutes = patch.plannedMinutes
         }
+
         if (patch.teamIds !== undefined) {
-          dbPatch.team_ids = [...patch.teamIds]
+          const previousTeamId = node.team_ids?.[0]?.trim() || null
+          const nextTeamId = patch.teamIds[0]?.trim() || null
+          const currentResponsibleId =
+            patch.defaultResponsibleId !== undefined
+              ? patch.defaultResponsibleId
+              : (node.default_responsible_id ?? null)
+
+          if (nextTeamId) {
+            queueMicrotask(() => ensureTeamMembers(nextTeamId))
+          }
+
+          const resolved = resolveActivityTeamAndResponsiblePatch({
+            previousTeamId,
+            nextTeamId,
+            currentResponsibleId,
+          })
+          dbPatch.team_ids = resolved.teamIds
+          dbPatch.default_responsible_id = resolved.defaultResponsibleId
+        } else if (patch.defaultResponsibleId !== undefined) {
+          dbPatch.default_responsible_id = patch.defaultResponsibleId
         }
-        return patchActivityFieldsInTreeClone(prev, activityId, dbPatch)
+
+        const next = patchActivityFieldsInTreeClone(prev, activityId, dbPatch)
+        workingTreeRef.current = next
+        return next
       })
       setSaveState('idle')
       setSaveErrorMessage(null)
     },
-    [],
+    [ensureTeamMembers],
   )
 
   const applyNodeNamePatch = useCallback((nodeId: string, name: string) => {
@@ -532,5 +674,8 @@ export function useOperationMatrixPreview(params: {
     inlineNameSaveRegistry,
     teams,
     teamsLoadFailed,
+    membersByTeam,
+    ensureTeamMembers,
+    retryTeamMembers,
   }
 }

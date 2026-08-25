@@ -54,6 +54,12 @@ import {
   MatrixContextActionsMenu,
 } from './MatrixContextActionsMenu'
 import { confirmPreviewStructureRemoval } from './operationMatrixPreviewStructureCreate'
+import {
+  collaboratorNameMapFromMembers,
+  eligibleResponsibleIdsFromMembers,
+  previewResponsibleSelectEnabled,
+  type PreviewTeamMembersState,
+} from './matrixPreviewResponsibleLogic'
 
 type Props = {
   model: OperationMatrixMacroPreviewModel
@@ -61,11 +67,15 @@ type Props = {
   edit?: {
     teams: { id: string; name: string }[]
     teamsListFailed: boolean
+    membersByTeam: Record<string, PreviewTeamMembersState>
+    ensureTeamMembers: (teamId: string) => void
+    retryTeamMembers: (teamId: string) => void
     onPatchActivity: (
       activityId: string,
       patch: Partial<{
         plannedMinutes: number | null
         teamIds: string[]
+        defaultResponsibleId: string | null
       }>,
     ) => void
     onPatchNodeName?: (nodeId: string, name: string) => void
@@ -217,6 +227,23 @@ function MacroPreviewActivityRow({
     )
 
   const primaryTeamId = activity.teamIds[0] ?? ''
+  const membersState: PreviewTeamMembersState =
+    primaryTeamId && edit.membersByTeam[primaryTeamId]
+      ? edit.membersByTeam[primaryTeamId]
+      : { status: 'idle' }
+  const eligibleIds =
+    membersState.status === 'ready'
+      ? eligibleResponsibleIdsFromMembers(membersState.members)
+      : null
+  const nameById =
+    membersState.status === 'ready'
+      ? collaboratorNameMapFromMembers(membersState.members)
+      : new Map<string, string>()
+  const responsibleEnabled = previewResponsibleSelectEnabled({
+    teamId: primaryTeamId || null,
+    membersState,
+  })
+  const responsibleSelectValue = activity.defaultResponsibleId ?? ''
 
   return (
     <li
@@ -354,6 +381,64 @@ function MacroPreviewActivityRow({
             <PencilMini className="pointer-events-none shrink-0 text-current opacity-40" />
           </label>
         )}
+
+        <label
+          className="flex min-w-0 max-w-full flex-col items-stretch gap-0.5 sm:max-w-[min(100%,12rem)]"
+          onPointerDown={stopDragOnControl}
+        >
+          <select
+            aria-label="Selecionar colaborador responsável da atividade"
+            value={responsibleSelectValue}
+            disabled={!responsibleEnabled}
+            onChange={(e) => {
+              const v = e.target.value.trim()
+              edit.onPatchActivity(activity.id, {
+                defaultResponsibleId: v === '' ? null : v,
+              })
+            }}
+            onFocus={() => {
+              if (primaryTeamId) edit.ensureTeamMembers(primaryTeamId)
+            }}
+            className="box-border min-h-[1.75rem] w-full min-w-0 max-w-[min(100%,12rem)] cursor-pointer truncate rounded border border-transparent bg-transparent py-0.5 pl-0.5 pr-6 text-right text-[11px] leading-snug text-slate-700 outline-none transition hover:border-white/12 hover:bg-white/[0.04] focus-visible:border-sgp-gold/35 focus-visible:ring-2 focus-visible:ring-sgp-gold/30 disabled:cursor-not-allowed disabled:opacity-50 dark:text-slate-400"
+          >
+            <option value="">— Sem responsável —</option>
+            {eligibleIds
+              ? [...eligibleIds].map((cid) => (
+                  <option key={cid} value={cid}>
+                    {nameById.get(cid) ?? cid}
+                  </option>
+                ))
+              : null}
+            {activity.defaultResponsibleId &&
+            (!eligibleIds || !eligibleIds.has(activity.defaultResponsibleId)) ? (
+              <option value={activity.defaultResponsibleId}>
+                {nameById.get(activity.defaultResponsibleId) ??
+                  activity.defaultResponsibleId}
+              </option>
+            ) : null}
+          </select>
+          {!primaryTeamId ? (
+            <span className="text-right text-[9px] leading-snug text-slate-500">
+              Selecione uma equipe
+            </span>
+          ) : membersState.status === 'loading' ? (
+            <span className="text-right text-[9px] leading-snug text-slate-500">
+              Carregando…
+            </span>
+          ) : membersState.status === 'error' ? (
+            <button
+              type="button"
+              className="text-right text-[9px] font-medium leading-snug text-rose-300 underline"
+              onClick={() => edit.retryTeamMembers(primaryTeamId)}
+            >
+              Tentar novamente
+            </button>
+          ) : membersState.status === 'ready' && eligibleIds && eligibleIds.size === 0 ? (
+            <span className="text-right text-[9px] leading-snug text-slate-500">
+              Sem colaboradores
+            </span>
+          ) : null}
+        </label>
 
         {info.missingEffectiveTime ? (
           <span className={matrixPreviewInfoBadgeClass}>Sem tempo previsto</span>

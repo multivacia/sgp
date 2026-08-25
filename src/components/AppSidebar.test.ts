@@ -33,7 +33,7 @@ vi.mock('../lib/shell/shell-function-context', () => ({
 
 vi.mock('./AppVersionStamp', () => ({
   AppVersionStamp: ({ placement }: { placement?: string }) =>
-    createElement('div', { 'data-version-placement': placement }, 'SGP+ v1.9.0 · Produção'),
+    createElement('div', { 'data-version-placement': placement }, 'SGP+ v1.9.1 · Produção'),
 }))
 
 describe('AppSidebar', () => {
@@ -94,7 +94,7 @@ describe('AppSidebar', () => {
       }),
     )
 
-    expect(html).toContain('SGP+ v1.9.0 · Produção')
+    expect(html).toContain('SGP+ v1.9.1 · Produção')
     expect(html).toContain('data-version-placement="sidebar"')
   })
 })

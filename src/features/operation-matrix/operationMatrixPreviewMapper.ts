@@ -12,6 +12,8 @@ export type MacroActivityRow = {
   teamIds: string[]
   /** Nome da equipe para exibição; id sem cadastro aparece como texto cru. */
   teamsShortLabel: string | null
+  /** Colaborador responsável opcional (`default_responsible_id`). */
+  defaultResponsibleId: string | null
 }
 
 export type MacroSectorBlock = {
@@ -92,6 +94,7 @@ export function buildOperationMatrixMacroPreviewModel(
                 plannedMinutes: act.planned_minutes,
                 teamIds,
                 teamsShortLabel,
+                defaultResponsibleId: act.default_responsible_id ?? null,
               }
             })
           return {

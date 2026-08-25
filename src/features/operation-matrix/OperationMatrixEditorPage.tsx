@@ -1199,6 +1199,7 @@ export function OperationMatrixEditorPage() {
       formActive,
       formPlanned,
       formTeamIds,
+      formResponsibleId,
       formRequired,
     })
     const token = generatePreviewDraftToken()

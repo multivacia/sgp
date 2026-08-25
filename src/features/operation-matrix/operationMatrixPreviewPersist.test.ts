@@ -40,7 +40,15 @@ function itemRoot(children: MatrixNodeTreeApi[] = []): MatrixNodeTreeApi {
   }
 }
 
-function act(id: string, parentId: string): MatrixNodeTreeApi {
+function act(
+  id: string,
+  parentId: string,
+  opts: Partial<{
+    team_ids: string[]
+    default_responsible_id: string | null
+    planned_minutes: number | null
+  }> = {},
+): MatrixNodeTreeApi {
   return {
     id,
     parent_id: parentId,
@@ -52,9 +60,9 @@ function act(id: string, parentId: string): MatrixNodeTreeApi {
     order_index: 0,
     level_depth: 3,
     is_active: true,
-    planned_minutes: 10,
-    default_responsible_id: null,
-    team_ids: [],
+    planned_minutes: opts.planned_minutes ?? 10,
+    default_responsible_id: opts.default_responsible_id ?? null,
+    team_ids: opts.team_ids ?? [],
     required: false,
     source_key: null,
     metadata_json: null,
@@ -231,6 +239,88 @@ describe('operationMatrixPreviewPersist', () => {
           call.kind === 'patch' &&
           call.id === 'activity-1' &&
           call.input.defaultResponsibleId === '550e8400-e29b-41d4-a716-446655440009',
+      ),
+    ).toBe(true)
+  })
+
+  it('na troca de equipe persiste teamIds com defaultResponsibleId null', () => {
+    const teamOld = '550e8400-e29b-41d4-a716-446655440001'
+    const teamNew = '550e8400-e29b-41d4-a716-446655440099'
+    const respId = '550e8400-e29b-41d4-a716-446655440009'
+    const baseline = itemRoot([
+      task('task-1', [
+        sector('sector-1', [
+          act('activity-1', 'sector-1', {
+            team_ids: [teamOld],
+            default_responsible_id: respId,
+          }),
+        ]),
+      ]),
+    ])
+    const working = patchActivityFieldsInTreeClone(baseline, 'activity-1', {
+      team_ids: [teamNew],
+      default_responsible_id: null,
+    })
+    const calls = planOperationMatrixPreviewApiPersist(baseline, working)
+    const patchCall = calls.find(
+      (call) => call.kind === 'patch' && call.id === 'activity-1',
+    )
+    expect(patchCall).toMatchObject({
+      kind: 'patch',
+      id: 'activity-1',
+      input: {
+        teamIds: [teamNew],
+        defaultResponsibleId: null,
+      },
+    })
+  })
+
+  it('permite salvar atividade com equipe e sem responsável', () => {
+    const teamId = '550e8400-e29b-41d4-a716-446655440001'
+    const baseline = itemRoot([
+      task('task-1', [sector('sector-1', [act('activity-1', 'sector-1')])]),
+    ])
+    const working = patchActivityFieldsInTreeClone(baseline, 'activity-1', {
+      team_ids: [teamId],
+      default_responsible_id: null,
+    })
+    const calls = planOperationMatrixPreviewApiPersist(baseline, working)
+    const patchCall = calls.find(
+      (call) => call.kind === 'patch' && call.id === 'activity-1',
+    )
+    expect(patchCall).toMatchObject({
+      kind: 'patch',
+      input: {
+        teamIds: [teamId],
+        defaultResponsibleId: null,
+      },
+    })
+  })
+
+  it('após limpar responsável na troca, seleção posterior gera patch só do responsável', () => {
+    const teamNew = '550e8400-e29b-41d4-a716-446655440099'
+    const respNew = '550e8400-e29b-41d4-a716-446655440088'
+    const afterTeamChange = itemRoot([
+      task('task-1', [
+        sector('sector-1', [
+          act('activity-1', 'sector-1', {
+            team_ids: [teamNew],
+            default_responsible_id: null,
+          }),
+        ]),
+      ]),
+    ])
+    const withResp = patchActivityFieldsInTreeClone(afterTeamChange, 'activity-1', {
+      default_responsible_id: respNew,
+    })
+    const calls = planOperationMatrixPreviewApiPersist(afterTeamChange, withResp)
+    expect(
+      calls.some(
+        (call) =>
+          call.kind === 'patch' &&
+          call.id === 'activity-1' &&
+          call.input.defaultResponsibleId === respNew &&
+          JSON.stringify(call.input.teamIds) === JSON.stringify([teamNew]),
       ),
     ).toBe(true)
   })

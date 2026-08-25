@@ -1,5 +1,15 @@
 # CHANGELOG
 
+## SGP+ v1.9.1 — 2026-08-24
+
+Tipo: Evolução operacional / Matriz de operações
+
+Inclui:
+
+- Seleção e edição do colaborador responsável na pré-visualização da matriz.
+- Responsável opcional, filtrado pelos colaboradores ativos da equipe da atividade.
+- Limpeza imediata do responsável ao trocar a equipe da atividade.
+
 ## SGP+ v1.9.0 — 2026-08-24
 
 Tipo: Evolução operacional / Governança de atividades

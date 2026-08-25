@@ -42,6 +42,9 @@ export function OperationMatrixPreviewPage() {
     inlineNameSaveRegistry,
     teams,
     teamsLoadFailed,
+    membersByTeam,
+    ensureTeamMembers,
+    retryTeamMembers,
   } = useOperationMatrixPreview({
     itemId,
     draftToken,
@@ -164,6 +167,9 @@ export function OperationMatrixPreviewPage() {
           edit={{
             teams: teams.map((t) => ({ id: t.id, name: t.name })),
             teamsListFailed: teamsLoadFailed,
+            membersByTeam,
+            ensureTeamMembers,
+            retryTeamMembers,
             onPatchActivity: applyActivityPatch,
             onPatchNodeName: applyNodeNamePatch,
             onAddTask: addPreviewTask,

@@ -13,6 +13,8 @@ export type MatrixEditorFormSnapshot = {
   formPlanned: string
   /** No máximo uma equipe padrão (0 ou 1 id). */
   formTeamIds: string[]
+  /** Responsável opcional da atividade selecionada. */
+  formResponsibleId: string | null
   formRequired: boolean
 }
 
@@ -81,6 +83,7 @@ export function applyEditorFormToTreeClone(
       node.planned_minutes = Number.isNaN(n) ? node.planned_minutes : n
     }
     node.team_ids = normalizeMatrixTeamIds(form.formTeamIds).slice(0, 1)
+    node.default_responsible_id = form.formResponsibleId?.trim() || null
     node.required = form.formRequired
   }
 
