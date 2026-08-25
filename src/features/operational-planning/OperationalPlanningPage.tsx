@@ -98,9 +98,11 @@ import {
   type PlanningDailySelectedDay,
   type PlanningViewMode,
 } from './planningDailyBoard'
+import { PlanningCapacityExceededDialog } from './PlanningCapacityExceededDialog'
 import { PlanningDailyKanbanView } from './PlanningDailyKanbanView'
 import { PlanningItemQuickActions } from './PlanningItemQuickActions'
 import { PlanningPlanCardExecution } from './PlanningPlanCardExecution'
+import { usePlanningCapacityExceededAlert } from './usePlanningCapacityExceededAlert'
 import {
   fridayAfterMonday,
   isIsoDateInWeekdays,
@@ -144,6 +146,10 @@ import { useActivityTicketPrint } from '../operational-tickets/useActivityTicket
 import { PlanningWeekTicketsPrintButton } from '../operational-tickets/PlanningWeekTicketsPrintButton'
 import { PlanningWeekTicketsPrintDialog } from '../operational-tickets/PlanningWeekTicketsPrintDialog'
 import { usePlanningWeekTicketsPrint } from '../operational-tickets/usePlanningWeekTicketsPrint'
+import {
+  SHOW_PLANNING_PRINCIPAL_DEVIATIONS,
+  SHOW_PLANNING_SECONDARY_TABS,
+} from './planningUiFlags'
 
 export { ACTIVITY_TICKET_PRINT_SUPPORT_MESSAGE } from '../operational-tickets/activityTicketPrintCopy'
 
@@ -629,6 +635,20 @@ export function OperationalPlanningPage() {
   const [modalDay, setModalDay] = useState('')
   const [modalMinutes, setModalMinutes] = useState<number>(60)
 
+  const capacityRowsForAlert = useMemo(
+    () => weekPayload?.capacityByCollaboratorDay ?? [],
+    [weekPayload?.capacityByCollaboratorDay],
+  )
+  const collaboratorNameById = useMemo(() => {
+    const map: Record<string, string> = {}
+    for (const c of collaborators) map[c.id] = c.fullName
+    return map
+  }, [collaborators])
+  const capacityExceededAlert = usePlanningCapacityExceededAlert(
+    capacityRowsForAlert,
+    collaboratorNameById,
+  )
+
   const [quickTimeEntryOpen, setQuickTimeEntryOpen] = useState(false)
   const [quickTimeEntryCandidate, setQuickTimeEntryCandidate] =
     useState<TimeEntryCandidateItem | null>(null)
@@ -937,7 +957,7 @@ export function OperationalPlanningPage() {
       const nextOrder =
         cellItems.length === 0 ? 0 : Math.max(...cellItems.map((c) => c.plannedOrder)) + 1
       const fi = modalFactoryIntakeItem
-      const next: DraftPlanItem = {
+      const nextItem: DraftPlanItem = {
         localKey: newLocalKey(),
         conveyorId: fi.conveyorId,
         activityNodeId: fi.activityNodeId,
@@ -956,9 +976,12 @@ export function OperationalPlanningPage() {
         realizedMinutes: fi.realizedMinutes,
         activityOperationalStatus: fi.activityOperationalStatus,
       }
-      setDraftItems((prev) => recalculateOrders([...prev, next]))
+      const previous = draftItems
+      const next = recalculateOrders([...previous, nextItem])
+      setDraftItems(next)
       setModalOpen(false)
       setModalFactoryIntakeItem(null)
+      capacityExceededAlert.notifyIfNeeded(previous, next)
       return
     }
 
@@ -974,7 +997,7 @@ export function OperationalPlanningPage() {
     )
     const nextOrder =
       cellItems.length === 0 ? 0 : Math.max(...cellItems.map((c) => c.plannedOrder)) + 1
-    const next: DraftPlanItem = {
+    const nextItem: DraftPlanItem = {
       localKey: newLocalKey(),
       conveyorId: modalBacklogItem.conveyorId,
       activityNodeId: modalBacklogItem.activityNodeId,
@@ -991,9 +1014,12 @@ export function OperationalPlanningPage() {
       isOutOfSequence: modalBacklogItem.isOutOfSequence,
       realizedMinutes: modalBacklogItem.realizedMinutes,
     }
-    setDraftItems((prev) => recalculateOrders([...prev, next]))
+    const previous = draftItems
+    const next = recalculateOrders([...previous, nextItem])
+    setDraftItems(next)
     setModalOpen(false)
     setModalBacklogItem(null)
+    capacityExceededAlert.notifyIfNeeded(previous, next)
   }
 
   const applyPlanningWeekFromServer = useCallback(
@@ -1142,7 +1168,7 @@ export function OperationalPlanningPage() {
     )
     const nextOrder =
       cellItems.length === 0 ? 0 : Math.max(...cellItems.map((c) => c.plannedOrder)) + 1
-    const next: DraftPlanItem = {
+    const nextItem: DraftPlanItem = {
       localKey: newLocalKey(),
       conveyorId: bl.conveyorId,
       activityNodeId: bl.activityNodeId,
@@ -1159,7 +1185,10 @@ export function OperationalPlanningPage() {
       isOutOfSequence: bl.isOutOfSequence,
       realizedMinutes: bl.realizedMinutes,
     }
-    setDraftItems((prev) => recalculateOrders([...prev, next]))
+    const previous = draftItems
+    const next = recalculateOrders([...previous, nextItem])
+    setDraftItems(next)
+    capacityExceededAlert.notifyIfNeeded(previous, next)
   }
 
   const summary = weekPayload?.summary
@@ -1393,6 +1422,11 @@ export function OperationalPlanningPage() {
     [weekPayload],
   )
 
+  /** Com abas secundárias ocultas, o painel lateral permanece no backlog. */
+  const activeSidePanelTab: SidePanelTab = SHOW_PLANNING_SECONDARY_TABS
+    ? sidePanelTab
+    : 'backlog'
+
   return (
     <PageCanvas>
       <div className="mx-auto max-w-[1600px] pb-16">
@@ -1586,12 +1620,13 @@ export function OperationalPlanningPage() {
         <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
           <div className="mt-10 grid gap-8 lg:grid-cols-[minmax(280px,360px)_1fr]">
             <section className="space-y-4">
+              {SHOW_PLANNING_SECONDARY_TABS ? (
               <div className="flex flex-wrap gap-1 rounded-xl border border-white/[0.08] bg-white/[0.03] p-1">
                 <button
                   type="button"
                   className={[
                     'rounded-lg px-2 py-1.5 text-[11px] font-medium sm:flex-1 sm:text-[12px]',
-                    sidePanelTab === 'backlog'
+                    activeSidePanelTab === 'backlog'
                       ? 'bg-white/[0.08] text-slate-100'
                       : 'text-slate-500 hover:text-slate-300',
                   ].join(' ')}
@@ -1603,7 +1638,7 @@ export function OperationalPlanningPage() {
                   type="button"
                   className={[
                     'rounded-lg px-2 py-1.5 text-[11px] font-medium sm:flex-1 sm:text-[12px]',
-                    sidePanelTab === 'factory-intake'
+                    activeSidePanelTab === 'factory-intake'
                       ? 'bg-violet-500/15 text-violet-100'
                       : 'text-slate-500 hover:text-slate-300',
                   ].join(' ')}
@@ -1615,7 +1650,7 @@ export function OperationalPlanningPage() {
                   type="button"
                   className={[
                     'rounded-lg px-2 py-1.5 text-[11px] font-medium sm:flex-1 sm:text-[12px]',
-                    sidePanelTab === 'sync-pending'
+                    activeSidePanelTab === 'sync-pending'
                       ? 'bg-amber-500/15 text-amber-100'
                       : 'text-slate-500 hover:text-slate-300',
                   ].join(' ')}
@@ -1630,7 +1665,7 @@ export function OperationalPlanningPage() {
                   type="button"
                   className={[
                     'rounded-lg px-2 py-1.5 text-[11px] font-medium sm:flex-1 sm:text-[12px]',
-                    sidePanelTab === 'outside-plan'
+                    activeSidePanelTab === 'outside-plan'
                       ? 'bg-amber-500/15 text-amber-100'
                       : 'text-slate-500 hover:text-slate-300',
                   ].join(' ')}
@@ -1647,7 +1682,7 @@ export function OperationalPlanningPage() {
                   type="button"
                   className={[
                     'rounded-lg px-2 py-1.5 text-[11px] font-medium sm:flex-1 sm:text-[12px]',
-                    sidePanelTab === 'history'
+                    activeSidePanelTab === 'history'
                       ? 'bg-sky-500/15 text-sky-100'
                       : 'text-slate-500 hover:text-slate-300',
                   ].join(' ')}
@@ -1661,8 +1696,9 @@ export function OperationalPlanningPage() {
                   ) : null}
                 </button>
               </div>
+              ) : null}
 
-              {sidePanelTab === 'backlog' ? (
+              {activeSidePanelTab === 'backlog' ? (
               <>
               <div>
                 <h2 className="text-[15px] font-semibold text-slate-100">Backlog operacional</h2>
@@ -1702,7 +1738,7 @@ export function OperationalPlanningPage() {
                 ) : null}
               </div>
               </>
-              ) : sidePanelTab === 'factory-intake' ? (
+              ) : activeSidePanelTab === 'factory-intake' ? (
               <div className="space-y-4">
                 <FactoryIntakePanel
                   intakeItems={factoryIntakeItems}
@@ -1715,7 +1751,7 @@ export function OperationalPlanningPage() {
                   onAddItem={openAddFactoryIntakeModal}
                 />
               </div>
-              ) : sidePanelTab === 'sync-pending' ? (
+              ) : activeSidePanelTab === 'sync-pending' ? (
               <PlanningSyncIssuesPanel
                 items={syncIssueItems}
                 onWeekApplied={async (message) => {
@@ -1723,7 +1759,7 @@ export function OperationalPlanningPage() {
                   await loadWeek()
                 }}
               />
-              ) : sidePanelTab === 'outside-plan' ? (
+              ) : activeSidePanelTab === 'outside-plan' ? (
               <div className="space-y-4">
                 <PlanningExecutionOutsidePlanPanel
                   entries={executionOutsidePlanEntries}
@@ -1891,10 +1927,12 @@ export function OperationalPlanningPage() {
                     filtersActive={planningFiltersActive}
                     outsidePlanFilterNote={outsidePlanDeviationNote}
                   />
-                  <PlanningPrincipalDeviationsPanel
-                    deviations={principalDeviations}
-                    weekdayDates={weekdayDates}
-                  />
+                  {SHOW_PLANNING_PRINCIPAL_DEVIATIONS ? (
+                    <PlanningPrincipalDeviationsPanel
+                      deviations={principalDeviations}
+                      weekdayDates={weekdayDates}
+                    />
+                  ) : null}
                 </>
               ) : null}
 
@@ -2067,6 +2105,12 @@ export function OperationalPlanningPage() {
           </div>
         </DndContext>
       </div>
+
+      <PlanningCapacityExceededDialog
+        open={capacityExceededAlert.open}
+        alerts={capacityExceededAlert.alerts}
+        onClose={capacityExceededAlert.close}
+      />
 
       {modalOpen && (modalBacklogItem || modalFactoryIntakeItem) ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">

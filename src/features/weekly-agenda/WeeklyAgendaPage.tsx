@@ -39,6 +39,8 @@ import { useActivityTicketPrint } from '../operational-tickets/useActivityTicket
 import { usePlanningWeekTicketsPrint } from '../operational-tickets/usePlanningWeekTicketsPrint'
 import { buildVisiblePlanningBacklogItems } from '../operational-planning/buildVisiblePlanningBacklogItems'
 import { buildPlanningDaySummaries } from '../operational-planning/planningBoardHelpers'
+import { PlanningCapacityExceededDialog } from '../operational-planning/PlanningCapacityExceededDialog'
+import { usePlanningCapacityExceededAlert } from '../operational-planning/usePlanningCapacityExceededAlert'
 import {
   canCompletePlanningStep,
   canPointTimeOnPlanningStep,
@@ -163,6 +165,15 @@ export function WeeklyAgendaPage() {
   const capacityRows = useMemo(
     () => weekPayload?.capacityByCollaboratorDay ?? [],
     [weekPayload?.capacityByCollaboratorDay],
+  )
+  const collaboratorNameById = useMemo(() => {
+    const map: Record<string, string> = {}
+    for (const c of collaborators) map[c.id] = c.fullName
+    return map
+  }, [collaborators])
+  const capacityExceededAlert = usePlanningCapacityExceededAlert(
+    capacityRows,
+    collaboratorNameById,
   )
 
   const todayIso = useMemo(() => localTodayIsoDate(), [])
@@ -489,7 +500,10 @@ export function WeeklyAgendaPage() {
       plannedActivityIds,
     })
     clearBacklogPlacingMode()
-    if (next) setDraftItems(next)
+    if (next) {
+      capacityExceededAlert.notifyIfNeeded(draftItems, next)
+      setDraftItems(next)
+    }
   }
 
   function handleDragStart(ev: DragStartEvent) {
@@ -552,6 +566,7 @@ export function WeeklyAgendaPage() {
       })
 
       if (next) {
+        capacityExceededAlert.notifyIfNeeded(draftItems, next)
         setDraftItems(next)
         clearBacklogPlacingMode()
         return
@@ -570,7 +585,10 @@ export function WeeklyAgendaPage() {
       collaborators,
       plannedActivityIds,
     })
-    if (next) setDraftItems(next)
+    if (next) {
+      capacityExceededAlert.notifyIfNeeded(draftItems, next)
+      setDraftItems(next)
+    }
   }
 
   function handleDragCancel() {
@@ -688,7 +706,10 @@ export function WeeklyAgendaPage() {
       collaborators,
       plannedActivityIds,
     })
-    if (next) setDraftItems(next)
+    if (next) {
+      capacityExceededAlert.notifyIfNeeded(draftItems, next)
+      setDraftItems(next)
+    }
   }
 
   function handleBatchQueueComplete() {
@@ -884,6 +905,12 @@ export function WeeklyAgendaPage() {
             )
           : null}
       </DndContext>
+
+      <PlanningCapacityExceededDialog
+        open={capacityExceededAlert.open}
+        alerts={capacityExceededAlert.alerts}
+        onClose={capacityExceededAlert.close}
+      />
 
       <WeeklyAgendaAttentionDrawer
         open={attentionDrawerOpen}
