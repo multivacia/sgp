@@ -48,6 +48,7 @@ import { isStepAbortedStatus } from './stepOperationalStatus.js'
 import { serviceCreateConveyorOperationalEvent } from './operational-events/conveyor-operational-events.service.js'
 import { lockConveyorAndStepForUpdate } from './lockConveyorAndStepForUpdate.js'
 import {
+  pickEffectiveContextualJustification,
   pickStandardJustificationSnapshot,
   resolveTimeEntryJustification,
   standardJustificationRowFields,
@@ -356,11 +357,18 @@ export async function serviceCreateConveyorTimeEntryForAppUser(
   let outSeqJust: string | null = null
   let oosStandard: ResolvedStandardJustification | null = null
   if (seq.isOutOfSequence) {
+    const effectiveOos = pickEffectiveContextualJustification({
+      specificJustificationId: input.outOfSequenceJustificationId,
+      specificJustificationComplement: input.outOfSequenceJustificationComplement,
+      specificLegacyText: input.outOfSequenceJustification,
+      voluntaryJustificationId: input.voluntaryJustificationId,
+      voluntaryJustificationComplement: input.voluntaryJustificationComplement,
+    })
     const resolved = await resolveTimeEntryJustification(pool, {
       required: true,
-      justificationId: input.outOfSequenceJustificationId,
-      justificationComplement: input.outOfSequenceJustificationComplement,
-      legacyText: input.outOfSequenceJustification,
+      justificationId: effectiveOos.justificationId,
+      justificationComplement: effectiveOos.justificationComplement,
+      legacyText: effectiveOos.legacyText,
       requiredErrorCode: ErrorCodes.TIME_ENTRY_OUT_OF_SEQUENCE_REQUIRES_JUSTIFICATION,
       requiredErrorMessage: TIME_ENTRY_JUSTIFICATION_REQUIRED_MESSAGE,
     })
@@ -435,11 +443,18 @@ export async function serviceCreateConveyorTimeEntryForAppUser(
     })
   }
 
+  const effectiveException = pickEffectiveContextualJustification({
+    specificJustificationId: input.exceptionJustificationId,
+    specificJustificationComplement: input.exceptionJustificationComplement,
+    specificLegacyText: input.exceptionJustification,
+    voluntaryJustificationId: input.voluntaryJustificationId,
+    voluntaryJustificationComplement: input.voluntaryJustificationComplement,
+  })
   const exceptionResolved = await resolveTimeEntryJustification(pool, {
     required: true,
-    justificationId: input.exceptionJustificationId,
-    justificationComplement: input.exceptionJustificationComplement,
-    legacyText: input.exceptionJustification,
+    justificationId: effectiveException.justificationId,
+    justificationComplement: effectiveException.justificationComplement,
+    legacyText: effectiveException.legacyText,
     requiredErrorCode: ErrorCodes.TIME_ENTRY_UNASSIGNED_REQUIRES_JUSTIFICATION,
     requiredErrorMessage: TIME_ENTRY_JUSTIFICATION_REQUIRED_MESSAGE,
   })
@@ -542,11 +557,18 @@ export async function serviceCreateConveyorTimeEntry(
     if (exceptionStandard || input.exceptionJustification?.trim()) {
       exceptionJustification = input.exceptionJustification?.trim() ?? null
     } else {
+      const effectiveException = pickEffectiveContextualJustification({
+        specificJustificationId: input.exceptionJustificationId,
+        specificJustificationComplement: input.exceptionJustificationComplement,
+        specificLegacyText: input.exceptionJustification,
+        voluntaryJustificationId: input.voluntaryJustificationId,
+        voluntaryJustificationComplement: input.voluntaryJustificationComplement,
+      })
       const resolved = await resolveTimeEntryJustification(pool, {
         required: true,
-        justificationId: input.exceptionJustificationId,
-        justificationComplement: input.exceptionJustificationComplement,
-        legacyText: input.exceptionJustification,
+        justificationId: effectiveException.justificationId,
+        justificationComplement: effectiveException.justificationComplement,
+        legacyText: effectiveException.legacyText,
         requiredErrorCode: ErrorCodes.TIME_ENTRY_UNASSIGNED_REQUIRES_JUSTIFICATION,
         requiredErrorMessage: TIME_ENTRY_JUSTIFICATION_REQUIRED_MESSAGE,
       })
@@ -576,11 +598,18 @@ export async function serviceCreateConveyorTimeEntry(
     if (oosStandard || input.outOfSequenceJustification?.trim()) {
       oosJustDb = input.outOfSequenceJustification?.trim() ?? null
     } else {
+      const effectiveOos = pickEffectiveContextualJustification({
+        specificJustificationId: input.outOfSequenceJustificationId,
+        specificJustificationComplement: input.outOfSequenceJustificationComplement,
+        specificLegacyText: input.outOfSequenceJustification,
+        voluntaryJustificationId: input.voluntaryJustificationId,
+        voluntaryJustificationComplement: input.voluntaryJustificationComplement,
+      })
       const resolved = await resolveTimeEntryJustification(pool, {
         required: true,
-        justificationId: input.outOfSequenceJustificationId,
-        justificationComplement: input.outOfSequenceJustificationComplement,
-        legacyText: input.outOfSequenceJustification,
+        justificationId: effectiveOos.justificationId,
+        justificationComplement: effectiveOos.justificationComplement,
+        legacyText: effectiveOos.legacyText,
         requiredErrorCode: ErrorCodes.TIME_ENTRY_OUT_OF_SEQUENCE_REQUIRES_JUSTIFICATION,
         requiredErrorMessage:
           'Informe uma justificativa para executar esta atividade fora da sequência recomendada.',

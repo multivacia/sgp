@@ -48,4 +48,18 @@ describe('postTimeEntryBodySchema', () => {
       postTimeEntryBodySchema.parse({ minutes: 20 }),
     ).toMatchObject({ minutes: 20, markAsDone: false })
   })
+
+  it('mapeia justificationId para voluntaryJustificationId', () => {
+    const id = '11111111-1111-1111-1111-111111111111'
+    expect(
+      postTimeEntryBodySchema.parse({
+        minutes: 10,
+        justificationId: id,
+        justificationComplement: '  detalhe  ',
+      }),
+    ).toMatchObject({
+      voluntaryJustificationId: id,
+      voluntaryJustificationComplement: 'detalhe',
+    })
+  })
 })

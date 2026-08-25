@@ -123,6 +123,28 @@ describe.skipIf(!hasDb)('conveyor assignees + time entries HTTP (integração)',
     return row.id
   }
 
+  async function activeJustificationId(): Promise<string> {
+    const r = await pool.query<{ id: string }>(
+      `SELECT id::text AS id FROM operational_time_entry_justifications
+       WHERE is_active = true
+         AND COALESCE(requires_complement, false) = false
+       ORDER BY sort_order
+       LIMIT 1`,
+    )
+    const id = r.rows[0]?.id
+    if (!id) throw new Error('justificativa ativa sem complemento obrigatório não encontrada')
+    return id
+  }
+
+  async function entryStandardJustificationId(entryId: string): Promise<string | null> {
+    const r = await pool.query<{ id: string | null }>(
+      `SELECT standard_justification_id::text AS id
+       FROM conveyor_time_entries WHERE id = $1::uuid`,
+      [entryId],
+    )
+    return r.rows[0]?.id ?? null
+  }
+
   function assigneesPath(conveyorId: string, stepId: string) {
     return `/api/v1/conveyors/${conveyorId}/steps/${stepId}/assignees`
   }
@@ -495,6 +517,227 @@ describe.skipIf(!hasDb)('conveyor assignees + time entries HTTP (integração)',
       [stepId],
     )
     expect(rows.rows[0]?.c).toBe('0')
+  })
+
+  it('time entry: não alocado com apenas justificationId genérico → 201 (fallback)', async () => {
+    const created = await serviceCreateConveyor(
+      pool,
+      minimalConveyorBody(`HTTP jid-ex ${randomUUID().slice(0, 8)}`),
+    )
+    await setConveyorProductionStatusForIntegration(pool, created.id)
+    const stepId = await firstNodeId(created.id, 'STEP')
+    const justificationId = await activeJustificationId()
+    const res = await request(app)
+      .post(timeEntriesPath(created.id, stepId))
+      .set(
+        'Cookie',
+        await sessionCookieForUser(pool, MARIA_APP_USER_ID, MARIA_EMAIL),
+      )
+      .send({
+        minutes: 8,
+        justificationId,
+      })
+    expect(res.status).toBe(201)
+    expect(res.body.data.entryOrigin).toBe('UNASSIGNED_EXCEPTION')
+    expect(await entryStandardJustificationId(res.body.data.id)).toBe(justificationId)
+  })
+
+  it('time entry: fora de sequência com apenas justificationId genérico → 201', async () => {
+    const created = await serviceCreateConveyor(pool, {
+      ...minimalConveyorBody(`HTTP jid-oos ${randomUUID().slice(0, 8)}`),
+      options: [
+        {
+          titulo: 'Opção OOS',
+          orderIndex: 1,
+          sourceOrigin: 'manual',
+          areas: [
+            {
+              titulo: 'Área',
+              orderIndex: 1,
+              sourceOrigin: 'manual',
+              steps: [
+                {
+                  titulo: 'Primeira',
+                  orderIndex: 1,
+                  plannedMinutes: 30,
+                  sourceOrigin: 'manual',
+                  required: true,
+                },
+                {
+                  titulo: 'Segunda',
+                  orderIndex: 2,
+                  plannedMinutes: 30,
+                  sourceOrigin: 'manual',
+                  required: true,
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    })
+    await setConveyorProductionStatusForIntegration(pool, created.id)
+    const steps = await pool.query<{ id: string }>(
+      `SELECT id::text AS id FROM conveyor_nodes
+       WHERE conveyor_id = $1::uuid AND node_type = 'STEP' AND deleted_at IS NULL
+       ORDER BY order_index`,
+      [created.id],
+    )
+    const firstStep = steps.rows[0]!.id
+    const secondStep = steps.rows[1]!.id
+    await serviceCreateConveyorNodeAssignee(pool, {
+      conveyorId: created.id,
+      conveyorNodeId: firstStep,
+      collaboratorId: COLAB_SEED,
+      isPrimary: true,
+    })
+    await serviceCreateConveyorNodeAssignee(pool, {
+      conveyorId: created.id,
+      conveyorNodeId: secondStep,
+      collaboratorId: COLAB_SEED,
+      isPrimary: true,
+    })
+    const justificationId = await activeJustificationId()
+    const res = await request(app)
+      .post(timeEntriesPath(created.id, secondStep))
+      .set(
+        'Cookie',
+        await sessionCookieForUser(pool, MARIA_APP_USER_ID, MARIA_EMAIL),
+      )
+      .send({
+        minutes: 9,
+        justificationId,
+      })
+    expect(res.status).toBe(201)
+    expect(res.body.data.isOutOfSequence).toBe(true)
+    expect(await entryStandardJustificationId(res.body.data.id)).toBe(justificationId)
+  })
+
+  it('time entry: fora de sequência sem justificativa → 422 OUT_OF_SEQUENCE', async () => {
+    const created = await serviceCreateConveyor(pool, {
+      ...minimalConveyorBody(`HTTP oos-req ${randomUUID().slice(0, 8)}`),
+      options: [
+        {
+          titulo: 'Opção OOS req',
+          orderIndex: 1,
+          sourceOrigin: 'manual',
+          areas: [
+            {
+              titulo: 'Área',
+              orderIndex: 1,
+              sourceOrigin: 'manual',
+              steps: [
+                {
+                  titulo: 'Primeira',
+                  orderIndex: 1,
+                  plannedMinutes: 30,
+                  sourceOrigin: 'manual',
+                  required: true,
+                },
+                {
+                  titulo: 'Segunda',
+                  orderIndex: 2,
+                  plannedMinutes: 30,
+                  sourceOrigin: 'manual',
+                  required: true,
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    })
+    await setConveyorProductionStatusForIntegration(pool, created.id)
+    const steps = await pool.query<{ id: string }>(
+      `SELECT id::text AS id FROM conveyor_nodes
+       WHERE conveyor_id = $1::uuid AND node_type = 'STEP' AND deleted_at IS NULL
+       ORDER BY order_index`,
+      [created.id],
+    )
+    await serviceCreateConveyorNodeAssignee(pool, {
+      conveyorId: created.id,
+      conveyorNodeId: steps.rows[0]!.id,
+      collaboratorId: COLAB_SEED,
+      isPrimary: true,
+    })
+    await serviceCreateConveyorNodeAssignee(pool, {
+      conveyorId: created.id,
+      conveyorNodeId: steps.rows[1]!.id,
+      collaboratorId: COLAB_SEED,
+      isPrimary: true,
+    })
+    const res = await request(app)
+      .post(timeEntriesPath(created.id, steps.rows[1]!.id))
+      .set(
+        'Cookie',
+        await sessionCookieForUser(pool, MARIA_APP_USER_ID, MARIA_EMAIL),
+      )
+      .send({ minutes: 5 })
+    expect(res.status).toBe(422)
+    expect(res.body.error.code).toBe('TIME_ENTRY_OUT_OF_SEQUENCE_REQUIRES_JUSTIFICATION')
+  })
+
+  it('time entry: assigned normal com justificationId voluntária → 201 e snapshot', async () => {
+    const created = await serviceCreateConveyor(
+      pool,
+      minimalConveyorBody(`HTTP vol ${randomUUID().slice(0, 8)}`),
+    )
+    await setConveyorProductionStatusForIntegration(pool, created.id)
+    const stepId = await firstNodeId(created.id, 'STEP')
+    await serviceCreateConveyorNodeAssignee(pool, {
+      conveyorId: created.id,
+      conveyorNodeId: stepId,
+      collaboratorId: COLAB_SEED,
+      isPrimary: true,
+    })
+    const justificationId = await activeJustificationId()
+    const res = await request(app)
+      .post(timeEntriesPath(created.id, stepId))
+      .set(
+        'Cookie',
+        await sessionCookieForUser(pool, MARIA_APP_USER_ID, MARIA_EMAIL),
+      )
+      .send({
+        minutes: 6,
+        justificationId,
+      })
+    expect(res.status).toBe(201)
+    expect(res.body.data.entryOrigin).toBe('ASSIGNED')
+    expect(res.body.data.isOutOfSequence).toBe(false)
+    expect(await entryStandardJustificationId(res.body.data.id)).toBe(justificationId)
+  })
+
+  it('time entry: specific exceptionJustificationId prevalece sobre justificationId', async () => {
+    const created = await serviceCreateConveyor(
+      pool,
+      minimalConveyorBody(`HTTP prec ${randomUUID().slice(0, 8)}`),
+    )
+    await setConveyorProductionStatusForIntegration(pool, created.id)
+    const stepId = await firstNodeId(created.id, 'STEP')
+    const ids = await pool.query<{ id: string }>(
+      `SELECT id::text AS id FROM operational_time_entry_justifications
+       WHERE is_active = true
+         AND COALESCE(requires_complement, false) = false
+       ORDER BY sort_order
+       LIMIT 2`,
+    )
+    expect(ids.rows.length).toBeGreaterThanOrEqual(2)
+    const specificId = ids.rows[0]!.id
+    const genericId = ids.rows[1]!.id
+    const res = await request(app)
+      .post(timeEntriesPath(created.id, stepId))
+      .set(
+        'Cookie',
+        await sessionCookieForUser(pool, MARIA_APP_USER_ID, MARIA_EMAIL),
+      )
+      .send({
+        minutes: 7,
+        exceptionJustificationId: specificId,
+        justificationId: genericId,
+      })
+    expect(res.status).toBe(201)
+    expect(res.body.data.entryOrigin).toBe('UNASSIGNED_EXCEPTION')
+    expect(await entryStandardJustificationId(res.body.data.id)).toBe(specificId)
   })
 
   it('time entry: step inexistente → 404', async () => {

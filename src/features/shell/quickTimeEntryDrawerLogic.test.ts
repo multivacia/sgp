@@ -109,6 +109,28 @@ describe('quickTimeEntryDrawerLogic', () => {
     expect(payload.justificationId).toBe('33333333-3333-3333-3333-333333333333')
     expect(payload.description).toBe('observação livre')
     expect(payload.outOfSequenceJustification).toBeUndefined()
+    expect(payload.exceptionJustificationId).toBeUndefined()
+  })
+
+  it('cenário defeito: FE classifica opcional e envia só justificationId (backend deve aceitar no contexto real)', () => {
+    const candidate = baseCandidate({
+      isAssignedToMe: true,
+      requiresJustification: false,
+      isOutOfSequence: false,
+      requiresOutOfSequenceJustification: false,
+    })
+    expect(candidateRequiresOperationalJustification(candidate)).toBe(false)
+    const payload = buildTimeEntryPayload({
+      candidate,
+      minutes: 20,
+      executedQuantity: 1,
+      description: '',
+      operationalJustification: jv('Atividade emergencial', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'),
+      markAsDone: false,
+    })
+    expect(payload.justificationId).toBe('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa')
+    expect(payload.exceptionJustificationId).toBeUndefined()
+    expect(payload.outOfSequenceJustificationId).toBeUndefined()
   })
 
   it('buildTimeEntryPayload normal sem seleção não envia justificativa', () => {

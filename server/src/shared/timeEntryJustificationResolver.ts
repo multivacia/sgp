@@ -33,6 +33,53 @@ function buildLegacyText(label: string, complement: string | null): string {
   return complement ? `${label} — ${complement}` : label
 }
 
+export type ContextualJustificationPickInput = {
+  /** ID específico do contexto (exceção ou fora de sequência). */
+  specificJustificationId?: string | null
+  specificJustificationComplement?: string | null
+  specificLegacyText?: string | null
+  /** justificationId genérico mapeado para voluntaryJustificationId. */
+  voluntaryJustificationId?: string | null
+  voluntaryJustificationComplement?: string | null
+}
+
+/**
+ * Normaliza a justificativa efetiva para um contexto obrigatório (exceção / OOS).
+ * Precedência: campos específicos do contexto; senão, justificativa genérica (voluntária).
+ * O complemento acompanha a fonte escolhida — não mistura complemento genérico com ID específico.
+ */
+export function pickEffectiveContextualJustification(
+  input: ContextualJustificationPickInput,
+): {
+  justificationId: string | null
+  justificationComplement: string | null
+  legacyText: string | null
+} {
+  const specificId = input.specificJustificationId?.trim() || null
+  if (specificId) {
+    return {
+      justificationId: specificId,
+      justificationComplement: input.specificJustificationComplement ?? null,
+      legacyText: input.specificLegacyText ?? null,
+    }
+  }
+
+  const voluntaryId = input.voluntaryJustificationId?.trim() || null
+  if (voluntaryId) {
+    return {
+      justificationId: voluntaryId,
+      justificationComplement: input.voluntaryJustificationComplement ?? null,
+      legacyText: input.specificLegacyText ?? null,
+    }
+  }
+
+  return {
+    justificationId: null,
+    justificationComplement: input.specificJustificationComplement ?? null,
+    legacyText: input.specificLegacyText ?? null,
+  }
+}
+
 /**
  * Resolve justificativa estruturada (id + complemento) ou texto livre legado.
  * Quando `required` e nenhum input válido, lança erro 422.
