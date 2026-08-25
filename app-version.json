@@ -1,7 +1,7 @@
 {
   "product": "SGP+",
-  "version": "1.9.1",
-  "releaseName": "Responsável na pré-visualização das matrizes de operação",
-  "releaseDate": "2026-08-24",
+  "version": "1.9.2",
+  "releaseName": "Correção da justificativa operacional no apontamento",
+  "releaseDate": "2026-08-25",
   "channel": "production"
 }

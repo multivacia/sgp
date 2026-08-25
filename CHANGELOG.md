@@ -1,5 +1,18 @@
 # CHANGELOG
 
+## SGP+ v1.9.2 — 2026-08-25
+
+Tipo: Correção operacional / Apontamento de horas
+
+Inclui:
+
+- Correção do salvamento de apontamentos com justificativa operacional
+  selecionada.
+- Aproveitamento da justificativa escolhida quando o backend identifica
+  apontamento fora de sequência ou colaborador não alocado.
+- Preservação da obrigatoriedade e validação das justificativas
+  operacionais.
+
 ## SGP+ v1.9.1 — 2026-08-24
 
 Tipo: Evolução operacional / Matriz de operações
