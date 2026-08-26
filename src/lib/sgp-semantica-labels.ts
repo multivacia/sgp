@@ -36,6 +36,20 @@ export const ATIVIDADE_STATUS_DETALHE_LABELS: Record<
   bloqueada: 'Bloqueada',
 }
 
+/**
+ * Níveis da hierarquia operacional da esteira, como gravados em
+ * `conveyor_nodes.node_type`. O vocabulário de schema (OPTION/AREA/STEP) nunca
+ * deve aparecer na interface — use `labelConveyorNodeType`.
+ */
+export type ConveyorNodeType = 'OPTION' | 'AREA' | 'STEP'
+
+/** Esteira → Tarefa → Setor → Atividade (`docs/` / CLAUDE.md). */
+export const CONVEYOR_NODE_TYPE_LABELS: Record<ConveyorNodeType, string> = {
+  OPTION: 'Tarefa',
+  AREA: 'Setor',
+  STEP: 'Atividade',
+}
+
 export function labelBacklogStatus(s: BacklogStatus): string {
   return BACKLOG_STATUS_LABELS[s]
 }
@@ -46,4 +60,8 @@ export function labelEsteiraStatusGeral(s: EsteiraStatusGeral): string {
 
 export function labelAtividadeStatusDetalhe(s: AtividadeStatusDetalhe): string {
   return ATIVIDADE_STATUS_DETALHE_LABELS[s]
+}
+
+export function labelConveyorNodeType(t: ConveyorNodeType): string {
+  return CONVEYOR_NODE_TYPE_LABELS[t]
 }

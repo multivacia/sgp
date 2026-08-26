@@ -1043,7 +1043,7 @@ export function ConveyorCreateEditPage({ mode }: { mode: Mode }) {
               >
                 <div className="flex flex-wrap items-end justify-between gap-2 border-b border-white/[0.06] pb-3">
                   <div>
-                    <h2 className="font-heading text-base font-semibold text-white">Sua esteira em montagem</h2>
+                    <h2 className="font-heading text-base font-semibold text-white">Estrutura da esteira</h2>
                     <p className="mt-0.5 text-xs text-slate-500">
                       Use «Bases e extras» à esquerda ou arraste para aqui. Soltar na coluna da esquerda{' '}
                       <span className="text-slate-400">remove da esteira</span>.

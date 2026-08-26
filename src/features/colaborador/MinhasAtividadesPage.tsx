@@ -17,6 +17,7 @@ import {
   labelConveyorOperationalStatus,
   labelRoleInStep,
 } from './minhasAtividadesLabels'
+import { labelConveyorNodeType } from '../../lib/sgp-semantica-labels'
 
 function apontamentoHref(item: MyActivityItem): string {
   const q = new URLSearchParams({
@@ -104,8 +105,8 @@ export function MinhasAtividadesPage() {
           <div>
             <h1 className="sgp-page-title">Minhas atividades</h1>
             <p className="sgp-page-lead mt-1">
-              Alocações reais em etapas (STEP) das suas esteiras: papel na
-              equipe, tempos e atalhos para detalhe e apontamento de horas.
+              As atividades em que você está alocado nas esteiras: seu papel na
+              equipe, tempos e atalhos para o detalhe e o apontamento de horas.
             </p>
           </div>
           <button
@@ -171,7 +172,9 @@ export function MinhasAtividadesPage() {
                       {item.conveyorName}
                     </h2>
                     <p className="text-sm font-medium text-slate-400">
-                      <span className="text-slate-500">Etapa · </span>
+                      <span className="text-slate-500">
+                        {labelConveyorNodeType('STEP')} ·{' '}
+                      </span>
                       {item.stepName}
                     </p>
                     <p className="text-xs text-slate-500">
@@ -196,17 +199,6 @@ export function MinhasAtividadesPage() {
                         </span>
                       )}
                     </div>
-                    <p className="text-[11px] text-slate-600">
-                      Esteira{' '}
-                      <span className="font-mono text-slate-500">
-                        {item.conveyorId}
-                      </span>
-                      {' · '}
-                      Etapa{' '}
-                      <span className="font-mono text-slate-500">
-                        {item.stepNodeId}
-                      </span>
-                    </p>
                   </div>
                   <div className="flex shrink-0 flex-col gap-2 sm:flex-row lg:flex-col">
                     <Link
@@ -235,9 +227,10 @@ export function MinhasAtividadesPage() {
             Nenhuma atividade alocada para si.
           </p>
           <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-slate-500">
-            Quando for alocado a etapas nas esteiras (equipe por STEP), elas
-            aparecerão aqui. Confirme no cadastro que o seu e-mail de login
-            coincide com o do colaborador.
+            Assim que for alocado a uma{' '}
+            {labelConveyorNodeType('STEP').toLowerCase()} de alguma esteira, ela
+            aparece aqui. Confirme no cadastro que o seu e-mail de login coincide
+            com o do colaborador.
           </p>
           <div className="mt-6 flex flex-wrap justify-center gap-3">
             <Link

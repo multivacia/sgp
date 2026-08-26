@@ -384,7 +384,7 @@ export function NovaEsteiraComposicaoManual({
         <div className="rounded-2xl border border-dashed border-white/[0.12] bg-black/20 px-6 py-10 text-center">
           {totem ? (
             <>
-              <p className="text-sm font-medium text-slate-200">Sua esteira em montagem está vazia</p>
+              <p className="text-sm font-medium text-slate-200">A estrutura da esteira ainda está vazia</p>
               <p className="mt-2 text-sm text-slate-500">
                 Escolha <span className="text-sgp-gold">Usar esta base</span> à esquerda ou arraste uma tarefa para{' '}
                 <span className="text-sgp-gold">adicionar à esteira</span>.

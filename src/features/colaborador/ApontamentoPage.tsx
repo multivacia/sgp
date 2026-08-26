@@ -29,6 +29,7 @@ import {
   parseFlexibleDeadlineToDate,
 } from '../../lib/backlog/operationalBuckets'
 import { labelRoleInStep } from './minhasAtividadesLabels'
+import { labelConveyorNodeType } from '../../lib/sgp-semantica-labels'
 import { transversalUxCopy } from '../../lib/transversalUxCopy'
 
 type ToastState = { message: string; variant: SgpToastVariant } | null
@@ -324,7 +325,7 @@ export function ApontamentoPage() {
           {fromEsteira ? 'Origem · esteira' : fromJornada ? 'Origem · jornada' : 'Origem · minha fila'}
         </p>
         <p className="relative mt-3 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">
-          Etapa (STEP)
+          {labelConveyorNodeType('STEP')}
         </p>
         <div className="relative mt-1 flex flex-wrap items-start gap-3">
           <h1 className="sgp-page-title min-w-0 flex-1 leading-tight">
@@ -339,7 +340,7 @@ export function ApontamentoPage() {
         <div className="relative mt-4 grid gap-2 text-sm text-slate-400 sm:grid-cols-2">
           <p>
             <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
-              Opção
+              {labelConveyorNodeType('OPTION')}
             </span>
             <span className="mt-0.5 block font-medium text-slate-200">
               {activity.optionName}
@@ -347,7 +348,7 @@ export function ApontamentoPage() {
           </p>
           <p>
             <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
-              Área
+              {labelConveyorNodeType('AREA')}
             </span>
             <span className="mt-0.5 block font-medium text-slate-200">
               {activity.areaName}

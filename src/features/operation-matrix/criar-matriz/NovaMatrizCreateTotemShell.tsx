@@ -301,7 +301,7 @@ export function NovaMatrizCreateTotemShell(props: NovaMatrizCreateTotemShellProp
       {activeTab === 'estrutura' ? (
         <div className="mt-6 min-w-0 space-y-4 rounded-2xl border border-white/[0.08] bg-white/[0.03] p-4">
           <div className="border-b border-white/[0.06] pb-3">
-            <h2 className="font-heading text-base font-semibold text-white">Sua matriz em montagem</h2>
+            <h2 className="font-heading text-base font-semibold text-white">Estrutura da matriz</h2>
             <p className="mt-0.5 text-xs text-slate-500">
               «Bases e extras», o catálogo à esquerda e o rascunho à direita montam o combo. Arraste, reordene e refine antes da revisão.
             </p>
