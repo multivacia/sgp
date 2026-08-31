@@ -150,6 +150,16 @@ import {
   SHOW_PLANNING_PRINCIPAL_DEVIATIONS,
   SHOW_PLANNING_SECONDARY_TABS,
 } from './planningUiFlags'
+import {
+  PLANNING_BACKLOG_COLUMN_CLASS,
+  PLANNING_BACKLOG_SCROLL_CLASS,
+  PLANNING_COLLABORATORS_COLUMN_CLASS,
+  PLANNING_COLLABORATORS_SCROLL_CLASS,
+  PLANNING_LAYOUT_TEST_IDS,
+  PLANNING_OPERATIONAL_WORKSPACE_CLASS,
+  PLANNING_PAGE_ROOT_CLASS,
+  PLANNING_UPPER_SECTION_CLASS,
+} from './planningOperationalLayout'
 
 export { ACTIVITY_TICKET_PRINT_SUPPORT_MESSAGE } from '../operational-tickets/activityTicketPrintCopy'
 
@@ -1429,7 +1439,11 @@ export function OperationalPlanningPage() {
 
   return (
     <PageCanvas>
-      <div className="mx-auto max-w-[1600px] pb-16">
+      <div
+        data-testid={PLANNING_LAYOUT_TEST_IDS.pageRoot}
+        className={PLANNING_PAGE_ROOT_CLASS}
+      >
+        <div className={PLANNING_UPPER_SECTION_CLASS}>
         <header className="sgp-header-card space-y-5">
           <div className="max-w-3xl">
             <h1 className="sgp-page-title">Planejamento da Semana</h1>
@@ -1572,9 +1586,6 @@ export function OperationalPlanningPage() {
                 Total da semana: {summary?.plannedItems ?? 0}
               </p>
             ) : null}
-          
-          
-          
           </div>
           <div className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-4">
             <p className="text-[11px] uppercase tracking-wide text-slate-500">Colaboradores no plano</p>
@@ -1617,11 +1628,205 @@ export function OperationalPlanningPage() {
           ) : null}
         </section>
 
+        <section className="space-y-4">
+          <div>
+            <h2 className="text-[15px] font-semibold text-slate-100">Plano semanal</h2>
+            <p className="mt-1 text-[12px] text-slate-500">
+              Arraste do backlog para uma célula ou use “Adicionar ao plano”.
+            </p>
+          </div>
+
+          {draftItems.length > 0 ? (
+            <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
+              <div className="flex flex-wrap items-end justify-between gap-3">
+                <p className="text-[12px] font-medium text-slate-400">Filtros do quadro</p>
+                {planningFiltersActive ? (
+                  <button
+                    type="button"
+                    className="rounded-lg border border-white/[0.08] bg-white/[0.04] px-2.5 py-1 text-[11px] text-slate-300 hover:bg-white/[0.07]"
+                    onClick={clearPlanningFilters}
+                  >
+                    Limpar filtros
+                  </button>
+                ) : null}
+              </div>
+              <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                <label className="block text-[11px] text-slate-500">
+                  Colaborador
+                  <select
+                    className="mt-1 w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-3 py-2 text-[13px] text-slate-100"
+                    value={planningFilters.collaboratorId}
+                    onChange={(e) =>
+                      setPlanningFilters((f) => ({ ...f, collaboratorId: e.target.value }))
+                    }
+                  >
+                    <option value={PLANNING_COLLABORATOR_ALL}>Todos</option>
+                    {planningFilterOptions.hasUnassigned ? (
+                      <option value={PLANNING_COLLABORATOR_UNASSIGNED}>Sem responsável</option>
+                    ) : null}
+                    {planningFilterOptions.collaborators.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="block text-[11px] text-slate-500">
+                  Esteira
+                  <select
+                    className="mt-1 w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-3 py-2 text-[13px] text-slate-100"
+                    value={planningFilters.conveyorId}
+                    onChange={(e) =>
+                      setPlanningFilters((f) => ({ ...f, conveyorId: e.target.value }))
+                    }
+                  >
+                    <option value={PLANNING_CONVEYOR_ALL}>Todas as esteiras</option>
+                    {planningFilterOptions.conveyors.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="block text-[11px] text-slate-500">
+                  Situação
+                  <select
+                    className="mt-1 w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-3 py-2 text-[13px] text-slate-100"
+                    value={planningFilters.state}
+                    onChange={(e) =>
+                      setPlanningFilters((f) => ({
+                        ...f,
+                        state: e.target.value as PlanningBoardFilters['state'],
+                      }))
+                    }
+                  >
+                    <option value="all">Todos</option>
+                    <option value="no_assignee">Sem responsável</option>
+                    {planningFilterOptions.states.includes('over_capacity') ? (
+                      <option value="over_capacity">Com capacidade excedida</option>
+                    ) : null}
+                  </select>
+                </label>
+                <label className="block text-[11px] text-slate-500">
+                  Busca no plano
+                  <input
+                    className="mt-1 w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-3 py-2 text-[13px] text-slate-100 placeholder:text-slate-600"
+                    placeholder="Esteira, atividade, setor…"
+                    value={planningFilters.q}
+                    onChange={(e) => setPlanningFilters((f) => ({ ...f, q: e.target.value }))}
+                  />
+                </label>
+              </div>
+              <div className="mt-3 flex flex-wrap items-center gap-3">
+                <p className="text-[11px] text-slate-500">
+                  Exibindo {visibleDraftItems.length} de {activeDraftItemsCount} itens planejados
+                  {planningFiltersActive ? ' (visão filtrada)' : ''}
+                </p>
+                <button
+                  type="button"
+                  className="rounded-lg border border-white/[0.10] bg-white/[0.05] px-2.5 py-1 text-[11px] font-medium text-slate-200 hover:bg-white/[0.08] disabled:opacity-50"
+                  title="Imprimir tickets das atividades visíveis no quadro"
+                  disabled={busy || isPrinting || ticketBatchSources.length === 0}
+                  onClick={handlePrintVisibleTickets}
+                >
+                  Imprimir tickets visíveis
+                  {ticketBatchSources.length > 0 ? ` (${ticketBatchSources.length})` : ''}
+                </button>
+                {planningViewMode === 'week' ? (
+                  <input
+                    className="rounded-xl border border-white/[0.08] bg-white/[0.04] px-3 py-2 text-[13px] text-slate-100 placeholder:text-slate-600"
+                    placeholder="Filtrar colaboradores no quadro…"
+                    value={boardCollabQ}
+                    onChange={(e) => setBoardCollabQ(e.target.value)}
+                  />
+                ) : null}
+              </div>
+              <p className="mt-2 text-[11px] leading-relaxed text-slate-500">
+                {ACTIVITY_TICKET_PRINT_SUPPORT_MESSAGE}
+              </p>
+              <p className="mt-1 text-[11px] leading-relaxed text-slate-500">
+                {ACTIVITY_TICKET_SILENT_PRINT_HINT}
+              </p>
+              <ThermalPrintAgentControls
+                agentStatus={agentStatus}
+                fallbackNotice={agentFallbackNotice}
+                onDismissFallback={clearAgentFallbackNotice}
+                onTestPrint={() => {
+                  void testThermalPrinter()
+                }}
+                testLoading={testPrintLoading}
+              />
+            </div>
+          ) : null}
+
+          {draftItems.length > 0 || executionOutsidePlanSummary.entriesCount > 0 ? (
+            <>
+              <PlanningWeekOperationalSummaryBar
+                summary={weekOperationalSummary}
+                filtersActive={planningFiltersActive}
+                weekTotalItems={activeDraftItemsCount}
+                executionOutsidePlanCount={executionOutsidePlanSummary.entriesCount}
+                executionOutsidePlanMinutes={executionOutsidePlanSummary.totalMinutes}
+              />
+              <PlanningWeekDeviationBar
+                summary={planningDeviationSummary}
+                filtersActive={planningFiltersActive}
+                outsidePlanFilterNote={outsidePlanDeviationNote}
+              />
+              {SHOW_PLANNING_PRINCIPAL_DEVIATIONS ? (
+                <PlanningPrincipalDeviationsPanel
+                  deviations={principalDeviations}
+                  weekdayDates={weekdayDates}
+                />
+              ) : null}
+            </>
+          ) : null}
+
+          {draftItems.length > 0 ? (
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="text-[11px] text-slate-500">Visualização</span>
+              <div className="inline-flex rounded-xl border border-white/[0.08] bg-white/[0.03] p-0.5">
+                <button
+                  type="button"
+                  className={[
+                    'rounded-lg px-3 py-1.5 text-[12px] font-medium transition-colors',
+                    planningViewMode === 'week'
+                      ? 'bg-white/[0.10] text-slate-100'
+                      : 'text-slate-400 hover:text-slate-200',
+                  ].join(' ')}
+                  onClick={() => setPlanningViewMode('week')}
+                >
+                  Semana
+                </button>
+                <button
+                  type="button"
+                  className={[
+                    'rounded-lg px-3 py-1.5 text-[12px] font-medium transition-colors',
+                    planningViewMode === 'daily'
+                      ? 'bg-white/[0.10] text-slate-100'
+                      : 'text-slate-400 hover:text-slate-200',
+                  ].join(' ')}
+                  onClick={() => setPlanningViewMode('daily')}
+                >
+                  Daily
+                </button>
+              </div>
+            </div>
+          ) : null}
+        </section>
+        </div>
+
         <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
-          <div className="mt-10 grid gap-8 lg:grid-cols-[minmax(280px,360px)_1fr]">
-            <section className="space-y-4">
+          <div
+            data-testid={PLANNING_LAYOUT_TEST_IDS.operationalWorkspace}
+            className={PLANNING_OPERATIONAL_WORKSPACE_CLASS}
+          >
+            <section
+              data-testid={PLANNING_LAYOUT_TEST_IDS.backlogColumn}
+              className={PLANNING_BACKLOG_COLUMN_CLASS}
+            >
               {SHOW_PLANNING_SECONDARY_TABS ? (
-              <div className="flex flex-wrap gap-1 rounded-xl border border-white/[0.08] bg-white/[0.03] p-1">
+              <div className="mb-3 flex shrink-0 flex-wrap gap-1 rounded-xl border border-white/[0.08] bg-white/[0.03] p-1">
                 <button
                   type="button"
                   className={[
@@ -1700,7 +1905,7 @@ export function OperationalPlanningPage() {
 
               {activeSidePanelTab === 'backlog' ? (
               <>
-              <div>
+              <div className="shrink-0 pb-3">
                 <h2 className="text-[15px] font-semibold text-slate-100">Backlog operacional</h2>
                 <p className="mt-1 text-[12px] text-slate-500">Buscar esteira / atividade</p>
                 <div className="mt-3 flex gap-2">
@@ -1722,7 +1927,10 @@ export function OperationalPlanningPage() {
                   </button>
                 </div>
               </div>
-              <div className="space-y-3 lg:max-h-[calc(100vh-220px)] lg:overflow-y-auto lg:pr-1">
+              <div
+                data-testid={PLANNING_LAYOUT_TEST_IDS.backlogScrollArea}
+                className={[PLANNING_BACKLOG_SCROLL_CLASS, 'space-y-3 pr-1'].join(' ')}
+              >
                 {visibleBacklogItems.map((b) => (
                   <BacklogDraggableCard
                     key={b.activityNodeId}
@@ -1739,7 +1947,10 @@ export function OperationalPlanningPage() {
               </div>
               </>
               ) : activeSidePanelTab === 'factory-intake' ? (
-              <div className="space-y-4">
+              <div
+                data-testid={PLANNING_LAYOUT_TEST_IDS.backlogScrollArea}
+                className={[PLANNING_BACKLOG_SCROLL_CLASS, 'space-y-4'].join(' ')}
+              >
                 <FactoryIntakePanel
                   intakeItems={factoryIntakeItems}
                   draftItems={draftItems}
@@ -1752,6 +1963,10 @@ export function OperationalPlanningPage() {
                 />
               </div>
               ) : activeSidePanelTab === 'sync-pending' ? (
+              <div
+                data-testid={PLANNING_LAYOUT_TEST_IDS.backlogScrollArea}
+                className={PLANNING_BACKLOG_SCROLL_CLASS}
+              >
               <PlanningSyncIssuesPanel
                 items={syncIssueItems}
                 onWeekApplied={async (message) => {
@@ -1759,15 +1974,22 @@ export function OperationalPlanningPage() {
                   await loadWeek()
                 }}
               />
+              </div>
               ) : activeSidePanelTab === 'outside-plan' ? (
-              <div className="space-y-4">
+              <div
+                data-testid={PLANNING_LAYOUT_TEST_IDS.backlogScrollArea}
+                className={[PLANNING_BACKLOG_SCROLL_CLASS, 'space-y-4'].join(' ')}
+              >
                 <PlanningExecutionOutsidePlanPanel
                   entries={executionOutsidePlanEntries}
                   summaryTotalMinutes={executionOutsidePlanSummary.totalMinutes}
                 />
               </div>
               ) : (
-              <div className="space-y-4">
+              <div
+                data-testid={PLANNING_LAYOUT_TEST_IDS.backlogScrollArea}
+                className={[PLANNING_BACKLOG_SCROLL_CLASS, 'space-y-4'].join(' ')}
+              >
                 <PlanningWeekHistoryPanel
                   items={visibleWeekActivityItems}
                   filters={historyFilters}
@@ -1779,202 +2001,21 @@ export function OperationalPlanningPage() {
               )}
             </section>
 
-            <section>
-              <div className="mb-4">
-                <h2 className="text-[15px] font-semibold text-slate-100">Plano semanal</h2>
-                <p className="mt-1 text-[12px] text-slate-500">
-                  Arraste do backlog para uma célula ou use “Adicionar ao plano”.
-                </p>
-              </div>
-
-              {draftItems.length > 0 ? (
-                <div className="mb-4 rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
-                  <div className="flex flex-wrap items-end justify-between gap-3">
-                    <p className="text-[12px] font-medium text-slate-400">Filtros do quadro</p>
-                    {planningFiltersActive ? (
-                      <button
-                        type="button"
-                        className="rounded-lg border border-white/[0.08] bg-white/[0.04] px-2.5 py-1 text-[11px] text-slate-300 hover:bg-white/[0.07]"
-                        onClick={clearPlanningFilters}
-                      >
-                        Limpar filtros
-                      </button>
-                    ) : null}
-                  </div>
-                  <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                    <label className="block text-[11px] text-slate-500">
-                      Colaborador
-                      <select
-                        className="mt-1 w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-3 py-2 text-[13px] text-slate-100"
-                        value={planningFilters.collaboratorId}
-                        onChange={(e) =>
-                          setPlanningFilters((f) => ({ ...f, collaboratorId: e.target.value }))
-                        }
-                      >
-                        <option value={PLANNING_COLLABORATOR_ALL}>Todos</option>
-                        {planningFilterOptions.hasUnassigned ? (
-                          <option value={PLANNING_COLLABORATOR_UNASSIGNED}>Sem responsável</option>
-                        ) : null}
-                        {planningFilterOptions.collaborators.map((c) => (
-                          <option key={c.id} value={c.id}>
-                            {c.label}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                    <label className="block text-[11px] text-slate-500">
-                      Esteira
-                      <select
-                        className="mt-1 w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-3 py-2 text-[13px] text-slate-100"
-                        value={planningFilters.conveyorId}
-                        onChange={(e) =>
-                          setPlanningFilters((f) => ({ ...f, conveyorId: e.target.value }))
-                        }
-                      >
-                        <option value={PLANNING_CONVEYOR_ALL}>Todas as esteiras</option>
-                        {planningFilterOptions.conveyors.map((c) => (
-                          <option key={c.id} value={c.id}>
-                            {c.label}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                    <label className="block text-[11px] text-slate-500">
-                      Situação
-                      <select
-                        className="mt-1 w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-3 py-2 text-[13px] text-slate-100"
-                        value={planningFilters.state}
-                        onChange={(e) =>
-                          setPlanningFilters((f) => ({
-                            ...f,
-                            state: e.target.value as PlanningBoardFilters['state'],
-                          }))
-                        }
-                      >
-                        <option value="all">Todos</option>
-                        <option value="no_assignee">Sem responsável</option>
-                        {planningFilterOptions.states.includes('over_capacity') ? (
-                          <option value="over_capacity">Com capacidade excedida</option>
-                        ) : null}
-                      </select>
-                    </label>
-                    <label className="block text-[11px] text-slate-500">
-                      Busca no plano
-                      <input
-                        className="mt-1 w-full rounded-xl border border-white/[0.08] bg-white/[0.04] px-3 py-2 text-[13px] text-slate-100 placeholder:text-slate-600"
-                        placeholder="Esteira, atividade, setor…"
-                        value={planningFilters.q}
-                        onChange={(e) =>
-                          setPlanningFilters((f) => ({ ...f, q: e.target.value }))
-                        }
-                      />
-                    </label>
-                  </div>
-                  <div className="mt-3 flex flex-wrap items-center gap-3">
-                    <p className="text-[11px] text-slate-500">
-                      Exibindo {visibleDraftItems.length} de {activeDraftItemsCount} itens
-                      planejados
-                      {planningFiltersActive ? ' (visão filtrada)' : ''}
-                    </p>
-                    <button
-                      type="button"
-                      className="rounded-lg border border-white/[0.10] bg-white/[0.05] px-2.5 py-1 text-[11px] font-medium text-slate-200 hover:bg-white/[0.08] disabled:opacity-50"
-                      title="Imprimir tickets das atividades visíveis no quadro"
-                      disabled={busy || isPrinting || ticketBatchSources.length === 0}
-                      onClick={handlePrintVisibleTickets}
-                    >
-                      Imprimir tickets visíveis
-                      {ticketBatchSources.length > 0 ? ` (${ticketBatchSources.length})` : ''}
-                    </button>
-                    {planningViewMode === 'week' ? (
-                      <input
-                        className="rounded-xl border border-white/[0.08] bg-white/[0.04] px-3 py-2 text-[13px] text-slate-100 placeholder:text-slate-600"
-                        placeholder="Filtrar colaboradores no quadro…"
-                        value={boardCollabQ}
-                        onChange={(e) => setBoardCollabQ(e.target.value)}
-                      />
-                    ) : null}
-                  </div>
-                  <p className="mt-2 text-[11px] leading-relaxed text-slate-500">
-                    {ACTIVITY_TICKET_PRINT_SUPPORT_MESSAGE}
-                  </p>
-                  <p className="mt-1 text-[11px] leading-relaxed text-slate-500">
-                    {ACTIVITY_TICKET_SILENT_PRINT_HINT}
-                  </p>
-                  <ThermalPrintAgentControls
-                    agentStatus={agentStatus}
-                    fallbackNotice={agentFallbackNotice}
-                    onDismissFallback={clearAgentFallbackNotice}
-                    onTestPrint={() => {
-                      void testThermalPrinter()
-                    }}
-                    testLoading={testPrintLoading}
-                  />
-                </div>
-              ) : null}
-
-              {draftItems.length > 0 || executionOutsidePlanSummary.entriesCount > 0 ? (
-                <>
-                  <PlanningWeekOperationalSummaryBar
-                    summary={weekOperationalSummary}
-                    filtersActive={planningFiltersActive}
-                    weekTotalItems={activeDraftItemsCount}
-                    executionOutsidePlanCount={executionOutsidePlanSummary.entriesCount}
-                    executionOutsidePlanMinutes={executionOutsidePlanSummary.totalMinutes}
-                  />
-                  <PlanningWeekDeviationBar
-                    summary={planningDeviationSummary}
-                    filtersActive={planningFiltersActive}
-                    outsidePlanFilterNote={outsidePlanDeviationNote}
-                  />
-                  {SHOW_PLANNING_PRINCIPAL_DEVIATIONS ? (
-                    <PlanningPrincipalDeviationsPanel
-                      deviations={principalDeviations}
-                      weekdayDates={weekdayDates}
-                    />
-                  ) : null}
-                </>
-              ) : null}
-
-              {draftItems.length > 0 ? (
-                <div className="mb-4 flex flex-wrap items-center gap-3">
-                  <span className="text-[11px] text-slate-500">Visualização</span>
-                  <div className="inline-flex rounded-xl border border-white/[0.08] bg-white/[0.03] p-0.5">
-                    <button
-                      type="button"
-                      className={[
-                        'rounded-lg px-3 py-1.5 text-[12px] font-medium transition-colors',
-                        planningViewMode === 'week'
-                          ? 'bg-white/[0.10] text-slate-100'
-                          : 'text-slate-400 hover:text-slate-200',
-                      ].join(' ')}
-                      onClick={() => setPlanningViewMode('week')}
-                    >
-                      Semana
-                    </button>
-                    <button
-                      type="button"
-                      className={[
-                        'rounded-lg px-3 py-1.5 text-[12px] font-medium transition-colors',
-                        planningViewMode === 'daily'
-                          ? 'bg-white/[0.10] text-slate-100'
-                          : 'text-slate-400 hover:text-slate-200',
-                      ].join(' ')}
-                      onClick={() => setPlanningViewMode('daily')}
-                    >
-                      Daily
-                    </button>
-                  </div>
-                </div>
-              ) : null}
-
+            <section
+              data-testid={PLANNING_LAYOUT_TEST_IDS.collaboratorsColumn}
+              className={PLANNING_COLLABORATORS_COLUMN_CLASS}
+            >
               {draftItems.length === 0 ? (
-                <p className="mb-4 rounded-xl border border-white/[0.06] bg-white/[0.02] px-4 py-3 text-[13px] leading-relaxed text-slate-400">
+                <p className="mb-3 shrink-0 rounded-xl border border-white/[0.06] bg-white/[0.02] px-4 py-3 text-[13px] leading-relaxed text-slate-400">
                   Nenhuma atividade planejada nesta semana. Arraste itens do backlog para o quadro
                   ou use “Adicionar ao plano”.
                 </p>
               ) : null}
 
+              <div
+                data-testid={PLANNING_LAYOUT_TEST_IDS.collaboratorsScrollArea}
+                className={PLANNING_COLLABORATORS_SCROLL_CLASS}
+              >
               {planningViewMode === 'daily' && draftItems.length > 0 ? (
                 <PlanningDailyKanbanView
                   items={visibleDraftItems}
@@ -1996,11 +2037,11 @@ export function OperationalPlanningPage() {
               ) : null}
 
               {planningViewMode === 'week' ? (
-              <div className="overflow-x-auto">
+              <div className="min-w-0">
                 <table className="w-full min-w-[900px] border-separate border-spacing-2">
                   <thead>
                     <tr>
-                      <th className="w-44 rounded-lg bg-white/[0.03] px-2 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                      <th className="sticky top-0 z-[1] w-44 rounded-lg border border-transparent bg-sgp-void/95 px-2 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-500 backdrop-blur-sm">
                         Colaborador
                       </th>
                       {dayLabels.map((label, i) => {
@@ -2013,10 +2054,10 @@ export function OperationalPlanningPage() {
                           <th
                             key={label}
                             className={[
-                              'rounded-lg px-2 py-2 text-left text-[11px] font-semibold uppercase tracking-wide',
+                              'sticky top-0 z-[1] rounded-lg px-2 py-2 text-left text-[11px] font-semibold uppercase tracking-wide backdrop-blur-sm',
                               isTodayCol
-                                ? 'border border-sgp-gold/25 bg-sgp-gold/[0.06] text-slate-200 ring-1 ring-sgp-gold/20'
-                                : 'bg-white/[0.03] text-slate-500',
+                                ? 'border border-sgp-gold/25 bg-sgp-void/95 text-slate-200 ring-1 ring-sgp-gold/20'
+                                : 'border border-transparent bg-sgp-void/95 text-slate-500',
                             ].join(' ')}
                           >
                             <div className="flex flex-wrap items-center gap-1.5">
@@ -2101,6 +2142,7 @@ export function OperationalPlanningPage() {
                 </table>
               </div>
               ) : null}
+              </div>
             </section>
           </div>
         </DndContext>
