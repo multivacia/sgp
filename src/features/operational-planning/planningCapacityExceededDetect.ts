@@ -58,13 +58,15 @@ function plannedMinutesByCollaboratorDay(
 function resolveCollaboratorName(
   collaboratorId: string,
   items: readonly PlanningCapacityDraftItemRef[],
-  nameById?: ReadonlyMap<string, string> | Readonly<Record<string, string>>,
+  nameById?: Map<string, string> | Readonly<Record<string, string>>,
 ): string {
   for (const item of items) {
     if (item.assignedCollaboratorId?.trim() !== collaboratorId) continue
     const n = item.assignedCollaboratorName?.trim()
     if (n) return n
   }
+  // `Map` (não `ReadonlyMap`): `instanceof Map` elimina o braço do Map e
+  // estreita o `else` para Record, permitindo indexação tipada sem assertion.
   if (nameById instanceof Map) {
     const n = nameById.get(collaboratorId)?.trim()
     if (n) return n
@@ -88,7 +90,7 @@ export function detectPlanningCapacityExceededAlerts(input: {
   previousItems: readonly PlanningCapacityDraftItemRef[]
   nextItems: readonly PlanningCapacityDraftItemRef[]
   capacityRows: readonly PlanningCapacityRowRef[]
-  collaboratorNameById?: ReadonlyMap<string, string> | Readonly<Record<string, string>>
+  collaboratorNameById?: Map<string, string> | Readonly<Record<string, string>>
 }): PlanningCapacityExceededAlert[] {
   const prevByCell = plannedMinutesByCollaboratorDay(input.previousItems)
   const nextByCell = plannedMinutesByCollaboratorDay(input.nextItems)

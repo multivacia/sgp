@@ -166,8 +166,8 @@ describe('formatPlanningCapacityExceededMessage', () => {
 describe('alerta imediato no rascunho com capacityMinutes da API', () => {
   it('com capacityRow disponível, draft acima do limite fica over_capacity', () => {
     const draftPlanned = sumPlanningItemMinutes([
-      { plannedMinutes: 300, status: 'PLANNED' },
-      { plannedMinutes: 240, status: 'PLANNED' },
+      { plannedDate: '2026-08-25', plannedMinutes: 300 },
+      { plannedDate: '2026-08-25', plannedMinutes: 240 },
     ])
     expect(draftPlanned).toBe(540)
     expect(resolvePlanningCapacityState(draftPlanned, 480)).toBe('over_capacity')

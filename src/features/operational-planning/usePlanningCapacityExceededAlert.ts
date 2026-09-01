@@ -13,7 +13,7 @@ import {
  */
 export function usePlanningCapacityExceededAlert(
   capacityRows: readonly PlanningCapacityRowRef[],
-  collaboratorNameById: ReadonlyMap<string, string> | Readonly<Record<string, string>>,
+  collaboratorNameById: Map<string, string> | Readonly<Record<string, string>>,
 ) {
   const [alerts, setAlerts] = useState<PlanningCapacityExceededAlert[]>([])
 
