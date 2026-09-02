@@ -9,6 +9,7 @@ import {
   serviceGetOperationalPlanningWeek,
 } from '../modules/operational-planning/operational-planning.service.js'
 import * as repo from '../modules/operational-planning/operational-planning.repository.js'
+import * as capacityMatrix from '../modules/operational-planning/buildCapacityByCollaboratorDay.js'
 import * as conveyorRepo from '../modules/conveyor-operational-plan/conveyor-operational-plan.repository.js'
 
 function sampleRow(
@@ -118,6 +119,8 @@ describe('planItemEnrichedRowToApi', () => {
 describe('serviceGetOperationalPlanningWeek — execution fields', () => {
   beforeEach(() => {
     vi.spyOn(repo, 'listExecutionOutsidePlanEntriesForWeek').mockResolvedValue([])
+    vi.spyOn(capacityMatrix, 'listActiveCollaboratorIdsForPlanningBoard').mockResolvedValue([])
+    vi.spyOn(capacityMatrix, 'buildCapacityByCollaboratorDay').mockResolvedValue([])
   })
 
   afterEach(() => {

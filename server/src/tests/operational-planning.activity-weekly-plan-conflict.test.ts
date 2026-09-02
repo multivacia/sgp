@@ -1,8 +1,9 @@
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type pg from 'pg'
 import { AppError } from '../shared/errors/AppError.js'
 import { ErrorCodes } from '../shared/errors/errorCodes.js'
 import * as repo from '../modules/operational-planning/operational-planning.repository.js'
+import * as capacityMatrix from '../modules/operational-planning/buildCapacityByCollaboratorDay.js'
 import {
   servicePatchOperationalWeekPlan,
   serviceSaveOperationalWeekPlan,
@@ -71,6 +72,11 @@ function mockSaveTransactionPool(): pg.Pool {
 }
 
 describe('atividade já planejada em outro plano semanal', () => {
+  beforeEach(() => {
+    vi.spyOn(capacityMatrix, 'listActiveCollaboratorIdsForPlanningBoard').mockResolvedValue([])
+    vi.spyOn(capacityMatrix, 'buildCapacityByCollaboratorDay').mockResolvedValue([])
+  })
+
   afterEach(() => {
     vi.restoreAllMocks()
   })
