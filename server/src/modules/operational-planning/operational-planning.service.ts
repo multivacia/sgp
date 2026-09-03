@@ -43,6 +43,7 @@ import {
   isActivityPlannedInOtherWeeklyPlan,
   isConveyorPlanItemLinkedElsewhere,
   listEnrichedItemsForWorkPlan,
+  listEnrichedItemsForWorkPlanExport,
   listExecutionOutsidePlanEntriesForWeek,
   listWeekActivityStepEventsForWeek,
   listWeekActivityTimeEntriesForWeek,
@@ -58,8 +59,18 @@ import {
   touchOperationalWorkPlanUpdatedAt,
   type FactoryIntakeRawRow,
   type PlanItemEnrichedRow,
+  type PlanItemExportRow,
   type OperationalWorkPlanRow,
 } from './operational-planning.repository.js'
+import { listCollaborators } from '../collaborators/collaborators.repository.js'
+import {
+  buildOperationalPlanningExportFilename,
+  buildOperationalPlanningExportWorkbookBuffer,
+  type OperationalPlanningExportCapacityRow,
+  type OperationalPlanningExportMeta,
+  type OperationalPlanningExportPlanningRow,
+  type OperationalPlanningExportSituation,
+} from './operational-planning.export.js'
 import {
   assertFriday,
   assertMonday,
@@ -1241,4 +1252,224 @@ export async function serviceListFactoryIntakeItems(
   void weekStart
   const raw = await listFactoryIntakeItems(pool)
   return { items: raw.map(factoryIntakeRowToApi) }
+}
+
+/**
+ * Dicionário PT-BR específico do export Excel — NÃO é o mesmo do frontend
+ * (`stepOperationalStatusLabel`), que tem rótulos diferentes para a mesma UI.
+ */
+const EXPORT_ACTIVITY_STATUS_LABELS: Record<string, string> = {
+  PENDING: 'Aberta',
+  IN_PROGRESS: 'Em andamento',
+  BLOCKED: 'Bloqueada',
+  COMPLETED: 'Concluída',
+  REOPENED: 'Reaberta',
+  ABORTED: 'Dispensada',
+}
+
+export function mapExportActivityStatusLabel(status: string | null | undefined): string {
+  if (!status) return '—'
+  return EXPORT_ACTIVITY_STATUS_LABELS[status] ?? status
+}
+
+export type ExportCapacityClassification = {
+  balanceMinutes: number | null
+  occupancyRatio: number | null
+  statusLabel: OperationalPlanningExportCapacityRow['statusLabel']
+}
+
+/** Classificação de capacidade do export — SEM limiar de 90% (regra de negócio explícita). */
+export function classifyCapacityRow(
+  capacityMinutes: number | null | undefined,
+  plannedMinutes: number,
+): ExportCapacityClassification {
+  const validCapacity =
+    typeof capacityMinutes === 'number' && Number.isFinite(capacityMinutes) && capacityMinutes > 0
+  if (!validCapacity) {
+    return { balanceMinutes: null, occupancyRatio: null, statusLabel: 'Capacidade não cadastrada' }
+  }
+  const balanceMinutes = capacityMinutes - plannedMinutes
+  const occupancyRatio = plannedMinutes / capacityMinutes
+  if (plannedMinutes > capacityMinutes) {
+    return { balanceMinutes, occupancyRatio, statusLabel: 'Sobrecarregado' }
+  }
+  if (plannedMinutes === capacityMinutes) {
+    return { balanceMinutes, occupancyRatio, statusLabel: 'No limite' }
+  }
+  return { balanceMinutes, occupancyRatio, statusLabel: 'Disponível' }
+}
+
+/**
+ * "Revisão necessária" por item, reaproveitando `deriveConveyorPlanFactorySyncState` em lote —
+ * mesma lógica de `mapWeekPlanItemsToApi`, mas sobre o shape de `listEnrichedItemsForWorkPlanExport`.
+ */
+async function buildExportReviewRequiredLabels(
+  pool: pg.Pool,
+  rows: readonly PlanItemExportRow[],
+): Promise<Map<string, string>> {
+  const linkedIds = [
+    ...new Set(
+      rows
+        .map((r) => r.conveyor_operational_plan_item_id)
+        .filter((id): id is string => Boolean(id)),
+    ),
+  ]
+  const conveyorById = await loadConveyorPlanItemsForWeekSync(pool, linkedIds)
+
+  const out = new Map<string, string>()
+  for (const row of rows) {
+    const copId = row.conveyor_operational_plan_item_id
+    if (!copId) {
+      out.set(row.id, 'Não')
+      continue
+    }
+    const planItem = conveyorById.get(copId)
+    if (!planItem) {
+      out.set(row.id, 'Sim — Item do plano da esteira vinculado não foi encontrado.')
+      continue
+    }
+    const derived = deriveConveyorPlanFactorySyncState({
+      planItem: {
+        plannedDate: planItem.planned_date,
+        plannedMinutes: planItem.planned_minutes,
+        plannedCollaboratorId: planItem.planned_collaborator_id,
+        plannedTeamId: planItem.planned_team_id,
+        status: planItem.status,
+        reviewRequired: planItem.review_required,
+        hasFactoryLink: true,
+      },
+      factoryItem: {
+        plannedDate: row.planned_date,
+        plannedMinutes: row.planned_minutes,
+        assignedCollaboratorId: row.assigned_collaborator_id,
+        assignedTeamId: row.assigned_team_id,
+        status: row.status,
+      },
+    })
+    if (derived.syncStatus === 'DIVERGED' && derived.differences.length > 0) {
+      out.set(row.id, `Sim — ${derived.differences.map((d) => d.message).join('; ')}`)
+    } else {
+      out.set(row.id, 'Não')
+    }
+  }
+  return out
+}
+
+/**
+ * Export Excel (2 abas) da semana salva (draft ?? published) — ignora filtros visuais.
+ * Somente leitura: nenhuma escrita, nenhuma transação, nenhuma alteração de estado do plano.
+ */
+export async function serviceExportOperationalPlanningWeekXlsx(
+  pool: pg.Pool,
+  weekStartRaw: string,
+): Promise<{ buffer: Buffer; filename: string }> {
+  const weekStartDate = mondayOfWeekContaining(weekStartRaw)
+  const weekEndDate = fridayAfterMonday(weekStartDate)
+  const weekdayDates = weekDayStrings(weekStartDate)
+
+  const [draftRow, publishedRow] = await Promise.all([
+    findDraftOperationalWorkPlanByWeekStart(pool, weekStartDate),
+    findPublishedOperationalWorkPlanByWeekStart(pool, weekStartDate),
+  ])
+  const editableRow = draftRow ?? publishedRow
+  if (!editableRow) {
+    throw new AppError(
+      'Nenhum plano encontrado para esta semana.',
+      404,
+      ErrorCodes.NOT_FOUND,
+    )
+  }
+
+  const rows = await listEnrichedItemsForWorkPlanExport(pool, editableRow.id)
+  if (rows.length === 0) {
+    throw new AppError(
+      'Não há atividades planejadas nesta semana para exportar.',
+      400,
+      ErrorCodes.VALIDATION_ERROR,
+    )
+  }
+
+  const situation: OperationalPlanningExportSituation =
+    draftRow && publishedRow
+      ? 'REVISAO_NAO_PUBLICADA'
+      : draftRow
+        ? 'RASCUNHO'
+        : 'PUBLICADO'
+
+  const reviewRequiredByItemId = await buildExportReviewRequiredLabels(pool, rows)
+
+  const activeCollaboratorIds = await listActiveCollaboratorIdsForPlanningBoard(pool)
+  const capacityByCollaboratorDay = await buildCapacityByCollaboratorDay(pool, {
+    items: rows,
+    weekdayDates,
+    collaboratorIds: activeCollaboratorIds,
+  })
+
+  const allCollaborators = await listCollaborators(pool, {})
+  const collaboratorNameById = new Map(allCollaborators.map((c) => [c.id, c.full_name]))
+
+  const planningRows: OperationalPlanningExportPlanningRow[] = rows.map((row) => ({
+    plannedDate: row.planned_date,
+    collaboratorName: row.assigned_collaborator_name ?? 'Não atribuído',
+    teamName: row.assigned_team_name ?? '—',
+    conveyorCode: row.conveyor_code?.trim() ? row.conveyor_code : '—',
+    conveyorTitle: row.conveyor_title,
+    clientName: row.conveyor_client_name?.trim() ? row.conveyor_client_name : '—',
+    vehicle: row.conveyor_vehicle?.trim() ? row.conveyor_vehicle : '—',
+    plate: row.conveyor_plate?.trim() ? row.conveyor_plate : '—',
+    estimatedDeadline: row.conveyor_estimated_deadline?.trim() ? row.conveyor_estimated_deadline : '—',
+    taskTitle: row.task_title,
+    sectorTitle: row.sector_title,
+    activityTitle: row.activity_title,
+    plannedOrderDisplay: row.planned_order + 1,
+    plannedMinutes: row.planned_minutes,
+    statusLabel: mapExportActivityStatusLabel(row.activity_operational_status),
+    notes: row.notes?.trim() ? row.notes : '—',
+    reviewRequiredLabel: reviewRequiredByItemId.get(row.id) ?? 'Não',
+  }))
+
+  const capacityRows: OperationalPlanningExportCapacityRow[] = capacityByCollaboratorDay
+    .map((row) => {
+      const classified = classifyCapacityRow(row.capacityMinutes, row.plannedMinutes)
+      return {
+        date: row.date,
+        collaboratorName: collaboratorNameById.get(row.collaboratorId) ?? '—',
+        capacityMinutes:
+          classified.statusLabel === 'Capacidade não cadastrada' ? null : row.capacityMinutes,
+        plannedMinutes: row.plannedMinutes,
+        balanceMinutes: classified.balanceMinutes,
+        occupancyRatio: classified.occupancyRatio,
+        statusLabel: classified.statusLabel,
+      }
+    })
+    .sort(
+      (a, b) => a.date.localeCompare(b.date) || a.collaboratorName.localeCompare(b.collaboratorName, 'pt-BR'),
+    )
+
+  const totalPlannedMinutes = rows.reduce(
+    (sum, row) => sum + Math.max(0, Number(row.planned_minutes ?? 0) || 0),
+    0,
+  )
+  const collaboratorsWithActivityCount = new Set(
+    rows.map((row) => row.assigned_collaborator_id).filter((id): id is string => Boolean(id)),
+  ).size
+
+  const meta: OperationalPlanningExportMeta = {
+    weekStartDate,
+    weekEndDate,
+    situation,
+    generatedAt: new Date(),
+    totalActivities: rows.length,
+    totalPlannedMinutes,
+    collaboratorsWithActivityCount,
+  }
+
+  const buffer = await buildOperationalPlanningExportWorkbookBuffer({
+    meta,
+    planningRows,
+    capacityRows,
+  })
+  const filename = buildOperationalPlanningExportFilename(weekStartDate, weekEndDate, situation)
+
+  return { buffer, filename }
 }

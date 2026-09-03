@@ -11,5 +11,6 @@ export function corsOptions(origin: string): CorsOptions {
       'X-User-Email',
       'Idempotency-Key',
     ],
+    exposedHeaders: ['Content-Disposition'],
   }
 }

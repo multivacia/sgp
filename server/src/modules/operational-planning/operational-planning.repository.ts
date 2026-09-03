@@ -1080,6 +1080,154 @@ export async function listEnrichedItemsForWorkPlan(
   }))
 }
 
+/**
+ * Linha mínima do item do plano semanal para o export Excel (Planejamento + Capacidade) —
+ * carrega SOMENTE os campos usados pelo export. Não é `PlanItemEnrichedRow` (que traz
+ * `realized_minutes`, dado de execução proibido no MVP do export).
+ */
+export type PlanItemExportRow = {
+  id: string
+  conveyor_id: string
+  conveyor_title: string
+  conveyor_code: string | null
+  conveyor_client_name: string | null
+  conveyor_vehicle: string | null
+  conveyor_plate: string | null
+  conveyor_estimated_deadline: string | null
+  activity_node_id: string
+  activity_title: string
+  task_title: string
+  sector_title: string
+  assigned_collaborator_id: string | null
+  assigned_collaborator_name: string | null
+  assigned_team_id: string | null
+  assigned_team_name: string | null
+  planned_date: string
+  planned_order: number
+  planned_minutes: number | null
+  status: string
+  notes: string | null
+  activity_operational_status: string | null
+  conveyor_operational_plan_item_id: string | null
+}
+
+/**
+ * Query dedicada ao export Excel do planejamento semanal — NÃO reaproveita nem altera
+ * `listEnrichedItemsForWorkPlan`. Ordenação de negócio própria: data → colaborador → ordem → id.
+ * Sem CTE/join de apontamentos (`conveyor_time_entries`): o export não usa tempo realizado.
+ */
+export async function listEnrichedItemsForWorkPlanExport(
+  pool: pg.Pool | pg.PoolClient,
+  workPlanId: string,
+): Promise<PlanItemExportRow[]> {
+  const r = await pool.query<{
+    id: string
+    conveyor_id: string
+    conveyor_title: string
+    conveyor_code: string | null
+    conveyor_client_name: string | null
+    conveyor_vehicle: string | null
+    conveyor_plate: string | null
+    conveyor_estimated_deadline: string | null
+    activity_node_id: string
+    activity_title: string
+    task_title: string
+    sector_title: string
+    assigned_collaborator_id: string | null
+    assigned_collaborator_name: string | null
+    assigned_team_id: string | null
+    assigned_team_name: string | null
+    planned_date: string
+    planned_order: number
+    planned_minutes: number | null
+    status: string
+    notes: string | null
+    activity_operational_status: string | null
+    conveyor_operational_plan_item_id: string | null
+  }>(
+    `
+    SELECT
+      i.id::text,
+      cv.id::text AS conveyor_id,
+      cv.name AS conveyor_title,
+      cv.code AS conveyor_code,
+      cv.client_name AS conveyor_client_name,
+      cv.vehicle AS conveyor_vehicle,
+      cv.plate AS conveyor_plate,
+      cv.estimated_deadline::text AS conveyor_estimated_deadline,
+      step.id::text AS activity_node_id,
+      step.name AS activity_title,
+      opt.name AS task_title,
+      area.name AS sector_title,
+      i.assigned_collaborator_id::text,
+      col.full_name AS assigned_collaborator_name,
+      i.assigned_team_id::text,
+      tm.name AS assigned_team_name,
+      i.planned_date::text,
+      i.planned_order,
+      i.planned_minutes,
+      i.status,
+      i.notes,
+      step.operational_status::text AS activity_operational_status,
+      i.conveyor_operational_plan_item_id::text
+    FROM operational_work_plan_items i
+    INNER JOIN conveyors cv
+      ON cv.id = i.conveyor_id
+      AND cv.deleted_at IS NULL
+    INNER JOIN conveyor_nodes step
+      ON step.id = i.activity_node_id
+      AND step.deleted_at IS NULL
+    INNER JOIN conveyor_nodes area
+      ON area.id = step.parent_id
+      AND area.node_type = 'AREA'
+      AND area.deleted_at IS NULL
+    INNER JOIN conveyor_nodes opt
+      ON opt.id = area.parent_id
+      AND opt.node_type = 'OPTION'
+      AND opt.deleted_at IS NULL
+    LEFT JOIN collaborators col
+      ON col.id = i.assigned_collaborator_id
+      AND col.deleted_at IS NULL
+    LEFT JOIN teams tm
+      ON tm.id = i.assigned_team_id
+      AND tm.deleted_at IS NULL
+    WHERE i.work_plan_id = $1::uuid
+      AND i.deleted_at IS NULL
+    ORDER BY
+      i.planned_date ASC,
+      col.full_name ASC NULLS LAST,
+      i.planned_order ASC,
+      i.id ASC
+    `,
+    [workPlanId],
+  )
+  return r.rows.map((row) => ({
+    id: row.id,
+    conveyor_id: row.conveyor_id,
+    conveyor_title: row.conveyor_title,
+    conveyor_code: row.conveyor_code,
+    conveyor_client_name: row.conveyor_client_name,
+    conveyor_vehicle: row.conveyor_vehicle,
+    conveyor_plate: row.conveyor_plate,
+    conveyor_estimated_deadline: row.conveyor_estimated_deadline,
+    activity_node_id: row.activity_node_id,
+    activity_title: row.activity_title,
+    task_title: row.task_title,
+    sector_title: row.sector_title,
+    assigned_collaborator_id: row.assigned_collaborator_id,
+    assigned_collaborator_name: row.assigned_collaborator_name,
+    assigned_team_id: row.assigned_team_id,
+    assigned_team_name: row.assigned_team_name,
+    planned_date: row.planned_date,
+    planned_order: row.planned_order,
+    planned_minutes: row.planned_minutes,
+    status: row.status,
+    notes: row.notes,
+    activity_operational_status: row.activity_operational_status,
+    conveyor_operational_plan_item_id: row.conveyor_operational_plan_item_id,
+  }))
+}
+
 export async function touchOperationalWorkPlanUpdatedAt(
   client: pg.PoolClient,
   planId: string,

@@ -96,7 +96,10 @@ export async function listActiveCollaboratorIdsForPlanningBoard(
 export async function buildCapacityByCollaboratorDay(
   pool: pg.Pool,
   input: {
-    items: readonly PlanItemEnrichedRow[]
+    items: readonly Pick<
+      PlanItemEnrichedRow,
+      'assigned_collaborator_id' | 'planned_date' | 'planned_minutes'
+    >[]
     weekdayDates: readonly string[]
     collaboratorIds?: readonly string[]
   },

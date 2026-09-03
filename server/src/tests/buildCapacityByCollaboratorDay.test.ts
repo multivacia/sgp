@@ -1,6 +1,7 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 import type pg from 'pg'
 import type { CollaboratorCapacityOverrideRow } from '../modules/operational-settings/operational-settings.repository.js'
+import type { PlanItemEnrichedRow } from '../modules/operational-planning/operational-planning.repository.js'
 import {
   buildCapacityByCollaboratorDay,
   pickOverrideDailyMinutesForDate,
@@ -146,29 +147,30 @@ describe('buildCapacityByCollaboratorDay', () => {
         effective_to: '2026-08-25',
       }),
     ])
+    const items: PlanItemEnrichedRow[] = [
+      {
+        id: '1',
+        conveyor_id: 'c',
+        conveyor_title: 'E',
+        activity_node_id: 'a',
+        activity_title: 'At',
+        task_title: 'T',
+        sector_title: 'S',
+        assigned_collaborator_id: COLLAB_A,
+        assigned_collaborator_name: 'João',
+        assigned_team_id: null,
+        planned_date: '2026-08-25',
+        planned_order: 1,
+        planned_minutes: 420,
+        status: 'PLANNED',
+        notes: null,
+        realized_minutes: 0,
+        activity_operational_status: null,
+        conveyor_operational_plan_item_id: null,
+      },
+    ]
     const out = await buildCapacityByCollaboratorDay({} as pg.Pool, {
-      items: [
-        {
-          id: '1',
-          conveyor_id: 'c',
-          conveyor_title: 'E',
-          activity_node_id: 'a',
-          activity_title: 'At',
-          task_title: 'T',
-          sector_title: 'S',
-          assigned_collaborator_id: COLLAB_A,
-          assigned_collaborator_name: 'João',
-          assigned_team_id: null,
-          planned_date: '2026-08-25',
-          planned_order: 1,
-          planned_minutes: 420,
-          status: 'PLANNED',
-          notes: null,
-          realized_minutes: 0,
-          activity_operational_status: null,
-          conveyor_operational_plan_item_id: null,
-        },
-      ],
+      items,
       weekdayDates: ['2026-08-24', '2026-08-25'],
       collaboratorIds: [COLLAB_A],
     })
@@ -181,29 +183,30 @@ describe('buildCapacityByCollaboratorDay', () => {
   })
 
   it('inclui colaborador presente só nos itens mesmo fora da lista ativa', async () => {
+    const items: PlanItemEnrichedRow[] = [
+      {
+        id: '1',
+        conveyor_id: 'c',
+        conveyor_title: 'E',
+        activity_node_id: 'a',
+        activity_title: 'At',
+        task_title: 'T',
+        sector_title: 'S',
+        assigned_collaborator_id: COLLAB_B,
+        assigned_collaborator_name: 'Maria',
+        assigned_team_id: null,
+        planned_date: '2026-08-25',
+        planned_order: 1,
+        planned_minutes: 60,
+        status: 'PLANNED',
+        notes: null,
+        realized_minutes: 0,
+        activity_operational_status: null,
+        conveyor_operational_plan_item_id: null,
+      },
+    ]
     const out = await buildCapacityByCollaboratorDay({} as pg.Pool, {
-      items: [
-        {
-          id: '1',
-          conveyor_id: 'c',
-          conveyor_title: 'E',
-          activity_node_id: 'a',
-          activity_title: 'At',
-          task_title: 'T',
-          sector_title: 'S',
-          assigned_collaborator_id: COLLAB_B,
-          assigned_collaborator_name: 'Maria',
-          assigned_team_id: null,
-          planned_date: '2026-08-25',
-          planned_order: 1,
-          planned_minutes: 60,
-          status: 'PLANNED',
-          notes: null,
-          realized_minutes: 0,
-          activity_operational_status: null,
-          conveyor_operational_plan_item_id: null,
-        },
-      ],
+      items,
       weekdayDates: ['2026-08-25'],
       collaboratorIds: [COLLAB_A],
     })

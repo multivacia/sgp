@@ -7,6 +7,7 @@ import {
   getOperationalPlanningFactoryIntake,
   getOperationalPlanningWeek,
   getOperationalPlanningWeekActivity,
+  getOperationalPlanningWeekExportXlsx,
   patchOperationalPlanningWeek,
   postApplyConveyorPlanToWeekItem,
   postOperationalPlanningWeek,
@@ -19,6 +20,11 @@ const authPlanning = [requireAuth(), requirePermission('conveyors.create')]
 export function operationalPlanningRouter(): Router {
   const r = Router()
   r.get('/operational-planning/week', ...authPlanning, asyncRoute(getOperationalPlanningWeek))
+  r.get(
+    '/operational-planning/week/export.xlsx',
+    ...authPlanning,
+    asyncRoute(getOperationalPlanningWeekExportXlsx),
+  )
   r.get(
     '/operational-planning/week-activity',
     ...authPlanning,

@@ -47,6 +47,7 @@ import { ApiError } from '../../lib/api/apiErrors'
 import { useRegisterTransientContext } from '../../lib/shell/transient-context'
 import { createCollaboratorsApiService } from '../../services/collaborators/collaboratorsApiService'
 import {
+  exportOperationalPlanningWeekToExcel,
   getFactoryIntakeItems,
   getOperationalPlanningWeek,
   getOperationalPlanningWeekActivity,
@@ -54,6 +55,12 @@ import {
   publishOperationalPlanningWeek,
   saveOperationalPlanningWeek,
 } from '../../services/operational-planning/operationalPlanningApiService'
+import { OperationalPlanningExportButton } from './OperationalPlanningExportButton'
+import {
+  isOperationalPlanningExportActionDisabled,
+  resolveOperationalPlanningExportWeekStart,
+  runOperationalPlanningExportFlow,
+} from './operationalPlanningExportFlow'
 import { buildVisiblePlanningBacklogItems } from './buildVisiblePlanningBacklogItems'
 import {
   PLAN_PUBLISHED_HELPER_TEXT,
@@ -1111,8 +1118,12 @@ export function OperationalPlanningPage() {
     })
   }
 
-  async function handleSaveDraft() {
-    if (!weekPayload) return
+  /**
+   * Salva o rascunho atual (mesma lógica de `handleSaveDraft`) e devolve o payload salvo
+   * (ou `null` em caso de erro) — reaproveitado pelo fluxo "Salvar e exportar" do Excel.
+   */
+  async function persistDraft(): Promise<OperationalPlanningWeekPayload | null> {
+    if (!weekPayload) return null
     const { weekStartDate, weekEndDate } = resolvePlanningSaveWeekDates(weekPayload)
     const body = buildSavePayload(weekStartDate, weekEndDate, draftItems)
     setBusy(true)
@@ -1124,6 +1135,7 @@ export function OperationalPlanningPage() {
       setSuccessMsg(resolvePlanningSaveSuccessMessage(resolvePlanningRevisionContext(out)))
       void loadBacklog()
       void loadFactoryIntake()
+      return out
     } catch (e) {
       reportClientError(e, { module: 'operational-planning', action: 'save_week' })
       const isPublished = weekPayload.plan?.status === 'PUBLISHED'
@@ -1135,8 +1147,40 @@ export function OperationalPlanningPage() {
             : 'Não foi possível salvar o rascunho.',
         ),
       )
+      return null
     } finally {
       setBusy(false)
+    }
+  }
+
+  async function handleSaveDraft() {
+    await persistDraft()
+  }
+
+  const [isExporting, setIsExporting] = useState(false)
+
+  async function handleExportExcel() {
+    if (isExporting || busy) return
+    if (draftItems.length === 0) return
+    setIsExporting(true)
+    try {
+      const weekStartDate = resolveOperationalPlanningExportWeekStart(
+        weekPayload?.week.weekStartDate,
+        weekMonday,
+      )
+      await runOperationalPlanningExportFlow({
+        dirty,
+        weekStartDate,
+        persistDraft,
+        exportWeek: exportOperationalPlanningWeekToExcel,
+      })
+    } catch (e) {
+      reportClientError(e, { module: 'operational-planning', action: 'export_week_excel' })
+      setErrorMsg(
+        e instanceof ApiError ? e.message : 'Não foi possível exportar o Excel do planejamento.',
+      )
+    } finally {
+      setIsExporting(false)
     }
   }
 
@@ -1501,6 +1545,14 @@ export function OperationalPlanningPage() {
               count={weekTicketSources.length}
               disabled={busy || isPrinting || weekTicketSources.length === 0}
               onClick={openWeekTicketsPrintDialog}
+            />
+            <OperationalPlanningExportButton
+              state={isExporting ? 'exporting' : dirty ? 'dirty' : 'idle'}
+              disabled={isOperationalPlanningExportActionDisabled({
+                draftItemsCount: draftItems.length,
+                busy,
+              })}
+              onClick={() => void handleExportExcel()}
             />
             <button
               type="button"
