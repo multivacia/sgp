@@ -24,7 +24,7 @@ export type OperationalPlanningWeeklyViewExportMeta = {
   collaboratorsWithActivityCount: number
 }
 
-/** Uma linha física = um item do plano semanal (nunca agrupado/concatenado em uma célula). */
+/** Item do plano semanal. Na planilha, itens do mesmo colaborador compartilham uma linha física. */
 export type OperationalPlanningWeeklyViewExportRow = {
   id: string
   collaboratorId: string | null
@@ -59,6 +59,10 @@ const WEEKDAY_LABELS = [
 ] as const
 
 const COLUMN_WIDTHS = [26, 30, 30, 30, 30, 30, 34]
+
+/** Altura aproximada por linha de texto (fonte 11pt) — ExcelJS não autoajusta wrapText. */
+const DATA_ROW_LINE_HEIGHT_PT = 15
+const DATA_ROW_HEIGHT_PADDING_PT = 4
 
 const FILL_HEADER: ExcelJS.Fill = {
   type: 'pattern',
@@ -133,8 +137,8 @@ export function sanitizeExcelText(value: string): string {
 }
 
 /**
- * Texto da atividade na célula do dia: `descrição da esteira — atividade`.
- * Sem descrição (nula/vazia/só espaços): somente a atividade. Sem separador solto.
+ * Texto legado (esteira — atividade). Preferir `formatWeeklyViewActivityCellContent`
+ * para a célula da Visão Semanal.
  */
 export function formatWeeklyViewActivityCellLabel(
   conveyorDescription: string | null | undefined,
@@ -145,6 +149,100 @@ export function formatWeeklyViewActivityCellLabel(
   if (description && activity) return `${description} — ${activity}`
   if (activity) return activity
   return description
+}
+
+/**
+ * Apresentação textual do tempo planejado a partir do mesmo valor em minutos usado em HH:mm.
+ * Exemplos: 0→`0 min`, 30→`30 min`, 60→`1h`, 65→`1h05 min`, 90→`1h30 min`.
+ */
+export function formatWeeklyViewPlannedDurationLabel(
+  minutes: number | null | undefined,
+): string {
+  const min =
+    typeof minutes === 'number' && Number.isFinite(minutes) && minutes > 0
+      ? Math.floor(minutes)
+      : 0
+  if (min === 0) return '0 min'
+  const h = Math.floor(min / 60)
+  const m = min % 60
+  if (h === 0) return `${m} min`
+  if (m === 0) return `${h}h`
+  return `${h}h${String(m).padStart(2, '0')} min`
+}
+
+/**
+ * Bloco multilinha de uma atividade na célula do dia (sem linha vazia indevida).
+ *
+ * Com esteira:
+ * `1º Nome da esteira\nNome da atividade\nTempo planejado: 1h30 min`
+ *
+ * Sem esteira:
+ * `1º Nome da atividade\nTempo planejado: 1h30 min`
+ */
+export function formatWeeklyViewActivityCellContent(
+  plannedOrder: number,
+  conveyorTitle: string | null | undefined,
+  activityTitle: string | null | undefined,
+  plannedMinutes: number | null | undefined,
+): string {
+  const orderPrefix = `${plannedOrder + 1}º`
+  const description = (conveyorTitle ?? '').trim()
+  const activity = (activityTitle ?? '').trim()
+  const timeLine = `Tempo planejado: ${formatWeeklyViewPlannedDurationLabel(plannedMinutes)}`
+
+  if (description && activity) {
+    return `${orderPrefix} ${description}\n${activity}\n${timeLine}`
+  }
+  const title = activity || description
+  if (title) {
+    return `${orderPrefix} ${title}\n${timeLine}`
+  }
+  return `${orderPrefix}\n${timeLine}`
+}
+
+/** Junta blocos de atividade na mesma célula, sem linha em branco entre eles. */
+export function joinWeeklyViewDayCellActivityBlocks(blocks: readonly string[]): string {
+  return blocks.filter((block) => block.length > 0).join('\n')
+}
+
+function countCellTextLines(value: unknown): number {
+  if (value == null || value === '') return 1
+  return String(value).split('\n').length
+}
+
+function applyDataRowHeightFromWrappedContent(excelRow: ExcelJS.Row): void {
+  let maxLines = 1
+  for (let col = 1; col <= COLUMN_COUNT; col += 1) {
+    maxLines = Math.max(maxLines, countCellTextLines(excelRow.getCell(col).value))
+  }
+  excelRow.height = Math.max(
+    DATA_ROW_LINE_HEIGHT_PT,
+    maxLines * DATA_ROW_LINE_HEIGHT_PT + DATA_ROW_HEIGHT_PADDING_PT,
+  )
+}
+
+/**
+ * Agrupa itens já ordenados por colaborador (mesma chave consecutiva), preservando a ordem.
+ */
+export function groupWeeklyViewRowsByCollaborator(
+  sortedRows: readonly OperationalPlanningWeeklyViewExportRow[],
+): OperationalPlanningWeeklyViewExportRow[][] {
+  const groups: OperationalPlanningWeeklyViewExportRow[][] = []
+  let currentKey: string | null = null
+  let current: OperationalPlanningWeeklyViewExportRow[] = []
+
+  for (const row of sortedRows) {
+    const key = row.collaboratorId ?? '__unassigned__'
+    if (currentKey === null || key !== currentKey) {
+      if (current.length > 0) groups.push(current)
+      current = [row]
+      currentKey = key
+    } else {
+      current.push(row)
+    }
+  }
+  if (current.length > 0) groups.push(current)
+  return groups
 }
 
 function formatDateBrPt(date: Date): string {
@@ -309,43 +407,49 @@ export async function buildOperationalPlanningWeeklyViewExportWorkbookBuffer(inp
   })
   headerRow.height = 30
 
+  const collaboratorGroups = groupWeeklyViewRowsByCollaborator(sortedRows)
   let rowNumber = FIRST_DATA_ROW
-  let previousGroupKey: string | null = null
-  let blockIndex = -1
-  for (const row of sortedRows) {
-    const groupKey = row.collaboratorId ?? '__unassigned__'
-    const isNewBlock = groupKey !== previousGroupKey
-    if (isNewBlock) blockIndex += 1
-    previousGroupKey = groupKey
-
+  collaboratorGroups.forEach((group, blockIndex) => {
+    const first = group[0]!
     const excelRow = sheet.getRow(rowNumber)
-    excelRow.getCell(1).value = sanitizeExcelText(resolveCollaboratorDisplayName(row))
+    excelRow.getCell(1).value = sanitizeExcelText(resolveCollaboratorDisplayName(first))
 
-    const dayIndex = dayIndexInWeek(row.plannedDate, meta.weekStartDate)
-    if (dayIndex != null) {
-      const activityLabel = formatWeeklyViewActivityCellLabel(
-        row.conveyorTitle,
-        row.activityTitle,
+    for (let dayIndex = 0; dayIndex < 5; dayIndex += 1) {
+      const dayItems = group.filter(
+        (item) => dayIndexInWeek(item.plannedDate, meta.weekStartDate) === dayIndex,
       )
-      const content = sanitizeExcelText(
-        `${row.plannedOrder + 1}º ${activityLabel} — ${formatDurationHhMm(row.plannedMinutes)}`,
+      if (dayItems.length === 0) continue
+      const blocks = dayItems.map((item) =>
+        formatWeeklyViewActivityCellContent(
+          item.plannedOrder,
+          item.conveyorTitle,
+          item.activityTitle,
+          item.plannedMinutes,
+        ),
       )
-      excelRow.getCell(2 + dayIndex).value = content
+      excelRow.getCell(2 + dayIndex).value = sanitizeExcelText(
+        joinWeeklyViewDayCellActivityBlocks(blocks),
+      )
     }
 
-    excelRow.getCell(COLUMN_COUNT).value = sanitizeExcelText(resolveNotesText(row))
+    const noteParts = group
+      .map((item) => resolveNotesText(item))
+      .filter((note) => note !== '—')
+    const notesText = noteParts.length > 0 ? noteParts.join('\n') : '—'
+    excelRow.getCell(COLUMN_COUNT).value = sanitizeExcelText(notesText)
 
     const altShade = blockIndex % 2 === 1
     for (let col = 1; col <= COLUMN_COUNT; col += 1) {
       const cell = excelRow.getCell(col)
-      cell.border = isNewBlock ? BORDER_BLOCK_START : BORDER_THIN
+      cell.border = BORDER_BLOCK_START
       cell.alignment = { vertical: 'top', wrapText: true }
       if (!cell.font) cell.font = { size: 11 }
       if (altShade) cell.fill = FILL_BLOCK_ALT
     }
 
+    applyDataRowHeightFromWrappedContent(excelRow)
     rowNumber += 1
-  }
+  })
 
   sheet.autoFilter = {
     from: { row: HEADER_ROW, column: 1 },
