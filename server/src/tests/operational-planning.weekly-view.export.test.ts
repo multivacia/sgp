@@ -3,8 +3,14 @@ import ExcelJS from 'exceljs'
 import {
   buildOperationalPlanningWeeklyViewExportFilename,
   buildOperationalPlanningWeeklyViewExportWorkbookBuffer,
+  computeWeeklyViewDataRowHeightPt,
   countTempoPlanejadoOccurrences,
   countWeeklyViewActivityBlocksInCell,
+  DATA_ROW_HEIGHT_PADDING_PT,
+  DATA_ROW_LINE_HEIGHT_PT,
+  estimateCharsPerWrappedLine,
+  estimateExplicitLineVisualLines,
+  estimateWrappedCellVisualLineCount,
   excelDateFromIso,
   EXCEL_MAX_ROW_HEIGHT_PT,
   formatDurationHhMm,
@@ -19,6 +25,7 @@ import {
   splitWeeklyViewGroupByWeekday,
   weeklyViewCollaboratorBlockRowCount,
   weeklyViewWeekdayDates,
+  WEEKLY_VIEW_COLUMN_WIDTHS,
   type OperationalPlanningWeeklyViewExportMeta,
   type OperationalPlanningWeeklyViewExportRow,
 } from '../modules/operational-planning/operational-planning.weekly-view.export.js'
@@ -222,6 +229,74 @@ describe('formatWeeklyViewPositionNotes', () => {
       'Segunda 1º — Obs segunda\nQuarta 1º — Obs quarta',
     )
     expect(formatWeeklyViewPositionNotes([null, null, null, null, null])).toBe('—')
+  })
+})
+
+describe('estimateWrappedCellVisualLineCount / altura dinâmica', () => {
+  const weekdayWidth = WEEKLY_VIEW_COLUMN_WIDTHS[1]!
+  const notesWidth = WEEKLY_VIEW_COLUMN_WIDTHS[6]!
+
+  it('preserva larguras configuradas e capacidade conservadora', () => {
+    expect([...WEEKLY_VIEW_COLUMN_WIDTHS]).toEqual([26, 32, 32, 32, 32, 32, 36])
+    expect(estimateCharsPerWrappedLine(weekdayWidth)).toBe(30)
+    expect(estimateCharsPerWrappedLine(notesWidth)).toBe(34)
+  })
+
+  it('linha explícita vazia conta como 1 linha visual', () => {
+    expect(estimateExplicitLineVisualLines('', 30)).toBe(1)
+    expect(estimateWrappedCellVisualLineCount('a\n\nb', 30)).toBe(3)
+  })
+
+  it('respeita quebras explícitas e soma quebras automáticas', () => {
+    const shortCell = formatWeeklyViewActivityCellContent(
+      0,
+      'OS 7350',
+      'Atividade curta',
+      90,
+      0,
+    )
+    expect(shortCell.split('\n')).toHaveLength(4)
+    expect(estimateWrappedCellVisualLineCount(shortCell, weekdayWidth)).toBe(4)
+    expect(computeWeeklyViewDataRowHeightPt(4)).toBe(
+      4 * DATA_ROW_LINE_HEIGHT_PT + DATA_ROW_HEIGHT_PADDING_PT,
+    )
+  })
+
+  it('descrições reais longas geram ao menos uma quebra visual adicional', () => {
+    const titles = [
+      'MONTAR PEÇS DE ACABAMENTO PORTA TRECO',
+      'Perfilar couro para dar acabamento(manualmente)',
+      'costura da borda e Fechamento do volante',
+      'limpreza dos forros de portas (junto das ombreiras )',
+      'INSTALAÇÃO DO BOTÃO DE PRESSÃO',
+    ]
+    for (const title of titles) {
+      const cell = formatWeeklyViewActivityCellContent(0, 'OS 7350', title, 240, 0)
+      expect(cell).toContain('Tempo apontado: ---')
+      expect(countTempoPlanejadoOccurrences(cell)).toBe(1)
+      expect((cell.match(/Tempo apontado:/g) ?? []).length).toBe(1)
+      const visual = estimateWrappedCellVisualLineCount(cell, weekdayWidth)
+      expect(visual).toBeGreaterThanOrEqual(4)
+      // títulos longos (exceto os que cabem em 1 linha) elevam altura
+      if (estimateExplicitLineVisualLines(title, estimateCharsPerWrappedLine(weekdayWidth)) > 1) {
+        expect(visual).toBeGreaterThanOrEqual(5)
+        expect(computeWeeklyViewDataRowHeightPt(visual)).toBeGreaterThanOrEqual(79)
+      }
+    }
+  })
+
+  it('palavra individual maior que a capacidade é fatiada', () => {
+    // 42 caracteres / capacidade 10 → 5 linhas visuais
+    const longWord = 'ABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOP'
+    expect(longWord.length).toBe(42)
+    expect(estimateExplicitLineVisualLines(longWord, 10)).toBe(5)
+  })
+
+  it('altura cresce 15pt por linha visual adicional e respeita teto 409', () => {
+    expect(computeWeeklyViewDataRowHeightPt(4)).toBe(64)
+    expect(computeWeeklyViewDataRowHeightPt(5)).toBe(79)
+    expect(computeWeeklyViewDataRowHeightPt(6)).toBe(94)
+    expect(computeWeeklyViewDataRowHeightPt(1000)).toBe(EXCEL_MAX_ROW_HEIGHT_PT)
   })
 })
 
@@ -535,5 +610,198 @@ describe('buildOperationalPlanningWeeklyViewExportWorkbookBuffer — grade por p
     expect(fillArgb(sheet.getRow(9).getCell(2))).not.toBe('FFF3F4F6')
     expect(fillArgb(sheet.getRow(10).getCell(2))).toBe('FFF3F4F6')
     expect(fillArgb(sheet.getRow(11).getCell(2))).toBe('FFF3F4F6')
+  })
+
+  it('altura variável por linha: curta compacta, longa expandida, independente', async () => {
+    const shortTitle = 'Acabamento'
+    const longTitle = 'MONTAR PEÇS DE ACABAMENTO PORTA TRECO'
+    const buffer = await buildOperationalPlanningWeeklyViewExportWorkbookBuffer({
+      meta: sampleMeta({ totalActivities: 3, collaboratorsWithActivityCount: 1 }),
+      rows: [
+        sampleRow({
+          id: 'short',
+          plannedDate: '2026-09-07',
+          plannedOrder: 0,
+          conveyorTitle: 'OS 7350',
+          activityTitle: shortTitle,
+          plannedMinutes: 90,
+          realizedMinutes: 45,
+          notes: null,
+        }),
+        sampleRow({
+          id: 'long',
+          plannedDate: '2026-09-07',
+          plannedOrder: 1,
+          conveyorTitle: 'OS 7350',
+          activityTitle: longTitle,
+          plannedMinutes: 240,
+          realizedMinutes: 0,
+          notes: null,
+        }),
+        sampleRow({
+          id: 'short-after',
+          plannedDate: '2026-09-07',
+          plannedOrder: 2,
+          conveyorTitle: 'OS 7350',
+          activityTitle: 'Costura',
+          plannedMinutes: 30,
+          realizedMinutes: 0,
+          notes: null,
+        }),
+      ],
+    })
+    const workbook = new ExcelJS.Workbook()
+    await workbook.xlsx.load(buffer)
+    const sheet = workbook.getWorksheet('Visão semanal')!
+
+    expect([...WEEKLY_VIEW_COLUMN_WIDTHS]).toEqual([26, 32, 32, 32, 32, 32, 36])
+    for (let col = 1; col <= 7; col += 1) {
+      expect(sheet.getColumn(col).width).toBe(WEEKLY_VIEW_COLUMN_WIDTHS[col - 1])
+    }
+
+    const hShort = sheet.getRow(8).height ?? 0
+    const hLong = sheet.getRow(9).height ?? 0
+    const hShortAfter = sheet.getRow(10).height ?? 0
+
+    expect(hShort).toBe(64)
+    expect(hLong).toBeGreaterThanOrEqual(79)
+    expect(hShortAfter).toBe(64)
+    expect(hShort).toBeLessThan(hLong)
+    expect(hShortAfter).toBeLessThan(hLong)
+    expect(hShort).toBeLessThanOrEqual(EXCEL_MAX_ROW_HEIGHT_PT)
+    expect(hLong).toBeLessThanOrEqual(EXCEL_MAX_ROW_HEIGHT_PT)
+
+    for (const rowNumber of [8, 9, 10]) {
+      const cell = sheet.getRow(rowNumber).getCell(2)
+      const text = String(cell.value ?? '')
+      expect(cell.font?.size).toBe(11)
+      expect(cell.alignment?.wrapText).toBe(true)
+      expect(text).toContain('Tempo planejado:')
+      expect(text).toContain('Tempo apontado:')
+      expect(countTempoPlanejadoOccurrences(text)).toBe(1)
+      expect((text.match(/Tempo apontado:/g) ?? []).length).toBe(1)
+      expect(countWeeklyViewActivityBlocksInCell(text)).toBe(1)
+      expect(text.split('\n').length).toBeGreaterThanOrEqual(4)
+    }
+
+    expect(String(sheet.getRow(8).getCell(2).value ?? '')).toContain('Tempo apontado: 45 min')
+    expect(String(sheet.getRow(9).getCell(2).value ?? '')).toContain('Tempo apontado: ---')
+    expect(String(sheet.getRow(9).getCell(2).value ?? '')).toContain(longTitle)
+  })
+
+  it('duas quebras visuais adicionais elevam altura para ~94 pt', async () => {
+    const veryLongTitle =
+      'limpreza dos forros de portas (junto das ombreiras ) e acabamento final completo da peça'
+    const cell = formatWeeklyViewActivityCellContent(0, 'OS 7350', veryLongTitle, 90, 0)
+    const visual = estimateWrappedCellVisualLineCount(cell, WEEKLY_VIEW_COLUMN_WIDTHS[1]!)
+    expect(visual).toBeGreaterThanOrEqual(6)
+    expect(computeWeeklyViewDataRowHeightPt(visual)).toBeGreaterThanOrEqual(94)
+
+    const buffer = await buildOperationalPlanningWeeklyViewExportWorkbookBuffer({
+      meta: sampleMeta({ totalActivities: 1, collaboratorsWithActivityCount: 1 }),
+      rows: [
+        sampleRow({
+          id: 'very-long',
+          plannedDate: '2026-09-07',
+          plannedOrder: 0,
+          conveyorTitle: 'OS 7350',
+          activityTitle: veryLongTitle,
+          plannedMinutes: 90,
+          realizedMinutes: 0,
+        }),
+      ],
+    })
+    const workbook = new ExcelJS.Workbook()
+    await workbook.xlsx.load(buffer)
+    const sheet = workbook.getWorksheet('Visão semanal')!
+    expect(sheet.getRow(8).height ?? 0).toBeGreaterThanOrEqual(94)
+    expect(String(sheet.getRow(8).getCell(2).value ?? '')).toContain('Tempo apontado: ---')
+  })
+
+  it('maior célula entre dias define a altura; observação longa também conta', async () => {
+    const buffer = await buildOperationalPlanningWeeklyViewExportWorkbookBuffer({
+      meta: sampleMeta({ totalActivities: 2, collaboratorsWithActivityCount: 1 }),
+      rows: [
+        sampleRow({
+          id: 'mon-short',
+          plannedDate: '2026-09-07',
+          plannedOrder: 0,
+          conveyorTitle: 'OS 1',
+          activityTitle: 'Curta',
+          notes: null,
+        }),
+        sampleRow({
+          id: 'tue-long',
+          plannedDate: '2026-09-08',
+          plannedOrder: 0,
+          conveyorTitle: 'OS 1',
+          activityTitle: 'Perfilar couro para dar acabamento(manualmente)',
+          notes: null,
+        }),
+      ],
+    })
+    const workbook = new ExcelJS.Workbook()
+    await workbook.xlsx.load(buffer)
+    const sheet = workbook.getWorksheet('Visão semanal')!
+    // mesma linha física (posição 1): terça longa eleva a altura da linha inteira
+    expect(sheet.getRow(8).height ?? 0).toBeGreaterThanOrEqual(79)
+
+    const notesBuffer = await buildOperationalPlanningWeeklyViewExportWorkbookBuffer({
+      meta: sampleMeta({ totalActivities: 1, collaboratorsWithActivityCount: 1 }),
+      rows: [
+        sampleRow({
+          id: 'notes-only',
+          plannedDate: '2026-09-07',
+          plannedOrder: 0,
+          conveyorTitle: 'OS 1',
+          activityTitle: 'Curta',
+          notes:
+            'Nota extensíssima para validar que a coluna Observações também participa do cálculo de altura visual da linha física correspondente na grade por posição do planejamento semanal',
+        }),
+      ],
+    })
+    const notesWb = new ExcelJS.Workbook()
+    await notesWb.xlsx.load(notesBuffer)
+    const notesSheet = notesWb.getWorksheet('Visão semanal')!
+    expect(notesSheet.getRow(8).height ?? 0).toBeGreaterThan(64)
+  })
+
+  it('descrições reais cobertas mantêm quarta linha e altura adequada', async () => {
+    const titles = [
+      'MONTAR PEÇS DE ACABAMENTO PORTA TRECO',
+      'Perfilar couro para dar acabamento(manualmente)',
+      'costura da borda e Fechamento do volante',
+      'limpreza dos forros de portas (junto das ombreiras )',
+      'INSTALAÇÃO DO BOTÃO DE PRESSÃO',
+    ]
+    const rows = titles.map((activityTitle, idx) =>
+      sampleRow({
+        id: `real-${idx}`,
+        plannedDate: '2026-09-07',
+        plannedOrder: idx,
+        conveyorTitle: 'OS 7350',
+        activityTitle,
+        plannedMinutes: 90,
+        realizedMinutes: idx === 0 ? 45 : 0,
+      }),
+    )
+    const buffer = await buildOperationalPlanningWeeklyViewExportWorkbookBuffer({
+      meta: sampleMeta({ totalActivities: rows.length, collaboratorsWithActivityCount: 1 }),
+      rows,
+    })
+    const workbook = new ExcelJS.Workbook()
+    await workbook.xlsx.load(buffer)
+    const sheet = workbook.getWorksheet('Visão semanal')!
+    for (let i = 0; i < titles.length; i += 1) {
+      const row = sheet.getRow(8 + i)
+      const text = String(row.getCell(2).value ?? '')
+      expect(text).toContain(titles[i]!)
+      expect(text).toContain('Tempo planejado:')
+      expect(text).toMatch(/Tempo apontado: (45 min|---)/)
+      expect(row.height ?? 0).toBeGreaterThanOrEqual(64)
+      expect(row.height ?? 0).toBeLessThanOrEqual(EXCEL_MAX_ROW_HEIGHT_PT)
+      expect(row.getCell(2).font?.size).toBe(11)
+      expect(row.getCell(2).alignment?.wrapText).toBe(true)
+    }
   })
 })

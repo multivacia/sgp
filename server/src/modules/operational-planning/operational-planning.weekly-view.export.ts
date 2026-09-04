@@ -68,15 +68,113 @@ const WEEKDAY_LABELS = [
 /** Rótulos curtos para observações por posição. */
 const WEEKDAY_SHORT_LABELS = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta'] as const
 
-const COLUMN_WIDTHS = [26, 32, 32, 32, 32, 32, 36]
+/** Larguras Excel (unidades de caractere): Colaborador, Seg–Sex, Observações. */
+export const WEEKLY_VIEW_COLUMN_WIDTHS = [26, 32, 32, 32, 32, 32, 36] as const
 
 /** Altura aproximada por linha de texto (fonte 11pt) — ExcelJS não autoajusta wrapText. */
-const DATA_ROW_LINE_HEIGHT_PT = 15
-const DATA_ROW_HEIGHT_PADDING_PT = 4
+export const DATA_ROW_LINE_HEIGHT_PT = 15
+export const DATA_ROW_HEIGHT_PADDING_PT = 4
 const DATA_CELL_FONT_SIZE = 11
 
 /** Limite nativo do Excel para altura de linha (pontos). Texto nunca é truncado. */
 export const EXCEL_MAX_ROW_HEIGHT_PT = 409
+
+/**
+ * Capacidade aproximada de caracteres por linha visual, dada a largura da coluna (fonte 11pt).
+ * Subtrai margem interna da célula para ficar ligeiramente conservador (evita corte).
+ */
+export function estimateCharsPerWrappedLine(columnWidth: number): number {
+  const width =
+    typeof columnWidth === 'number' && Number.isFinite(columnWidth) && columnWidth > 0
+      ? columnWidth
+      : 1
+  return Math.max(1, Math.floor(width) - 2)
+}
+
+/**
+ * Estima linhas visuais de um único trecho (sem `\n`), por simulação determinística de
+ * quebra por palavras. Palavras maiores que a capacidade são fatiadas.
+ */
+export function estimateExplicitLineVisualLines(
+  line: string,
+  charsPerLine: number,
+): number {
+  const capacity = Math.max(1, Math.floor(charsPerLine))
+  if (line.length === 0) return 1
+
+  const words = line.split(/\s+/).filter((w) => w.length > 0)
+  if (words.length === 0) return 1
+
+  let visualLines = 1
+  let used = 0
+
+  for (const word of words) {
+    if (word.length > capacity) {
+      let remaining = word
+      while (remaining.length > 0) {
+        const spaceLeft = used === 0 ? capacity : capacity - used - 1
+        if (spaceLeft <= 0) {
+          visualLines += 1
+          used = 0
+          continue
+        }
+        if (remaining.length <= spaceLeft) {
+          used = used === 0 ? remaining.length : used + 1 + remaining.length
+          remaining = ''
+        } else {
+          const take = used === 0 ? capacity : spaceLeft
+          remaining = remaining.slice(take)
+          visualLines += 1
+          used = 0
+        }
+      }
+      continue
+    }
+
+    if (used === 0) {
+      used = word.length
+    } else if (used + 1 + word.length <= capacity) {
+      used += 1 + word.length
+    } else {
+      visualLines += 1
+      used = word.length
+    }
+  }
+
+  return visualLines
+}
+
+/**
+ * Estima a quantidade de linhas visuais de uma célula com `wrapText`, considerando
+ * quebras explícitas (`\n`) e quebras automáticas pela largura da coluna.
+ */
+export function estimateWrappedCellVisualLineCount(
+  value: unknown,
+  columnWidth: number,
+): number {
+  if (value == null || value === '') return 1
+  const text = String(value)
+  const charsPerLine = estimateCharsPerWrappedLine(columnWidth)
+  const explicitLines = text.split('\n')
+  let total = 0
+  for (const line of explicitLines) {
+    total += estimateExplicitLineVisualLines(line, charsPerLine)
+  }
+  return Math.max(1, total)
+}
+
+/** Converte linhas visuais em altura de linha Excel (pt), com teto nativo. */
+export function computeWeeklyViewDataRowHeightPt(visualLineCount: number): number {
+  const lines =
+    typeof visualLineCount === 'number' && Number.isFinite(visualLineCount)
+      ? Math.max(1, Math.floor(visualLineCount))
+      : 1
+  const rawHeight = Math.max(
+    DATA_ROW_LINE_HEIGHT_PT,
+    lines * DATA_ROW_LINE_HEIGHT_PT + DATA_ROW_HEIGHT_PADDING_PT,
+  )
+  return Math.min(EXCEL_MAX_ROW_HEIGHT_PT, rawHeight)
+}
 
 const FILL_HEADER: ExcelJS.Fill = {
   type: 'pattern',
@@ -306,6 +404,7 @@ export function formatWeeklyViewPositionNotes(
   return lines.length > 0 ? lines.join('\n') : '—'
 }
 
+/** Conta apenas quebras explícitas (`\n`). Preferir `estimateWrappedCellVisualLineCount` para altura. */
 export function countCellTextLines(value: unknown): number {
   if (value == null || value === '') return 1
   return String(value).split('\n').length
@@ -323,16 +422,20 @@ export function countWeeklyViewActivityBlocksInCell(cellText: string): number {
   return matches?.length ?? 0
 }
 
+/**
+ * Altura individual da linha física: maior necessidade visual entre Seg–Sex e Observações.
+ * Ignora a coluna do colaborador (frequentemente mesclada) para não inflar a altura.
+ */
 function applyDataRowHeightFromWrappedContent(excelRow: ExcelJS.Row): void {
-  let maxLines = 1
-  for (let col = 1; col <= COLUMN_COUNT; col += 1) {
-    maxLines = Math.max(maxLines, countCellTextLines(excelRow.getCell(col).value))
+  let maxVisualLines = 1
+  for (let col = 2; col <= COLUMN_COUNT; col += 1) {
+    const columnWidth = WEEKLY_VIEW_COLUMN_WIDTHS[col - 1] ?? 32
+    maxVisualLines = Math.max(
+      maxVisualLines,
+      estimateWrappedCellVisualLineCount(excelRow.getCell(col).value, columnWidth),
+    )
   }
-  const rawHeight = Math.max(
-    DATA_ROW_LINE_HEIGHT_PT,
-    maxLines * DATA_ROW_LINE_HEIGHT_PT + DATA_ROW_HEIGHT_PADDING_PT,
-  )
-  excelRow.height = Math.min(EXCEL_MAX_ROW_HEIGHT_PT, rawHeight)
+  excelRow.height = computeWeeklyViewDataRowHeightPt(maxVisualLines)
 }
 
 function formatDateBrPt(date: Date): string {
@@ -460,7 +563,7 @@ export async function buildOperationalPlanningWeeklyViewExportWorkbookBuffer(inp
   const workbook = new ExcelJS.Workbook()
   const sheet = workbook.addWorksheet(SHEET_NAME)
 
-  COLUMN_WIDTHS.forEach((width, idx) => {
+  WEEKLY_VIEW_COLUMN_WIDTHS.forEach((width, idx) => {
     sheet.getColumn(idx + 1).width = width
   })
 
