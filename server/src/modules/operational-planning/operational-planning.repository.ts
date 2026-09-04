@@ -1879,3 +1879,74 @@ export async function listWeekActivityStepEventsForWeek(
     actor_name: row.actor_name,
   }))
 }
+
+export type PlanItemWeeklyViewRow = {
+  id: string
+  assigned_collaborator_id: string | null
+  assigned_collaborator_name: string | null
+  planned_date: string
+  planned_order: number
+  planned_minutes: number | null
+  activity_title: string
+  notes: string | null
+}
+
+/**
+ * Query dedicada ao export Excel "Visão semanal" (matriz colaborador × dia) — NÃO reaproveita
+ * nem altera `listEnrichedItemsForWorkPlan`/`listEnrichedItemsForWorkPlanExport`. Sem CTE/join
+ * de apontamentos (`conveyor_time_entries`): a visão semanal não usa tempo realizado. Traz
+ * somente os campos usados pela matriz (sem esteira/tarefa/setor, fora de escopo desta visão).
+ * Nenhum join com "todos os colaboradores ativos" — só aparecem colaboradores com item no plano.
+ */
+export async function listItemsForWorkPlanWeeklyView(
+  pool: pg.Pool | pg.PoolClient,
+  workPlanId: string,
+): Promise<PlanItemWeeklyViewRow[]> {
+  const r = await pool.query<{
+    id: string
+    assigned_collaborator_id: string | null
+    assigned_collaborator_name: string | null
+    planned_date: string
+    planned_order: number
+    planned_minutes: number | null
+    activity_title: string
+    notes: string | null
+  }>(
+    `
+    SELECT
+      i.id::text,
+      i.assigned_collaborator_id::text,
+      col.full_name AS assigned_collaborator_name,
+      i.planned_date::text,
+      i.planned_order,
+      i.planned_minutes,
+      step.name AS activity_title,
+      i.notes
+    FROM operational_work_plan_items i
+    INNER JOIN conveyor_nodes step
+      ON step.id = i.activity_node_id
+      AND step.deleted_at IS NULL
+    LEFT JOIN collaborators col
+      ON col.id = i.assigned_collaborator_id
+      AND col.deleted_at IS NULL
+    WHERE i.work_plan_id = $1::uuid
+      AND i.deleted_at IS NULL
+    ORDER BY
+      col.full_name ASC NULLS LAST,
+      i.planned_date ASC,
+      i.planned_order ASC,
+      i.id ASC
+    `,
+    [workPlanId],
+  )
+  return r.rows.map((row) => ({
+    id: row.id,
+    assigned_collaborator_id: row.assigned_collaborator_id,
+    assigned_collaborator_name: row.assigned_collaborator_name,
+    planned_date: row.planned_date,
+    planned_order: row.planned_order,
+    planned_minutes: row.planned_minutes,
+    activity_title: row.activity_title,
+    notes: row.notes,
+  }))
+}

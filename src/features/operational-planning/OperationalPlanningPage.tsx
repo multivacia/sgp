@@ -48,6 +48,7 @@ import { useRegisterTransientContext } from '../../lib/shell/transient-context'
 import { createCollaboratorsApiService } from '../../services/collaborators/collaboratorsApiService'
 import {
   exportOperationalPlanningWeekToExcel,
+  exportOperationalPlanningWeeklyViewToExcel,
   getFactoryIntakeItems,
   getOperationalPlanningWeek,
   getOperationalPlanningWeekActivity,
@@ -61,6 +62,13 @@ import {
   resolveOperationalPlanningExportWeekStart,
   runOperationalPlanningExportFlow,
 } from './operationalPlanningExportFlow'
+import { OperationalPlanningWeeklyViewExportButton } from './OperationalPlanningWeeklyViewExportButton'
+import {
+  isOperationalPlanningWeeklyViewExportActionDisabled,
+  resolveOperationalPlanningExportMutualExclusion,
+  resolveOperationalPlanningWeeklyViewExportWeekStart,
+  runOperationalPlanningWeeklyViewExportFlow,
+} from './operationalPlanningWeeklyViewExportFlow'
 import { buildVisiblePlanningBacklogItems } from './buildVisiblePlanningBacklogItems'
 import {
   PLAN_PUBLISHED_HELPER_TEXT,
@@ -1184,6 +1192,41 @@ export function OperationalPlanningPage() {
     }
   }
 
+  const [isExportingWeeklyView, setIsExportingWeeklyView] = useState(false)
+
+  /** Enquanto uma exportação roda, a outra fica desabilitada — nunca simultâneas. */
+  const exportMutualExclusion = resolveOperationalPlanningExportMutualExclusion({
+    isExporting,
+    isExportingWeeklyView,
+  })
+
+  async function handleExportWeeklyView() {
+    if (isExportingWeeklyView || isExporting || busy) return
+    if (draftItems.length === 0) return
+    setIsExportingWeeklyView(true)
+    try {
+      const weekStartDate = resolveOperationalPlanningWeeklyViewExportWeekStart(
+        weekPayload?.week.weekStartDate,
+        weekMonday,
+      )
+      await runOperationalPlanningWeeklyViewExportFlow({
+        dirty,
+        weekStartDate,
+        persistDraft,
+        exportWeeklyView: exportOperationalPlanningWeeklyViewToExcel,
+      })
+    } catch (e) {
+      reportClientError(e, { module: 'operational-planning', action: 'export_week_weekly_view_excel' })
+      setErrorMsg(
+        e instanceof ApiError
+          ? e.message
+          : 'Não foi possível exportar a visão semanal do planejamento.',
+      )
+    } finally {
+      setIsExportingWeeklyView(false)
+    }
+  }
+
   async function handlePublish() {
     if (!weekPayload?.plan || draftItems.length === 0) return
     setBusy(true)
@@ -1548,11 +1591,23 @@ export function OperationalPlanningPage() {
             />
             <OperationalPlanningExportButton
               state={isExporting ? 'exporting' : dirty ? 'dirty' : 'idle'}
-              disabled={isOperationalPlanningExportActionDisabled({
-                draftItemsCount: draftItems.length,
-                busy,
-              })}
+              disabled={
+                isOperationalPlanningExportActionDisabled({
+                  draftItemsCount: draftItems.length,
+                  busy,
+                }) || exportMutualExclusion.originalBlockedByOther
+              }
               onClick={() => void handleExportExcel()}
+            />
+            <OperationalPlanningWeeklyViewExportButton
+              state={isExportingWeeklyView ? 'exporting' : dirty ? 'dirty' : 'idle'}
+              disabled={
+                isOperationalPlanningWeeklyViewExportActionDisabled({
+                  draftItemsCount: draftItems.length,
+                  busy,
+                }) || exportMutualExclusion.weeklyViewBlockedByOther
+              }
+              onClick={() => void handleExportWeeklyView()}
             />
             <button
               type="button"

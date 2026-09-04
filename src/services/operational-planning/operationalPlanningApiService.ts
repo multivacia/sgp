@@ -82,6 +82,60 @@ export async function exportOperationalPlanningWeekToExcel(weekStart: string): P
   URL.revokeObjectURL(objectUrl)
 }
 
+export const EXPORT_OPERATIONAL_PLANNING_WEEKLY_VIEW_FAIL_MESSAGE =
+  'Não foi possível exportar a visão semanal do planejamento.'
+
+/** Baixa o `.xlsx` da "Visão semanal" (draft ?? published), ignorando filtros visuais. */
+export async function exportOperationalPlanningWeeklyViewToExcel(weekStart: string): Promise<void> {
+  const baseUrl = getApiBaseUrl()
+  const pathPart = `${BASE}/operational-planning/week/export-weekly-view.xlsx?weekStart=${encodeURIComponent(weekStart)}`
+  const url = baseUrl ? `${baseUrl}${pathPart}` : pathPart
+
+  let res: Response
+  try {
+    res = await fetch(url, { method: 'GET', credentials: 'include' })
+  } catch (e) {
+    throw new ApiError(EXPORT_OPERATIONAL_PLANNING_WEEKLY_VIEW_FAIL_MESSAGE, 503, {
+      code: 'NETWORK_ERROR',
+      cause: e,
+    })
+  }
+
+  if (!res.ok) {
+    let parsed: unknown = null
+    try {
+      const text = await res.text()
+      parsed = text ? JSON.parse(text) : null
+    } catch {
+      // Corpo não-JSON: segue com mensagem padrão pelo status.
+    }
+    const { message, code, errorRef, correlationId, category, severity, details } =
+      parseErrorEnvelope(parsed, res.status)
+    throw new ApiError(message, res.status, {
+      code,
+      errorRef,
+      correlationId,
+      category,
+      severity,
+      details,
+    })
+  }
+
+  const blob = await res.blob()
+  const filename =
+    filenameFromContentDisposition(res.headers.get('Content-Disposition')) ??
+    `planejamento-semanal-visao-${weekStart}.xlsx`
+  const objectUrl = URL.createObjectURL(blob)
+  const anchor = document.createElement('a')
+  anchor.href = objectUrl
+  anchor.download = filename
+  anchor.rel = 'noopener'
+  document.body.appendChild(anchor)
+  anchor.click()
+  anchor.remove()
+  URL.revokeObjectURL(objectUrl)
+}
+
 export async function getOperationalPlanningWeek(
   weekStartDate: string,
 ): Promise<OperationalPlanningWeekPayload> {
