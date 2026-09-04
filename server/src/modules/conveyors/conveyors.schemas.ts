@@ -293,6 +293,31 @@ export type PatchConveyorStructureBody = z.infer<
   typeof patchConveyorStructureBodySchema
 >
 
+export type PostConveyorOptionBody = z.infer<typeof postConveyorOptionSchema>
+
+/**
+ * POST /api/v1/conveyors/:id/structure/items — inclusão tardia (append-only)
+ * em esteira EM_ANDAMENTO. Reusa schemas de OPTION/AREA/STEP do create.
+ */
+export const postConveyorStructureItemBodySchema = z.object({
+  reason: z
+    .string()
+    .transform((s) => s.trim())
+    .pipe(
+      z
+        .string()
+        .min(3, 'Motivo deve ter entre 3 e 500 caracteres.')
+        .max(500, 'Motivo deve ter entre 3 e 500 caracteres.'),
+    ),
+  originType: z.enum(['MANUAL', 'BASE', 'HYBRID']),
+  matrixRootItemId: z.string().uuid().nullable().optional(),
+  option: postConveyorOptionSchema,
+})
+
+export type PostConveyorStructureItemBody = z.infer<
+  typeof postConveyorStructureItemBodySchema
+>
+
 const emptyQueryToUndef = (v: unknown): unknown =>
   v === '' || v === undefined ? undefined : v
 

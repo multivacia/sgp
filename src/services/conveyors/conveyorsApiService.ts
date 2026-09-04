@@ -9,6 +9,7 @@ import type {
   PatchConveyorStatusBody,
   PatchConveyorStepCompletionBody,
   PatchConveyorStructureBody,
+  PostConveyorStructureItemBody,
 } from '../../domain/conveyors/conveyor.types'
 import type {
   ConveyorHealthAnalysisHistoryItem,
@@ -210,6 +211,26 @@ export async function patchConveyorStructure(
     'PATCH',
     `${BASE}/conveyors/${encodeURIComponent(id)}/structure`,
     { body },
+  )
+}
+
+/**
+ * Inclusão tardia append-only — POST /api/v1/conveyors/:id/structure/items
+ * Requer header Idempotency-Key estável (cliente reenvia no retry).
+ */
+export async function appendConveyorStructureItem(
+  id: string,
+  body: PostConveyorStructureItemBody,
+  options?: { idempotencyKey?: string },
+): Promise<{ data: ConveyorDetail; meta: Record<string, unknown> }> {
+  const idempotencyKey = options?.idempotencyKey?.trim() || crypto.randomUUID()
+  return requestJsonEnvelope<ConveyorDetail>(
+    'POST',
+    `${BASE}/conveyors/${encodeURIComponent(id)}/structure/items`,
+    {
+      body,
+      headers: { 'Idempotency-Key': idempotencyKey },
+    },
   )
 }
 

@@ -7,8 +7,21 @@ export function canReplaceConveyorStructure(
   return status === 'EM_ELABORACAO' || status === 'AGUARDANDO_PLANEJAMENTO'
 }
 
+/**
+ * Inclusão tardia (append-only) — só em EM_ANDAMENTO.
+ * Não libera PATCH /structure.
+ */
+export function canAppendLateStructureItem(
+  status: ConveyorOperationalStatus,
+): boolean {
+  return status === 'EM_ANDAMENTO'
+}
+
 export const STRUCTURE_TAB_BLOCKED_UX_MESSAGE =
   'A alteração da estrutura da esteira só é permitida enquanto a esteira está em elaboração ou aguardando planejamento. Os dados principais podem ser alterados sem afetar o histórico operacional.'
+
+export const LATE_STRUCTURE_APPEND_SUCCESS_MESSAGE =
+  'Novo item incluído. As novas atividades estão disponíveis no Backlog do Planejamento Semanal.'
 
 export function resolveCanSaveConveyorChanges(input: {
   hasDadosChanges: boolean

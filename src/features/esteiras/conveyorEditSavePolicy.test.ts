@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  canAppendLateStructureItem,
   canReplaceConveyorStructure,
   resolveCanSaveConveyorChanges,
   resolveConveyorEditSubmitPlan,
@@ -126,6 +127,24 @@ describe('conveyorEditSavePolicy', () => {
     })
 
     it('bloqueia substituição em EM_ANDAMENTO', () => {
+      expect(canReplaceConveyorStructure('EM_ANDAMENTO')).toBe(false)
+    })
+  })
+
+  describe('canAppendLateStructureItem', () => {
+    it('permite inclusão tardia só em EM_ANDAMENTO', () => {
+      expect(canAppendLateStructureItem('EM_ANDAMENTO')).toBe(true)
+    })
+
+    it('bloqueia inclusão tardia fora de EM_ANDAMENTO', () => {
+      expect(canAppendLateStructureItem('EM_ELABORACAO')).toBe(false)
+      expect(canAppendLateStructureItem('AGUARDANDO_PLANEJAMENTO')).toBe(false)
+      expect(canAppendLateStructureItem('A_INICIAR')).toBe(false)
+      expect(canAppendLateStructureItem('FINALIZADA')).toBe(false)
+    })
+
+    it('não libera PATCH structure via canReplace quando append é permitido', () => {
+      expect(canAppendLateStructureItem('EM_ANDAMENTO')).toBe(true)
       expect(canReplaceConveyorStructure('EM_ANDAMENTO')).toBe(false)
     })
   })

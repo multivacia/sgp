@@ -37,6 +37,11 @@ describe('getOperationalEventDisplayLabel', () => {
   it('CONVEYOR_STEP_COMPLETED', () => {
     expect(getOperationalEventDisplayLabel('CONVEYOR_STEP_COMPLETED')).toBe('Atividade concluída')
   })
+  it('CONVEYOR_STRUCTURE_ITEM_ADDED', () => {
+    expect(getOperationalEventDisplayLabel('CONVEYOR_STRUCTURE_ITEM_ADDED')).toBe(
+      'Item incluído na esteira',
+    )
+  })
   it('CONVEYOR_STEP_REOPENED', () => {
     expect(getOperationalEventDisplayLabel('CONVEYOR_STEP_REOPENED')).toBe('Atividade reaberta')
   })
@@ -117,6 +122,26 @@ describe('formatOperationalEventReasonLine', () => {
         ev({ eventType: 'CONVEYOR_STEP_REOPENED', reason: 'EXPLICITLY_REOPENED' }),
       ),
     ).toBe('Reabertura registrada manualmente.')
+  })
+
+  it('CONVEYOR_STRUCTURE_ITEM_ADDED usa motivo completo do metadata', () => {
+    expect(
+      formatOperationalEventReasonLine(
+        ev({
+          eventType: 'CONVEYOR_STRUCTURE_ITEM_ADDED',
+          reason: 'LATE_STRUCTURE_APPEND',
+          metadataJson: { reason: 'Peça complementar solicitada pelo cliente' },
+        }),
+      ),
+    ).toBe('Peça complementar solicitada pelo cliente')
+  })
+
+  it('LATE_STRUCTURE_APPEND sem metadata', () => {
+    expect(
+      formatOperationalEventReasonLine(
+        ev({ eventType: 'CONVEYOR_STRUCTURE_ITEM_ADDED', reason: 'LATE_STRUCTURE_APPEND' }),
+      ),
+    ).toBe('Inclusão tardia de item na estrutura.')
   })
 })
 

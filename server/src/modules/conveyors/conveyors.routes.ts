@@ -17,6 +17,7 @@ import {
   patchConveyorDados,
   patchConveyorStructure,
 } from './conveyors.patch.controller.js'
+import { postConveyorStructureItem } from './conveyors.structure-append.controller.js'
 import { deleteConveyor } from './conveyors.delete.controller.js'
 import {
   postConveyorReturnToBacklog,
@@ -66,6 +67,12 @@ export function conveyorsRouter(env: Env): Router {
     requireAuth(),
     requirePermission('conveyors.create'),
     asyncRoute(patchConveyorStructure),
+  )
+  r.post(
+    '/conveyors/:id/structure/items',
+    requireAuth(),
+    requirePermission('conveyors.create'),
+    asyncRoute(postConveyorStructureItem),
   )
   r.patch(
     '/conveyors/:id',

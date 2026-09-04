@@ -9,6 +9,8 @@ export const conveyorOperationalEventTypeValues = [
   'CONVEYOR_STEP_OUT_OF_SEQUENCE_TIME_ENTRY',
   'CONVEYOR_RETURNED_TO_BACKLOG',
   'CONVEYOR_RETURNED_TO_PLANNING',
+  /** Inclusão tardia de OPTION/AREA/STEP em esteira EM_ANDAMENTO. */
+  'CONVEYOR_STRUCTURE_ITEM_ADDED',
   'MANUAL_NOTE',
 ] as const
 

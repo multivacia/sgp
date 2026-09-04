@@ -25,6 +25,8 @@ export function getOperationalEventDisplayLabel(eventType: string): string {
       return 'Atividade dispensada'
     case 'CONVEYOR_STEP_RESTORED':
       return 'Dispensa restaurada'
+    case 'CONVEYOR_STRUCTURE_ITEM_ADDED':
+      return 'Item incluído na esteira'
     case 'CONVEYOR_STEP_BLOCKED':
       return 'Atividade bloqueada'
     case 'CONVEYOR_STEP_UNBLOCKED':
@@ -55,6 +57,8 @@ export function getOperationalEventCategory(eventType: string): OperationalEvent
     case 'CONVEYOR_STEP_RESTORED':
       return 'reopen'
     case 'CONVEYOR_STEP_ABORTED':
+      return 'other'
+    case 'CONVEYOR_STRUCTURE_ITEM_ADDED':
       return 'other'
     case 'CONVEYOR_STEP_BLOCKED':
     case 'CONVEYOR_STEP_UNBLOCKED':
@@ -131,6 +135,8 @@ export function getOperationalEventSeverity(eventType: string): OperationalEvent
       return 'warning'
     case 'CONVEYOR_STEP_ABORTED':
       return 'warning'
+    case 'CONVEYOR_STRUCTURE_ITEM_ADDED':
+      return 'info'
     case 'CONVEYOR_STEP_BLOCKED':
       return 'critical'
     case 'CONVEYOR_STEP_UNBLOCKED':
@@ -244,11 +250,20 @@ export function formatOperationalEventReasonLine(event: ConveyorOperationalEvent
       reasonLabelSnapshot?: unknown
       reasonLabel?: unknown
       reasonText?: unknown
+      lateAddReason?: unknown
+      reason?: unknown
       previousAbort?: {
         abortReasonLabelSnapshot?: unknown
         abortReasonCode?: unknown
         abortReasonText?: unknown
       }
+    }
+    const lateReason =
+      (typeof m.lateAddReason === 'string' && m.lateAddReason.trim()) ||
+      (typeof m.reason === 'string' && m.reason.trim()) ||
+      null
+    if (event.eventType === 'CONVEYOR_STRUCTURE_ITEM_ADDED' && lateReason) {
+      return lateReason.length > 160 ? `${lateReason.slice(0, 157)}…` : lateReason
     }
     const snap =
       (typeof m.reasonLabelSnapshot === 'string' && m.reasonLabelSnapshot.trim()) ||
@@ -279,6 +294,7 @@ export function formatOperationalEventReasonLine(event: ConveyorOperationalEvent
   const r = (event.reason ?? '').trim()
   if (!r) return null
   const u = r.toUpperCase()
+  if (u === 'LATE_STRUCTURE_APPEND') return 'Inclusão tardia de item na estrutura.'
   if (u === 'EXPLICITLY_COMPLETED') return 'Conclusão registrada manualmente.'
   if (u === 'EXPLICITLY_REOPENED') return 'Reabertura registrada manualmente.'
   if (u === 'EXPLICITLY_RESTORED_FROM_ABORTED') return 'Restauração explícita de dispensa.'

@@ -96,6 +96,15 @@ export function formatConveyorOperationalEvent(
           : 'A dispensa foi restaurada. A atividade volta elegível a novo planejamento, sem reativar itens cancelados.',
       )
     }
+    case 'CONVEYOR_STRUCTURE_ITEM_ADDED': {
+      const reasonLine = formatOperationalEventReasonLine(event)
+      return baseDisplay(
+        event,
+        reasonLine
+          ? `Novo item incluído na estrutura em andamento. ${reasonLine}`
+          : 'Novo item incluído na estrutura em andamento. As novas atividades ficam disponíveis no Backlog do Planejamento Semanal.',
+      )
+    }
     case 'CONVEYOR_STEP_BLOCKED':
       return baseDisplay(
         event,

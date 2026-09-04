@@ -63,10 +63,15 @@ export function operationalPlanningBacklogExcludeWeeklyPlanItemsSql(
 
 /**
  * Esteira EM_ANDAMENTO com plano operacional ativo segue fluxo novo
- * (Aguardando encaixe / semana), não o backlog legado.
+ * (Aguardando encaixe / semana), não o backlog legado — exceto STEPs
+ * incluídos tardiamente com flag `lateAddToWeeklyBacklog` (A1/A2/A6).
+ *
+ * Assinatura: (conveyorAlias='cv', stepAlias='step') — o repositório chama
+ * só com alias da esteira; o default de stepAlias evita tocar o repository.
  */
 export function operationalPlanningBacklogExcludeEmProducaoWithActivePlanSql(
   conveyorAlias = 'cv',
+  stepAlias = 'step',
 ): string {
   const inactive = OPERATIONAL_PLANNING_BACKLOG_INACTIVE_PLAN_STATUSES.map((s) => `'${s}'`).join(', ')
   return `
@@ -79,5 +84,41 @@ export function operationalPlanningBacklogExcludeEmProducaoWithActivePlanSql(
             AND cop.deleted_at IS NULL
             AND cop.status NOT IN (${inactive})
         )
+        AND NOT (
+          COALESCE(${stepAlias}.metadata_json->>'lateAddToWeeklyBacklog', 'false') = 'true'
+          AND ${stepAlias}.operational_status IS DISTINCT FROM 'ABORTED'
+          AND ${stepAlias}.operational_status IS DISTINCT FROM 'COMPLETED'
+          AND ${stepAlias}.is_active = TRUE
+          AND ${stepAlias}.deleted_at IS NULL
+        )
       )`
+}
+
+/**
+ * Espelho puro (sem DB) da cláusula de exceção late-add dentro do fragmento A6.
+ * True = STEP satisfaz a exceção (não é barrado pelo bloqueio EM_ANDAMENTO+plano ativo).
+ * Alinha com SQL: COALESCE(flag,'false')='true', IS DISTINCT FROM ABORTED/COMPLETED,
+ * is_active = TRUE, deleted_at IS NULL.
+ */
+export function stepSatisfiesLateAddBacklogException(step: {
+  lateAddToWeeklyBacklog: boolean | string | null | undefined
+  operationalStatus: string | null | undefined
+  isActive: boolean
+  deletedAt: string | Date | null | undefined
+}): boolean {
+  const flagRaw =
+    step.lateAddToWeeklyBacklog === true
+      ? 'true'
+      : step.lateAddToWeeklyBacklog === false
+        ? 'false'
+        : step.lateAddToWeeklyBacklog == null
+          ? 'false'
+          : String(step.lateAddToWeeklyBacklog)
+  const flagOk = flagRaw === 'true'
+  // IS DISTINCT FROM: null ≠ ABORTED/COMPLETED → passa
+  const statusOk =
+    step.operationalStatus !== 'ABORTED' && step.operationalStatus !== 'COMPLETED'
+  const activeOk = step.isActive === true
+  const notDeleted = step.deletedAt == null
+  return flagOk && statusOk && activeOk && notDeleted
 }

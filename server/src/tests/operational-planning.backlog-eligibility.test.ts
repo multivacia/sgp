@@ -7,6 +7,7 @@ import {
   operationalPlanningBacklogExcludeConveyorPlanItemsSql,
   operationalPlanningBacklogExcludeEmProducaoWithActivePlanSql,
   operationalPlanningBacklogExcludeWeeklyPlanItemsSql,
+  stepSatisfiesLateAddBacklogException,
 } from '../modules/operational-planning/operational-planning.backlog-eligibility.js'
 import { listOperationalPlanningBacklog } from '../modules/operational-planning/operational-planning.repository.js'
 import { serviceListOperationalPlanningBacklog } from '../modules/operational-planning/operational-planning.service.js'
@@ -38,6 +39,119 @@ describe('operational planning backlog eligibility SQL', () => {
     const sql = operationalPlanningBacklogExcludeEmProducaoWithActivePlanSql()
     expect(sql).toContain("operational_status = 'EM_ANDAMENTO'")
     expect(sql).toContain('conveyor_operational_plans')
+  })
+
+  it('A2: lateAddToWeeklyBacklog exception uses step alias (default step)', () => {
+    const sql = operationalPlanningBacklogExcludeEmProducaoWithActivePlanSql()
+    expect(sql).toContain("metadata_json->>'lateAddToWeeklyBacklog'")
+    expect(sql).toContain("= 'true'")
+    expect(sql).toContain('step.metadata_json')
+    expect(sql).toContain('cv.operational_status')
+  })
+
+  it('A2: accepts custom conveyorAlias and stepAlias without breaking call site order', () => {
+    const sql = operationalPlanningBacklogExcludeEmProducaoWithActivePlanSql('cv', 'step')
+    expect(sql).toContain('cv.operational_status')
+    expect(sql).toContain('step.metadata_json')
+    // Chamada legado do repository: só conveyorAlias — stepAlias permanece 'step'
+    const legacy = operationalPlanningBacklogExcludeEmProducaoWithActivePlanSql('cv')
+    expect(legacy).toContain('step.metadata_json')
+  })
+
+  it('A6: fragmento SQL inclui exceção lateAddToWeeklyBacklog=true', () => {
+    const sql = operationalPlanningBacklogExcludeEmProducaoWithActivePlanSql()
+    expect(sql).toContain("COALESCE(step.metadata_json->>'lateAddToWeeklyBacklog', 'false') = 'true'")
+    // Proteções A6 só dentro da exceção late-add (não filtro global ABORTED no repository)
+    expect(sql).toContain("operational_status IS DISTINCT FROM 'ABORTED'")
+    expect(sql).toContain("operational_status IS DISTINCT FROM 'COMPLETED'")
+    expect(sql).toContain('is_active = TRUE')
+    expect(sql).toContain('deleted_at IS NULL')
+  })
+
+  it('A6: helper puro — exige flag lateAdd; exclui ABORTED e COMPLETED', () => {
+    expect(
+      stepSatisfiesLateAddBacklogException({
+        lateAddToWeeklyBacklog: true,
+        operationalStatus: 'PENDING',
+        isActive: true,
+        deletedAt: null,
+      }),
+    ).toBe(true)
+    expect(
+      stepSatisfiesLateAddBacklogException({
+        lateAddToWeeklyBacklog: false,
+        operationalStatus: 'PENDING',
+        isActive: true,
+        deletedAt: null,
+      }),
+    ).toBe(false)
+    expect(
+      stepSatisfiesLateAddBacklogException({
+        lateAddToWeeklyBacklog: true,
+        operationalStatus: 'ABORTED',
+        isActive: true,
+        deletedAt: null,
+      }),
+    ).toBe(false)
+    expect(
+      stepSatisfiesLateAddBacklogException({
+        lateAddToWeeklyBacklog: true,
+        operationalStatus: 'COMPLETED',
+        isActive: true,
+        deletedAt: null,
+      }),
+    ).toBe(false)
+  })
+
+  it('A6: helper puro — exige is_active=TRUE e deleted_at IS NULL', () => {
+    expect(
+      stepSatisfiesLateAddBacklogException({
+        lateAddToWeeklyBacklog: true,
+        operationalStatus: 'PENDING',
+        isActive: false,
+        deletedAt: null,
+      }),
+    ).toBe(false)
+    expect(
+      stepSatisfiesLateAddBacklogException({
+        lateAddToWeeklyBacklog: true,
+        operationalStatus: 'PENDING',
+        isActive: true,
+        deletedAt: '2026-01-01T00:00:00.000Z',
+      }),
+    ).toBe(false)
+  })
+
+  it('A6: REOPENED (ou status ≠ ABORTED/COMPLETED) com flag NÃO é bloqueado pelas proteções A6', () => {
+    expect(
+      stepSatisfiesLateAddBacklogException({
+        lateAddToWeeklyBacklog: true,
+        operationalStatus: 'REOPENED',
+        isActive: true,
+        deletedAt: null,
+      }),
+    ).toBe(true)
+    expect(
+      stepSatisfiesLateAddBacklogException({
+        lateAddToWeeklyBacklog: true,
+        operationalStatus: 'IN_PROGRESS',
+        isActive: true,
+        deletedAt: null,
+      }),
+    ).toBe(true)
+    expect(
+      stepSatisfiesLateAddBacklogException({
+        lateAddToWeeklyBacklog: 'true',
+        operationalStatus: null,
+        isActive: true,
+        deletedAt: null,
+      }),
+    ).toBe(true)
+    // Fragmento SQL continua com IS DISTINCT FROM (REOPENED passa no AND NOT ABORTED/COMPLETED)
+    const sql = operationalPlanningBacklogExcludeEmProducaoWithActivePlanSql()
+    expect(sql).toMatch(/IS DISTINCT FROM 'ABORTED'/)
+    expect(sql).toMatch(/IS DISTINCT FROM 'COMPLETED'/)
+    expect(sql).not.toContain("= 'REOPENED'")
   })
 
   it('excludes STEPs already present in active weekly work plans', () => {

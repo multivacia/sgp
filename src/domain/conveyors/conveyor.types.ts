@@ -247,6 +247,14 @@ export type PatchConveyorStructureBody = {
   options: CreateConveyorOptionInput[]
 }
 
+/** POST /api/v1/conveyors/:id/structure/items — inclusão tardia (append-only). */
+export type PostConveyorStructureItemBody = {
+  reason: string
+  originType: ConveyorOriginRegister
+  matrixRootItemId?: string | null
+  option: CreateConveyorOptionInput
+}
+
 /** Corpo do PATCH /api/v1/conveyors/:id/status */
 export type PatchConveyorStatusBody = {
   operationalStatus: ConveyorOperationalStatus

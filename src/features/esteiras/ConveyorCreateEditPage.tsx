@@ -9,6 +9,7 @@ import type {
   CreateConveyorDados,
   CreateConveyorStepAssigneeInput,
   PatchConveyorDadosBody,
+  PostConveyorStructureItemBody,
 } from '../../domain/conveyors/conveyor.types'
 import type { Collaborator } from '../../domain/collaborators/collaborator.types'
 import type { Team } from '../../domain/teams/team.types'
@@ -20,6 +21,7 @@ import { mapOperationalStatusToUi } from '../../lib/backlog/mapConveyorListToBac
 import { useRegisterTransientContext } from '../../lib/shell/transient-context'
 import {
   abortConveyorStep,
+  appendConveyorStructureItem,
   createConveyor,
   getConveyorById,
   getConveyorOperationalEvents,
@@ -29,6 +31,7 @@ import {
 } from '../../services/conveyors/conveyorsApiService'
 import { canAbortStep } from '../../domain/conveyors/stepOperationalStatus'
 import { AbortConveyorStepDialog } from './AbortConveyorStepDialog'
+import { LateStructureAppendDrawer } from './LateStructureAppendDrawer'
 import { createCollaboratorsApiService } from '../../services/collaborators/collaboratorsApiService'
 import { listTeams } from '../../services/teams/teamsApiService'
 import { getMatrixTree, listMatrixItems } from '../../services/operation-matrix/operationMatrixApiService'
@@ -67,7 +70,9 @@ import {
   hasPersistableStructureChanges,
 } from './conveyorEditStructureSnapshot'
 import {
+  canAppendLateStructureItem,
   canReplaceConveyorStructure,
+  LATE_STRUCTURE_APPEND_SUCCESS_MESSAGE,
   resolveCanSaveConveyorChanges,
   resolveConveyorEditSubmitPlan,
   shouldValidateStructureOnSubmit,
@@ -219,6 +224,10 @@ export function ConveyorCreateEditPage({ mode }: { mode: Mode }) {
   } | null>(null)
   const [stepAbortingId, setStepAbortingId] = useState<string | null>(null)
   const [stepAbortError, setStepAbortError] = useState<string | null>(null)
+  const [lateAppendOpen, setLateAppendOpen] = useState(false)
+  const [lateAppendBusy, setLateAppendBusy] = useState(false)
+  const [lateAppendError, setLateAppendError] = useState<string | null>(null)
+  const [lateAppendIdempotencyKey, setLateAppendIdempotencyKey] = useState<string | null>(null)
   const manualRootsRef = useRef(manualRoots)
   manualRootsRef.current = manualRoots
 
@@ -535,6 +544,11 @@ export function ConveyorCreateEditPage({ mode }: { mode: Mode }) {
   const canReplaceStructure =
     operationalStatus != null ? canReplaceConveyorStructure(operationalStatus) : true
   const structureEditLocked = mode === 'edit' && !canReplaceStructure
+  const showLateAppendAction =
+    mode === 'edit' &&
+    canAlterConveyor &&
+    operationalStatus != null &&
+    canAppendLateStructureItem(operationalStatus)
   const pendenciasRevisao = useMemo(() => {
     const basePendencias = pendenciasParaResumo(dados.nome, manualRoots, manualAloc)
     if (!hasDadosChanges && !hasStructureChanges) {
@@ -658,6 +672,62 @@ export function ConveyorCreateEditPage({ mode }: { mode: Mode }) {
       }
     },
     [abortDialog, applyLoadedDetail, detailId, pathname, presentBlocking],
+  )
+
+  const handleOpenLateAppend = useCallback(() => {
+    setLateAppendError(null)
+    setLateAppendIdempotencyKey(crypto.randomUUID())
+    setLateAppendOpen(true)
+  }, [])
+
+  const handleConfirmLateAppend = useCallback(
+    async (body: PostConveyorStructureItemBody) => {
+      if (!detailId?.trim() || lateAppendBusy) return
+      const key = lateAppendIdempotencyKey?.trim() || crypto.randomUUID()
+      if (!lateAppendIdempotencyKey) setLateAppendIdempotencyKey(key)
+      setLateAppendBusy(true)
+      setLateAppendError(null)
+      try {
+        const out = await appendConveyorStructureItem(detailId.trim(), body, {
+          idempotencyKey: key,
+        })
+        applyLoadedDetail(out.data)
+        setLateAppendOpen(false)
+        setLateAppendIdempotencyKey(null)
+        setRouteToast(LATE_STRUCTURE_APPEND_SUCCESS_MESSAGE)
+        setOperationalEventsLoading(true)
+        try {
+          const ev = await getConveyorOperationalEvents(detailId.trim(), {
+            limit: operationalEventsLimit,
+          })
+          setOperationalEvents(ev.data)
+        } catch {
+          setOperationalEvents([])
+        } finally {
+          setOperationalEventsLoading(false)
+        }
+      } catch (e) {
+        const n = reportClientError(e, {
+          module: 'esteiras',
+          action: 'alterar_esteira_structure_append',
+          route: pathname,
+          entityId: detailId,
+        })
+        if (isBlockingSeverity(n.severity)) presentBlocking(n)
+        else setLateAppendError(n.userMessage || 'Não foi possível incluir o item.')
+      } finally {
+        setLateAppendBusy(false)
+      }
+    },
+    [
+      applyLoadedDetail,
+      detailId,
+      lateAppendBusy,
+      lateAppendIdempotencyKey,
+      operationalEventsLimit,
+      pathname,
+      presentBlocking,
+    ],
   )
 
   async function handleSubmit() {
@@ -806,6 +876,25 @@ export function ConveyorCreateEditPage({ mode }: { mode: Mode }) {
           setStepAbortError(null)
         }}
         onConfirm={(payload) => void handleConfirmAbortStep(payload)}
+      />
+      <LateStructureAppendDrawer
+        key={lateAppendIdempotencyKey ?? 'late-append-closed'}
+        open={lateAppendOpen}
+        busy={lateAppendBusy}
+        error={lateAppendError}
+        colabList={colabList}
+        colabLoading={colabLoading}
+        colabError={colabError}
+        teamList={teamList}
+        teamLoading={teamLoading}
+        teamError={teamError}
+        onCancel={() => {
+          if (lateAppendBusy) return
+          setLateAppendOpen(false)
+          setLateAppendError(null)
+          setLateAppendIdempotencyKey(null)
+        }}
+        onConfirm={(body) => void handleConfirmLateAppend(body)}
       />
       <div className="mx-auto max-w-[1600px] pb-12">
       <header className="rounded-2xl border border-white/[0.08] bg-gradient-to-r from-sgp-void via-sgp-navy-deep/80 to-sgp-void px-4 py-4 shadow-inner ring-1 ring-white/[0.04] sm:px-5">
@@ -998,6 +1087,21 @@ export function ConveyorCreateEditPage({ mode }: { mode: Mode }) {
           <section className="space-y-4">
             {structureEditLocked ? (
               <SgpInlineBanner variant="neutral" message={STRUCTURE_TAB_BLOCKED_UX_MESSAGE} />
+            ) : null}
+            {showLateAppendAction ? (
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-xs text-slate-400">
+                  Estrutura existente em somente leitura. Você pode incluir um novo item ao final.
+                </p>
+                <button
+                  type="button"
+                  className="sgp-cta-primary text-sm"
+                  onClick={handleOpenLateAppend}
+                  disabled={lateAppendBusy}
+                >
+                  Incluir novo item
+                </button>
+              </div>
             ) : null}
             <div className="flex flex-col gap-5 xl:grid xl:grid-cols-[minmax(0,15rem)_minmax(0,1fr)] xl:items-start xl:gap-4">
               <button
