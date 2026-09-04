@@ -10,6 +10,7 @@ import {
   isValidProductionPin,
   normalizeProductionSearchText,
   productionTrackTimeDisabledTitle,
+  resolveProductionExceededMinutes,
   resolveProductionCredentialBadge,
   resolveProductionOperationalStatusDisplay,
   sortProductionCollaboratorsByName,
@@ -183,6 +184,22 @@ describe('formatProductionMinutes', () => {
 
   it('formata horas e minutos', () => {
     expect(formatProductionMinutes(90)).toBe('1h 30min')
+  })
+})
+
+describe('resolveProductionExceededMinutes', () => {
+  it('retorna null sem tempo planejado válido', () => {
+    expect(resolveProductionExceededMinutes(null, 90)).toBeNull()
+    expect(resolveProductionExceededMinutes(0, 90)).toBeNull()
+  })
+
+  it('retorna null quando realizado não excede o planejado', () => {
+    expect(resolveProductionExceededMinutes(90, 60)).toBeNull()
+    expect(resolveProductionExceededMinutes(90, 90)).toBeNull()
+  })
+
+  it('retorna apenas o excedente positivo quando realizado ultrapassa o planejado', () => {
+    expect(resolveProductionExceededMinutes(90, 135)).toBe(45)
   })
 })
 

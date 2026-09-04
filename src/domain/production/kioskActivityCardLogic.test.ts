@@ -5,8 +5,6 @@ import {
   kioskRequiresOperationalJustification,
   productionOutOfSequenceJustificationError,
   productionPlannedTimeReachedHint,
-  productionTimePlannedCoverageLabel,
-  productionTimePlannedCoveragePct,
   resolveKioskInitialSessionCompletionPct,
 } from './kioskActivityCardLogic'
 import type { ProductionWorkQueueItem } from './production.types'
@@ -47,16 +45,6 @@ const baseItem = (
 })
 
 describe('kioskActivityCardLogic', () => {
-  it('productionTimePlannedCoveragePct usa tempo realizado/planejado', () => {
-    expect(
-      productionTimePlannedCoveragePct({ plannedMinutes: 15, realizedMinutes: 15 }),
-    ).toBe(100)
-  })
-
-  it('productionTimePlannedCoverageLabel não usa "previsto" ambíguo sozinho', () => {
-    expect(productionTimePlannedCoverageLabel(100)).toBe('Tempo previsto: 100%')
-  })
-
   it('productionPlannedTimeReachedHint quando tempo atingido sem conclusão', () => {
     expect(
       productionPlannedTimeReachedHint(

@@ -1,6 +1,7 @@
 import type { ProductionWorkQueueItem } from './production.types'
 import type { JustificationFieldValue } from '../../features/shell/quickTimeEntryDrawerLogic'
 import { validateJustificationFieldValue } from '../operational/timeEntryJustificationField'
+import { resolveProductionExceededMinutes } from './production.helpers'
 
 export const PRODUCTION_OUT_OF_SEQUENCE_JUSTIFICATION_MIN = 3
 export const PRODUCTION_OUT_OF_SEQUENCE_JUSTIFICATION_MAX = 500
@@ -41,19 +42,6 @@ export function productionOutOfSequenceJustificationError(input: {
   return null
 }
 
-/** Percentual do tempo previsto já apontado (não é status operacional). */
-export function productionTimePlannedCoveragePct(
-  item: Pick<ProductionWorkQueueItem, 'plannedMinutes' | 'realizedMinutes'>,
-): number {
-  if (!item.plannedMinutes || item.plannedMinutes <= 0) return 0
-  return Math.min(100, Math.round((item.realizedMinutes / item.plannedMinutes) * 100))
-}
-
-export function productionTimePlannedCoverageLabel(pct: number): string {
-  if (pct <= 0) return 'Tempo previsto: 0%'
-  return `Tempo previsto: ${pct}%`
-}
-
 export function productionPlannedTimeReachedHint(
   item: Pick<
     ProductionWorkQueueItem,
@@ -81,9 +69,12 @@ export function kioskRequiresExcessTimeJustification(
   minutesNovo: number,
 ): boolean {
   if (!Number.isInteger(minutesNovo) || minutesNovo <= 0) return false
-  const planned = item.plannedMinutes
-  if (planned == null || !Number.isFinite(planned) || planned <= 0) return false
-  return item.realizedMinutes + minutesNovo > planned
+  return (
+    resolveProductionExceededMinutes(
+      item.plannedMinutes,
+      item.realizedMinutes + minutesNovo,
+    ) !== null
+  )
 }
 
 export function kioskRequiresOperationalJustification(

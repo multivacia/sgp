@@ -1,7 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { ApiError } from '../../lib/api/apiErrors'
 import type { ProductionWorkQueueItem } from '../../domain/production/production.types'
-import { formatProductionDate, formatProductionMinutes } from '../../domain/production/production.helpers'
+import {
+  formatProductionDate,
+  formatProductionMinutes,
+  resolveProductionExceededMinutes,
+} from '../../domain/production/production.helpers'
 import {
   createProductionTimeEntry,
   PRODUCTION_TIME_ENTRY_ERROR_MESSAGE,
@@ -43,6 +47,10 @@ export function ProductionTimeEntryDialog({ item, onClose, onSuccess }: Props) {
 
   const needsJustification = productionTimeEntryNeedsJustification(item)
   const preferredCategory = productionTimeEntryPreferredCategory(item)
+  const exceededMinutes = resolveProductionExceededMinutes(
+    item.plannedMinutes,
+    item.realizedMinutes,
+  )
 
   useEffect(() => {
     minutesRef.current?.focus()
@@ -160,13 +168,15 @@ export function ProductionTimeEntryDialog({ item, onClose, onSuccess }: Props) {
             <dd className="font-medium text-slate-200">{formatProductionMinutes(item.plannedMinutes)}</dd>
           </div>
           <div>
-            <dt className="text-xs text-slate-500">Apontado</dt>
+            <dt className="text-xs text-slate-500">Apontado/Realizado</dt>
             <dd className="font-medium text-slate-200">{formatProductionMinutes(item.realizedMinutes) || '—'}</dd>
           </div>
-          <div>
-            <dt className="text-xs text-slate-500">Pendente</dt>
-            <dd className="font-medium text-slate-200">{formatProductionMinutes(item.pendingMinutes) || '—'}</dd>
-          </div>
+          {exceededMinutes != null ? (
+            <div>
+              <dt className="text-xs text-slate-500">Tempo excedido</dt>
+              <dd className="font-medium text-slate-200">{formatProductionMinutes(exceededMinutes)}</dd>
+            </div>
+          ) : null}
         </dl>
 
         <form onSubmit={(e) => void handleSubmit(e)} noValidate>
