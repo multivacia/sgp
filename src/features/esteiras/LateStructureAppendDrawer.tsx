@@ -34,6 +34,8 @@ type Props = {
   onConfirm: (body: PostConveyorStructureItemBody) => void
 }
 
+const STRUCTURE_HINT = 'Preencha os dados da tarefa, do setor e da atividade.'
+
 /**
  * Drawer de inclusão tardia: nova subárvore (1 OPTION) + motivo obrigatório sem pré-seleção.
  * Superfícies e tipografia usam tokens semânticos / painel temático do SGP+ (claro e escuro).
@@ -55,6 +57,10 @@ export function LateStructureAppendDrawer({
   const [roots, setRoots] = useState<ManualOptionDraft[]>(() => [createInitialManualOption(1)])
   const [aloc, setAloc] = useState<Record<string, NovaEsteiraAlocacaoLinha[]>>({})
   const [reason, setReason] = useState('')
+  /** Evita erro estrutural global antes de o usuário interagir com a composição. */
+  const [structureTouched, setStructureTouched] = useState(false)
+  /** Remonta a composição após descartar para reaplicar initiallyExpanded. */
+  const [composicaoKey, setComposicaoKey] = useState(0)
 
   const structureError = useMemo(() => {
     if (roots.length !== 1) return 'Inclua exatamente uma nova tarefa (OPTION).'
@@ -66,6 +72,32 @@ export function LateStructureAppendDrawer({
   const canSubmit = !busy && structureError === null && reasonOk
 
   if (!open) return null
+
+  function resetDraftStructure() {
+    setRoots([createInitialManualOption(1)])
+    setAloc({})
+    setStructureTouched(false)
+    setComposicaoKey((k) => k + 1)
+  }
+
+  function handleRootsChange(next: ManualOptionDraft[]) {
+    setStructureTouched(true)
+    // Exatamente 1 OPTION; descartar a única recria rascunho vazio expandido (motivo preservado).
+    if (next.length === 0) {
+      resetDraftStructure()
+      return
+    }
+    setRoots(next.slice(0, 1))
+  }
+
+  function handleAlocChange(
+    next:
+      | Record<string, NovaEsteiraAlocacaoLinha[]>
+      | ((prev: Record<string, NovaEsteiraAlocacaoLinha[]>) => Record<string, NovaEsteiraAlocacaoLinha[]>),
+  ) {
+    setStructureTouched(true)
+    setAloc(next)
+  }
 
   function handleConfirm() {
     if (!canSubmit) return
@@ -148,17 +180,11 @@ export function LateStructureAppendDrawer({
 
           <div className="rounded-xl border border-sgp-border-subtle bg-sgp-surface-muted p-3">
             <NovaEsteiraComposicaoManual
+              key={composicaoKey}
               roots={roots}
-              onChangeRoots={(next) => {
-                // Garante exatamente 1 OPTION (append de uma subárvore).
-                if (next.length === 0) {
-                  setRoots([createInitialManualOption(1)])
-                  return
-                }
-                setRoots(next.slice(0, 1))
-              }}
+              onChangeRoots={handleRootsChange}
               alocacoes={aloc}
-              onChangeAlocacoes={setAloc}
+              onChangeAlocacoes={handleAlocChange}
               colabList={colabList}
               colabLoading={colabLoading}
               colabError={colabError}
@@ -166,10 +192,17 @@ export function LateStructureAppendDrawer({
               teamLoading={teamLoading}
               teamError={teamError}
               variant="totem"
+              initiallyExpanded
+              optionRemoveLabel="Descartar item"
             />
           </div>
 
-          {structureError ? (
+          {!structureTouched ? (
+            <p data-testid="late-structure-hint" className="text-sm text-sgp-muted">
+              {STRUCTURE_HINT}
+            </p>
+          ) : null}
+          {structureTouched && structureError ? (
             <SgpInlineBanner message={structureError} variant="neutral" />
           ) : null}
           {error ? <SgpInlineBanner message={error} variant="error" /> : null}

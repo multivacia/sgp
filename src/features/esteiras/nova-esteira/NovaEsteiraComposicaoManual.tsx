@@ -64,6 +64,25 @@ type Props = {
   onRequestAbortStep?: (step: { stepNodeId: string; stepName: string }) => void
   canAbortStep?: (step: ManualStepDraft) => boolean
   abortingStepId?: string | null
+  /**
+   * Quando true (ex.: inclusão tardia), tarefas/setores iniciais abrem expandídos.
+   * Default false preserva o totem notebook-first (cartões fechados).
+   */
+  initiallyExpanded?: boolean
+  /**
+   * Rótulo do botão de remoção da OPTION. Default: totem → "Remover da esteira";
+   * demais → "Remover tarefa".
+   */
+  optionRemoveLabel?: string
+}
+
+function buildInitialOpenAreas(roots: ManualOptionDraft[]): Record<string, string[]> {
+  const init: Record<string, string[]> = {}
+  for (const op of roots) {
+    const first = op.areas[0]
+    if (first) init[op.key] = [first.key]
+  }
+  return init
 }
 
 export function NovaEsteiraComposicaoManual({
@@ -82,16 +101,24 @@ export function NovaEsteiraComposicaoManual({
   onRequestAbortStep,
   canAbortStep,
   abortingStepId = null,
+  initiallyExpanded = false,
+  optionRemoveLabel,
 }: Props) {
   const totem = variant === 'totem'
   const rascunho = variant === 'rascunho' || totem
   const areaLabel = 'Setor'
+  const removeOptionLabel =
+    optionRemoveLabel ?? (totem ? 'Remover da esteira' : 'Remover tarefa')
   const reorderBtnClass =
     'rounded border border-white/10 px-1.5 py-0.5 text-[10px] text-slate-400 hover:border-white/20 disabled:pointer-events-none disabled:opacity-35'
   const lockedFieldClass = 'disabled:cursor-not-allowed disabled:opacity-60'
   const lockedActionClass = 'disabled:cursor-not-allowed disabled:opacity-45'
-  const [openAreasByOption, setOpenAreasByOption] = useState<Record<string, string[]>>({})
-  const [openOptionKeys, setOpenOptionKeys] = useState<string[]>([])
+  const [openAreasByOption, setOpenAreasByOption] = useState<Record<string, string[]>>(
+    () => (initiallyExpanded ? buildInitialOpenAreas(roots) : {}),
+  )
+  const [openOptionKeys, setOpenOptionKeys] = useState<string[]>(() =>
+    initiallyExpanded ? roots.map((r) => r.key) : [],
+  )
 
   function handleOptionToggle(opKey: string, open: boolean) {
     setOpenOptionKeys((prev) => {
@@ -472,7 +499,7 @@ export function NovaEsteiraComposicaoManual({
                       aria-disabled={readOnly}
                       onClick={() => removeOption(op.key)}
                     >
-                      {totem ? 'Remover da esteira' : 'Remover tarefa'}
+                      {removeOptionLabel}
                     </button>
                   )}
                 </div>
@@ -795,6 +822,7 @@ export function NovaEsteiraComposicaoManual({
               return (
                 <li key={op.key} className="list-none">
                   <details
+                    open={openOptionKeys.includes(op.key)}
                     className="group rounded-2xl border border-white/[0.08] bg-white/[0.03] open:pb-5"
                     onToggle={(e) => handleOptionToggle(op.key, e.currentTarget.open)}
                   >
@@ -882,7 +910,7 @@ export function NovaEsteiraComposicaoManual({
                               removeOption(op.key)
                             }}
                           >
-                            Remover da esteira
+                            {removeOptionLabel}
                           </button>
                           <span className="text-[11px] font-semibold text-sgp-gold/90">
                             {openOptionKeys.includes(op.key) ? 'Recolher' : 'Expandir'}
