@@ -10,6 +10,7 @@ import {
   formatDurationHhMm,
   formatWeeklyViewActivityCellContent,
   formatWeeklyViewActivityCellLabel,
+  formatWeeklyViewApontadoDurationLabel,
   formatWeeklyViewPlannedDurationLabel,
   formatWeeklyViewPositionNotes,
   groupWeeklyViewRowsByCollaborator,
@@ -50,6 +51,7 @@ function sampleRow(
     conveyorTitle: null,
     activityTitle: 'Atividade A',
     notes: 'Observação',
+    realizedMinutes: 0,
     ...partial,
   }
 }
@@ -120,6 +122,7 @@ function countFilledActivityCellsInBlock(
       filled += 1
       expect(countTempoPlanejadoOccurrences(text)).toBe(1)
       expect(countWeeklyViewActivityBlocksInCell(text)).toBe(1)
+      expect((text.match(/Tempo apontado:/g) ?? []).length).toBe(1)
     }
   }
   return filled
@@ -168,17 +171,33 @@ describe('formatWeeklyViewPlannedDurationLabel', () => {
   })
 })
 
+describe('formatWeeklyViewApontadoDurationLabel', () => {
+  it('usa --- para zero/nulo e formata positivos como o planejado', () => {
+    expect(formatWeeklyViewApontadoDurationLabel(0)).toBe('---')
+    expect(formatWeeklyViewApontadoDurationLabel(null)).toBe('---')
+    expect(formatWeeklyViewApontadoDurationLabel(undefined)).toBe('---')
+    expect(formatWeeklyViewApontadoDurationLabel(45)).toBe('45 min')
+    expect(formatWeeklyViewApontadoDurationLabel(60)).toBe('1h')
+    expect(formatWeeklyViewApontadoDurationLabel(65)).toBe('1h05 min')
+    expect(formatWeeklyViewApontadoDurationLabel(90)).toBe('1h30 min')
+    expect(formatWeeklyViewApontadoDurationLabel(75)).toBe('1h15 min')
+  })
+})
+
 describe('formatWeeklyViewActivityCellContent', () => {
-  it('gera três linhas com esteira e duas sem; preserva acentos', () => {
-    expect(formatWeeklyViewActivityCellContent(0, 'Reforma', 'Retirada', 90)).toBe(
-      '1º Reforma\nRetirada\nTempo planejado: 1h30 min',
+  it('gera quatro linhas com esteira e três sem (sempre com Tempo apontado)', () => {
+    expect(formatWeeklyViewActivityCellContent(0, 'Reforma', 'Retirada', 90, 45)).toBe(
+      '1º Reforma\nRetirada\nTempo planejado: 1h30 min\nTempo apontado: 45 min',
     )
-    expect(formatWeeklyViewActivityCellContent(0, null, 'Retirada', 60)).toBe(
-      '1º Retirada\nTempo planejado: 1h',
+    expect(formatWeeklyViewActivityCellContent(0, null, 'Retirada', 60, 0)).toBe(
+      '1º Retirada\nTempo planejado: 1h\nTempo apontado: ---',
     )
-    expect(formatWeeklyViewActivityCellContent(0, '  Revisão  ', '  Remoção  ', 60)).toBe(
-      '1º Revisão\nRemoção\nTempo planejado: 1h',
+    expect(formatWeeklyViewActivityCellContent(0, '  Revisão  ', '  Remoção  ', 60, null)).toBe(
+      '1º Revisão\nRemoção\nTempo planejado: 1h\nTempo apontado: ---',
     )
+    const withEsteira = formatWeeklyViewActivityCellContent(0, 'OS', 'Ativ', 30, 15)
+    expect(withEsteira.split('\n')).toHaveLength(4)
+    expect(withEsteira.split('\n').some((l) => l.trim() === '')).toBe(false)
     expect(formatWeeklyViewActivityCellLabel('A', 'B')).toBe('A — B')
   })
 })
@@ -286,9 +305,46 @@ describe('buildOperationalPlanningWeeklyViewExportWorkbookBuffer — grade por p
 
     expect(sheet.getRow(8).getCell(2).font?.size).toBe(11)
     expect(sheet.getRow(8).height ?? 0).toBeLessThan(EXCEL_MAX_ROW_HEIGHT_PT)
+    expect(sheet.getRow(8).height ?? 0).toBeGreaterThanOrEqual(4 * 15)
     expect(sheet.getRow(8).getCell(2).alignment?.wrapText).toBe(true)
+    expect(String(sheet.getRow(8).getCell(2).value ?? '')).toContain('Tempo apontado: ---')
     expect(sheet.getRow(8).getCell(2).border?.top?.style).toBe('medium')
     expect(sheet.getRow(9).getCell(2).border?.top?.style).toBe('thin')
+  })
+
+  it('workbook: Tempo apontado com valor e --- por célula (uma ocorrência)', async () => {
+    const buffer = await buildOperationalPlanningWeeklyViewExportWorkbookBuffer({
+      meta: sampleMeta(),
+      rows: [
+        sampleRow({
+          id: 'a',
+          plannedDate: '2026-09-07',
+          conveyorTitle: 'Esteira',
+          activityTitle: 'Com apontamento',
+          plannedMinutes: 90,
+          realizedMinutes: 45,
+        }),
+        sampleRow({
+          id: 'b',
+          plannedDate: '2026-09-08',
+          conveyorTitle: null,
+          activityTitle: 'Sem apontamento',
+          plannedMinutes: 60,
+          realizedMinutes: 0,
+        }),
+      ],
+    })
+    const workbook = new ExcelJS.Workbook()
+    await workbook.xlsx.load(buffer)
+    const sheet = workbook.getWorksheet('Visão semanal')!
+    const mon = String(sheet.getRow(8).getCell(2).value ?? '')
+    const tue = String(sheet.getRow(8).getCell(3).value ?? '')
+    expect(mon).toBe(
+      '1º Esteira\nCom apontamento\nTempo planejado: 1h30 min\nTempo apontado: 45 min',
+    )
+    expect(tue).toBe('1º Sem apontamento\nTempo planejado: 1h\nTempo apontado: ---')
+    expect((mon.match(/Tempo apontado:/g) ?? []).length).toBe(1)
+    expect((tue.match(/Tempo apontado:/g) ?? []).length).toBe(1)
   })
 
   it('arquivo completo Admin14 + Gabriel6 + João14 → 34 linhas e 64 atividades', async () => {

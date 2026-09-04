@@ -42,13 +42,14 @@ function mapRowToExportRow(row: PlanItemWeeklyViewRow): OperationalPlanningWeekl
     conveyorTitle: row.conveyor_title,
     activityTitle: row.activity_title,
     notes: row.notes,
+    realizedMinutes: row.realized_minutes,
   }
 }
 
 /**
  * Export Excel (1 aba "Visão semanal") da semana salva (draft ?? published) — ignora filtros
  * visuais. Somente leitura: nenhuma escrita, nenhuma transação, nenhuma alteração de estado
- * do plano. Sem qualquer consulta a `conveyor_time_entries` ou dado de execução/apontamento.
+ * do plano. Inclui tempo apontado acumulado por STEP (`realized_minutes`).
  */
 export async function serviceExportOperationalPlanningWeeklyViewXlsx(
   pool: pg.Pool,

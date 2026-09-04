@@ -162,7 +162,9 @@ describe.skipIf(!hasDb)('listItemsForWorkPlanWeeklyView (integração)', () => {
       expect(anaRow?.notes).toBe('Nota')
       expect(anaRow?.conveyor_title).toBeTruthy()
       expect(typeof anaRow?.conveyor_title).toBe('string')
-      expect(anaRow).not.toHaveProperty('realized_minutes')
+      expect(anaRow).toHaveProperty('realized_minutes')
+      expect(typeof anaRow?.realized_minutes).toBe('number')
+      expect(anaRow?.realized_minutes).toBe(0)
 
       const mariaRow = rows.find((r) => r.assigned_collaborator_id === MARIA_COLLABORATOR_ID)
       expect(mariaRow?.assigned_collaborator_name).toBe('Maria Silva')
@@ -173,6 +175,71 @@ describe.skipIf(!hasDb)('listItemsForWorkPlanWeeklyView (integração)', () => {
       await pool.query(`DELETE FROM conveyor_nodes WHERE conveyor_id = $1::uuid`, [conveyorId])
       await pool.query(`DELETE FROM conveyors WHERE id = $1::uuid`, [conveyorId])
       await pool.query(`DELETE FROM collaborators WHERE id = $1::uuid`, [anaId])
+    }
+  })
+
+  it('soma realized_minutes do STEP, ignora deleted_at e não multiplica linhas do plano', async () => {
+    const label = `WeeklyViewRealized ${randomUUID().slice(0, 8)}`
+    const created = await serviceCreateConveyor(pool, conveyorBodyWithSteps(label))
+    const conveyorId = created.id
+    const planId = randomUUID()
+    const weekStart = mondayOfWeekContaining('2032-05-03')
+    const weekEnd = fridayAfterMonday(weekStart)
+    const entryIds: string[] = []
+
+    try {
+      const stepsRes = await pool.query<{ id: string }>(
+        `SELECT id::text FROM conveyor_nodes
+         WHERE conveyor_id = $1::uuid AND node_type = 'STEP' AND deleted_at IS NULL
+         ORDER BY order_index`,
+        [conveyorId],
+      )
+      const [step1, step2] = stepsRes.rows.map((r) => r.id)
+
+      await pool.query(
+        `INSERT INTO operational_work_plans (id, week_start_date, week_end_date, status, created_by)
+         VALUES ($1::uuid, $2::date, $3::date, 'DRAFT', $4::uuid)`,
+        [planId, weekStart, weekEnd, GOV_ADMIN_USER_ID],
+      )
+
+      const itemId = randomUUID()
+      await pool.query(
+        `INSERT INTO operational_work_plan_items (
+           id, work_plan_id, conveyor_id, activity_node_id, assigned_collaborator_id,
+           planned_date, planned_order, planned_minutes, status, notes, deleted_at
+         ) VALUES ($1::uuid, $2::uuid, $3::uuid, $4::uuid, $5::uuid, $6::date, 0, 60, 'PLANNED', NULL, NULL)`,
+        [itemId, planId, conveyorId, step1, MARIA_COLLABORATOR_ID, weekStart],
+      )
+
+      const e1 = randomUUID()
+      const e2 = randomUUID()
+      const eDeleted = randomUUID()
+      const eOtherStep = randomUUID()
+      entryIds.push(e1, e2, eDeleted, eOtherStep)
+
+      await pool.query(
+        `INSERT INTO conveyor_time_entries (
+           id, conveyor_id, conveyor_node_id, collaborator_id, entry_at, minutes, entry_mode, deleted_at
+         ) VALUES
+           ($1::uuid, $5::uuid, $6::uuid, $7::uuid, now(), 30, 'manual', NULL),
+           ($2::uuid, $5::uuid, $6::uuid, $7::uuid, now(), 45, 'manual', NULL),
+           ($3::uuid, $5::uuid, $6::uuid, $7::uuid, now(), 99, 'manual', now()),
+           ($4::uuid, $5::uuid, $8::uuid, $7::uuid, now(), 20, 'manual', NULL)`,
+        [e1, e2, eDeleted, eOtherStep, conveyorId, step1, MARIA_COLLABORATOR_ID, step2],
+      )
+
+      const rows = await listItemsForWorkPlanWeeklyView(pool, planId)
+      expect(rows).toHaveLength(1)
+      expect(rows[0]?.realized_minutes).toBe(75)
+    } finally {
+      if (entryIds.length) {
+        await pool.query(`DELETE FROM conveyor_time_entries WHERE id = ANY($1::uuid[])`, [entryIds])
+      }
+      await pool.query(`DELETE FROM operational_work_plan_items WHERE work_plan_id = $1::uuid`, [planId])
+      await pool.query(`DELETE FROM operational_work_plans WHERE id = $1::uuid`, [planId])
+      await pool.query(`DELETE FROM conveyor_node_assignees WHERE conveyor_id = $1::uuid`, [conveyorId])
+      await pool.query(`DELETE FROM conveyor_nodes WHERE conveyor_id = $1::uuid`, [conveyorId])
+      await pool.query(`DELETE FROM conveyors WHERE id = $1::uuid`, [conveyorId])
     }
   })
 })

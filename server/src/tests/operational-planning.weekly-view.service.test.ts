@@ -22,6 +22,7 @@ function samplePlanItemRow(overrides: Partial<PlanItemWeeklyViewRow> = {}): Plan
     conveyor_title: 'Esteira Demo',
     activity_title: 'Atividade A',
     notes: null,
+    realized_minutes: 0,
     ...overrides,
   }
 }
@@ -142,5 +143,26 @@ describe('serviceExportOperationalPlanningWeeklyViewXlsx', () => {
     expect(call?.meta.totalActivities).toBe(3)
     expect(call?.meta.totalPlannedMinutes).toBe(120)
     expect(call?.meta.collaboratorsWithActivityCount).toBe(2)
+  })
+
+  it('transporta realizedMinutes do repository para o exportador', async () => {
+    vi.spyOn(repo, 'findDraftOperationalWorkPlanByWeekStart').mockResolvedValue(
+      samplePlanRow('DRAFT', 'plan-1'),
+    )
+    vi.spyOn(repo, 'findPublishedOperationalWorkPlanByWeekStart').mockResolvedValue(null)
+    vi.spyOn(repo, 'listItemsForWorkPlanWeeklyView').mockResolvedValue([
+      samplePlanItemRow({ realized_minutes: 75 }),
+      samplePlanItemRow({ id: 'i2', realized_minutes: 0 }),
+    ])
+
+    const buildBuffer = await import(
+      '../modules/operational-planning/operational-planning.weekly-view.export.js'
+    )
+    const spyBuild = vi.spyOn(buildBuffer, 'buildOperationalPlanningWeeklyViewExportWorkbookBuffer')
+
+    await serviceExportOperationalPlanningWeeklyViewXlsx(pool, '2026-09-07')
+
+    const call = spyBuild.mock.calls[0]?.[0]
+    expect(call?.rows.map((r) => r.realizedMinutes)).toEqual([75, 0])
   })
 })

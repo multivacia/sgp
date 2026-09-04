@@ -41,6 +41,8 @@ export type OperationalPlanningWeeklyViewExportRow = {
   conveyorTitle: string | null
   activityTitle: string
   notes: string | null
+  /** Total apontado do STEP (`SUM(conveyor_time_entries.minutes)` com `deleted_at IS NULL`). */
+  realizedMinutes: number
 }
 
 const SHEET_NAME = 'Visão semanal'
@@ -183,33 +185,50 @@ export function formatWeeklyViewPlannedDurationLabel(
 }
 
 /**
+ * Rótulo do tempo apontado: valores positivos usam o mesmo formatador do planejado;
+ * zero/nulo/inválido → `---` (nunca `0 min`).
+ */
+export function formatWeeklyViewApontadoDurationLabel(
+  minutes: number | null | undefined,
+): string {
+  const min =
+    typeof minutes === 'number' && Number.isFinite(minutes) && minutes > 0
+      ? Math.floor(minutes)
+      : 0
+  if (min === 0) return '---'
+  return formatWeeklyViewPlannedDurationLabel(min)
+}
+
+/**
  * Conteúdo multilinha de **uma** atividade na célula do dia.
  *
  * Com esteira:
- * `1º Nome da esteira\nNome da atividade\nTempo planejado: 1h30 min`
+ * `1º Nome da esteira\nNome da atividade\nTempo planejado: 1h30 min\nTempo apontado: 45 min`
  *
- * Sem esteira:
- * `1º Nome da atividade\nTempo planejado: 1h30 min`
+ * Sem esteira / sem apontamento:
+ * `1º Nome da atividade\nTempo planejado: 1h30 min\nTempo apontado: ---`
  */
 export function formatWeeklyViewActivityCellContent(
   plannedOrder: number,
   conveyorTitle: string | null | undefined,
   activityTitle: string | null | undefined,
   plannedMinutes: number | null | undefined,
+  realizedMinutes: number | null | undefined = 0,
 ): string {
   const orderPrefix = `${plannedOrder + 1}º`
   const description = (conveyorTitle ?? '').trim()
   const activity = (activityTitle ?? '').trim()
-  const timeLine = `Tempo planejado: ${formatWeeklyViewPlannedDurationLabel(plannedMinutes)}`
+  const plannedLine = `Tempo planejado: ${formatWeeklyViewPlannedDurationLabel(plannedMinutes)}`
+  const apontadoLine = `Tempo apontado: ${formatWeeklyViewApontadoDurationLabel(realizedMinutes)}`
 
   if (description && activity) {
-    return `${orderPrefix} ${description}\n${activity}\n${timeLine}`
+    return `${orderPrefix} ${description}\n${activity}\n${plannedLine}\n${apontadoLine}`
   }
   const title = activity || description
   if (title) {
-    return `${orderPrefix} ${title}\n${timeLine}`
+    return `${orderPrefix} ${title}\n${plannedLine}\n${apontadoLine}`
   }
-  return `${orderPrefix}\n${timeLine}`
+  return `${orderPrefix}\n${plannedLine}\n${apontadoLine}`
 }
 
 /**
@@ -514,6 +533,7 @@ export async function buildOperationalPlanningWeeklyViewExportWorkbookBuffer(inp
             item.conveyorTitle,
             item.activityTitle,
             item.plannedMinutes,
+            item.realizedMinutes,
           ),
         )
       }
