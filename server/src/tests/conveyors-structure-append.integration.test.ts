@@ -84,6 +84,7 @@ function minimalConveyorBody(nome: string): PostConveyorBody {
 
 function appendBody(titulo = 'Item tardio') {
   return {
+    appendKind: 'OPTION' as const,
     reason: 'Necessidade operacional emergencial',
     originType: 'MANUAL' as const,
     matrixRootItemId: null,
@@ -107,6 +108,47 @@ function appendBody(titulo = 'Item tardio') {
           ],
         },
       ],
+    },
+  }
+}
+
+function appendAreaBody(targetParentNodeId: string, titulo = 'Setor tardio AREA') {
+  return {
+    appendKind: 'AREA' as const,
+    targetParentNodeId,
+    reason: 'Necessidade de novo setor',
+    originType: 'MANUAL' as const,
+    matrixRootItemId: null,
+    area: {
+      titulo,
+      orderIndex: 1,
+      sourceOrigin: 'manual' as const,
+      steps: [
+        {
+          titulo: 'Atividade do setor',
+          orderIndex: 1,
+          plannedMinutes: 20,
+          sourceOrigin: 'manual' as const,
+          required: true,
+        },
+      ],
+    },
+  }
+}
+
+function appendStepBody(targetParentNodeId: string, titulo = 'Atividade tardia STEP') {
+  return {
+    appendKind: 'STEP' as const,
+    targetParentNodeId,
+    reason: 'Necessidade de nova atividade',
+    originType: 'MANUAL' as const,
+    matrixRootItemId: null,
+    step: {
+      titulo,
+      orderIndex: 1,
+      plannedMinutes: 10,
+      sourceOrigin: 'manual' as const,
+      required: true,
     },
   }
 }
@@ -200,7 +242,9 @@ describe.skipIf(!hasDb)('conveyor structure append HTTP (integração)', () => {
 
     expect(res.status).toBe(200)
     expect(res.body.meta.structureItemAppendIdempotent).toBe(false)
+    expect(res.body.meta.appendKind).toBe('OPTION')
     expect(res.body.meta.addedOptionId).toBeTruthy()
+    expect(res.body.meta.addedNodeId).toBe(res.body.meta.addedOptionId)
     expect(Array.isArray(res.body.meta.addedStepIds)).toBe(true)
     expect(res.body.meta.addedStepIds.length).toBe(1)
     // Append bem-sucedido NÃO altera ciclo de vida da esteira
@@ -315,6 +359,124 @@ describe.skipIf(!hasDb)('conveyor structure append HTTP (integração)', () => {
       .set('Idempotency-Key', key)
       .send(appendBody('Segundo diferente'))
     expect(second.status).toBe(409)
+  })
+
+  it('append AREA sob OPTION: 200, totais, meta sem addedOptionId', async () => {
+    const cid = await seedEmAndamento()
+    const cookie = await adminCookie()
+    const before = await request(app).get(`/api/v1/conveyors/${cid}`).set('Cookie', cookie)
+    expect(before.status).toBe(200)
+    const optionId = before.body.data.structure.options[0].id as string
+    const beforeTotals = {
+      totalOptions: before.body.data.totalOptions as number,
+      totalAreas: before.body.data.totalAreas as number,
+      totalSteps: before.body.data.totalSteps as number,
+      totalPlannedMinutes: before.body.data.totalPlannedMinutes as number,
+    }
+
+    const key = randomUUID()
+    const res = await request(app)
+      .post(`/api/v1/conveyors/${cid}/structure/items`)
+      .set('Cookie', cookie)
+      .set('Idempotency-Key', key)
+      .send(appendAreaBody(optionId))
+
+    expect(res.status).toBe(200)
+    expect(res.body.meta.appendKind).toBe('AREA')
+    expect(res.body.meta.addedOptionId).toBeNull()
+    expect(res.body.meta.addedAreaId).toBeTruthy()
+    expect(res.body.meta.addedNodeId).toBe(res.body.meta.addedAreaId)
+    expect(res.body.meta.addedStepIds).toHaveLength(1)
+    expect(res.body.data.totalOptions).toBe(beforeTotals.totalOptions)
+    expect(res.body.data.totalAreas).toBe(beforeTotals.totalAreas + 1)
+    expect(res.body.data.totalSteps).toBe(beforeTotals.totalSteps + 1)
+    expect(res.body.data.totalPlannedMinutes).toBe(beforeTotals.totalPlannedMinutes + 20)
+    expect(res.body.data.operationalStatus).toBe('EM_ANDAMENTO')
+
+    const stepId = res.body.meta.addedStepIds[0] as string
+    const metaRow = await pool.query<{ metadata_json: unknown }>(
+      `SELECT metadata_json FROM conveyor_nodes WHERE id = $1::uuid`,
+      [stepId],
+    )
+    expect((metaRow.rows[0]?.metadata_json as Record<string, unknown>).lateAddToWeeklyBacklog).toBe(
+      true,
+    )
+
+    const replay = await request(app)
+      .post(`/api/v1/conveyors/${cid}/structure/items`)
+      .set('Cookie', cookie)
+      .set('Idempotency-Key', key)
+      .send(appendAreaBody(optionId))
+    expect(replay.status).toBe(200)
+    expect(replay.body.meta.structureItemAppendIdempotent).toBe(true)
+    expect(replay.body.meta.addedAreaId).toBe(res.body.meta.addedAreaId)
+    expect(replay.body.data.totalAreas).toBe(res.body.data.totalAreas)
+  })
+
+  it('append STEP sob AREA: 200, totais, meta sem addedOptionId', async () => {
+    const cid = await seedEmAndamento()
+    const cookie = await adminCookie()
+    const before = await request(app).get(`/api/v1/conveyors/${cid}`).set('Cookie', cookie)
+    expect(before.status).toBe(200)
+    const areaId = before.body.data.structure.options[0].areas[0].id as string
+    const beforeTotals = {
+      totalOptions: before.body.data.totalOptions as number,
+      totalAreas: before.body.data.totalAreas as number,
+      totalSteps: before.body.data.totalSteps as number,
+      totalPlannedMinutes: before.body.data.totalPlannedMinutes as number,
+    }
+
+    const key = randomUUID()
+    const res = await request(app)
+      .post(`/api/v1/conveyors/${cid}/structure/items`)
+      .set('Cookie', cookie)
+      .set('Idempotency-Key', key)
+      .send(appendStepBody(areaId))
+
+    expect(res.status).toBe(200)
+    expect(res.body.meta.appendKind).toBe('STEP')
+    expect(res.body.meta.addedOptionId).toBeNull()
+    expect(res.body.meta.addedAreaId).toBeNull()
+    expect(res.body.meta.addedNodeId).toBe(res.body.meta.addedStepIds[0])
+    expect(res.body.meta.addedStepIds).toHaveLength(1)
+    expect(res.body.data.totalOptions).toBe(beforeTotals.totalOptions)
+    expect(res.body.data.totalAreas).toBe(beforeTotals.totalAreas)
+    expect(res.body.data.totalSteps).toBe(beforeTotals.totalSteps + 1)
+    expect(res.body.data.totalPlannedMinutes).toBe(beforeTotals.totalPlannedMinutes + 10)
+
+    const stepId = res.body.meta.addedStepIds[0] as string
+    const metaRow = await pool.query<{ metadata_json: unknown }>(
+      `SELECT metadata_json FROM conveyor_nodes WHERE id = $1::uuid`,
+      [stepId],
+    )
+    expect((metaRow.rows[0]?.metadata_json as Record<string, unknown>).lateAddToWeeklyBacklog).toBe(
+      true,
+    )
+
+    const replay = await request(app)
+      .post(`/api/v1/conveyors/${cid}/structure/items`)
+      .set('Cookie', cookie)
+      .set('Idempotency-Key', key)
+      .send(appendStepBody(areaId))
+    expect(replay.status).toBe(200)
+    expect(replay.body.meta.structureItemAppendIdempotent).toBe(true)
+    expect(replay.body.meta.addedStepIds[0]).toBe(stepId)
+  })
+
+  it('legado sem appendKind + option → tratado como OPTION', async () => {
+    const cid = await seedEmAndamento()
+    const cookie = await adminCookie()
+    const legacy = appendBody('Legado OPTION')
+    const withoutKind = { ...legacy }
+    delete (withoutKind as { appendKind?: string }).appendKind
+    const res = await request(app)
+      .post(`/api/v1/conveyors/${cid}/structure/items`)
+      .set('Cookie', cookie)
+      .set('Idempotency-Key', randomUUID())
+      .send(withoutKind)
+    expect(res.status).toBe(200)
+    expect(res.body.meta.appendKind).toBe('OPTION')
+    expect(res.body.meta.addedOptionId).toBeTruthy()
   })
 
   it('A6: STEP late-add ABORTED / restore preserva flag lateAddToWeeklyBacklog', async () => {

@@ -295,28 +295,80 @@ export type PatchConveyorStructureBody = z.infer<
 
 export type PostConveyorOptionBody = z.infer<typeof postConveyorOptionSchema>
 
-/**
- * POST /api/v1/conveyors/:id/structure/items — inclusão tardia (append-only)
- * em esteira EM_ANDAMENTO. Reusa schemas de OPTION/AREA/STEP do create.
- */
-export const postConveyorStructureItemBodySchema = z.object({
-  reason: z
-    .string()
-    .transform((s) => s.trim())
-    .pipe(
-      z
-        .string()
-        .min(3, 'Motivo deve ter entre 3 e 500 caracteres.')
-        .max(500, 'Motivo deve ter entre 3 e 500 caracteres.'),
-    ),
+const lateAppendReasonSchema = z
+  .string()
+  .transform((s) => s.trim())
+  .pipe(
+    z
+      .string()
+      .min(3, 'Motivo deve ter entre 3 e 500 caracteres.')
+      .max(500, 'Motivo deve ter entre 3 e 500 caracteres.'),
+  )
+
+const lateAppendCommonFields = {
+  reason: lateAppendReasonSchema,
   originType: z.enum(['MANUAL', 'BASE', 'HYBRID']),
   matrixRootItemId: z.string().uuid().nullable().optional(),
+}
+
+/**
+ * POST /api/v1/conveyors/:id/structure/items — inclusão tardia multinível (append-only).
+ * Discriminado por `appendKind`. Body legado sem appendKind + `option` → OPTION.
+ */
+const postConveyorStructureItemOptionSchema = z.object({
+  /** Sempre materializado pelo preprocess (legado sem appendKind → OPTION). */
+  appendKind: z.literal('OPTION'),
+  targetParentNodeId: z.null().optional(),
+  ...lateAppendCommonFields,
   option: postConveyorOptionSchema,
 })
 
+const postConveyorStructureItemAreaSchema = z.object({
+  appendKind: z.literal('AREA'),
+  targetParentNodeId: z.string().uuid(),
+  ...lateAppendCommonFields,
+  area: postConveyorAreaSchema,
+})
+
+const postConveyorStructureItemStepSchema = z.object({
+  appendKind: z.literal('STEP'),
+  targetParentNodeId: z.string().uuid(),
+  ...lateAppendCommonFields,
+  step: postConveyorStepSchema,
+})
+
+export const postConveyorStructureItemBodySchema = z.preprocess(
+  (raw) => {
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return raw
+    const o = raw as Record<string, unknown>
+    if (o.appendKind == null && o.option != null) {
+      return { ...o, appendKind: 'OPTION' }
+    }
+    return raw
+  },
+  z.discriminatedUnion('appendKind', [
+    postConveyorStructureItemOptionSchema,
+    postConveyorStructureItemAreaSchema,
+    postConveyorStructureItemStepSchema,
+  ]),
+)
+
 export type PostConveyorStructureItemBody = z.infer<
-  typeof postConveyorStructureItemBodySchema
+  typeof postConveyorStructureItemOptionSchema
+> | z.infer<typeof postConveyorStructureItemAreaSchema> | z.infer<
+  typeof postConveyorStructureItemStepSchema
 >
+export type PostConveyorStructureItemOptionBody = z.infer<
+  typeof postConveyorStructureItemOptionSchema
+>
+export type PostConveyorStructureItemAreaBody = z.infer<
+  typeof postConveyorStructureItemAreaSchema
+>
+export type PostConveyorStructureItemStepBody = z.infer<
+  typeof postConveyorStructureItemStepSchema
+>
+export type PostConveyorAreaBody = z.infer<typeof postConveyorAreaSchema>
+export type PostConveyorStepBody = z.infer<typeof postConveyorStepSchema>
 
 const emptyQueryToUndef = (v: unknown): unknown =>
   v === '' || v === undefined ? undefined : v

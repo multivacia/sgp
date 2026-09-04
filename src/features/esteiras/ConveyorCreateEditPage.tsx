@@ -386,7 +386,7 @@ export function ConveyorCreateEditPage({ mode }: { mode: Mode }) {
 
   useEffect(() => {
     if (matrizes.length === 0) return
-    if (mode !== 'create' && aba !== 'estrutura') return
+    if (mode !== 'create' && aba !== 'estrutura' && !lateAppendOpen) return
     let cancelled = false
     ;(async () => {
       setTreesLoading(true)
@@ -407,7 +407,7 @@ export function ConveyorCreateEditPage({ mode }: { mode: Mode }) {
     return () => {
       cancelled = true
     }
-  }, [aba, matrizes, mode, pathname, presentBlocking])
+  }, [aba, lateAppendOpen, matrizes, mode, pathname, presentBlocking])
 
   const removeDraftOptionKey = useCallback((optionKey: string) => {
     setManualRoots((prev) => {
@@ -882,6 +882,13 @@ export function ConveyorCreateEditPage({ mode }: { mode: Mode }) {
         open={lateAppendOpen}
         busy={lateAppendBusy}
         error={lateAppendError}
+        structure={detail?.structure ?? { options: [] }}
+        matrices={matrizes}
+        matricesLoading={matrizesLoading}
+        matricesError={matrizesError}
+        treeByMatrixId={treeByMatrixId}
+        treesLoading={treesLoading}
+        treesError={treesError}
         colabList={colabList}
         colabLoading={colabLoading}
         colabError={colabError}

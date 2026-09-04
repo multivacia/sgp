@@ -247,13 +247,37 @@ export type PatchConveyorStructureBody = {
   options: CreateConveyorOptionInput[]
 }
 
-/** POST /api/v1/conveyors/:id/structure/items — inclusão tardia (append-only). */
-export type PostConveyorStructureItemBody = {
+/** POST /api/v1/conveyors/:id/structure/items — inclusão tardia multinível (append-only). */
+export type StructureAppendKind = 'OPTION' | 'AREA' | 'STEP'
+
+type PostConveyorStructureItemCommon = {
   reason: string
   originType: ConveyorOriginRegister
   matrixRootItemId?: string | null
+}
+
+export type PostConveyorStructureItemOptionBody = PostConveyorStructureItemCommon & {
+  appendKind?: 'OPTION'
+  targetParentNodeId?: null
   option: CreateConveyorOptionInput
 }
+
+export type PostConveyorStructureItemAreaBody = PostConveyorStructureItemCommon & {
+  appendKind: 'AREA'
+  targetParentNodeId: string
+  area: CreateConveyorAreaInput
+}
+
+export type PostConveyorStructureItemStepBody = PostConveyorStructureItemCommon & {
+  appendKind: 'STEP'
+  targetParentNodeId: string
+  step: CreateConveyorStepInput
+}
+
+export type PostConveyorStructureItemBody =
+  | PostConveyorStructureItemOptionBody
+  | PostConveyorStructureItemAreaBody
+  | PostConveyorStructureItemStepBody
 
 /** Corpo do PATCH /api/v1/conveyors/:id/status */
 export type PatchConveyorStatusBody = {

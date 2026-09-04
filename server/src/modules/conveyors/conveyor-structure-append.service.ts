@@ -11,6 +11,7 @@ import { appUserHasPermission } from '../permissions/permissions.repository.js'
 import { parseIdempotencyKeyHeader } from './conveyor-step-abort.service.js'
 import {
   computeStructureAppendFingerprint,
+  fingerprintInputFromAppendBody,
   LATE_STRUCTURE_APPEND_REASON_CODE,
 } from './conveyor-structure-append.fingerprint.js'
 import { detectSyntheticSubtreeRollupInCreatePayload } from './conveyorCreateDiagnostics.js'
@@ -28,7 +29,9 @@ import {
   type ConveyorDetailRow,
 } from './conveyors.repository.js'
 import type {
+  PostConveyorAreaBody,
   PostConveyorOptionBody,
+  PostConveyorStepBody,
   PostConveyorStructureItemBody,
 } from './conveyors.schemas.js'
 import {
@@ -67,6 +70,29 @@ function revalidateOption(option: PostConveyorOptionBody): void {
   }
 }
 
+function revalidateArea(area: PostConveyorAreaBody): void {
+  const steps = [...area.steps].sort((a, b) => a.orderIndex - b.orderIndex)
+  assertUniqueOrderIndices(steps, `Etapas da área "${area.titulo}"`)
+}
+
+function computeAreaTotals(area: PostConveyorAreaBody): {
+  totalAreas: number
+  totalSteps: number
+  totalPlannedMinutes: number
+} {
+  let totalSteps = 0
+  let totalPlannedMinutes = 0
+  const steps = [...area.steps].sort((a, b) => a.orderIndex - b.orderIndex)
+  for (const st of steps) {
+    totalSteps++
+    totalPlannedMinutes += resolveActivityPlannedTotalMinutes(
+      st.plannedMinutes,
+      resolveInitialConveyorStepPlannedQuantity(),
+    )
+  }
+  return { totalAreas: 1, totalSteps, totalPlannedMinutes }
+}
+
 function computeOptionTotals(option: PostConveyorOptionBody): {
   totalAreas: number
   totalSteps: number
@@ -77,38 +103,52 @@ function computeOptionTotals(option: PostConveyorOptionBody): {
   let totalPlannedMinutes = 0
   const areas = [...option.areas].sort((a, b) => a.orderIndex - b.orderIndex)
   for (const ar of areas) {
-    totalAreas++
-    const steps = [...ar.steps].sort((a, b) => a.orderIndex - b.orderIndex)
-    for (const st of steps) {
-      totalSteps++
-      totalPlannedMinutes += resolveActivityPlannedTotalMinutes(
-        st.plannedMinutes,
-        resolveInitialConveyorStepPlannedQuantity(),
-      )
-    }
+    const t = computeAreaTotals(ar)
+    totalAreas += t.totalAreas
+    totalSteps += t.totalSteps
+    totalPlannedMinutes += t.totalPlannedMinutes
   }
   return { totalAreas, totalSteps, totalPlannedMinutes }
 }
 
-function collectAssigneeTargets(option: PostConveyorOptionBody): {
+function computeStepTotals(step: PostConveyorStepBody): {
+  totalAreas: number
+  totalSteps: number
+  totalPlannedMinutes: number
+} {
+  return {
+    totalAreas: 0,
+    totalSteps: 1,
+    totalPlannedMinutes: resolveActivityPlannedTotalMinutes(
+      step.plannedMinutes,
+      resolveInitialConveyorStepPlannedQuantity(),
+    ),
+  }
+}
+
+function collectAssigneeTargetsFromSteps(
+  steps: readonly PostConveyorStepBody[],
+): {
   collaboratorIds: Set<string>
   teamIds: Set<string>
 } {
   const collaboratorIds = new Set<string>()
   const teamIds = new Set<string>()
-  for (const ar of option.areas) {
-    for (const st of ar.steps) {
-      for (const a of st.assignees ?? []) {
-        const t = a.type ?? 'COLLABORATOR'
-        if (t === 'TEAM') {
-          if (a.teamId) teamIds.add(a.teamId)
-          continue
-        }
-        if (a.collaboratorId) collaboratorIds.add(a.collaboratorId)
+  for (const st of steps) {
+    for (const a of st.assignees ?? []) {
+      const t = a.type ?? 'COLLABORATOR'
+      if (t === 'TEAM') {
+        if (a.teamId) teamIds.add(a.teamId)
+        continue
       }
+      if (a.collaboratorId) collaboratorIds.add(a.collaboratorId)
     }
   }
   return { collaboratorIds, teamIds }
+}
+
+function collectAssigneeTargets(option: PostConveyorOptionBody) {
+  return collectAssigneeTargetsFromSteps(option.areas.flatMap((ar) => ar.steps))
 }
 
 async function assertCanAppend(pool: pg.Pool, actorAppUserId: string): Promise<void> {
@@ -222,20 +262,39 @@ function fingerprintFromEventMetadata(meta: Record<string, unknown> | null): str
   return typeof fp === 'string' && fp.trim() ? fp.trim() : null
 }
 
-function idsFromEventMetadata(meta: Record<string, unknown> | null): {
+export type AppendIdsFromMetadata = {
+  appendKind: 'OPTION' | 'AREA' | 'STEP' | null
+  addedNodeId: string | null
   addedOptionId: string | null
+  addedAreaId: string | null
   addedStepIds: string[]
-} {
+}
+
+function idsFromEventMetadata(meta: Record<string, unknown> | null): AppendIdsFromMetadata {
   if (!meta || typeof meta !== 'object') {
-    return { addedOptionId: null, addedStepIds: [] }
+    return {
+      appendKind: null,
+      addedNodeId: null,
+      addedOptionId: null,
+      addedAreaId: null,
+      addedStepIds: [],
+    }
   }
+  const rawKind = meta.appendKind
+  const appendKind =
+    rawKind === 'OPTION' || rawKind === 'AREA' || rawKind === 'STEP' ? rawKind : null
   const addedOptionId =
     typeof meta.addedOptionId === 'string' ? meta.addedOptionId : null
+  const addedAreaId = typeof meta.addedAreaId === 'string' ? meta.addedAreaId : null
+  const addedNodeId =
+    typeof meta.addedNodeId === 'string'
+      ? meta.addedNodeId
+      : addedOptionId ?? addedAreaId ?? null
   const raw = meta.addedStepIds
   const addedStepIds = Array.isArray(raw)
     ? raw.filter((x): x is string => typeof x === 'string')
     : []
-  return { addedOptionId, addedStepIds }
+  return { appendKind, addedNodeId, addedOptionId, addedAreaId, addedStepIds }
 }
 
 /**
@@ -261,6 +320,227 @@ export function assertEventMatchesAppend(
   )
 }
 
+/**
+ * Replay exige IDs coerentes com o kind.
+ * OPTION: addedOptionId obrigatório (legado).
+ * AREA/STEP: addedNodeId (ou addedAreaId / primeiro step) — sem exigir addedOptionId.
+ */
+export function assertReplayIdsForKind(
+  ids: AppendIdsFromMetadata,
+  appendKind: 'OPTION' | 'AREA' | 'STEP',
+): void {
+  if (appendKind === 'OPTION') {
+    if (!ids.addedOptionId) {
+      throw new AppError(
+        'Idempotency-Key já utilizada em outra operação.',
+        409,
+        ErrorCodes.CONFLICT,
+      )
+    }
+    return
+  }
+  if (appendKind === 'AREA') {
+    if (!ids.addedAreaId && !ids.addedNodeId) {
+      throw new AppError(
+        'Idempotency-Key já utilizada em outra operação.',
+        409,
+        ErrorCodes.CONFLICT,
+      )
+    }
+    return
+  }
+  if (ids.addedStepIds.length === 0 && !ids.addedNodeId) {
+    throw new AppError(
+      'Idempotency-Key já utilizada em outra operação.',
+      409,
+      ErrorCodes.CONFLICT,
+    )
+  }
+}
+
+type ParentNodeRow = {
+  id: string
+  conveyor_id: string
+  root_id: string
+  parent_id: string | null
+  node_type: 'OPTION' | 'AREA' | 'STEP'
+  is_active: boolean
+  deleted_at: Date | null
+}
+
+async function loadAndAssertParentNode(
+  client: pg.PoolClient,
+  input: {
+    conveyorId: string
+    parentId: string
+    expectedType: 'OPTION' | 'AREA'
+  },
+): Promise<ParentNodeRow> {
+  const r = await client.query<ParentNodeRow>(
+    `
+    SELECT
+      id::text,
+      conveyor_id::text,
+      root_id::text,
+      parent_id::text,
+      node_type,
+      is_active,
+      deleted_at
+    FROM conveyor_nodes
+    WHERE id = $1::uuid
+    `,
+    [input.parentId],
+  )
+  const row = r.rows[0]
+  if (!row || row.deleted_at != null) {
+    throw new AppError(
+      'Nó pai não encontrado ou removido.',
+      422,
+      ErrorCodes.VALIDATION_ERROR,
+    )
+  }
+  if (row.conveyor_id !== input.conveyorId) {
+    throw new AppError(
+      'Nó pai não pertence a esta esteira.',
+      422,
+      ErrorCodes.VALIDATION_ERROR,
+    )
+  }
+  if (!row.is_active) {
+    throw new AppError('Nó pai está inativo.', 422, ErrorCodes.VALIDATION_ERROR)
+  }
+  if (row.node_type !== input.expectedType) {
+    throw new AppError(
+      input.expectedType === 'OPTION'
+        ? 'Área tardia deve ser incluída sob uma tarefa (OPTION).'
+        : 'Atividade tardia deve ser incluída sob um setor (AREA).',
+      422,
+      ErrorCodes.VALIDATION_ERROR,
+    )
+  }
+  return row
+}
+
+async function nextSiblingOrderIndex(
+  client: pg.PoolClient,
+  input: {
+    conveyorId: string
+    parentId: string | null
+    nodeType: 'OPTION' | 'AREA' | 'STEP'
+  },
+): Promise<number> {
+  const r = await client.query<{ max: number | null }>(
+    input.parentId == null
+      ? `
+        SELECT MAX(order_index) AS max
+          FROM conveyor_nodes
+         WHERE conveyor_id = $1::uuid
+           AND deleted_at IS NULL
+           AND node_type = $2
+           AND parent_id IS NULL
+        `
+      : `
+        SELECT MAX(order_index) AS max
+          FROM conveyor_nodes
+         WHERE conveyor_id = $1::uuid
+           AND deleted_at IS NULL
+           AND node_type = $2
+           AND parent_id = $3::uuid
+        `,
+    input.parentId == null
+      ? [input.conveyorId, input.nodeType]
+      : [input.conveyorId, input.nodeType, input.parentId],
+  )
+  const max = r.rows[0]?.max
+  return (typeof max === 'number' ? max : 0) + 1
+}
+
+async function insertStepAssignees(
+  client: pg.PoolClient,
+  input: {
+    conveyorId: string
+    stepId: string
+    assignees: PostConveyorStepBody['assignees']
+  },
+): Promise<void> {
+  const assignees = input.assignees ?? []
+  for (let i = 0; i < assignees.length; i++) {
+    const a = assignees[i]!
+    const t = a.type ?? 'COLLABORATOR'
+    await insertConveyorNodeAssignee(client, {
+      id: newAssignmentId(),
+      conveyor_id: input.conveyorId,
+      conveyor_node_id: input.stepId,
+      assignment_type: t,
+      collaborator_id: t === 'COLLABORATOR' ? (a.collaboratorId ?? null) : null,
+      team_id: t === 'TEAM' ? (a.teamId ?? null) : null,
+      is_primary: a.isPrimary,
+      assignment_origin: a.assignmentOrigin ?? 'base',
+      order_index: a.orderIndex ?? i,
+      metadata_json: null,
+    })
+  }
+}
+
+async function materializeAppendStepsUnderArea(
+  client: pg.PoolClient,
+  input: {
+    conveyorId: string
+    areaId: string
+    rootId: string
+    steps: PostConveyorStepBody[]
+    stepMetadata: Record<string, unknown>
+    /** Quando true, order_index do body é ignorado e usa nextSibling sob a área. */
+    renumberFromSibling?: boolean
+  },
+): Promise<string[]> {
+  const stepIds: string[] = []
+  const steps = [...input.steps].sort((a, b) => a.orderIndex - b.orderIndex)
+  let nextOrder = input.renumberFromSibling
+    ? await nextSiblingOrderIndex(client, {
+        conveyorId: input.conveyorId,
+        parentId: input.areaId,
+        nodeType: 'STEP',
+      })
+    : null
+
+  for (const st of steps) {
+    const stepId = newNodeId()
+    stepIds.push(stepId)
+    const orderIndex = nextOrder ?? st.orderIndex
+    if (nextOrder != null) nextOrder += 1
+    await insertConveyorNode(client, {
+      id: stepId,
+      conveyor_id: input.conveyorId,
+      parent_id: input.areaId,
+      root_id: input.rootId,
+      node_type: 'STEP',
+      source_origin: st.sourceOrigin,
+      code: null,
+      name: st.titulo.trim(),
+      description: null,
+      order_index: orderIndex,
+      level_depth: 2,
+      is_active: true,
+      planned_minutes: st.plannedMinutes,
+      planned_quantity: resolveInitialConveyorStepPlannedQuantity(),
+      default_responsible_id: null,
+      required: st.required ?? true,
+      source_key: st.sourceKey?.trim() || null,
+      metadata_json: input.stepMetadata,
+      operational_status: 'PENDING',
+      operational_completed_at: null,
+      operational_completed_by: null,
+    })
+    await insertStepAssignees(client, {
+      conveyorId: input.conveyorId,
+      stepId,
+      assignees: st.assignees,
+    })
+  }
+  return stepIds
+}
+
 async function materializeAppendOption(
   client: pg.PoolClient,
   input: {
@@ -269,8 +549,9 @@ async function materializeAppendOption(
     optionOrderIndex: number
     stepMetadata: Record<string, unknown>
   },
-): Promise<{ optionId: string; stepIds: string[] }> {
+): Promise<{ optionId: string; areaIds: string[]; stepIds: string[] }> {
   const optionId = newNodeId()
+  const areaIds: string[] = []
   const stepIds: string[] = []
 
   await insertConveyorNode(client, {
@@ -300,6 +581,7 @@ async function materializeAppendOption(
   const areas = [...input.option.areas].sort((a, b) => a.orderIndex - b.orderIndex)
   for (const ar of areas) {
     const areaId = newNodeId()
+    areaIds.push(areaId)
     await insertConveyorNode(client, {
       id: areaId,
       conveyor_id: input.conveyorId,
@@ -324,55 +606,66 @@ async function materializeAppendOption(
       operational_completed_by: null,
     })
 
-    const steps = [...ar.steps].sort((a, b) => a.orderIndex - b.orderIndex)
-    for (const st of steps) {
-      const stepId = newNodeId()
-      stepIds.push(stepId)
-      await insertConveyorNode(client, {
-        id: stepId,
-        conveyor_id: input.conveyorId,
-        parent_id: areaId,
-        root_id: optionId,
-        node_type: 'STEP',
-        source_origin: st.sourceOrigin,
-        code: null,
-        name: st.titulo.trim(),
-        description: null,
-        order_index: st.orderIndex,
-        level_depth: 2,
-        is_active: true,
-        planned_minutes: st.plannedMinutes,
-        planned_quantity: resolveInitialConveyorStepPlannedQuantity(),
-        default_responsible_id: null,
-        required: st.required ?? true,
-        source_key: st.sourceKey?.trim() || null,
-        metadata_json: input.stepMetadata,
-        operational_status: 'PENDING',
-        operational_completed_at: null,
-        operational_completed_by: null,
-      })
-
-      const assignees = st.assignees ?? []
-      for (let i = 0; i < assignees.length; i++) {
-        const a = assignees[i]!
-        const t = a.type ?? 'COLLABORATOR'
-        await insertConveyorNodeAssignee(client, {
-          id: newAssignmentId(),
-          conveyor_id: input.conveyorId,
-          conveyor_node_id: stepId,
-          assignment_type: t,
-          collaborator_id: t === 'COLLABORATOR' ? (a.collaboratorId ?? null) : null,
-          team_id: t === 'TEAM' ? (a.teamId ?? null) : null,
-          is_primary: a.isPrimary,
-          assignment_origin: a.assignmentOrigin ?? 'base',
-          order_index: a.orderIndex ?? i,
-          metadata_json: null,
-        })
-      }
-    }
+    const ids = await materializeAppendStepsUnderArea(client, {
+      conveyorId: input.conveyorId,
+      areaId,
+      rootId: optionId,
+      steps: ar.steps,
+      stepMetadata: input.stepMetadata,
+    })
+    stepIds.push(...ids)
   }
 
-  return { optionId, stepIds }
+  return { optionId, areaIds, stepIds }
+}
+
+async function materializeAppendArea(
+  client: pg.PoolClient,
+  input: {
+    conveyorId: string
+    parentOption: ParentNodeRow
+    area: PostConveyorAreaBody
+    stepMetadata: Record<string, unknown>
+  },
+): Promise<{ areaId: string; stepIds: string[] }> {
+  const areaId = newNodeId()
+  const orderIndex = await nextSiblingOrderIndex(client, {
+    conveyorId: input.conveyorId,
+    parentId: input.parentOption.id,
+    nodeType: 'AREA',
+  })
+  await insertConveyorNode(client, {
+    id: areaId,
+    conveyor_id: input.conveyorId,
+    parent_id: input.parentOption.id,
+    root_id: input.parentOption.root_id,
+    node_type: 'AREA',
+    source_origin: input.area.sourceOrigin,
+    code: null,
+    name: input.area.titulo.trim(),
+    description: null,
+    order_index: orderIndex,
+    level_depth: 1,
+    is_active: true,
+    planned_minutes: null,
+    planned_quantity: 1,
+    default_responsible_id: null,
+    required: true,
+    source_key: null,
+    metadata_json: null,
+    operational_status: null,
+    operational_completed_at: null,
+    operational_completed_by: null,
+  })
+
+  const stepIds = await materializeAppendStepsUnderArea(client, {
+    conveyorId: input.conveyorId,
+    areaId,
+    rootId: input.parentOption.root_id,
+    steps: input.area.steps,
+    stepMetadata: input.stepMetadata,
+  })
+  return { areaId, stepIds }
 }
 
 async function updateConveyorTotalsOnly(
@@ -405,24 +698,6 @@ async function updateConveyorTotalsOnly(
   )
 }
 
-async function nextOptionOrderIndex(
-  client: pg.PoolClient,
-  conveyorId: string,
-): Promise<number> {
-  const r = await client.query<{ max: number | null }>(
-    `
-    SELECT MAX(order_index) AS max
-      FROM conveyor_nodes
-     WHERE conveyor_id = $1::uuid
-       AND deleted_at IS NULL
-       AND node_type = 'OPTION'
-    `,
-    [conveyorId],
-  )
-  const max = r.rows[0]?.max
-  return (typeof max === 'number' ? max : 0) + 1
-}
-
 async function loadDetail(pool: pg.Pool, conveyorId: string): Promise<ConveyorDetailApi> {
   const rowAfter = await findConveyorById(pool, conveyorId)
   if (!rowAfter) {
@@ -433,10 +708,89 @@ async function loadDetail(pool: pg.Pool, conveyorId: string): Promise<ConveyorDe
   return mapDetailRowToApi(rowAfter, structureAfter)
 }
 
+function assertNoSyntheticRollupForAppend(body: PostConveyorStructureItemBody): void {
+  const kind = body.appendKind
+  if (kind === 'OPTION') {
+    const rollup = detectSyntheticSubtreeRollupInCreatePayload({
+      options: [body.option],
+    })
+    if (rollup.length > 0) {
+      throw new AppError(
+        'A estrutura contém uma etapa sintética de Matriz. Remova o item agregado e mantenha apenas as atividades reais.',
+        422,
+        ErrorCodes.CONVEYOR_SYNTHETIC_ROLLUP_STEP,
+        { findings: rollup },
+        {
+          errorRef: ErrorRefs.CONVEYOR_CREATE_FAILED,
+          category: 'BUSINESS',
+          severity: 'warning',
+        },
+      )
+    }
+    return
+  }
+  if (kind === 'AREA') {
+    // Adaptação: envolve a área sob OPTION placeholder que não casa com títulos de step.
+    const rollup = detectSyntheticSubtreeRollupInCreatePayload({
+      options: [
+        {
+          titulo: '__late_append_area__',
+          orderIndex: 1,
+          sourceOrigin: body.area.sourceOrigin,
+          areas: [body.area],
+        },
+      ],
+    })
+    if (rollup.length > 0) {
+      throw new AppError(
+        'A estrutura contém uma etapa sintética de Matriz. Remova o item agregado e mantenha apenas as atividades reais.',
+        422,
+        ErrorCodes.CONVEYOR_SYNTHETIC_ROLLUP_STEP,
+        { findings: rollup },
+        {
+          errorRef: ErrorRefs.CONVEYOR_CREATE_FAILED,
+          category: 'BUSINESS',
+          severity: 'warning',
+        },
+      )
+    }
+  }
+  // STEP único: detector de rollup de subárvore não se aplica.
+}
+
+async function assertAssigneesValid(
+  pool: pg.Pool,
+  targets: { collaboratorIds: Set<string>; teamIds: Set<string> },
+): Promise<void> {
+  for (const cid of targets.collaboratorIds) {
+    const ok = await collaboratorActiveForOperations(pool, cid)
+    if (!ok) {
+      throw new AppError(
+        'Colaborador de alocação inexistente, inativo ou indisponível.',
+        422,
+        ErrorCodes.VALIDATION_ERROR,
+      )
+    }
+  }
+  for (const tid of targets.teamIds) {
+    const t = await findTeamById(pool, tid)
+    if (!t || !t.is_active || t.deleted_at) {
+      throw new AppError(
+        'Time de alocação inexistente ou inativo.',
+        422,
+        ErrorCodes.VALIDATION_ERROR,
+      )
+    }
+  }
+}
+
 export type AppendStructureItemResult = {
   detail: ConveyorDetailApi
   structureItemAppendIdempotent: boolean
-  addedOptionId: string
+  appendKind: 'OPTION' | 'AREA' | 'STEP'
+  addedNodeId: string
+  addedOptionId: string | null
+  addedAreaId: string | null
   addedStepIds: string[]
 }
 
@@ -451,64 +805,43 @@ export async function serviceAppendConveyorStructureItem(
 ): Promise<AppendStructureItemResult> {
   await assertCanAppend(pool, input.actorAppUserId)
 
-  const reason = input.body.reason
-  const option = input.body.option
-  revalidateOption(option)
-
+  const body = input.body
+  const appendKind = body.appendKind
+  const reason = body.reason
   const matrixRootItemId =
-    input.body.matrixRootItemId === undefined ? null : input.body.matrixRootItemId
+    body.matrixRootItemId === undefined ? null : body.matrixRootItemId
 
-  const fingerprint = computeStructureAppendFingerprint({
-    conveyorId: input.conveyorId,
-    reason,
-    originType: input.body.originType,
-    matrixRootItemId,
-    option,
-  })
-
-  const assigneeTargets = collectAssigneeTargets(option)
-  for (const cid of assigneeTargets.collaboratorIds) {
-    const ok = await collaboratorActiveForOperations(pool, cid)
-    if (!ok) {
-      throw new AppError(
-        'Colaborador de alocação inexistente, inativo ou indisponível.',
-        422,
-        ErrorCodes.VALIDATION_ERROR,
-      )
-    }
-  }
-  for (const tid of assigneeTargets.teamIds) {
-    const t = await findTeamById(pool, tid)
-    if (!t || !t.is_active || t.deleted_at) {
-      throw new AppError(
-        'Time de alocação inexistente ou inativo.',
-        422,
-        ErrorCodes.VALIDATION_ERROR,
-      )
-    }
+  if (appendKind === 'OPTION') {
+    revalidateOption(body.option)
+  } else if (appendKind === 'AREA') {
+    revalidateArea(body.area)
   }
 
-  const rollup = detectSyntheticSubtreeRollupInCreatePayload({
-    options: [option],
-  })
-  if (rollup.length > 0) {
-    throw new AppError(
-      'A estrutura contém uma etapa sintética de Matriz. Remova o item agregado e mantenha apenas as atividades reais.',
-      422,
-      ErrorCodes.CONVEYOR_SYNTHETIC_ROLLUP_STEP,
-      { findings: rollup },
-      {
-        errorRef: ErrorRefs.CONVEYOR_CREATE_FAILED,
-        category: 'BUSINESS',
-        severity: 'warning',
-      },
-    )
-  }
+  const fingerprint = computeStructureAppendFingerprint(
+    fingerprintInputFromAppendBody(input.conveyorId, body),
+  )
 
-  const optionTotals = computeOptionTotals(option)
+  const assigneeTargets =
+    appendKind === 'OPTION'
+      ? collectAssigneeTargets(body.option)
+      : appendKind === 'AREA'
+        ? collectAssigneeTargetsFromSteps(body.area.steps)
+        : collectAssigneeTargetsFromSteps([body.step])
+  await assertAssigneesValid(pool, assigneeTargets)
+  assertNoSyntheticRollupForAppend(body)
+
+  const deltaTotals =
+    appendKind === 'OPTION'
+      ? { totalOptions: 1, ...computeOptionTotals(body.option) }
+      : appendKind === 'AREA'
+        ? { totalOptions: 0, ...computeAreaTotals(body.area) }
+        : { totalOptions: 0, ...computeStepTotals(body.step) }
+
   const client = await pool.connect()
   let structureItemAppendIdempotent = false
-  let addedOptionId = ''
+  let addedOptionId: string | null = null
+  let addedAreaId: string | null = null
+  let addedNodeId = ''
   let addedStepIds: string[] = []
 
   try {
@@ -525,16 +858,17 @@ export async function serviceAppendConveyorStructureItem(
         fingerprint,
       })
       const ids = idsFromEventMetadata(existing.metadata_json)
-      if (!ids.addedOptionId) {
-        throw new AppError(
-          'Idempotency-Key já utilizada em outra operação.',
-          409,
-          ErrorCodes.CONFLICT,
-        )
-      }
+      assertReplayIdsForKind(ids, appendKind)
       structureItemAppendIdempotent = true
       addedOptionId = ids.addedOptionId
+      addedAreaId = ids.addedAreaId
       addedStepIds = ids.addedStepIds
+      addedNodeId =
+        ids.addedNodeId ??
+        ids.addedOptionId ??
+        ids.addedAreaId ??
+        ids.addedStepIds[0] ??
+        ''
       await client.query('COMMIT')
     } else {
       if (conveyor.operational_status !== 'EM_ANDAMENTO') {
@@ -546,8 +880,6 @@ export async function serviceAppendConveyorStructureItem(
       }
 
       const occurredIso = new Date().toISOString()
-      const optionOrderIndex = await nextOptionOrderIndex(client, input.conveyorId)
-
       const stepMetadata = {
         lateAddToWeeklyBacklog: true,
         lateAddAt: occurredIso,
@@ -555,29 +887,75 @@ export async function serviceAppendConveyorStructureItem(
         lateAddByUserId: input.actorAppUserId,
       }
 
-      const materialized = await materializeAppendOption(client, {
-        conveyorId: input.conveyorId,
-        option,
-        optionOrderIndex,
-        stepMetadata,
-      })
-      addedOptionId = materialized.optionId
-      addedStepIds = materialized.stepIds
+      if (appendKind === 'OPTION') {
+        const optionOrderIndex = await nextSiblingOrderIndex(client, {
+          conveyorId: input.conveyorId,
+          parentId: null,
+          nodeType: 'OPTION',
+        })
+        const materialized = await materializeAppendOption(client, {
+          conveyorId: input.conveyorId,
+          option: body.option,
+          optionOrderIndex,
+          stepMetadata,
+        })
+        addedOptionId = materialized.optionId
+        addedAreaId = materialized.areaIds[0] ?? null
+        addedNodeId = materialized.optionId
+        addedStepIds = materialized.stepIds
+      } else if (appendKind === 'AREA') {
+        const parent = await loadAndAssertParentNode(client, {
+          conveyorId: input.conveyorId,
+          parentId: body.targetParentNodeId,
+          expectedType: 'OPTION',
+        })
+        const materialized = await materializeAppendArea(client, {
+          conveyorId: input.conveyorId,
+          parentOption: parent,
+          area: body.area,
+          stepMetadata,
+        })
+        addedOptionId = null
+        addedAreaId = materialized.areaId
+        addedNodeId = materialized.areaId
+        addedStepIds = materialized.stepIds
+      } else {
+        const parent = await loadAndAssertParentNode(client, {
+          conveyorId: input.conveyorId,
+          parentId: body.targetParentNodeId,
+          expectedType: 'AREA',
+        })
+        const stepIds = await materializeAppendStepsUnderArea(client, {
+          conveyorId: input.conveyorId,
+          areaId: parent.id,
+          rootId: parent.root_id,
+          steps: [body.step],
+          stepMetadata,
+          renumberFromSibling: true,
+        })
+        addedOptionId = null
+        addedAreaId = null
+        addedNodeId = stepIds[0]!
+        addedStepIds = stepIds
+      }
 
       await updateConveyorTotalsOnly(client, input.conveyorId, {
-        total_options: conveyor.total_options + 1,
-        total_areas: conveyor.total_areas + optionTotals.totalAreas,
-        total_steps: conveyor.total_steps + optionTotals.totalSteps,
+        total_options: conveyor.total_options + deltaTotals.totalOptions,
+        total_areas: conveyor.total_areas + deltaTotals.totalAreas,
+        total_steps: conveyor.total_steps + deltaTotals.totalSteps,
         total_planned_minutes:
-          conveyor.total_planned_minutes + optionTotals.totalPlannedMinutes,
+          conveyor.total_planned_minutes + deltaTotals.totalPlannedMinutes,
       })
+
+      const targetParentNodeId =
+        appendKind === 'OPTION' ? null : body.targetParentNodeId
 
       const ev = await serviceCreateConveyorOperationalEvent(client, {
         conveyorId: input.conveyorId,
-        nodeId: addedOptionId,
+        nodeId: addedNodeId,
         eventType: 'CONVEYOR_STRUCTURE_ITEM_ADDED',
         previousValue: null,
-        newValue: addedOptionId,
+        newValue: addedNodeId,
         reason: LATE_STRUCTURE_APPEND_REASON_CODE,
         source: 'USER_ACTION',
         occurredAt: occurredIso,
@@ -586,9 +964,13 @@ export async function serviceAppendConveyorStructureItem(
         metadataJson: {
           fingerprint,
           reason,
-          originType: input.body.originType,
+          originType: body.originType,
           matrixRootItemId,
+          appendKind,
+          targetParentNodeId,
+          addedNodeId,
           addedOptionId,
+          addedAreaId,
           addedStepIds,
           idempotencyKey: input.idempotencyKey,
         },
@@ -599,9 +981,17 @@ export async function serviceAppendConveyorStructureItem(
           fingerprint,
         })
         const ids = idsFromEventMetadata(ev.event.metadata_json)
+        assertReplayIdsForKind(ids, appendKind)
         structureItemAppendIdempotent = true
-        if (ids.addedOptionId) addedOptionId = ids.addedOptionId
-        if (ids.addedStepIds.length) addedStepIds = ids.addedStepIds
+        addedOptionId = ids.addedOptionId
+        addedAreaId = ids.addedAreaId
+        addedStepIds = ids.addedStepIds.length ? ids.addedStepIds : addedStepIds
+        addedNodeId =
+          ids.addedNodeId ??
+          ids.addedOptionId ??
+          ids.addedAreaId ??
+          ids.addedStepIds[0] ??
+          addedNodeId
       }
 
       await client.query('COMMIT')
@@ -621,7 +1011,10 @@ export async function serviceAppendConveyorStructureItem(
   return {
     detail,
     structureItemAppendIdempotent,
+    appendKind,
+    addedNodeId,
     addedOptionId,
+    addedAreaId,
     addedStepIds,
   }
 }

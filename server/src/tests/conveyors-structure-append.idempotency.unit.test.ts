@@ -2,7 +2,10 @@ import { describe, expect, it } from 'vitest'
 import { AppError } from '../shared/errors/AppError.js'
 import { ErrorCodes } from '../shared/errors/errorCodes.js'
 import { computeStructureAppendFingerprint } from '../modules/conveyors/conveyor-structure-append.fingerprint.js'
-import { assertEventMatchesAppend } from '../modules/conveyors/conveyor-structure-append.service.js'
+import {
+  assertEventMatchesAppend,
+  assertReplayIdsForKind,
+} from '../modules/conveyors/conveyor-structure-append.service.js'
 import type { PostConveyorOptionBody } from '../modules/conveyors/conveyors.schemas.js'
 import type { ConveyorOperationalEventRow } from '../modules/conveyors/operational-events/conveyor-operational-events.types.js'
 
@@ -11,6 +14,7 @@ import type { ConveyorOperationalEventRow } from '../modules/conveyors/operation
  * - sem evento existente → proceed (serviço não chama a assert)
  * - mesma key + esteira + CONVEYOR_STRUCTURE_ITEM_ADDED + fingerprint → replay
  * - mesma key + esteira/tipo/payload diferente → 409
+ * - AREA/STEP: replay sem exigir addedOptionId
  */
 
 const option: PostConveyorOptionBody = {
@@ -61,11 +65,12 @@ describe('structure append idempotency matrix (A8)', () => {
     reason: 'motivo',
     originType: 'MANUAL',
     matrixRootItemId: null,
+    appendKind: 'OPTION',
+    targetParentNodeId: null,
     option,
   })
 
   it('sem evento existente → proceed (assert não é chamada; documentado)', () => {
-    // Comportamento do serviço: if (!existing) materializa; não chama assertEventMatchesAppend.
     const existing: ConveyorOperationalEventRow | null = null
     expect(existing).toBeNull()
   })
@@ -123,6 +128,51 @@ describe('structure append idempotency matrix (A8)', () => {
           metadata_json: { fingerprint },
         }),
         { conveyorId, fingerprint },
+      ),
+    ).toThrow(AppError)
+  })
+
+  it('AREA: replay aceita meta sem addedOptionId (addedAreaId/addedNodeId)', () => {
+    expect(() =>
+      assertReplayIdsForKind(
+        {
+          appendKind: 'AREA',
+          addedNodeId: 'area-1',
+          addedOptionId: null,
+          addedAreaId: 'area-1',
+          addedStepIds: ['step-1'],
+        },
+        'AREA',
+      ),
+    ).not.toThrow()
+  })
+
+  it('STEP: replay aceita meta sem addedOptionId (addedStepIds/addedNodeId)', () => {
+    expect(() =>
+      assertReplayIdsForKind(
+        {
+          appendKind: 'STEP',
+          addedNodeId: 'step-1',
+          addedOptionId: null,
+          addedAreaId: null,
+          addedStepIds: ['step-1'],
+        },
+        'STEP',
+      ),
+    ).not.toThrow()
+  })
+
+  it('OPTION: replay ainda exige addedOptionId', () => {
+    expect(() =>
+      assertReplayIdsForKind(
+        {
+          appendKind: 'OPTION',
+          addedNodeId: null,
+          addedOptionId: null,
+          addedAreaId: null,
+          addedStepIds: ['step-1'],
+        },
+        'OPTION',
       ),
     ).toThrow(AppError)
   })
