@@ -105,9 +105,9 @@ describe('resolveAppVersionMetadata', () => {
     )
 
     expect(metadata.product).toBe('SGP+')
-    expect(metadata.version).toBe('1.9.3')
+    expect(metadata.version).toBe('1.9.4')
     expect(metadata.releaseName).toBe(
-      'Alerta de capacidade operacional no planejamento semanal',
+      'Exportações do planejamento e inclusão tardia de itens',
     )
     expect(metadata.environment).toBe('development')
     expect(metadata.commit).toBe('local')

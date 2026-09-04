@@ -21,15 +21,15 @@ describe('frontend version metadata', () => {
   it('usa app-version.json como base segura', () => {
     ;(globalThis as TestGlobal).__SGP_APP_BASE_METADATA__ = {
       product: 'SGP+',
-      version: '1.9.3',
-      releaseName: 'Alerta de capacidade operacional no planejamento semanal',
+      version: '1.9.4',
+      releaseName: 'Exportações do planejamento e inclusão tardia de itens',
     }
     const metadata = resolveFrontendVersionMetadata()
 
     expect(metadata.product).toBe('SGP+')
-    expect(metadata.version).toBe('1.9.3')
+    expect(metadata.version).toBe('1.9.4')
     expect(metadata.releaseName).toBe(
-      'Alerta de capacidade operacional no planejamento semanal',
+      'Exportações do planejamento e inclusão tardia de itens',
     )
     expect(metadata.environment).toBe('development')
     expect(metadata.commitSha).toBe('local')
@@ -39,10 +39,10 @@ describe('frontend version metadata', () => {
   it('prioriza overrides Vite para ambiente e build metadata', () => {
     ;(globalThis as TestGlobal).__SGP_APP_BASE_METADATA__ = {
       product: 'SGP+',
-      version: '1.9.3',
-      releaseName: 'Alerta de capacidade operacional no planejamento semanal',
+      version: '1.9.4',
+      releaseName: 'Exportações do planejamento e inclusão tardia de itens',
     }
-    vi.stubEnv('VITE_APP_VERSION', '1.9.3-rc.1')
+    vi.stubEnv('VITE_APP_VERSION', '1.9.4-rc.1')
     vi.stubEnv('VITE_APP_RELEASE_NAME', 'rc-kiosk-contrast')
     vi.stubEnv('VITE_APP_ENV', 'homologation')
     vi.stubEnv('VITE_GIT_SHA', 'fedcba987654')
@@ -50,7 +50,7 @@ describe('frontend version metadata', () => {
 
     expect(resolveFrontendVersionMetadata()).toEqual({
       product: 'SGP+',
-      version: '1.9.3-rc.1',
+      version: '1.9.4-rc.1',
       releaseName: 'rc-kiosk-contrast',
       environment: 'homologation',
       environmentLabel: 'Homologação',

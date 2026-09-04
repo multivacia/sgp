@@ -1,7 +1,7 @@
 {
   "product": "SGP+",
-  "version": "1.9.3",
-  "releaseName": "Alerta de capacidade operacional no planejamento semanal",
-  "releaseDate": "2026-08-25",
+  "version": "1.9.4",
+  "releaseName": "Exportações do planejamento e inclusão tardia de itens",
+  "releaseDate": "2026-09-04",
   "channel": "production"
 }
