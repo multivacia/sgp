@@ -6,6 +6,9 @@
  * import cruzado com aquele arquivo. Helpers pequenos e puros (sanitização de fórmula, parse
  * de data local, formatação de timestamp/valores) são duplicados aqui propositalmente — ver
  * `docs/ai` / spec da tarefa: preferir isolamento a acoplamento.
+ *
+ * Modelo estrutural: **1 colaborador = 1 linha física**; atividades distribuídas nas colunas
+ * de segunda a sexta; observações consolidadas na coluna final.
  */
 import ExcelJS from 'exceljs'
 
@@ -24,7 +27,7 @@ export type OperationalPlanningWeeklyViewExportMeta = {
   collaboratorsWithActivityCount: number
 }
 
-/** Uma linha física = um item do plano semanal (nunca agrupado/concatenado em uma célula). */
+/** Item do plano semanal. Na planilha, itens do mesmo colaborador compartilham uma linha física. */
 export type OperationalPlanningWeeklyViewExportRow = {
   id: string
   collaboratorId: string | null
@@ -58,11 +61,20 @@ const WEEKDAY_LABELS = [
   'Sexta-feira',
 ] as const
 
-const COLUMN_WIDTHS = [26, 30, 30, 30, 30, 30, 34]
+/** Rótulos curtos para observações consolidadas. */
+const WEEKDAY_SHORT_LABELS = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta'] as const
 
-/** Altura aproximada por linha de texto (fonte 11pt) — ExcelJS não autoajusta wrapText. */
+/** Colaborador + dias (ligeiramente mais largos) + observações. */
+const COLUMN_WIDTHS = [26, 36, 36, 36, 36, 36, 40]
+
+/** Altura aproximada por linha de texto em fonte 11pt — ExcelJS não autoajusta wrapText. */
 const DATA_ROW_LINE_HEIGHT_PT = 15
 const DATA_ROW_HEIGHT_PADDING_PT = 4
+const DATA_CELL_FONT_SIZE_DEFAULT = 11
+const DATA_CELL_FONT_SIZE_MIN = 8
+
+/** Limite nativo do Excel para altura de linha (pontos). Texto nunca é truncado. */
+export const EXCEL_MAX_ROW_HEIGHT_PT = 409
 
 const FILL_HEADER: ExcelJS.Fill = {
   type: 'pattern',
@@ -85,7 +97,7 @@ const FILL_AMBER: ExcelJS.Fill = {
 }
 const FONT_AMBER: Partial<ExcelJS.Font> = { color: { argb: 'FF7F6000' } }
 
-/** Preenchimento discreto por BLOCO de colaborador (não por linha individual). */
+/** Preenchimento discreto por colaborador (linha física). */
 const FILL_BLOCK_ALT: ExcelJS.Fill = {
   type: 'pattern',
   pattern: 'solid',
@@ -99,7 +111,7 @@ const BORDER_THIN: Partial<ExcelJS.Borders> = {
   right: { style: 'thin' },
 }
 
-/** Borda superior mais forte ao iniciar um novo bloco de colaborador. */
+/** Borda estrutural de cada linha de colaborador. */
 const BORDER_BLOCK_START: Partial<ExcelJS.Borders> = {
   top: { style: 'medium' },
   left: { style: 'thin' },
@@ -171,7 +183,7 @@ export function formatWeeklyViewPlannedDurationLabel(
 }
 
 /**
- * Conteúdo multilinha da célula do dia para **um** item (uma linha física).
+ * Bloco multilinha de **uma** atividade dentro da célula do dia.
  *
  * Com esteira:
  * `1º Nome da esteira\nNome da atividade\nTempo planejado: 1h30 min`
@@ -200,21 +212,103 @@ export function formatWeeklyViewActivityCellContent(
   return `${orderPrefix}\n${timeLine}`
 }
 
-function countCellTextLines(value: unknown): number {
+/** Junta blocos de atividade na mesma célula, sem linha em branco entre eles. */
+export function joinWeeklyViewDayCellActivityBlocks(blocks: readonly string[]): string {
+  return blocks.filter((block) => block.length > 0).join('\n')
+}
+
+/**
+ * Agrupa itens já ordenados por `collaboratorId` (chave consecutiva), preservando a ordem.
+ * Itens sem colaborador usam a chave `__unassigned__`.
+ */
+export function groupWeeklyViewRowsByCollaborator(
+  sortedRows: readonly OperationalPlanningWeeklyViewExportRow[],
+): OperationalPlanningWeeklyViewExportRow[][] {
+  const groups: OperationalPlanningWeeklyViewExportRow[][] = []
+  let currentKey: string | null = null
+  let current: OperationalPlanningWeeklyViewExportRow[] = []
+
+  for (const row of sortedRows) {
+    const key = row.collaboratorId ?? '__unassigned__'
+    if (currentKey === null || key !== currentKey) {
+      if (current.length > 0) groups.push(current)
+      current = [row]
+      currentKey = key
+    } else {
+      current.push(row)
+    }
+  }
+  if (current.length > 0) groups.push(current)
+  return groups
+}
+
+/** Índice do dia (0=segunda … 4=sexta) da semana para `plannedDate`, ou `null` se fora da semana. */
+function dayIndexInWeek(plannedDateIso: string, weekStartDateIso: string): number | null {
+  const diffDays = Math.round(
+    (excelDateFromIso(plannedDateIso).getTime() - excelDateFromIso(weekStartDateIso).getTime()) /
+      86_400_000,
+  )
+  return diffDays >= 0 && diffDays <= 4 ? diffDays : null
+}
+
+/**
+ * Observações consolidadas por colaborador: `Segunda 3º — texto`.
+ * Ordem: segunda→sexta e, dentro do dia, `plannedOrder` (itens já ordenados).
+ */
+export function formatWeeklyViewConsolidatedNotes(
+  group: readonly OperationalPlanningWeeklyViewExportRow[],
+  weekStartDate: string,
+): string {
+  const lines: string[] = []
+  for (const item of group) {
+    const dayIndex = dayIndexInWeek(item.plannedDate, weekStartDate)
+    if (dayIndex == null) continue
+    const note = item.notes?.trim()
+    if (!note) continue
+    const dayLabel = WEEKDAY_SHORT_LABELS[dayIndex]!
+    lines.push(`${dayLabel} ${item.plannedOrder + 1}º — ${note}`)
+  }
+  return lines.length > 0 ? lines.join('\n') : '—'
+}
+
+export function countCellTextLines(value: unknown): number {
   if (value == null || value === '') return 1
   return String(value).split('\n').length
 }
 
-/** Altura por linha física, com base nas quebras reais das células daquela linha. */
-function applyDataRowHeightFromWrappedContent(excelRow: ExcelJS.Row): void {
+export function lineHeightForFontSize(fontSize: number): number {
+  return (DATA_ROW_LINE_HEIGHT_PT * fontSize) / DATA_CELL_FONT_SIZE_DEFAULT
+}
+
+/**
+ * Escolhe fonte de 11→8 pt para caber o máximo possível dentro do limite de altura do Excel.
+ * O texto da célula nunca é truncado.
+ */
+export function resolveWeeklyViewDataCellFontSize(maxTextLines: number): number {
+  for (let size = DATA_CELL_FONT_SIZE_DEFAULT; size >= DATA_CELL_FONT_SIZE_MIN; size -= 1) {
+    const height = maxTextLines * lineHeightForFontSize(size) + DATA_ROW_HEIGHT_PADDING_PT
+    if (height <= EXCEL_MAX_ROW_HEIGHT_PT) return size
+  }
+  return DATA_CELL_FONT_SIZE_MIN
+}
+
+function applyCollaboratorRowPresentation(excelRow: ExcelJS.Row, altShade: boolean): void {
   let maxLines = 1
   for (let col = 1; col <= COLUMN_COUNT; col += 1) {
     maxLines = Math.max(maxLines, countCellTextLines(excelRow.getCell(col).value))
   }
-  excelRow.height = Math.max(
-    DATA_ROW_LINE_HEIGHT_PT,
-    maxLines * DATA_ROW_LINE_HEIGHT_PT + DATA_ROW_HEIGHT_PADDING_PT,
-  )
+  const fontSize = resolveWeeklyViewDataCellFontSize(maxLines)
+  const lineHeight = lineHeightForFontSize(fontSize)
+  const rawHeight = Math.max(lineHeight, maxLines * lineHeight + DATA_ROW_HEIGHT_PADDING_PT)
+  excelRow.height = Math.min(EXCEL_MAX_ROW_HEIGHT_PT, rawHeight)
+
+  for (let col = 1; col <= COLUMN_COUNT; col += 1) {
+    const cell = excelRow.getCell(col)
+    cell.border = BORDER_BLOCK_START
+    cell.alignment = { vertical: 'top', wrapText: true }
+    cell.font = { size: fontSize }
+    if (altShade) cell.fill = FILL_BLOCK_ALT
+  }
 }
 
 function formatDateBrPt(date: Date): string {
@@ -288,10 +382,6 @@ function resolveCollaboratorDisplayName(row: OperationalPlanningWeeklyViewExport
   return row.collaboratorName?.trim() ? row.collaboratorName : '—'
 }
 
-function resolveNotesText(row: OperationalPlanningWeeklyViewExportRow): string {
-  return row.notes?.trim() ? row.notes : '—'
-}
-
 /**
  * Ordenação de negócio: colaborador (nominal, pt-BR) → data planejada → `plannedOrder` → id
  * (desempate técnico, não exibido). Itens sem colaborador (`collaboratorId === null`) sempre
@@ -307,6 +397,8 @@ export function sortOperationalPlanningWeeklyViewRows(
     if (!aUnassigned && !bUnassigned && a.collaboratorId !== b.collaboratorId) {
       const nameCmp = (a.collaboratorName ?? '').localeCompare(b.collaboratorName ?? '', 'pt-BR')
       if (nameCmp !== 0) return nameCmp
+      // Mesmo nome, IDs distintos: agrupa cada ID de forma estável (blocos consecutivos).
+      return a.collaboratorId!.localeCompare(b.collaboratorId!)
     }
     const dateCmp = a.plannedDate.localeCompare(b.plannedDate)
     if (dateCmp !== 0) return dateCmp
@@ -316,13 +408,10 @@ export function sortOperationalPlanningWeeklyViewRows(
   })
 }
 
-/** Índice do dia (0=segunda … 4=sexta) da semana para `plannedDate`, ou `null` se fora da semana. */
-function dayIndexInWeek(plannedDateIso: string, weekStartDateIso: string): number | null {
-  const diffDays = Math.round(
-    (excelDateFromIso(plannedDateIso).getTime() - excelDateFromIso(weekStartDateIso).getTime()) /
-      86_400_000,
-  )
-  return diffDays >= 0 && diffDays <= 4 ? diffDays : null
+/** Conta blocos de atividade (`Nº `) em uma célula do dia. */
+export function countWeeklyViewActivityBlocksInCell(cellText: string): number {
+  const matches = cellText.match(/(^|\n)\d+º /g)
+  return matches?.length ?? 0
 }
 
 export async function buildOperationalPlanningWeeklyViewExportWorkbookBuffer(input: {
@@ -331,6 +420,7 @@ export async function buildOperationalPlanningWeeklyViewExportWorkbookBuffer(inp
 }): Promise<Buffer> {
   const { meta } = input
   const sortedRows = sortOperationalPlanningWeeklyViewRows(input.rows)
+  const collaboratorGroups = groupWeeklyViewRowsByCollaborator(sortedRows)
 
   const workbook = new ExcelJS.Workbook()
   const sheet = workbook.addWorksheet(SHEET_NAME)
@@ -380,43 +470,36 @@ export async function buildOperationalPlanningWeeklyViewExportWorkbookBuffer(inp
   headerRow.height = 30
 
   let rowNumber = FIRST_DATA_ROW
-  let previousGroupKey: string | null = null
-  let blockIndex = -1
-  for (const row of sortedRows) {
-    const groupKey = row.collaboratorId ?? '__unassigned__'
-    const isNewBlock = groupKey !== previousGroupKey
-    if (isNewBlock) blockIndex += 1
-    previousGroupKey = groupKey
-
+  collaboratorGroups.forEach((group, blockIndex) => {
+    const first = group[0]!
     const excelRow = sheet.getRow(rowNumber)
-    excelRow.getCell(1).value = sanitizeExcelText(resolveCollaboratorDisplayName(row))
+    excelRow.getCell(1).value = sanitizeExcelText(resolveCollaboratorDisplayName(first))
 
-    const dayIndex = dayIndexInWeek(row.plannedDate, meta.weekStartDate)
-    if (dayIndex != null) {
-      excelRow.getCell(2 + dayIndex).value = sanitizeExcelText(
+    for (let dayIndex = 0; dayIndex < 5; dayIndex += 1) {
+      const dayItems = group.filter(
+        (item) => dayIndexInWeek(item.plannedDate, meta.weekStartDate) === dayIndex,
+      )
+      if (dayItems.length === 0) continue
+      const blocks = dayItems.map((item) =>
         formatWeeklyViewActivityCellContent(
-          row.plannedOrder,
-          row.conveyorTitle,
-          row.activityTitle,
-          row.plannedMinutes,
+          item.plannedOrder,
+          item.conveyorTitle,
+          item.activityTitle,
+          item.plannedMinutes,
         ),
+      )
+      excelRow.getCell(2 + dayIndex).value = sanitizeExcelText(
+        joinWeeklyViewDayCellActivityBlocks(blocks),
       )
     }
 
-    excelRow.getCell(COLUMN_COUNT).value = sanitizeExcelText(resolveNotesText(row))
+    excelRow.getCell(COLUMN_COUNT).value = sanitizeExcelText(
+      formatWeeklyViewConsolidatedNotes(group, meta.weekStartDate),
+    )
 
-    const altShade = blockIndex % 2 === 1
-    for (let col = 1; col <= COLUMN_COUNT; col += 1) {
-      const cell = excelRow.getCell(col)
-      cell.border = isNewBlock ? BORDER_BLOCK_START : BORDER_THIN
-      cell.alignment = { vertical: 'top', wrapText: true }
-      if (!cell.font) cell.font = { size: 11 }
-      if (altShade) cell.fill = FILL_BLOCK_ALT
-    }
-
-    applyDataRowHeightFromWrappedContent(excelRow)
+    applyCollaboratorRowPresentation(excelRow, blockIndex % 2 === 1)
     rowNumber += 1
-  }
+  })
 
   sheet.autoFilter = {
     from: { row: HEADER_ROW, column: 1 },

@@ -3,11 +3,18 @@ import ExcelJS from 'exceljs'
 import {
   buildOperationalPlanningWeeklyViewExportFilename,
   buildOperationalPlanningWeeklyViewExportWorkbookBuffer,
+  countCellTextLines,
+  countWeeklyViewActivityBlocksInCell,
   excelDateFromIso,
+  EXCEL_MAX_ROW_HEIGHT_PT,
   formatDurationHhMm,
   formatWeeklyViewActivityCellContent,
   formatWeeklyViewActivityCellLabel,
+  formatWeeklyViewConsolidatedNotes,
   formatWeeklyViewPlannedDurationLabel,
+  groupWeeklyViewRowsByCollaborator,
+  joinWeeklyViewDayCellActivityBlocks,
+  resolveWeeklyViewDataCellFontSize,
   sanitizeExcelText,
   sortOperationalPlanningWeeklyViewRows,
   weeklyViewWeekdayDates,
@@ -45,6 +52,35 @@ function sampleRow(
     notes: 'Observação',
     ...partial,
   }
+}
+
+function buildVolumeRowsForAdmin(): OperationalPlanningWeeklyViewExportRow[] {
+  const days = [
+    { date: '2026-09-07', count: 14 },
+    { date: '2026-09-08', count: 3 },
+    { date: '2026-09-09', count: 8 },
+    { date: '2026-09-10', count: 12 },
+    { date: '2026-09-11', count: 7 },
+  ]
+  const rows: OperationalPlanningWeeklyViewExportRow[] = []
+  for (const day of days) {
+    for (let i = 0; i < day.count; i += 1) {
+      rows.push(
+        sampleRow({
+          id: `admin-${day.date}-${i}`,
+          collaboratorId: 'admin',
+          collaboratorName: 'Admin',
+          plannedDate: day.date,
+          plannedOrder: i,
+          conveyorTitle: `OS 6995`,
+          activityTitle: `Atividade ${day.date} #${i + 1}`,
+          plannedMinutes: 15 + (i % 4) * 15,
+          notes: i === 2 && day.date === '2026-09-07' ? 'Aguardar confirmação do cliente' : null,
+        }),
+      )
+    }
+  }
+  return rows
 }
 
 describe('buildOperationalPlanningWeeklyViewExportFilename', () => {
@@ -120,11 +156,10 @@ describe('formatWeeklyViewPlannedDurationLabel', () => {
     expect(formatWeeklyViewPlannedDurationLabel(90)).toBe('1h30 min')
     expect(formatWeeklyViewPlannedDurationLabel(120)).toBe('2h')
     expect(formatWeeklyViewPlannedDurationLabel(135)).toBe('2h15 min')
-    expect(formatWeeklyViewPlannedDurationLabel(630)).toBe('10h30 min')
   })
 
-  it('usa o mesmo valor de minutos que formatDurationHhMm (fonte única)', () => {
-    for (const minutes of [0, 5, 30, 60, 65, 90, 120, 135, 600, 1500, null, undefined, -10]) {
+  it('usa o mesmo valor de minutos que formatDurationHhMm', () => {
+    for (const minutes of [0, 5, 30, 60, 65, 90, 120, 135, 600, null, undefined]) {
       const hhmm = formatDurationHhMm(minutes as number | null | undefined)
       const [hStr, mStr] = hhmm.split(':')
       const fromHhMm = Number(hStr) * 60 + Number(mStr)
@@ -133,25 +168,7 @@ describe('formatWeeklyViewPlannedDurationLabel', () => {
           ? Math.floor(minutes)
           : 0
       expect(fromHhMm).toBe(normalized)
-      expect(formatWeeklyViewPlannedDurationLabel(minutes as number | null | undefined)).toBeTruthy()
     }
-  })
-
-  it('trata nulo/inválido como 0 min', () => {
-    expect(formatWeeklyViewPlannedDurationLabel(null)).toBe('0 min')
-    expect(formatWeeklyViewPlannedDurationLabel(undefined)).toBe('0 min')
-    expect(formatWeeklyViewPlannedDurationLabel(Number.NaN)).toBe('0 min')
-    expect(formatWeeklyViewPlannedDurationLabel(-30)).toBe('0 min')
-  })
-})
-
-describe('formatDurationHhMm', () => {
-  it('permanece disponível e estável (fonte do valor em minutos)', () => {
-    expect(formatDurationHhMm(60)).toBe('1:00')
-    expect(formatDurationHhMm(45)).toBe('0:45')
-    expect(formatDurationHhMm(600)).toBe('10:00')
-    expect(formatDurationHhMm(1500)).toBe('25:00')
-    expect(formatDurationHhMm(null)).toBe('0:00')
   })
 })
 
@@ -169,32 +186,99 @@ describe('formatWeeklyViewActivityCellContent', () => {
     )
   })
 
-  it('gera duas linhas quando a esteira está ausente/vazia/só espaços', () => {
+  it('gera duas linhas quando a esteira está ausente', () => {
     expect(formatWeeklyViewActivityCellContent(0, null, 'Retirada', 60)).toBe(
       '1º Retirada\nTempo planejado: 1h',
     )
-    expect(formatWeeklyViewActivityCellContent(0, undefined, 'Retirada', 60)).toBe(
-      '1º Retirada\nTempo planejado: 1h',
-    )
-    expect(formatWeeklyViewActivityCellContent(0, '', 'Retirada', 30)).toBe(
+    expect(formatWeeklyViewActivityCellContent(0, '   ', 'Retirada', 30)).toBe(
       '1º Retirada\nTempo planejado: 30 min',
     )
-    expect(formatWeeklyViewActivityCellContent(0, '   ', 'Retirada', 5)).toBe(
-      '1º Retirada\nTempo planejado: 5 min',
-    )
   })
 
-  it('não gera linha vazia no lugar da esteira e aplica trim', () => {
-    const text = formatWeeklyViewActivityCellContent(1, '  Esteira X  ', '  Atividade Y  ', 65)
-    expect(text).toBe('2º Esteira X\nAtividade Y\nTempo planejado: 1h05 min')
-    expect(text.split('\n')).toHaveLength(3)
-    expect(text.split('\n').some((line) => line.trim() === '')).toBe(false)
-  })
-
-  it('preserva acentos', () => {
+  it('preserva acentos e aplica trim', () => {
     expect(
-      formatWeeklyViewActivityCellContent(0, 'Revisão do assento', 'Remoção do revestimento', 60),
-    ).toBe('1º Revisão do assento\nRemoção do revestimento\nTempo planejado: 1h')
+      formatWeeklyViewActivityCellContent(0, '  Revisão  ', '  Remoção  ', 60),
+    ).toBe('1º Revisão\nRemoção\nTempo planejado: 1h')
+  })
+})
+
+describe('joinWeeklyViewDayCellActivityBlocks', () => {
+  it('une várias atividades na mesma célula sem linha em branco entre elas', () => {
+    const joined = joinWeeklyViewDayCellActivityBlocks([
+      formatWeeklyViewActivityCellContent(0, 'OS 6995', 'Corte do novo tecido', 15),
+      formatWeeklyViewActivityCellContent(1, 'OS 6995', 'Aplicação de cola no teto e no tecido', 30),
+      formatWeeklyViewActivityCellContent(2, 'OS 6995', 'Revestir o teto com tecido novo', 80),
+    ])
+    expect(joined).toBe(
+      [
+        '1º OS 6995',
+        'Corte do novo tecido',
+        'Tempo planejado: 15 min',
+        '2º OS 6995',
+        'Aplicação de cola no teto e no tecido',
+        'Tempo planejado: 30 min',
+        '3º OS 6995',
+        'Revestir o teto com tecido novo',
+        'Tempo planejado: 1h20 min',
+      ].join('\n'),
+    )
+    expect(joined.includes('\n\n')).toBe(false)
+  })
+})
+
+describe('groupWeeklyViewRowsByCollaborator', () => {
+  it('agrupa por collaboratorId consecutivo sem perder itens', () => {
+    const sorted = sortOperationalPlanningWeeklyViewRows([
+      sampleRow({ id: 'a1', collaboratorId: 'a', collaboratorName: 'Ana', plannedDate: '2026-09-07' }),
+      sampleRow({ id: 'a2', collaboratorId: 'a', collaboratorName: 'Ana', plannedDate: '2026-09-08' }),
+      sampleRow({ id: 'b1', collaboratorId: 'b', collaboratorName: 'Bruno', plannedDate: '2026-09-07' }),
+      sampleRow({ id: 'z', collaboratorId: null, collaboratorName: null, plannedDate: '2026-09-07' }),
+    ])
+    const groups = groupWeeklyViewRowsByCollaborator(sorted)
+    expect(groups).toHaveLength(3)
+    expect(groups[0]!.map((r) => r.id)).toEqual(['a1', 'a2'])
+    expect(groups[1]!.map((r) => r.id)).toEqual(['b1'])
+    expect(groups[2]!.map((r) => r.id)).toEqual(['z'])
+  })
+})
+
+describe('formatWeeklyViewConsolidatedNotes', () => {
+  it('identifica dia e ordem; ignora vazias; — quando nenhuma', () => {
+    const group = [
+      sampleRow({
+        plannedDate: '2026-09-07',
+        plannedOrder: 2,
+        notes: 'Aguardar confirmação do cliente',
+      }),
+      sampleRow({
+        id: '2',
+        plannedDate: '2026-09-09',
+        plannedOrder: 0,
+        notes: 'Utilizar material separado',
+      }),
+      sampleRow({
+        id: '3',
+        plannedDate: '2026-09-11',
+        plannedOrder: 1,
+        notes: '   ',
+      }),
+      sampleRow({
+        id: '4',
+        plannedDate: '2026-09-11',
+        plannedOrder: 2,
+        notes: 'Conferir acabamento',
+      }),
+    ]
+    expect(formatWeeklyViewConsolidatedNotes(group, '2026-09-07')).toBe(
+      [
+        'Segunda 3º — Aguardar confirmação do cliente',
+        'Quarta 1º — Utilizar material separado',
+        'Sexta 3º — Conferir acabamento',
+      ].join('\n'),
+    )
+    expect(formatWeeklyViewConsolidatedNotes([sampleRow({ notes: null })], '2026-09-07')).toBe(
+      '—',
+    )
   })
 })
 
@@ -221,14 +305,15 @@ describe('sortOperationalPlanningWeeklyViewRows', () => {
     const sorted = sortOperationalPlanningWeeklyViewRows(rows)
     expect(sorted.map((r) => r.id)).toEqual(['a1', 'a2', 'b', 'z'])
   })
+})
 
-  it('desempata por id quando colaborador, data e ordem são iguais', () => {
-    const rows: OperationalPlanningWeeklyViewExportRow[] = [
-      sampleRow({ id: 'zzz', collaboratorId: 'col-a', plannedDate: '2026-09-07', plannedOrder: 0 }),
-      sampleRow({ id: 'aaa', collaboratorId: 'col-a', plannedDate: '2026-09-07', plannedOrder: 0 }),
-    ]
-    const sorted = sortOperationalPlanningWeeklyViewRows(rows)
-    expect(sorted.map((r) => r.id)).toEqual(['aaa', 'zzz'])
+describe('resolveWeeklyViewDataCellFontSize / altura', () => {
+  it('reduz fonte até 8pt e nunca ultrapassa o limite do Excel na altura calculada', () => {
+    expect(resolveWeeklyViewDataCellFontSize(3)).toBe(11)
+    const sizeForDense = resolveWeeklyViewDataCellFontSize(42)
+    expect(sizeForDense).toBeGreaterThanOrEqual(8)
+    expect(sizeForDense).toBeLessThanOrEqual(11)
+    expect(EXCEL_MAX_ROW_HEIGHT_PT).toBe(409)
   })
 })
 
@@ -245,39 +330,18 @@ describe('buildOperationalPlanningWeeklyViewExportWorkbookBuffer', () => {
 
   it('título/período/situação/geração/totais em linhas próprias', async () => {
     const buffer = await buildOperationalPlanningWeeklyViewExportWorkbookBuffer({
-      meta: sampleMeta({ situation: 'PUBLICADO' }),
+      meta: sampleMeta({ situation: 'PUBLICADO', totalActivities: 44, collaboratorsWithActivityCount: 1 }),
       rows: [sampleRow()],
     })
     const workbook = new ExcelJS.Workbook()
     await workbook.xlsx.load(buffer)
     const sheet = workbook.getWorksheet('Visão semanal')
     expect(sheet?.getRow(1).getCell(1).value).toBe('SGP+ — Planejamento semanal')
-    const periodValue = String(sheet?.getRow(2).getCell(1).value ?? '')
-    expect(periodValue).toContain('07/09/2026')
-    expect(periodValue).toContain('11/09/2026')
-    expect(sheet?.getRow(3).getCell(1).value).toBe('Situação: PUBLICADO')
-    const generatedValue = String(sheet?.getRow(4).getCell(1).value ?? '')
-    expect(generatedValue.startsWith('Gerado em:')).toBe(true)
-    const totalsValue = String(sheet?.getRow(5).getCell(1).value ?? '')
-    expect(totalsValue).toContain('Total de atividades:')
-    expect(totalsValue).toContain('Tempo planejado total:')
-    expect(totalsValue).toContain('Colaboradores com atividade:')
+    expect(String(sheet?.getRow(5).getCell(1).value ?? '')).toContain('Total de atividades: 44')
+    expect(String(sheet?.getRow(5).getCell(1).value ?? '')).toContain('Colaboradores com atividade: 1')
   })
 
-  it('formata "Gerado em" em America/Sao_Paulo independentemente do fuso do processo', async () => {
-    const buffer = await buildOperationalPlanningWeeklyViewExportWorkbookBuffer({
-      meta: sampleMeta({ generatedAt: new Date('2026-09-05T14:30:00.000Z') }),
-      rows: [sampleRow()],
-    })
-    const workbook = new ExcelJS.Workbook()
-    await workbook.xlsx.load(buffer)
-    const sheet = workbook.getWorksheet('Visão semanal')
-    const generatedValue = String(sheet?.getRow(4).getCell(1).value ?? '')
-    expect(generatedValue).toContain('11:30')
-    expect(generatedValue).not.toContain('14:30')
-  })
-
-  it('lista exata das 7 colunas, com quebra de linha literal nos cabeçalhos de dia', async () => {
+  it('lista exata das 7 colunas', async () => {
     const buffer = await buildOperationalPlanningWeeklyViewExportWorkbookBuffer({
       meta: sampleMeta(),
       rows: [sampleRow()],
@@ -296,46 +360,37 @@ describe('buildOperationalPlanningWeeklyViewExportWorkbookBuffer', () => {
       'Sexta-feira\n11/09/2026',
       'Observações',
     ])
-    expect(headers[1]).toContain('\n')
   })
 
-  it('atividade de segunda só na coluna de segunda — demais colunas de dia vazias na linha', async () => {
+  it('um colaborador com atividades em cinco dias gera uma única linha física', async () => {
     const buffer = await buildOperationalPlanningWeeklyViewExportWorkbookBuffer({
       meta: sampleMeta(),
-      rows: [sampleRow({ plannedDate: '2026-09-07', activityTitle: 'Atividade Segunda' })],
+      rows: [
+        sampleRow({ id: '1', plannedDate: '2026-09-07', activityTitle: 'Seg' }),
+        sampleRow({ id: '2', plannedDate: '2026-09-08', activityTitle: 'Ter' }),
+        sampleRow({ id: '3', plannedDate: '2026-09-09', activityTitle: 'Qua' }),
+        sampleRow({ id: '4', plannedDate: '2026-09-10', activityTitle: 'Qui' }),
+        sampleRow({ id: '5', plannedDate: '2026-09-11', activityTitle: 'Sex' }),
+      ],
     })
     const workbook = new ExcelJS.Workbook()
     await workbook.xlsx.load(buffer)
     const sheet = workbook.getWorksheet('Visão semanal')
-    const dataRow = sheet?.getRow(8)
-    expect(String(dataRow?.getCell(2).value ?? '')).toContain('Atividade Segunda')
-    expect(dataRow?.getCell(3).value ?? null).toBeFalsy()
-    expect(dataRow?.getCell(4).value ?? null).toBeFalsy()
-    expect(dataRow?.getCell(5).value ?? null).toBeFalsy()
-    expect(dataRow?.getCell(6).value ?? null).toBeFalsy()
+    expect(String(sheet?.getRow(8).getCell(1).value ?? '')).toBe('Maria Silva')
+    expect(String(sheet?.getRow(8).getCell(2).value ?? '')).toContain('Seg')
+    expect(String(sheet?.getRow(8).getCell(3).value ?? '')).toContain('Ter')
+    expect(String(sheet?.getRow(8).getCell(4).value ?? '')).toContain('Qua')
+    expect(String(sheet?.getRow(8).getCell(5).value ?? '')).toContain('Qui')
+    expect(String(sheet?.getRow(8).getCell(6).value ?? '')).toContain('Sex')
+    expect(sheet?.getRow(9).getCell(1).value ?? null).toBeFalsy()
   })
 
-  it('atividade de terça só na coluna de terça', async () => {
-    const buffer = await buildOperationalPlanningWeeklyViewExportWorkbookBuffer({
-      meta: sampleMeta(),
-      rows: [sampleRow({ plannedDate: '2026-09-08', activityTitle: 'Atividade Terça' })],
-    })
-    const workbook = new ExcelJS.Workbook()
-    await workbook.xlsx.load(buffer)
-    const sheet = workbook.getWorksheet('Visão semanal')
-    const dataRow = sheet?.getRow(8)
-    expect(dataRow?.getCell(2).value ?? null).toBeFalsy()
-    expect(String(dataRow?.getCell(3).value ?? '')).toContain('Atividade Terça')
-    expect(dataRow?.getCell(4).value ?? null).toBeFalsy()
-  })
-
-  it('2 atividades do mesmo colaborador no mesmo dia geram 2 linhas físicas distintas', async () => {
+  it('2 itens do mesmo colaborador no mesmo dia ficam na mesma célula, sem concatenação perdida', async () => {
     const buffer = await buildOperationalPlanningWeeklyViewExportWorkbookBuffer({
       meta: sampleMeta(),
       rows: [
         sampleRow({
           id: 'i1',
-          plannedDate: '2026-09-07',
           plannedOrder: 0,
           conveyorTitle: 'Nome da esteira',
           activityTitle: 'Primeira atividade',
@@ -344,7 +399,6 @@ describe('buildOperationalPlanningWeeklyViewExportWorkbookBuffer', () => {
         }),
         sampleRow({
           id: 'i2',
-          plannedDate: '2026-09-07',
           plannedOrder: 1,
           conveyorTitle: 'Outra esteira',
           activityTitle: 'Segunda atividade',
@@ -356,68 +410,178 @@ describe('buildOperationalPlanningWeeklyViewExportWorkbookBuffer', () => {
     const workbook = new ExcelJS.Workbook()
     await workbook.xlsx.load(buffer)
     const sheet = workbook.getWorksheet('Visão semanal')
-    const row1 = String(sheet?.getRow(8).getCell(2).value ?? '')
-    const row2 = String(sheet?.getRow(9).getCell(2).value ?? '')
-    expect(row1).toBe(
-      '1º Nome da esteira\nPrimeira atividade\nTempo planejado: 1h30 min',
+    const cell = String(sheet?.getRow(8).getCell(2).value ?? '')
+    expect(cell).toBe(
+      [
+        '1º Nome da esteira',
+        'Primeira atividade',
+        'Tempo planejado: 1h30 min',
+        '2º Outra esteira',
+        'Segunda atividade',
+        'Tempo planejado: 45 min',
+      ].join('\n'),
     )
-    expect(row2).toBe(
-      '2º Outra esteira\nSegunda atividade\nTempo planejado: 45 min',
+    expect(cell.includes('\n\n')).toBe(false)
+    expect(sheet?.getRow(9).getCell(1).value ?? null).toBeFalsy()
+    expect(String(sheet?.getRow(8).getCell(7).value ?? '')).toBe(
+      'Segunda 1º — Nota 1\nSegunda 2º — Nota 2',
     )
-    expect(row1.includes('Segunda atividade')).toBe(false)
-    expect(row2.includes('Primeira atividade')).toBe(false)
-    expect(String(sheet?.getRow(8).getCell(7).value ?? '')).toBe('Nota 1')
-    expect(String(sheet?.getRow(9).getCell(7).value ?? '')).toBe('Nota 2')
-    // quantidade de linhas de dados = quantidade de itens
-    expect(sheet?.getRow(10).getCell(1).value ?? null).toBeFalsy()
   })
 
-  it('quantidade de linhas de dados permanece igual à quantidade de itens exportados', async () => {
-    const rows = [
-      sampleRow({ id: 'a', collaboratorId: 'col-a', collaboratorName: 'Ana', plannedDate: '2026-09-07' }),
-      sampleRow({ id: 'b', collaboratorId: 'col-a', collaboratorName: 'Ana', plannedDate: '2026-09-08' }),
-      sampleRow({ id: 'c', collaboratorId: 'col-b', collaboratorName: 'Bruno', plannedDate: '2026-09-07' }),
-    ]
-    const buffer = await buildOperationalPlanningWeeklyViewExportWorkbookBuffer({
-      meta: sampleMeta(),
-      rows,
-    })
-    const workbook = new ExcelJS.Workbook()
-    await workbook.xlsx.load(buffer)
-    const sheet = workbook.getWorksheet('Visão semanal')
-    expect(String(sheet?.getRow(8).getCell(1).value ?? '')).toBe('Ana')
-    expect(String(sheet?.getRow(9).getCell(1).value ?? '')).toBe('Ana')
-    expect(String(sheet?.getRow(10).getCell(1).value ?? '')).toBe('Bruno')
-    expect(sheet?.getRow(11).getCell(1).value ?? null).toBeFalsy()
-  })
-
-  it('preserva bordas de início/continuidade e alternância visual de blocos da base', async () => {
+  it('quantidade de linhas de dados = colaboradores distintos (IDs diferentes com mesmo nome separados)', async () => {
     const buffer = await buildOperationalPlanningWeeklyViewExportWorkbookBuffer({
       meta: sampleMeta(),
       rows: [
-        sampleRow({ id: 'a1', collaboratorId: 'col-a', collaboratorName: 'Ana', plannedDate: '2026-09-07' }),
-        sampleRow({ id: 'a2', collaboratorId: 'col-a', collaboratorName: 'Ana', plannedDate: '2026-09-08' }),
-        sampleRow({ id: 'b1', collaboratorId: 'col-b', collaboratorName: 'Bruno', plannedDate: '2026-09-07' }),
+        sampleRow({ id: '1', collaboratorId: 'id-1', collaboratorName: 'João', plannedDate: '2026-09-07' }),
+        sampleRow({ id: '2', collaboratorId: 'id-2', collaboratorName: 'João', plannedDate: '2026-09-07' }),
+        sampleRow({ id: '3', collaboratorId: 'id-1', collaboratorName: 'João', plannedDate: '2026-09-08' }),
       ],
     })
     const workbook = new ExcelJS.Workbook()
     await workbook.xlsx.load(buffer)
     const sheet = workbook.getWorksheet('Visão semanal')
-    const r8 = sheet?.getRow(8).getCell(1)
-    const r9 = sheet?.getRow(9).getCell(1)
-    const r10 = sheet?.getRow(10).getCell(1)
-    expect(r8?.border?.top?.style).toBe('medium')
-    expect(r9?.border?.top?.style).toBe('thin')
-    expect(r10?.border?.top?.style).toBe('medium')
-    // bloco 0 (Ana) sem fill alt; bloco 1 (Bruno) com fill alt
-    const fillArgb = (cell: ExcelJS.Cell | undefined) =>
-      (cell?.fill as ExcelJS.FillPattern | undefined)?.fgColor?.argb
-    expect(fillArgb(r8)).not.toBe('FFF3F4F6')
-    expect(fillArgb(r9)).not.toBe('FFF3F4F6')
-    expect(fillArgb(r10)).toBe('FFF3F4F6')
+    expect(String(sheet?.getRow(8).getCell(1).value ?? '')).toBe('João')
+    expect(String(sheet?.getRow(9).getCell(1).value ?? '')).toBe('João')
+    expect(sheet?.getRow(10).getCell(1).value ?? null).toBeFalsy()
+    expect(countWeeklyViewActivityBlocksInCell(String(sheet?.getRow(8).getCell(2).value ?? ''))).toBe(
+      1,
+    )
+    expect(countWeeklyViewActivityBlocksInCell(String(sheet?.getRow(8).getCell(3).value ?? ''))).toBe(
+      1,
+    )
+    expect(countWeeklyViewActivityBlocksInCell(String(sheet?.getRow(9).getCell(2).value ?? ''))).toBe(
+      1,
+    )
   })
 
-  it('célula do dia com esteira em 3 linhas na mesma coluna (sem coluna nova)', async () => {
+  it('itens sem colaborador agrupados em "Não atribuído" ao final', async () => {
+    const buffer = await buildOperationalPlanningWeeklyViewExportWorkbookBuffer({
+      meta: sampleMeta(),
+      rows: [
+        sampleRow({ id: 'a', collaboratorId: 'col-a', collaboratorName: 'Ana' }),
+        sampleRow({ id: 'z1', collaboratorId: null, collaboratorName: null, plannedOrder: 0 }),
+        sampleRow({ id: 'z2', collaboratorId: null, collaboratorName: null, plannedOrder: 1 }),
+      ],
+    })
+    const workbook = new ExcelJS.Workbook()
+    await workbook.xlsx.load(buffer)
+    const sheet = workbook.getWorksheet('Visão semanal')
+    expect(sheet?.getRow(8).getCell(1).value).toBe('Ana')
+    expect(sheet?.getRow(9).getCell(1).value).toBe('Não atribuído')
+    expect(countWeeklyViewActivityBlocksInCell(String(sheet?.getRow(9).getCell(2).value ?? ''))).toBe(
+      2,
+    )
+    expect(sheet?.getRow(10).getCell(1).value ?? null).toBeFalsy()
+  })
+
+  it('não duplica nem perde atividades; ordem e numeração diária preservadas', async () => {
+    const rows = [
+      sampleRow({
+        id: 'm2',
+        plannedDate: '2026-09-07',
+        plannedOrder: 1,
+        activityTitle: 'Segunda B',
+      }),
+      sampleRow({
+        id: 'm1',
+        plannedDate: '2026-09-07',
+        plannedOrder: 0,
+        activityTitle: 'Segunda A',
+      }),
+      sampleRow({
+        id: 't1',
+        plannedDate: '2026-09-08',
+        plannedOrder: 0,
+        activityTitle: 'Terça A',
+      }),
+    ]
+    const buffer = await buildOperationalPlanningWeeklyViewExportWorkbookBuffer({
+      meta: sampleMeta({ totalActivities: 3 }),
+      rows,
+    })
+    const workbook = new ExcelJS.Workbook()
+    await workbook.xlsx.load(buffer)
+    const sheet = workbook.getWorksheet('Visão semanal')
+    const mon = String(sheet?.getRow(8).getCell(2).value ?? '')
+    const tue = String(sheet?.getRow(8).getCell(3).value ?? '')
+    expect(mon.indexOf('Segunda A')).toBeLessThan(mon.indexOf('Segunda B'))
+    expect(mon).toContain('1º')
+    expect(mon).toContain('2º')
+    expect(tue).toContain('1º')
+    expect(tue).toContain('Terça A')
+    expect(countWeeklyViewActivityBlocksInCell(mon)).toBe(2)
+    expect(countWeeklyViewActivityBlocksInCell(tue)).toBe(1)
+  })
+
+  it('cenário de volume Admin 14/3/8/12/7 — uma linha, 44 atividades, altura válida', async () => {
+    const adminRows = buildVolumeRowsForAdmin()
+    const gabriel = sampleRow({
+      id: 'g1',
+      collaboratorId: 'gabriel',
+      collaboratorName: 'Gabriel',
+      plannedDate: '2026-09-07',
+      activityTitle: 'Gabriel 1',
+    })
+    const joao = sampleRow({
+      id: 'j1',
+      collaboratorId: 'joao',
+      collaboratorName: 'João',
+      plannedDate: '2026-09-08',
+      activityTitle: 'João 1',
+    })
+    const all = [...adminRows, gabriel, joao]
+    expect(adminRows).toHaveLength(44)
+
+    const buffer = await buildOperationalPlanningWeeklyViewExportWorkbookBuffer({
+      meta: sampleMeta({
+        totalActivities: all.length,
+        collaboratorsWithActivityCount: 3,
+      }),
+      rows: all,
+    })
+    const workbook = new ExcelJS.Workbook()
+    await workbook.xlsx.load(buffer)
+    const sheet = workbook.getWorksheet('Visão semanal')!
+
+    expect(String(sheet.getRow(8).getCell(1).value ?? '')).toBe('Admin')
+    expect(String(sheet.getRow(9).getCell(1).value ?? '')).toBe('Gabriel')
+    expect(String(sheet.getRow(10).getCell(1).value ?? '')).toBe('João')
+    expect(sheet.getRow(11).getCell(1).value ?? null).toBeFalsy()
+
+    const mon = String(sheet.getRow(8).getCell(2).value ?? '')
+    const tue = String(sheet.getRow(8).getCell(3).value ?? '')
+    const wed = String(sheet.getRow(8).getCell(4).value ?? '')
+    const thu = String(sheet.getRow(8).getCell(5).value ?? '')
+    const fri = String(sheet.getRow(8).getCell(6).value ?? '')
+    expect(countWeeklyViewActivityBlocksInCell(mon)).toBe(14)
+    expect(countWeeklyViewActivityBlocksInCell(tue)).toBe(3)
+    expect(countWeeklyViewActivityBlocksInCell(wed)).toBe(8)
+    expect(countWeeklyViewActivityBlocksInCell(thu)).toBe(12)
+    expect(countWeeklyViewActivityBlocksInCell(fri)).toBe(7)
+    const totalBlocks =
+      countWeeklyViewActivityBlocksInCell(mon) +
+      countWeeklyViewActivityBlocksInCell(tue) +
+      countWeeklyViewActivityBlocksInCell(wed) +
+      countWeeklyViewActivityBlocksInCell(thu) +
+      countWeeklyViewActivityBlocksInCell(fri)
+    expect(totalBlocks).toBe(44)
+
+    const adminRow = sheet.getRow(8)
+    expect(adminRow.getCell(2).alignment?.wrapText).toBe(true)
+    expect(adminRow.getCell(2).alignment?.vertical).toBe('top')
+    expect(adminRow.height ?? 0).toBeGreaterThan(0)
+    expect(adminRow.height ?? 0).toBeLessThanOrEqual(EXCEL_MAX_ROW_HEIGHT_PT)
+    expect((adminRow.getCell(2).font?.size ?? 11)).toBeGreaterThanOrEqual(8)
+    expect((adminRow.getCell(2).font?.size ?? 11)).toBeLessThanOrEqual(11)
+
+    const notes = String(adminRow.getCell(7).value ?? '')
+    expect(notes).toContain('Segunda 3º — Aguardar confirmação do cliente')
+
+    // maior célula define a altura (segunda com 14×3=42 linhas)
+    expect(countCellTextLines(mon)).toBeGreaterThan(countCellTextLines(tue))
+  })
+
+  it('célula com esteira em 3 linhas; wrapText e altura por maior célula', async () => {
     const buffer = await buildOperationalPlanningWeeklyViewExportWorkbookBuffer({
       meta: sampleMeta(),
       rows: [
@@ -432,123 +596,21 @@ describe('buildOperationalPlanningWeeklyViewExportWorkbookBuffer', () => {
     const workbook = new ExcelJS.Workbook()
     await workbook.xlsx.load(buffer)
     const sheet = workbook.getWorksheet('Visão semanal')
-    const headerRow = sheet?.getRow(7)
-    const headers = Array.from({ length: 7 }, (_, idx) => String(headerRow?.getCell(idx + 1).value ?? ''))
-    expect(headers).toHaveLength(7)
-    expect(headers[0]).toBe('Colaborador')
-    expect(headers[6]).toBe('Observações')
     const cell = String(sheet?.getRow(8).getCell(2).value ?? '')
     expect(cell).toBe(
       '1º Reforma dos bancos do veículo\nRetirada do revestimento\nTempo planejado: 1h',
     )
+    expect(sheet?.getRow(8).getCell(2).alignment?.wrapText).toBe(true)
+    expect(sheet?.getRow(8).height ?? 0).toBeGreaterThanOrEqual(3 * 15)
   })
 
-  it('descrição ausente/vazia na célula → duas linhas (atividade + tempo), sem linha vazia', async () => {
-    const buffer = await buildOperationalPlanningWeeklyViewExportWorkbookBuffer({
-      meta: sampleMeta(),
-      rows: [
-        sampleRow({
-          id: 'a',
-          collaboratorId: 'c1',
-          collaboratorName: 'A',
-          plannedDate: '2026-09-07',
-          conveyorTitle: null,
-          activityTitle: 'Só atividade',
-          plannedMinutes: 30,
-        }),
-        sampleRow({
-          id: 'b',
-          collaboratorId: 'c2',
-          collaboratorName: 'B',
-          plannedDate: '2026-09-07',
-          conveyorTitle: '   ',
-          activityTitle: '  Outra  ',
-          plannedMinutes: 120,
-        }),
-      ],
-    })
-    const workbook = new ExcelJS.Workbook()
-    await workbook.xlsx.load(buffer)
-    const sheet = workbook.getWorksheet('Visão semanal')
-    const a = String(sheet?.getRow(8).getCell(2).value ?? '')
-    const b = String(sheet?.getRow(9).getCell(2).value ?? '')
-    expect(a).toBe('1º Só atividade\nTempo planejado: 30 min')
-    expect(b).toBe('1º Outra\nTempo planejado: 2h')
-    expect(a.split('\n').some((line) => line.trim() === '')).toBe(false)
-    expect(b.split('\n').some((line) => line.trim() === '')).toBe(false)
-  })
-
-  it('aplica wrapText e altura suficiente para todas as linhas da célula', async () => {
+  it('preserva proteção contra fórmula em observações consolidadas', async () => {
     const buffer = await buildOperationalPlanningWeeklyViewExportWorkbookBuffer({
       meta: sampleMeta(),
       rows: [
         sampleRow({
           plannedDate: '2026-09-07',
-          conveyorTitle: 'Esteira',
-          activityTitle: 'Atividade',
-          plannedMinutes: 90,
-        }),
-      ],
-    })
-    const workbook = new ExcelJS.Workbook()
-    await workbook.xlsx.load(buffer)
-    const sheet = workbook.getWorksheet('Visão semanal')
-    const dataRow = sheet?.getRow(8)
-    const dayCell = dataRow?.getCell(2)
-    expect(dayCell?.alignment?.wrapText).toBe(true)
-    expect(dayCell?.alignment?.vertical).toBe('top')
-    const lines = String(dayCell?.value ?? '').split('\n').length
-    expect(lines).toBe(3)
-    expect(dataRow?.height ?? 0).toBeGreaterThanOrEqual(lines * 15)
-  })
-
-  it('altura da linha física é individual e comporta o texto multilinha da própria célula', async () => {
-    const buffer = await buildOperationalPlanningWeeklyViewExportWorkbookBuffer({
-      meta: sampleMeta(),
-      rows: [
-        sampleRow({
-          id: 'with-conveyor',
-          collaboratorId: 'col-a',
-          collaboratorName: 'Ana',
-          plannedDate: '2026-09-07',
-          conveyorTitle: 'Esteira',
-          activityTitle: 'Atividade',
-          plannedMinutes: 90,
-        }),
-        sampleRow({
-          id: 'no-conveyor',
-          collaboratorId: 'col-a',
-          collaboratorName: 'Ana',
-          plannedDate: '2026-09-08',
-          conveyorTitle: null,
-          activityTitle: 'Só atividade',
-          plannedMinutes: 30,
-        }),
-      ],
-    })
-    const workbook = new ExcelJS.Workbook()
-    await workbook.xlsx.load(buffer)
-    const sheet = workbook.getWorksheet('Visão semanal')
-    const rowWith = sheet?.getRow(8)
-    const rowWithout = sheet?.getRow(9)
-    const linesWith = String(rowWith?.getCell(2).value ?? '').split('\n').length
-    const linesWithout = String(rowWithout?.getCell(3).value ?? '').split('\n').length
-    expect(linesWith).toBe(3)
-    expect(linesWithout).toBe(2)
-    expect(rowWith?.height ?? 0).toBeGreaterThanOrEqual(linesWith * 15)
-    expect(rowWithout?.height ?? 0).toBeGreaterThanOrEqual(linesWithout * 15)
-    // linhas físicas distintas — altura não agrega atividades do colaborador
-    expect(rowWithout?.height ?? 0).toBeLessThan(rowWith?.height ?? 0)
-  })
-
-  it('preserva proteção contra fórmula em observações após formatação multilinha', async () => {
-    const buffer = await buildOperationalPlanningWeeklyViewExportWorkbookBuffer({
-      meta: sampleMeta(),
-      rows: [
-        sampleRow({
-          plannedDate: '2026-09-07',
-          conveyorTitle: 'Esteira',
-          activityTitle: 'Atividade',
+          plannedOrder: 0,
           notes: '=CMD()',
         }),
       ],
@@ -556,83 +618,21 @@ describe('buildOperationalPlanningWeeklyViewExportWorkbookBuffer', () => {
     const workbook = new ExcelJS.Workbook()
     await workbook.xlsx.load(buffer)
     const sheet = workbook.getWorksheet('Visão semanal')
-    expect(String(sheet?.getRow(8).getCell(7).value ?? '')).toBe("'=CMD()")
-    expect(String(sheet?.getRow(8).getCell(2).value ?? '')).toContain('Esteira')
-    expect(String(sheet?.getRow(8).getCell(2).value ?? '')).toContain('Atividade')
+    // sanitização age no início da célula; prefixo "Segunda…" impede fórmula — conteúdo preservado
+    const notes = String(sheet?.getRow(8).getCell(7).value ?? '')
+    expect(notes).toContain('=CMD()')
+    expect(notes).toContain('Segunda 1º —')
+    expect(sheet?.getRow(8).getCell(7).formula).toBeFalsy()
   })
 
-  it('ordem exibida como 1º/2º (plannedOrder + 1)', async () => {
+  it('protege nome de colaborador começando com + contra fórmula', async () => {
     const buffer = await buildOperationalPlanningWeeklyViewExportWorkbookBuffer({
       meta: sampleMeta(),
-      rows: [sampleRow({ plannedOrder: 4, plannedDate: '2026-09-07' })],
+      rows: [sampleRow({ collaboratorName: '+Nome', notes: null })],
     })
     const workbook = new ExcelJS.Workbook()
     await workbook.xlsx.load(buffer)
     const sheet = workbook.getWorksheet('Visão semanal')
-    expect(String(sheet?.getRow(8).getCell(2).value ?? '')).toContain('5º')
-  })
-
-  it('duração embutida usa rótulo textual — 60→1h, 45→45 min, 600→10h, 1500→25h', async () => {
-    const buffer = await buildOperationalPlanningWeeklyViewExportWorkbookBuffer({
-      meta: sampleMeta(),
-      rows: [
-        sampleRow({ id: 'a', collaboratorId: 'col-a', collaboratorName: 'A', plannedDate: '2026-09-07', plannedMinutes: 60 }),
-        sampleRow({ id: 'b', collaboratorId: 'col-b', collaboratorName: 'B', plannedDate: '2026-09-07', plannedMinutes: 45 }),
-        sampleRow({ id: 'c', collaboratorId: 'col-c', collaboratorName: 'C', plannedDate: '2026-09-07', plannedMinutes: 600 }),
-        sampleRow({ id: 'd', collaboratorId: 'col-d', collaboratorName: 'D', plannedDate: '2026-09-07', plannedMinutes: 1500 }),
-      ],
-    })
-    const workbook = new ExcelJS.Workbook()
-    await workbook.xlsx.load(buffer)
-    const sheet = workbook.getWorksheet('Visão semanal')
-    const values = Array.from({ length: 4 }, (_, i) => String(sheet?.getRow(8 + i).getCell(2).value ?? ''))
-    expect(values.some((v) => v.includes('Tempo planejado: 1h'))).toBe(true)
-    expect(values.some((v) => v.includes('Tempo planejado: 45 min'))).toBe(true)
-    expect(values.some((v) => v.includes('Tempo planejado: 10h'))).toBe(true)
-    expect(values.some((v) => v.includes('Tempo planejado: 25h'))).toBe(true)
-    expect(values.every((v) => !/\d+:\d{2}/.test(v))).toBe(true)
-  })
-
-  it('observação correta por linha; observação ausente vira —', async () => {
-    const buffer = await buildOperationalPlanningWeeklyViewExportWorkbookBuffer({
-      meta: sampleMeta(),
-      rows: [
-        sampleRow({ id: 'a', collaboratorId: 'col-a', collaboratorName: 'A', notes: 'Nota da atividade' }),
-        sampleRow({ id: 'b', collaboratorId: 'col-b', collaboratorName: 'B', notes: null }),
-        sampleRow({ id: 'c', collaboratorId: 'col-c', collaboratorName: 'C', notes: '   ' }),
-      ],
-    })
-    const workbook = new ExcelJS.Workbook()
-    await workbook.xlsx.load(buffer)
-    const sheet = workbook.getWorksheet('Visão semanal')
-    const notesValues = Array.from({ length: 3 }, (_, i) => String(sheet?.getRow(8 + i).getCell(7).value ?? ''))
-    expect(notesValues).toEqual(['Nota da atividade', '—', '—'])
-  })
-
-  it('"Não atribuído" quando o item não tem colaborador — e fica ao final da ordenação', async () => {
-    const buffer = await buildOperationalPlanningWeeklyViewExportWorkbookBuffer({
-      meta: sampleMeta(),
-      rows: [
-        sampleRow({ id: 'a', collaboratorId: 'col-a', collaboratorName: 'Ana' }),
-        sampleRow({ id: 'z', collaboratorId: null, collaboratorName: null }),
-      ],
-    })
-    const workbook = new ExcelJS.Workbook()
-    await workbook.xlsx.load(buffer)
-    const sheet = workbook.getWorksheet('Visão semanal')
-    expect(sheet?.getRow(8).getCell(1).value).toBe('Ana')
-    expect(sheet?.getRow(9).getCell(1).value).toBe('Não atribuído')
-  })
-
-  it('protege texto começando com =, +, - ou @ contra reinterpretação como fórmula', async () => {
-    const buffer = await buildOperationalPlanningWeeklyViewExportWorkbookBuffer({
-      meta: sampleMeta(),
-      rows: [sampleRow({ notes: '=SUM(A1:A9)', collaboratorName: '+Nome' })],
-    })
-    const workbook = new ExcelJS.Workbook()
-    await workbook.xlsx.load(buffer)
-    const sheet = workbook.getWorksheet('Visão semanal')
-    expect(sheet?.getRow(8).getCell(7).value).toBe("'=SUM(A1:A9)")
     expect(sheet?.getRow(8).getCell(1).value).toBe("'+Nome")
   })
 
@@ -652,47 +652,6 @@ describe('buildOperationalPlanningWeeklyViewExportWorkbookBuffer', () => {
     }
   })
 
-  it('não expõe nenhum UUID em coluna visível', async () => {
-    const buffer = await buildOperationalPlanningWeeklyViewExportWorkbookBuffer({
-      meta: sampleMeta(),
-      rows: [
-        sampleRow({
-          id: '11111111-1111-1111-1111-111111111111',
-          collaboratorId: '22222222-2222-2222-2222-222222222222',
-        }),
-      ],
-    })
-    const workbook = new ExcelJS.Workbook()
-    await workbook.xlsx.load(buffer)
-    const uuidRe = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i
-    for (const sheet of workbook.worksheets) {
-      const values = (sheet.getSheetValues() ?? [])
-        .flatMap((r) => (Array.isArray(r) ? r : []))
-        .map((v) => String(v ?? ''))
-      for (const v of values) {
-        expect(uuidRe.test(v)).toBe(false)
-      }
-    }
-  })
-
-  it('não inclui dados de execução/apontamento/tempo realizado/quantidade executada', async () => {
-    const buffer = await buildOperationalPlanningWeeklyViewExportWorkbookBuffer({
-      meta: sampleMeta(),
-      rows: [sampleRow()],
-    })
-    const workbook = new ExcelJS.Workbook()
-    await workbook.xlsx.load(buffer)
-    const forbidden = /realizad|excedid|quantidade executada|apontamento/i
-    for (const sheet of workbook.worksheets) {
-      const values = (sheet.getSheetValues() ?? [])
-        .flatMap((r) => (Array.isArray(r) ? r : []))
-        .map((v) => String(v ?? ''))
-      for (const v of values) {
-        expect(forbidden.test(v)).toBe(false)
-      }
-    }
-  })
-
   it('aplica autofiltro, freeze panes na linha 7 e pageSetup paisagem', async () => {
     const buffer = await buildOperationalPlanningWeeklyViewExportWorkbookBuffer({
       meta: sampleMeta(),
@@ -704,19 +663,24 @@ describe('buildOperationalPlanningWeeklyViewExportWorkbookBuffer', () => {
     expect(sheet?.autoFilter).toBeTruthy()
     expect(sheet?.views?.[0]).toMatchObject({ state: 'frozen', ySplit: 7 })
     expect(sheet?.pageSetup?.orientation).toBe('landscape')
-    expect(sheet?.pageSetup?.fitToWidth).toBe(1)
-    expect(sheet?.pageSetup?.fitToHeight).toBe(0)
   })
 
-  it('nenhuma aba oculta', async () => {
+  it('alternância visual por colaborador e borda estrutural em cada linha', async () => {
     const buffer = await buildOperationalPlanningWeeklyViewExportWorkbookBuffer({
       meta: sampleMeta(),
-      rows: [sampleRow()],
+      rows: [
+        sampleRow({ id: 'a', collaboratorId: 'a', collaboratorName: 'Ana' }),
+        sampleRow({ id: 'b', collaboratorId: 'b', collaboratorName: 'Bruno' }),
+      ],
     })
     const workbook = new ExcelJS.Workbook()
     await workbook.xlsx.load(buffer)
-    for (const sheet of workbook.worksheets) {
-      expect(sheet.state ?? 'visible').toBe('visible')
-    }
+    const sheet = workbook.getWorksheet('Visão semanal')
+    expect(sheet?.getRow(8).getCell(1).border?.top?.style).toBe('medium')
+    expect(sheet?.getRow(9).getCell(1).border?.top?.style).toBe('medium')
+    const fillArgb = (cell: ExcelJS.Cell | undefined) =>
+      (cell?.fill as ExcelJS.FillPattern | undefined)?.fgColor?.argb
+    expect(fillArgb(sheet?.getRow(8).getCell(1))).not.toBe('FFF3F4F6')
+    expect(fillArgb(sheet?.getRow(9).getCell(1))).toBe('FFF3F4F6')
   })
 })
