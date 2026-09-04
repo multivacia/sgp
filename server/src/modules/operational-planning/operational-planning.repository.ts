@@ -1887,6 +1887,8 @@ export type PlanItemWeeklyViewRow = {
   planned_date: string
   planned_order: number
   planned_minutes: number | null
+  /** Nome/descrição da esteira (`conveyors.name`). */
+  conveyor_title: string | null
   activity_title: string
   notes: string | null
 }
@@ -1894,8 +1896,8 @@ export type PlanItemWeeklyViewRow = {
 /**
  * Query dedicada ao export Excel "Visão semanal" (matriz colaborador × dia) — NÃO reaproveita
  * nem altera `listEnrichedItemsForWorkPlan`/`listEnrichedItemsForWorkPlanExport`. Sem CTE/join
- * de apontamentos (`conveyor_time_entries`): a visão semanal não usa tempo realizado. Traz
- * somente os campos usados pela matriz (sem esteira/tarefa/setor, fora de escopo desta visão).
+ * de apontamentos (`conveyor_time_entries`): a visão semanal não usa tempo realizado.
+ * Inclui o nome da esteira (`conveyors.name`) para compor a célula da atividade.
  * Nenhum join com "todos os colaboradores ativos" — só aparecem colaboradores com item no plano.
  */
 export async function listItemsForWorkPlanWeeklyView(
@@ -1909,6 +1911,7 @@ export async function listItemsForWorkPlanWeeklyView(
     planned_date: string
     planned_order: number
     planned_minutes: number | null
+    conveyor_title: string | null
     activity_title: string
     notes: string | null
   }>(
@@ -1920,12 +1923,16 @@ export async function listItemsForWorkPlanWeeklyView(
       i.planned_date::text,
       i.planned_order,
       i.planned_minutes,
+      cv.name AS conveyor_title,
       step.name AS activity_title,
       i.notes
     FROM operational_work_plan_items i
     INNER JOIN conveyor_nodes step
       ON step.id = i.activity_node_id
       AND step.deleted_at IS NULL
+    INNER JOIN conveyors cv
+      ON cv.id = step.conveyor_id
+      AND cv.deleted_at IS NULL
     LEFT JOIN collaborators col
       ON col.id = i.assigned_collaborator_id
       AND col.deleted_at IS NULL
@@ -1946,6 +1953,7 @@ export async function listItemsForWorkPlanWeeklyView(
     planned_date: row.planned_date,
     planned_order: row.planned_order,
     planned_minutes: row.planned_minutes,
+    conveyor_title: row.conveyor_title,
     activity_title: row.activity_title,
     notes: row.notes,
   }))

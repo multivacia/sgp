@@ -32,6 +32,8 @@ export type OperationalPlanningWeeklyViewExportRow = {
   plannedDate: string
   plannedOrder: number
   plannedMinutes: number | null
+  /** Nome/descrição da esteira (`conveyors.name`). */
+  conveyorTitle: string | null
   activityTitle: string
   notes: string | null
 }
@@ -128,6 +130,21 @@ export function weeklyViewWeekdayDates(weekStartDate: string): string[] {
 export function sanitizeExcelText(value: string): string {
   if (/^[=+\-@]/.test(value)) return `'${value}`
   return value
+}
+
+/**
+ * Texto da atividade na célula do dia: `descrição da esteira — atividade`.
+ * Sem descrição (nula/vazia/só espaços): somente a atividade. Sem separador solto.
+ */
+export function formatWeeklyViewActivityCellLabel(
+  conveyorDescription: string | null | undefined,
+  activityTitle: string | null | undefined,
+): string {
+  const description = (conveyorDescription ?? '').trim()
+  const activity = (activityTitle ?? '').trim()
+  if (description && activity) return `${description} — ${activity}`
+  if (activity) return activity
+  return description
 }
 
 function formatDateBrPt(date: Date): string {
@@ -306,8 +323,12 @@ export async function buildOperationalPlanningWeeklyViewExportWorkbookBuffer(inp
 
     const dayIndex = dayIndexInWeek(row.plannedDate, meta.weekStartDate)
     if (dayIndex != null) {
+      const activityLabel = formatWeeklyViewActivityCellLabel(
+        row.conveyorTitle,
+        row.activityTitle,
+      )
       const content = sanitizeExcelText(
-        `${row.plannedOrder + 1}º ${row.activityTitle} — ${formatDurationHhMm(row.plannedMinutes)}`,
+        `${row.plannedOrder + 1}º ${activityLabel} — ${formatDurationHhMm(row.plannedMinutes)}`,
       )
       excelRow.getCell(2 + dayIndex).value = content
     }

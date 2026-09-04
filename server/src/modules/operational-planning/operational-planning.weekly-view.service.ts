@@ -39,6 +39,7 @@ function mapRowToExportRow(row: PlanItemWeeklyViewRow): OperationalPlanningWeekl
     plannedDate: row.planned_date,
     plannedOrder: row.planned_order,
     plannedMinutes: row.planned_minutes,
+    conveyorTitle: row.conveyor_title,
     activityTitle: row.activity_title,
     notes: row.notes,
   }

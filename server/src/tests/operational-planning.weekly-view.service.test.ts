@@ -19,6 +19,7 @@ function samplePlanItemRow(overrides: Partial<PlanItemWeeklyViewRow> = {}): Plan
     planned_date: '2026-09-07',
     planned_order: 0,
     planned_minutes: 90,
+    conveyor_title: 'Esteira Demo',
     activity_title: 'Atividade A',
     notes: null,
     ...overrides,

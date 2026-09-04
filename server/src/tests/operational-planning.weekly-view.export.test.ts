@@ -5,6 +5,7 @@ import {
   buildOperationalPlanningWeeklyViewExportWorkbookBuffer,
   excelDateFromIso,
   formatDurationHhMm,
+  formatWeeklyViewActivityCellLabel,
   sanitizeExcelText,
   sortOperationalPlanningWeeklyViewRows,
   weeklyViewWeekdayDates,
@@ -37,6 +38,7 @@ function sampleRow(
     plannedDate: '2026-09-07',
     plannedOrder: 0,
     plannedMinutes: 60,
+    conveyorTitle: null,
     activityTitle: 'Atividade A',
     notes: 'Observação',
     ...partial,
@@ -92,6 +94,38 @@ describe('sanitizeExcelText', () => {
 
   it('mantém texto normal inalterado', () => {
     expect(sanitizeExcelText('Observação normal')).toBe('Observação normal')
+  })
+})
+
+describe('formatWeeklyViewActivityCellLabel', () => {
+  it('compõe descrição — atividade quando ambos existem', () => {
+    expect(
+      formatWeeklyViewActivityCellLabel(
+        'Reforma dos bancos do veículo',
+        'Retirada do revestimento',
+      ),
+    ).toBe('Reforma dos bancos do veículo — Retirada do revestimento')
+  })
+
+  it('descrição nula ou vazia → somente atividade', () => {
+    expect(formatWeeklyViewActivityCellLabel(null, 'Retirada')).toBe('Retirada')
+    expect(formatWeeklyViewActivityCellLabel(undefined, 'Retirada')).toBe('Retirada')
+    expect(formatWeeklyViewActivityCellLabel('', 'Retirada')).toBe('Retirada')
+    expect(formatWeeklyViewActivityCellLabel('   ', 'Retirada')).toBe('Retirada')
+  })
+
+  it('aplica trim e não gera separador solto', () => {
+    expect(
+      formatWeeklyViewActivityCellLabel('  Esteira X  ', '  Atividade Y  '),
+    ).toBe('Esteira X — Atividade Y')
+    expect(formatWeeklyViewActivityCellLabel('  ', '  Atividade Y  ')).toBe('Atividade Y')
+    expect(formatWeeklyViewActivityCellLabel('Esteira X', '  ')).toBe('Esteira X')
+  })
+
+  it('preserva acentos', () => {
+    expect(
+      formatWeeklyViewActivityCellLabel('Revisão do assento', 'Remoção do revestimento'),
+    ).toBe('Revisão do assento — Remoção do revestimento')
   })
 })
 
@@ -247,6 +281,83 @@ describe('buildOperationalPlanningWeeklyViewExportWorkbookBuffer', () => {
     const row2 = String(sheet?.getRow(9).getCell(2).value ?? '')
     expect(row1).toContain('1º Primeira')
     expect(row2).toContain('2º Segunda')
+  })
+
+  it('célula do dia inclui descrição da esteira — atividade na mesma coluna (sem coluna nova)', async () => {
+    const buffer = await buildOperationalPlanningWeeklyViewExportWorkbookBuffer({
+      meta: sampleMeta(),
+      rows: [
+        sampleRow({
+          plannedDate: '2026-09-07',
+          conveyorTitle: 'Reforma dos bancos do veículo',
+          activityTitle: 'Retirada do revestimento',
+          plannedMinutes: 60,
+        }),
+      ],
+    })
+    const workbook = new ExcelJS.Workbook()
+    await workbook.xlsx.load(buffer)
+    const sheet = workbook.getWorksheet('Visão semanal')
+    const headerRow = sheet?.getRow(7)
+    const headers = Array.from({ length: 7 }, (_, idx) => String(headerRow?.getCell(idx + 1).value ?? ''))
+    expect(headers).toHaveLength(7)
+    expect(headers[0]).toBe('Colaborador')
+    expect(headers[6]).toBe('Observações')
+    const cell = String(sheet?.getRow(8).getCell(2).value ?? '')
+    expect(cell).toBe('1º Reforma dos bancos do veículo — Retirada do revestimento — 1:00')
+    expect(cell).not.toMatch(/^ —|— $/)
+  })
+
+  it('descrição ausente/vazia na célula → somente atividade (sem separador solto)', async () => {
+    const buffer = await buildOperationalPlanningWeeklyViewExportWorkbookBuffer({
+      meta: sampleMeta(),
+      rows: [
+        sampleRow({
+          id: 'a',
+          collaboratorId: 'c1',
+          plannedDate: '2026-09-07',
+          conveyorTitle: null,
+          activityTitle: 'Só atividade',
+        }),
+        sampleRow({
+          id: 'b',
+          collaboratorId: 'c2',
+          plannedDate: '2026-09-07',
+          conveyorTitle: '   ',
+          activityTitle: '  Outra  ',
+        }),
+      ],
+    })
+    const workbook = new ExcelJS.Workbook()
+    await workbook.xlsx.load(buffer)
+    const sheet = workbook.getWorksheet('Visão semanal')
+    const a = String(sheet?.getRow(8).getCell(2).value ?? '')
+    const b = String(sheet?.getRow(9).getCell(2).value ?? '')
+    expect(a).toContain('1º Só atividade —')
+    expect(a).not.toContain('— Só atividade')
+    expect(b).toContain('1º Outra —')
+    expect(b).not.toMatch(/^\s*—|—\s*—/)
+  })
+
+  it('preserva proteção contra fórmula em observações após concatenação da atividade', async () => {
+    const buffer = await buildOperationalPlanningWeeklyViewExportWorkbookBuffer({
+      meta: sampleMeta(),
+      rows: [
+        sampleRow({
+          plannedDate: '2026-09-07',
+          conveyorTitle: 'Esteira',
+          activityTitle: 'Atividade',
+          notes: '=CMD()',
+        }),
+      ],
+    })
+    const workbook = new ExcelJS.Workbook()
+    await workbook.xlsx.load(buffer)
+    const sheet = workbook.getWorksheet('Visão semanal')
+    expect(String(sheet?.getRow(8).getCell(7).value ?? '')).toBe("'=CMD()")
+    expect(String(sheet?.getRow(8).getCell(2).value ?? '')).toContain(
+      'Esteira — Atividade',
+    )
   })
 
   it('ordem exibida como 1º/2º (plannedOrder + 1)', async () => {

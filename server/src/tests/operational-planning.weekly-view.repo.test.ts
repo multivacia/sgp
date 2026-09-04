@@ -160,7 +160,8 @@ describe.skipIf(!hasDb)('listItemsForWorkPlanWeeklyView (integração)', () => {
       expect(anaRow).toBeTruthy()
       expect(anaRow?.activity_title).toBeTruthy()
       expect(anaRow?.notes).toBe('Nota')
-      expect(anaRow).not.toHaveProperty('conveyor_title')
+      expect(anaRow?.conveyor_title).toBeTruthy()
+      expect(typeof anaRow?.conveyor_title).toBe('string')
       expect(anaRow).not.toHaveProperty('realized_minutes')
 
       const mariaRow = rows.find((r) => r.assigned_collaborator_id === MARIA_COLLABORATOR_ID)
