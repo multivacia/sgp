@@ -302,19 +302,6 @@ export function ConveyorCreateEditPage({ mode }: { mode: Mode }) {
     }
   }, [id, mode, pathname, presentBlocking, applyLoadedDetail])
 
-  useRegisterTransientContext({
-    id: mode === 'create' ? 'nova-esteira-wizard' : 'alterar-esteira-wizard',
-    isDirty: () =>
-      dados.nome.trim().length > 0 ||
-      manualRoots.length > 0 ||
-      extras.inicioPrevisto.length > 0 ||
-      extras.fimPrevisto.length > 0,
-    onReset: () => {
-      if (mode === 'edit') setAba('dados')
-      setSubmitError(null)
-    },
-  })
-
   useEffect(() => {
     let cancelled = false
     ;(async () => {
@@ -561,6 +548,28 @@ export function ConveyorCreateEditPage({ mode }: { mode: Mode }) {
     hasStructureChanges,
     estruturaOk,
     canReplaceStructure,
+  })
+
+  // Em edição, alinhar o guard de saída à política de "Salvar alterações" (baseline),
+  // para que inclusão tardia já persistida + applyLoadedDetail não deixe falso dirty.
+  // Em criação, manter a heurística do wizard (formulário ainda vazio no início).
+  useRegisterTransientContext({
+    id: mode === 'create' ? 'nova-esteira-wizard' : 'alterar-esteira-wizard',
+    isDirty: () => {
+      if (mode === 'edit') {
+        return hasDadosChanges || hasStructureChanges || lateAppendOpen
+      }
+      return (
+        dados.nome.trim().length > 0 ||
+        manualRoots.length > 0 ||
+        extras.inicioPrevisto.length > 0 ||
+        extras.fimPrevisto.length > 0
+      )
+    },
+    onReset: () => {
+      if (mode === 'edit') setAba('dados')
+      setSubmitError(null)
+    },
   })
 
   const handlePatchStatus = useCallback(
