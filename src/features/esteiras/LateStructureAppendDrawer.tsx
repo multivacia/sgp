@@ -6,6 +6,7 @@ import type {
   CreateConveyorStepAssigneeInput,
   PostConveyorStructureItemBody,
 } from '../../domain/conveyors/conveyor.types'
+import { SgpInlineBanner } from '../../components/ui/SgpToast'
 import {
   buildManualConveyorInput,
   manualAssigneeRowsToApi,
@@ -35,6 +36,7 @@ type Props = {
 
 /**
  * Drawer de inclusão tardia: nova subárvore (1 OPTION) + motivo obrigatório sem pré-seleção.
+ * Superfícies e tipografia usam tokens semânticos / painel temático do SGP+ (claro e escuro).
  */
 export function LateStructureAppendDrawer({
   open,
@@ -108,12 +110,18 @@ export function LateStructureAppendDrawer({
       aria-modal="true"
       aria-labelledby="late-structure-append-title"
     >
-      <div className="flex max-h-[92vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#0b1220] shadow-2xl">
-        <header className="border-b border-white/10 px-4 py-3">
-          <h2 id="late-structure-append-title" className="font-heading text-base font-semibold text-white">
+      <div
+        data-testid="late-structure-append-panel"
+        className="flex max-h-[92vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl border border-sgp-border bg-sgp-app-panel text-[color:var(--semantic-base-fg)] shadow-2xl"
+      >
+        <header className="border-b border-sgp-border px-4 py-3">
+          <h2
+            id="late-structure-append-title"
+            className="font-heading text-base font-semibold text-[color:var(--semantic-base-fg)]"
+          >
             Incluir novo item
           </h2>
-          <p className="mt-1 text-xs text-slate-400">
+          <p className="mt-1 text-xs text-sgp-muted">
             A estrutura existente permanece intacta. A nova tarefa é acrescentada ao final e as
             atividades entram no Backlog do Planejamento Semanal.
           </p>
@@ -121,7 +129,7 @@ export function LateStructureAppendDrawer({
 
         <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-4">
           <label className="block space-y-1.5">
-            <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+            <span className="text-[11px] font-semibold uppercase tracking-wide text-sgp-muted">
               Motivo da inclusão <span className="text-sgp-gold">*</span>
             </span>
             <textarea
@@ -132,13 +140,13 @@ export function LateStructureAppendDrawer({
               maxLength={500}
               disabled={busy}
             />
-            <span className="block text-[11px] text-slate-500">
+            <span className="block text-[11px] text-sgp-muted">
               {reasonTrim.length}/500
               {!reasonOk && reasonTrim.length > 0 ? ' — mínimo 3 caracteres' : null}
             </span>
           </label>
 
-          <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
+          <div className="rounded-xl border border-sgp-border-subtle bg-sgp-surface-muted p-3">
             <NovaEsteiraComposicaoManual
               roots={roots}
               onChangeRoots={(next) => {
@@ -162,12 +170,12 @@ export function LateStructureAppendDrawer({
           </div>
 
           {structureError ? (
-            <p className="text-sm text-amber-300/90">{structureError}</p>
+            <SgpInlineBanner message={structureError} variant="neutral" />
           ) : null}
-          {error ? <p className="text-sm text-rose-300/90">{error}</p> : null}
+          {error ? <SgpInlineBanner message={error} variant="error" /> : null}
         </div>
 
-        <footer className="flex flex-wrap justify-end gap-2 border-t border-white/10 px-4 py-3">
+        <footer className="flex flex-wrap justify-end gap-2 border-t border-sgp-border px-4 py-3">
           <button type="button" className="sgp-cta-secondary" onClick={onCancel} disabled={busy}>
             Cancelar
           </button>
