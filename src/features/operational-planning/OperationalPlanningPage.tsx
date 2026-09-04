@@ -69,13 +69,15 @@ import {
   resolveOperationalPlanningWeeklyViewExportWeekStart,
   runOperationalPlanningWeeklyViewExportFlow,
 } from './operationalPlanningWeeklyViewExportFlow'
-import { buildVisiblePlanningBacklogItems } from './buildVisiblePlanningBacklogItems'
+import {
+  buildVisiblePlanningBacklogItems,
+  mergeRemoteAndLocalPlanningBacklogItems,
+} from './buildVisiblePlanningBacklogItems'
 import {
   PLAN_PUBLISHED_HELPER_TEXT,
   PLAN_UNPUBLISHED_CHANGES_BADGE,
   PUBLISH_BUTTON_LABEL,
   PUBLISH_SUCCESS_MESSAGE,
-  SAVE_REVISION_SUCCESS_MESSAGE,
   isPlanningPublishDisabled,
   resolvePlanningPublishButtonTitle,
   resolvePlanningRevisionContext,
@@ -84,7 +86,6 @@ import {
   resolvePlanningSaveSuccessMessage,
   resolvePlanningSaveWeekDates,
   resolvePlanningStatusBadgeLabel,
-  shouldAutoPersistPlanChanges,
   hasLegacyPlanWeekEndDate,
   LEGACY_PLAN_WEEK_END_NOTICE,
 } from './operationalPlanningPlanStatusCopy'
@@ -233,6 +234,61 @@ function planItemToDraft(it: OperationalPlanningPlanItem): DraftPlanItem {
     syncDifferences: it.syncDifferences,
     status: it.status,
   }
+}
+
+/** Converte item do quadro em shape de backlog para devolução local pré-save. */
+function draftItemToLocalBacklogItem(it: DraftPlanItem): OperationalPlanningBacklogItem {
+  const planned =
+    it.plannedMinutes != null && Number.isFinite(it.plannedMinutes)
+      ? Math.max(0, Math.floor(it.plannedMinutes))
+      : null
+  const realized =
+    it.realizedMinutes != null && Number.isFinite(it.realizedMinutes)
+      ? Math.max(0, Math.floor(it.realizedMinutes))
+      : 0
+  const pendingMinutes =
+    planned == null ? 0 : Math.max(0, planned - realized)
+  const collabId = it.assignedCollaboratorId?.trim() ?? ''
+  return {
+    conveyorId: it.conveyorId,
+    conveyorTitle: it.conveyorTitle,
+    clientName: null,
+    vehicleDescription: null,
+    licensePlate: null,
+    taskTitle: it.taskTitle,
+    sectorTitle: it.sectorTitle,
+    activityNodeId: it.activityNodeId,
+    activityTitle: it.activityTitle,
+    plannedMinutes: planned,
+    realizedMinutes: realized,
+    pendingMinutes,
+    assignedCollaborators: collabId
+      ? [{ id: collabId, fullName: it.assignedCollaboratorName?.trim() || 'Colaborador' }]
+      : [],
+    assignedTeams: [],
+    isOutOfSequence: Boolean(it.isOutOfSequence),
+    previousOpenCount: 0,
+    isOverdue: false,
+    hasAssignees: Boolean(collabId),
+  }
+}
+
+function backlogItemMatchesQuery(item: OperationalPlanningBacklogItem, q: string): boolean {
+  const needle = q.trim().toLowerCase()
+  if (!needle) return true
+  const hay = [
+    item.activityTitle,
+    item.conveyorTitle,
+    item.taskTitle,
+    item.sectorTitle,
+    item.clientName,
+    item.vehicleDescription,
+    item.licensePlate,
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase()
+  return hay.includes(needle)
 }
 
 function recalculateOrders(items: DraftPlanItem[]): DraftPlanItem[] {
@@ -624,6 +680,10 @@ export function OperationalPlanningPage() {
   const savedDraftJsonRef = useRef<string>('')
 
   const [backlogItems, setBacklogItems] = useState<OperationalPlanningBacklogItem[]>([])
+  /** Devoluções locais ao backlog ainda não refletidas pelo GET (antes do save). */
+  const [localReturnedBacklogItems, setLocalReturnedBacklogItems] = useState<
+    OperationalPlanningBacklogItem[]
+  >([])
   const [factoryIntakeItems, setFactoryIntakeItems] = useState<
     OperationalPlanningFactoryIntakeItem[]
   >([])
@@ -723,6 +783,7 @@ export function OperationalPlanningPage() {
       try {
         const parsed = JSON.parse(savedDraftJsonRef.current) as DraftPlanItem[]
         setDraftItems(parsed)
+        setLocalReturnedBacklogItems([])
       } catch {
         /* noop */
       }
@@ -760,6 +821,7 @@ export function OperationalPlanningPage() {
         setDraftItems([])
         savedDraftJsonRef.current = JSON.stringify([])
       }
+      setLocalReturnedBacklogItems([])
       void loadWeekActivity(w.week.weekStartDate)
     } catch (e) {
       reportClientError(e, { module: 'operational-planning', action: 'load_week' })
@@ -1042,6 +1104,9 @@ export function OperationalPlanningPage() {
     const previous = draftItems
     const next = recalculateOrders([...previous, nextItem])
     setDraftItems(next)
+    setLocalReturnedBacklogItems((locals) =>
+      locals.filter((l) => l.activityNodeId !== modalBacklogItem.activityNodeId),
+    )
     setModalOpen(false)
     setModalBacklogItem(null)
     capacityExceededAlert.notifyIfNeeded(previous, next)
@@ -1059,47 +1124,24 @@ export function OperationalPlanningPage() {
         setDraftItems([])
         savedDraftJsonRef.current = JSON.stringify([])
       }
+      setLocalReturnedBacklogItems([])
       void loadWeekActivity(out.week.weekStartDate)
     },
     [loadWeekActivity],
   )
 
-  const persistPublishedPlanItems = useCallback(
-    async (items: DraftPlanItem[]) => {
-      if (!weekPayload?.plan || !shouldAutoPersistPlanChanges(weekPayload)) return
-      const { weekStartDate, weekEndDate } = resolvePlanningSaveWeekDates(weekPayload)
-      const body = buildSavePayload(weekStartDate, weekEndDate, items)
-      setBusy(true)
-      setErrorMsg(null)
-      try {
-        const out = await saveOperationalPlanningWeek(body)
-        applyPlanningWeekFromServer(out)
-        setSuccessMsg(SAVE_REVISION_SUCCESS_MESSAGE)
-        void loadBacklog()
-        void loadFactoryIntake()
-      } catch (e) {
-        reportClientError(e, { module: 'operational-planning', action: 'save_published_remove' })
-        setErrorMsg(
-          resolvePlanningSaveErrorMessage(
-            e,
-            'Não foi possível salvar a revisão do plano.',
-          ),
-        )
-        void loadWeek()
-      } finally {
-        setBusy(false)
-      }
-    },
-    [weekPayload, loadBacklog, loadFactoryIntake, loadWeek, applyPlanningWeekFromServer],
-  )
-
   function removeDraft(localKey: string) {
     setDraftItems((prev) => {
-      const next = prev.filter((p) => p.localKey !== localKey)
-      if (shouldAutoPersistPlanChanges(weekPayload)) {
-        void persistPublishedPlanItems(next)
+      const removed = prev.find((p) => p.localKey === localKey)
+      if (removed) {
+        const localItem = draftItemToLocalBacklogItem(removed)
+        setLocalReturnedBacklogItems((locals) => {
+          if (locals.some((l) => l.activityNodeId === localItem.activityNodeId)) return locals
+          return [...locals, localItem]
+        })
       }
-      return next
+      // Apenas estado local: persistência continua exclusiva de "Salvar alterações".
+      return prev.filter((p) => p.localKey !== localKey)
     })
   }
 
@@ -1257,7 +1299,9 @@ export function OperationalPlanningPage() {
     const cell = parseCellId(oid)
     if (!cell) return
     if (plannedActivityIds.has(activityNodeId)) return
-    const bl = backlogItems.find((b) => b.activityNodeId === activityNodeId)
+    const bl =
+      backlogItems.find((b) => b.activityNodeId === activityNodeId) ??
+      localReturnedBacklogItems.find((b) => b.activityNodeId === activityNodeId)
     if (!bl) return
     const name = collaborators.find((c) => c.id === cell.collaboratorId)?.fullName ?? null
     const cellItems = draftItems.filter(
@@ -1285,15 +1329,21 @@ export function OperationalPlanningPage() {
     const previous = draftItems
     const next = recalculateOrders([...previous, nextItem])
     setDraftItems(next)
+    setLocalReturnedBacklogItems((locals) =>
+      locals.filter((l) => l.activityNodeId !== activityNodeId),
+    )
     capacityExceededAlert.notifyIfNeeded(previous, next)
   }
 
   const summary = weekPayload?.summary
 
-  const visibleBacklogItems = useMemo(
-    () => buildVisiblePlanningBacklogItems(backlogItems, draftItems),
-    [backlogItems, draftItems],
-  )
+  const visibleBacklogItems = useMemo(() => {
+    const localForFilter = localReturnedBacklogItems.filter((item) =>
+      backlogItemMatchesQuery(item, backlogQ),
+    )
+    const merged = mergeRemoteAndLocalPlanningBacklogItems(backlogItems, localForFilter)
+    return buildVisiblePlanningBacklogItems(merged, draftItems)
+  }, [backlogItems, localReturnedBacklogItems, draftItems, backlogQ])
 
   const factoryIntakeWeek = useMemo(
     () => ({
@@ -1318,8 +1368,11 @@ export function OperationalPlanningPage() {
   })
 
   const backlogExecutionLookup = useMemo(
-    () => buildPlanningBacklogExecutionLookup(backlogItems),
-    [backlogItems],
+    () =>
+      buildPlanningBacklogExecutionLookup(
+        mergeRemoteAndLocalPlanningBacklogItems(backlogItems, localReturnedBacklogItems),
+      ),
+    [backlogItems, localReturnedBacklogItems],
   )
 
   const {
