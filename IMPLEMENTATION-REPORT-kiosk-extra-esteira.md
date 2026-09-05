@@ -11,9 +11,12 @@ depender de `app_users`.
 ## Alterações feitas
 
 ### Migration
-- `server/migrations/0052_operational_extra_time_entries_production_origin.sql`
-  (última migration existente na branch era `0051`, então a nova recebeu o
-  número real seguinte: `0052`):
+- `server/migrations/0053_operational_extra_time_entries_production_origin.sql`
+  (última migration existente na branch era `0051`, então a nova recebeu
+  originalmente o número `0052`; renumerada para `0053` após integração em
+  `develop`, pois outra entrega em paralelo — sugestão de colaboradores —
+  também havia usado `0052_team_members_suggestion_order.sql`; conteúdo SQL
+  inalterado, apenas o nome do arquivo mudou):
   - `created_by_user_id` passa a ser `NULL`-ável.
   - novo `created_by_collaborator_id uuid NULL REFERENCES collaborators(id) ON DELETE RESTRICT`.
   - novo `origin text NOT NULL DEFAULT 'WEB'` com `CHECK (origin IN ('WEB','PRODUCTION'))`.
@@ -25,7 +28,7 @@ depender de `app_users`.
     `created_by_user_id` preenchido (não há linha antiga que viole o XOR).
   - Migration testada localmente (banco de desenvolvimento efêmero criado para
     esta tarefa) — aplicada com sucesso via `npm run migrate`, do zero até
-    `0052`, sem erros. **Não foi aplicada em HML/PRD** (fora do escopo — regra do
+    `0053`, sem erros. **Não foi aplicada em HML/PRD** (fora do escopo — regra do
     projeto é nunca rodar migração sem instrução explícita além do ambiente
     local de verificação).
 
@@ -124,7 +127,7 @@ instalados. Como a spec exige explicitamente um "teste de componente... Vitest
 
 | Critério | Atendido? | Onde |
 |---|---|---|
-| Migration nova com número real (`0052`) | Sim | `server/migrations/0052_operational_extra_time_entries_production_origin.sql` |
+| Migration nova com número real (`0053`) | Sim | `server/migrations/0053_operational_extra_time_entries_production_origin.sql` |
 | `created_by_user_id` NULLABLE | Sim | mesma migration |
 | `created_by_collaborator_id` novo, FK `collaborators(id)` | Sim | idem |
 | `origin` novo, `CHECK IN ('WEB','PRODUCTION')`, default `'WEB'` | Sim | idem |
@@ -170,6 +173,14 @@ instalados. Como a spec exige explicitamente um "teste de componente... Vitest
 ```
 (`git diff` completo disponível no commit desta entrega — `git show <hash>`.)
 
+> Nota pós-merge: `server/migrations/0052_operational_extra_time_entries_production_origin.sql`
+> (linha acima) foi renomeado para
+> `server/migrations/0053_operational_extra_time_entries_production_origin.sql`
+> após integração em `develop`, por conflito de numeração com
+> `0052_team_members_suggestion_order.sql` (entrega paralela). O bloco acima é
+> o registro histórico do diff no momento do commit original; mantido
+> verbatim por fidelidade à evidência.
+
 ### `npm run lint` (raiz, cobre frontend + tipos)
 ```
 EXIT CODE: 1
@@ -203,7 +214,9 @@ Inclui os 7 testes novos de `KioskExtraActivityModal.test.tsx`.
 ### `npm run server:test` (server, Vitest — integração real com PostgreSQL local)
 Rodado contra um banco de desenvolvimento local dedicado (`sgp_dev`, PostgreSQL
 16, criado só para esta verificação — nunca aponta para HML/PRD), com todas as
-migrations aplicadas via `npm run migrate` (`0001` → `0052`).
+migrations aplicadas via `npm run migrate` (`0001` → `0052`, numeração no
+momento desta verificação; a migration desta feature foi renumerada para
+`0053` após integração em `develop` — ver nota na seção "Migration").
 
 Isolado, o teste novo é **100% determinístico** (rodado 3× seguidas, sempre
 15/15):
@@ -255,7 +268,8 @@ nenhuma alteração minha. Não tentei "corrigir" esses testes — estão fora d
 escopo aprovado desta spec.
 
 ## Migrations
-- Nova: `server/migrations/0052_operational_extra_time_entries_production_origin.sql`.
+- Nova: `server/migrations/0053_operational_extra_time_entries_production_origin.sql`
+  (renumerada de `0052` após integração em `develop` — ver nota acima).
 - Aplicada apenas no banco de desenvolvimento local efêmero criado para esta
   tarefa (`sgp_dev`), para permitir rodar `tsc`/testes de integração reais.
   **Não foi aplicada em HML nem PRD** — isso deve seguir o fluxo normal do
@@ -321,5 +335,5 @@ escopo aprovado desta spec.
   só no arquivo novo, via `/** @vitest-environment jsdom */`), mas é a
   primeira vez que esse padrão é usado no repositório — outros times que
   quiserem testar componentes React devem seguir esse mesmo padrão.
-- Migration `0052` não foi aplicada em HML/PRD (fora do escopo desta tarefa,
-  conforme regra do projeto).
+- Migration `0053` (renumerada de `0052`) não foi aplicada em HML/PRD (fora do
+  escopo desta tarefa, conforme regra do projeto).
