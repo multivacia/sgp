@@ -40,6 +40,10 @@ export function teamMemberFromApiJson(raw: unknown): TeamMember {
     teamId: String(raw.teamId ?? ''),
     collaboratorId: String(raw.collaboratorId ?? ''),
     collaboratorFullName: String(raw.collaboratorFullName ?? ''),
+    collaboratorCode:
+      raw.collaboratorCode === undefined || raw.collaboratorCode === null
+        ? null
+        : String(raw.collaboratorCode),
     collaboratorEmail:
       raw.collaboratorEmail === undefined || raw.collaboratorEmail === null
         ? null
@@ -52,6 +56,10 @@ export function teamMemberFromApiJson(raw: unknown): TeamMember {
         : String(raw.collaboratorDeletedAt),
     role: raw.role === undefined || raw.role === null ? null : String(raw.role),
     isPrimary: Boolean(raw.isPrimary),
+    suggestionOrder:
+      typeof raw.suggestionOrder === 'number' && Number.isFinite(raw.suggestionOrder)
+        ? Math.max(1, Math.floor(raw.suggestionOrder))
+        : 1,
     isActive: Boolean(raw.isActive),
     createdAt: String(raw.createdAt ?? ''),
     updatedAt: String(raw.updatedAt ?? ''),
@@ -83,6 +91,7 @@ export function teamMemberCreateToApiBody(
   }
   if (input.role !== undefined) body.role = input.role
   if (input.isPrimary !== undefined) body.isPrimary = input.isPrimary
+  if (input.suggestionOrder !== undefined) body.suggestionOrder = input.suggestionOrder
   return body
 }
 
@@ -93,5 +102,6 @@ export function teamMemberUpdateToApiBody(
   if (input.role !== undefined) body.role = input.role
   if (input.isPrimary !== undefined) body.isPrimary = input.isPrimary
   if (input.isActive !== undefined) body.isActive = input.isActive
+  if (input.suggestionOrder !== undefined) body.suggestionOrder = input.suggestionOrder
   return body
 }

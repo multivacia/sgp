@@ -13,12 +13,14 @@ export type TeamMember = {
   teamId: string
   collaboratorId: string
   collaboratorFullName: string
+  collaboratorCode: string | null
   collaboratorEmail: string | null
   collaboratorStatus: string
   collaboratorIsActive: boolean
   collaboratorDeletedAt: string | null
   role: string | null
   isPrimary: boolean
+  suggestionOrder: number
   isActive: boolean
   createdAt: string
   updatedAt: string
@@ -40,12 +42,14 @@ export type TeamMemberCreateInput = {
   collaboratorId: string
   role?: string | null
   isPrimary?: boolean
+  suggestionOrder?: number
 }
 
 export type TeamMemberUpdateInput = {
   role?: string | null
   isPrimary?: boolean
   isActive?: boolean
+  suggestionOrder?: number
 }
 
 export type TeamListParams = {

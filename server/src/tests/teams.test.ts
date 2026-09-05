@@ -108,6 +108,28 @@ describe.skipIf(!hasDb)('teams (integração)', () => {
     expect(add.status).toBe(201)
     const memberId = add.body.data?.id as string
     expect(memberId).toMatch(/^[0-9a-f-]{36}$/i)
+    expect(add.body.data?.suggestionOrder).toBe(1)
+    expect(add.body.data?.isPrimary).toBe(true)
+
+    const patchOrder = await request(app)
+      .patch(`/api/v1/teams/${teamId}/members/${memberId}`)
+      .set('Cookie', cookie)
+      .send({ suggestionOrder: 3, isPrimary: true })
+    expect(patchOrder.status).toBe(200)
+    expect(patchOrder.body.data?.suggestionOrder).toBe(3)
+    expect(patchOrder.body.data?.isPrimary).toBe(true)
+
+    const listed = await request(app)
+      .get(`/api/v1/teams/${teamId}/members`)
+      .set('Cookie', cookie)
+    expect(listed.status).toBe(200)
+    expect(listed.body.data[0]?.suggestionOrder).toBe(3)
+
+    const rejectOrder = await request(app)
+      .patch(`/api/v1/teams/${teamId}/members/${memberId}`)
+      .set('Cookie', cookie)
+      .send({ suggestionOrder: 0 })
+    expect(rejectOrder.status).toBe(422)
 
     const del = await request(app)
       .delete(`/api/v1/teams/${teamId}/members/${memberId}`)

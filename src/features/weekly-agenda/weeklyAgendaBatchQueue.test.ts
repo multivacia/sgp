@@ -128,21 +128,64 @@ describe('weekly free minutes', () => {
 })
 
 describe('findBestBatchQueueSuggestion', () => {
-  it('picks collaborator with most weekly free and default day', () => {
+  it('does not pick the collaborator with the most weekly free minutes by name', () => {
     const suggestion = findBestBatchQueueSuggestion({
-      collaborators: collaborators.map((c) => ({ ...c, status: 'active' as const })),
+      item: {
+        ...backlogItem,
+        suggestionContext: {
+          responsibleCollaboratorId: 'col-1',
+          responsibleCollaboratorCode: 'C1',
+          responsibleCollaboratorFullName: 'Carlos',
+          effectiveTeamId: 'team-1',
+          effectiveTeamName: 'Time',
+          multipleTeamsAssigned: false,
+          members: [
+            {
+              id: 'col-1',
+              code: 'C1',
+              fullName: 'Carlos',
+              isPrimary: true,
+              suggestionOrder: 1,
+            },
+            {
+              id: 'col-2',
+              code: 'A1',
+              fullName: 'Ana',
+              isPrimary: false,
+              suggestionOrder: 1,
+            },
+          ],
+        },
+      },
       weekdayDates,
       draftItems: [
         draft({ localKey: 'a', activityNodeId: 'act-a', assignedCollaboratorId: 'col-1', plannedMinutes: 450 }),
       ],
       capacityRows: [
         { collaboratorId: 'col-1', date: weekdayDates[0], capacityMinutes: 480, plannedMinutes: 450 },
+        { collaboratorId: 'col-1', date: weekdayDates[1], capacityMinutes: 480, plannedMinutes: 0 },
+        { collaboratorId: 'col-2', date: weekdayDates[0], capacityMinutes: 480, plannedMinutes: 0 },
+        { collaboratorId: 'col-2', date: weekdayDates[1], capacityMinutes: 480, plannedMinutes: 0 },
+      ],
+      defaultPlannedDate: weekdayDates[0],
+      neededMinutes: 90,
+    })
+    expect(suggestion?.collaboratorId).not.toBe('col-2')
+    expect(suggestion?.collaboratorId).toBe('col-1')
+    expect(suggestion?.plannedDate).toBe(weekdayDates[1])
+  })
+
+  it('returns null without inventing a candidate when there is no suggestion context', () => {
+    const suggestion = findBestBatchQueueSuggestion({
+      item: backlogItem,
+      weekdayDates,
+      draftItems: [],
+      capacityRows: [
         { collaboratorId: 'col-2', date: weekdayDates[0], capacityMinutes: 480, plannedMinutes: 0 },
       ],
       defaultPlannedDate: weekdayDates[1],
     })
-    expect(suggestion?.collaboratorId).toBe('col-2')
-    expect(suggestion?.plannedDate).toBe(weekdayDates[1])
+    expect(suggestion).toBeNull()
   })
 })
 
@@ -174,7 +217,11 @@ describe('applyBatchQueueAssignment', () => {
       plannedActivityIds: input.plannedActivityIds,
     })
     const pickComparable = (items: DraftPlanItem[] | null) =>
-      items?.map(({ localKey: _lk, ...rest }) => rest) ?? null
+      items?.map((item) => {
+        const { localKey, ...rest } = item
+        void localKey
+        return rest
+      }) ?? null
     expect(pickComparable(fromQueue)).toEqual(pickComparable(fromDnD))
     const placed = fromQueue?.find((d) => d.activityNodeId === backlogItem.activityNodeId)
     expect(placed?.plannedOrder).toBe(0)

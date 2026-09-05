@@ -211,6 +211,11 @@ describe('serviceListOperationalPlanningBacklog', () => {
         assigned_teams_json: [],
       },
     ])
+    vi.spyOn(opRepo, 'loadPlanningSuggestionFactsForSteps').mockResolvedValue({
+      assignees: [],
+      members: [],
+      queryCount: 0,
+    })
     vi.spyOn(conveyorRepo, 'listConveyorNodesForSequenceAnalysis').mockResolvedValue([
       {
         id: 'step-1',
@@ -233,5 +238,6 @@ describe('serviceListOperationalPlanningBacklog', () => {
     expect(out.items).toHaveLength(1)
     expect(out.items[0]?.conveyorId).toBe('cv-legacy')
     expect(out.items[0]?.activityNodeId).toBe('step-1')
+    expect(out.items[0]?.suggestionContext.members).toEqual([])
   })
 })

@@ -1380,7 +1380,7 @@ export async function listOperationalPlanningBacklog(
           SELECT json_agg(json_build_object(
             'id', col.id::text,
             'fullName', col.full_name
-          ))
+          ) ORDER BY cna.is_primary DESC, cna.order_index ASC, cna.created_at ASC, col.id ASC)
           FROM conveyor_node_assignees cna
           INNER JOIN collaborators col
             ON col.id = cna.collaborator_id
@@ -1396,7 +1396,7 @@ export async function listOperationalPlanningBacklog(
           SELECT json_agg(json_build_object(
             'id', t.id::text,
             'name', t.name
-          ))
+          ) ORDER BY cna.is_primary DESC, cna.order_index ASC, cna.created_at ASC, t.id ASC)
           FROM conveyor_node_assignees cna
           INNER JOIN teams t ON t.id = cna.team_id AND t.deleted_at IS NULL
           WHERE cna.conveyor_node_id = step.id
@@ -1495,6 +1495,121 @@ export async function listOperationalPlanningBacklog(
     assigned_collaborators_json: row.assigned_collaborators_json,
     assigned_teams_json: row.assigned_teams_json,
   }))
+}
+
+export type SuggestionAssigneeLoadRow = {
+  activity_node_id: string
+  assignment_type: 'COLLABORATOR' | 'TEAM'
+  collaborator_id: string | null
+  collaborator_code: string | null
+  collaborator_full_name: string | null
+  collaborator_is_active: boolean | null
+  collaborator_status: string | null
+  collaborator_deleted_at: Date | null
+  team_id: string | null
+  team_name: string | null
+  team_is_active: boolean | null
+  team_deleted_at: Date | null
+  is_primary: boolean
+  order_index: number
+  created_at: Date
+}
+
+export type SuggestionMemberLoadRow = {
+  team_id: string
+  collaborator_id: string
+  collaborator_code: string | null
+  collaborator_full_name: string
+  is_primary: boolean
+  suggestion_order: number
+  member_is_active: boolean
+  collaborator_is_active: boolean
+  collaborator_status: string
+  collaborator_deleted_at: Date | null
+}
+
+/**
+ * Carrega assignees do STEP + membros dos times atribuídos em lote (não N+1).
+ */
+export async function loadPlanningSuggestionFactsForSteps(
+  pool: pg.Pool,
+  activityNodeIds: string[],
+): Promise<{
+  assignees: SuggestionAssigneeLoadRow[]
+  members: SuggestionMemberLoadRow[]
+  queryCount: number
+}> {
+  const ids = [...new Set(activityNodeIds.filter((id) => id && id.length > 0))]
+  if (ids.length === 0) {
+    return { assignees: [], members: [], queryCount: 0 }
+  }
+
+  let queryCount = 0
+  const assigneeResult = await pool.query<SuggestionAssigneeLoadRow>(
+    `
+    SELECT
+      cna.conveyor_node_id::text AS activity_node_id,
+      cna.assignment_type,
+      cna.collaborator_id::text,
+      col.code AS collaborator_code,
+      col.full_name AS collaborator_full_name,
+      col.is_active AS collaborator_is_active,
+      col.status AS collaborator_status,
+      col.deleted_at AS collaborator_deleted_at,
+      cna.team_id::text,
+      t.name AS team_name,
+      t.is_active AS team_is_active,
+      t.deleted_at AS team_deleted_at,
+      cna.is_primary,
+      cna.order_index,
+      cna.created_at
+    FROM conveyor_node_assignees cna
+    LEFT JOIN collaborators col ON col.id = cna.collaborator_id
+    LEFT JOIN teams t ON t.id = cna.team_id
+    WHERE cna.deleted_at IS NULL
+      AND cna.conveyor_node_id = ANY($1::uuid[])
+    ORDER BY cna.conveyor_node_id,
+             cna.is_primary DESC,
+             cna.order_index ASC,
+             cna.created_at ASC
+    `,
+    [ids],
+  )
+  queryCount += 1
+  const assignees = assigneeResult.rows
+
+  const teamIds = [
+    ...new Set(
+      assignees
+        .filter((row) => row.assignment_type === 'TEAM' && row.team_id)
+        .map((row) => row.team_id as string),
+    ),
+  ]
+  if (teamIds.length === 0) {
+    return { assignees, members: [], queryCount }
+  }
+
+  const memberResult = await pool.query<SuggestionMemberLoadRow>(
+    `
+    SELECT
+      tm.team_id::text,
+      tm.collaborator_id::text,
+      c.code AS collaborator_code,
+      c.full_name AS collaborator_full_name,
+      tm.is_primary,
+      tm.suggestion_order,
+      tm.is_active AS member_is_active,
+      c.is_active AS collaborator_is_active,
+      c.status AS collaborator_status,
+      c.deleted_at AS collaborator_deleted_at
+    FROM team_members tm
+    INNER JOIN collaborators c ON c.id = tm.collaborator_id
+    WHERE tm.team_id = ANY($1::uuid[])
+    `,
+    [teamIds],
+  )
+  queryCount += 1
+  return { assignees, members: memberResult.rows, queryCount }
 }
 
 export type WorkPlanItemForSyncApplyRow = {

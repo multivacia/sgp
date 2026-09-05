@@ -97,6 +97,24 @@ export type OperationalPlanningWeekPayload = {
   }
 }
 
+export type OperationalPlanningSuggestionMember = {
+  id: string
+  code: string | null
+  fullName: string
+  isPrimary: boolean
+  suggestionOrder: number
+}
+
+export type OperationalPlanningSuggestionContext = {
+  responsibleCollaboratorId: string | null
+  responsibleCollaboratorCode: string | null
+  responsibleCollaboratorFullName: string | null
+  effectiveTeamId: string | null
+  effectiveTeamName: string | null
+  members: OperationalPlanningSuggestionMember[]
+  multipleTeamsAssigned: boolean
+}
+
 export type OperationalPlanningPlanSyncStatus = 'PENDING' | 'SYNCED' | 'DIVERGED'
 
 export type OperationalPlanningPlanSyncDifferenceCode =
@@ -167,6 +185,7 @@ export type OperationalPlanningFactoryIntakeItem = {
   totalPlanItems: number
   linkedPlanItems: number
   pendingPlanItems: number
+  suggestionContext?: OperationalPlanningSuggestionContext | null
 }
 
 export type OperationalPlanningFactoryIntakePayload = {
@@ -191,6 +210,7 @@ export type OperationalPlanningBacklogItem = {
   pendingMinutes: number
   assignedCollaborators: Array<{ id: string; fullName: string }>
   assignedTeams: Array<{ id: string; name: string }>
+  suggestionContext?: OperationalPlanningSuggestionContext | null
   isOutOfSequence: boolean
   previousOpenCount: number
   isOverdue: boolean

@@ -16,6 +16,7 @@ import type {
   PatchTeamMemberBody,
 } from './teams.schemas.js'
 import * as repo from './teams.repository.js'
+import { nextTeamMemberSuggestionOrder } from './teams.suggestion-order.js'
 
 function isPgUniqueViolation(e: unknown): boolean {
   return (
@@ -137,11 +138,15 @@ export async function serviceAddMember(
     if (isPrimary) {
       await repo.clearPrimaryForTeam(client, teamId)
     }
+    const suggestionOrder =
+      body.suggestionOrder ??
+      nextTeamMemberSuggestionOrder(await repo.maxSuggestionOrderForTeam(client, teamId))
     const row = await repo.insertTeamMember(client, {
       team_id: teamId,
       collaborator_id: body.collaboratorId,
       role,
       is_primary: isPrimary,
+      suggestion_order: suggestionOrder,
     })
     await client.query('COMMIT')
     return rowToTeamMemberApi(row)
@@ -172,7 +177,8 @@ export async function servicePatchMember(
   const hasChange =
     body.role !== undefined ||
     body.isPrimary !== undefined ||
-    body.isActive !== undefined
+    body.isActive !== undefined ||
+    body.suggestionOrder !== undefined
   if (!hasChange) {
     return rowToTeamMemberApi(existing)
   }
@@ -183,8 +189,12 @@ export async function servicePatchMember(
     if (body.isPrimary === true) {
       await repo.clearPrimaryForTeam(client, teamId, memberId)
     }
-    const patch: { role?: string | null; is_primary?: boolean; is_active?: boolean } =
-      {}
+    const patch: {
+      role?: string | null
+      is_primary?: boolean
+      is_active?: boolean
+      suggestion_order?: number
+    } = {}
     if (body.role !== undefined) {
       patch.role = body.role === null ? null : body.role
     }
@@ -194,6 +204,9 @@ export async function servicePatchMember(
       if (body.isActive === false) {
         patch.is_primary = false
       }
+    }
+    if (body.suggestionOrder !== undefined) {
+      patch.suggestion_order = body.suggestionOrder
     }
     const row = await repo.updateTeamMember(client, teamId, memberId, patch)
     await client.query('COMMIT')

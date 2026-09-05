@@ -45,6 +45,11 @@ describe('serviceListFactoryIntakeItems', () => {
 
   it('returns mapped intake items', async () => {
     vi.spyOn(opRepo, 'listFactoryIntakeItems').mockResolvedValue([sampleIntakeRow()])
+    vi.spyOn(opRepo, 'loadPlanningSuggestionFactsForSteps').mockResolvedValue({
+      assignees: [],
+      members: [],
+      queryCount: 0,
+    })
     const out = await serviceListFactoryIntakeItems(pool, '2026-05-12')
     expect(out.items).toHaveLength(1)
     expect(out.items[0]?.conveyorName).toBe('Esteira A')
@@ -55,5 +60,14 @@ describe('serviceListFactoryIntakeItems', () => {
     expect(out.items[0]?.totalPlanItems).toBe(3)
     expect(out.items[0]?.linkedPlanItems).toBe(1)
     expect(out.items[0]?.pendingPlanItems).toBe(2)
+    expect(out.items[0]?.suggestionContext).toEqual({
+      responsibleCollaboratorId: null,
+      responsibleCollaboratorCode: null,
+      responsibleCollaboratorFullName: null,
+      effectiveTeamId: null,
+      effectiveTeamName: null,
+      members: [],
+      multipleTeamsAssigned: false,
+    })
   })
 })

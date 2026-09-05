@@ -76,6 +76,9 @@ export function EquipeDetalhePage() {
   const [editRoleValue, setEditRoleValue] = useState('')
   const [editPrimaryValue, setEditPrimaryValue] = useState(false)
   const [savingEditRole, setSavingEditRole] = useState(false)
+  const [orderDrafts, setOrderDrafts] = useState<Record<string, string>>({})
+  const [savingOrderId, setSavingOrderId] = useState<string | null>(null)
+  const [editSuggestionOrder, setEditSuggestionOrder] = useState('1')
 
   const pushToast = useCallback((message: string, variant: SgpToastVariant = 'success') => {
     setToast({ message, variant })
@@ -99,6 +102,9 @@ export function EquipeDetalhePage() {
       setIsActive(t.isActive)
       const m = await listTeamMembers(teamId)
       setMembers(m)
+      setOrderDrafts(
+        Object.fromEntries(m.map((row) => [row.id, String(row.suggestionOrder ?? 1)])),
+      )
     } catch (err) {
       const n = reportClientError(err, {
         module: 'equipes',
@@ -246,6 +252,41 @@ export function EquipeDetalhePage() {
     setEditRoleTarget(m)
     setEditRoleValue(m.role ?? '')
     setEditPrimaryValue(Boolean(m.isPrimary))
+    setEditSuggestionOrder(String(m.suggestionOrder ?? 1))
+  }
+
+  async function saveSuggestionOrder(member: TeamMember, raw: string) {
+    if (!teamId) return
+    const parsed = Number.parseInt(raw, 10)
+    if (!Number.isFinite(parsed) || parsed < 1) {
+      pushToast('A prioridade de sugestão deve ser um número inteiro maior ou igual a 1.', 'error')
+      setOrderDrafts((prev) => ({
+        ...prev,
+        [member.id]: String(member.suggestionOrder ?? 1),
+      }))
+      return
+    }
+    if (parsed === member.suggestionOrder) return
+    setSavingOrderId(member.id)
+    try {
+      await patchTeamMember(teamId, member.id, { suggestionOrder: parsed })
+      pushToast('Prioridade de sugestão atualizada.')
+      await load()
+    } catch (err) {
+      const rep = reportClientError(err, {
+        module: 'equipes',
+        action: 'patch_suggestion_order',
+        route: `/app/equipes/${teamId}`,
+        entityId: member.id,
+      })
+      if (isBlockingSeverity(rep.severity)) {
+        presentBlocking(rep)
+        return
+      }
+      pushToast(rep.userMessage, 'error')
+    } finally {
+      setSavingOrderId(null)
+    }
   }
 
   async function onEditMemberRoleSubmit() {
@@ -254,7 +295,14 @@ export function EquipeDetalhePage() {
     const normalized = editRoleValue.trim()
     const currentPrimary = Boolean(editRoleTarget.isPrimary)
     const primaryChanged = editPrimaryValue !== currentPrimary
-    if (normalized === current && !primaryChanged) {
+    const currentOrder = editRoleTarget.suggestionOrder ?? 1
+    const nextOrder = Number.parseInt(editSuggestionOrder, 10)
+    if (!Number.isFinite(nextOrder) || nextOrder < 1) {
+      pushToast('A prioridade de sugestão deve ser um número inteiro maior ou igual a 1.', 'error')
+      return
+    }
+    const orderChanged = nextOrder !== currentOrder
+    if (normalized === current && !primaryChanged && !orderChanged) {
       setEditRoleTarget(null)
       return
     }
@@ -264,6 +312,7 @@ export function EquipeDetalhePage() {
       await patchTeamMember(teamId, editRoleTarget.id, {
         role: normalized === '' ? null : normalized,
         isPrimary: editPrimaryValue,
+        suggestionOrder: nextOrder,
       })
       pushToast('Membro da equipe atualizado.')
       setEditRoleTarget(null)
@@ -382,7 +431,14 @@ export function EquipeDetalhePage() {
 
           <section className="mt-6 max-w-6xl rounded-2xl border border-white/10 bg-sgp-app-panel-deep/80 p-6 shadow-xl backdrop-blur">
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <h2 className="text-sm font-bold uppercase tracking-wide text-slate-400">Membros</h2>
+              <div>
+                <h2 className="text-sm font-bold uppercase tracking-wide text-slate-400">Membros</h2>
+                <p className="mt-1 max-w-2xl text-xs leading-relaxed text-slate-500">
+                  Prioridade de sugestão: valores menores aparecem primeiro no planejamento semanal.
+                  Valores iguais formam o mesmo nível. A referência da equipe sempre tem precedência,
+                  independentemente deste número.
+                </p>
+              </div>
               {canMembers && (
                 <button
                   type="button"
@@ -420,6 +476,9 @@ export function EquipeDetalhePage() {
                         Referência
                       </th>
                       <th className="whitespace-nowrap px-4 py-4 font-heading text-[11px] font-bold uppercase tracking-[0.12em]">
+                        Prioridade de sugestão
+                      </th>
+                      <th className="whitespace-nowrap px-4 py-4 font-heading text-[11px] font-bold uppercase tracking-[0.12em]">
                         Situação
                       </th>
                       {canMembers && (
@@ -449,7 +508,10 @@ export function EquipeDetalhePage() {
                       return (
                         <tr
                           key={m.id}
-                          className="border-b border-white/5 text-slate-200 hover:bg-white/[0.03]"
+                          className={[
+                            'border-b border-white/5 text-slate-200 hover:bg-white/[0.03]',
+                            m.isPrimary ? 'border-l-4 border-l-sgp-gold/80 bg-sgp-gold/[0.04]' : '',
+                          ].join(' ')}
                         >
                           <td className="px-4 py-3">
                             <div className="font-medium text-white">{m.collaboratorFullName}</div>
@@ -460,11 +522,47 @@ export function EquipeDetalhePage() {
                           <td className="px-4 py-3 text-slate-400">{m.role ?? '—'}</td>
                           <td className="px-4 py-3">
                             {m.isPrimary ? (
-                              <span className="rounded-full bg-sgp-gold/15 px-2 py-0.5 text-[11px] font-semibold text-sgp-gold">
+                              <span
+                                className="inline-flex items-center gap-1 rounded-full bg-sgp-gold/15 px-2 py-0.5 text-[11px] font-semibold text-sgp-gold"
+                                aria-label="Membro principal da equipe (referência)"
+                              >
+                                <span aria-hidden="true">★</span>
                                 Referência
                               </span>
                             ) : (
-                              '—'
+                              <span className="text-slate-500">Membro</span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3">
+                            {canMembers ? (
+                              <label className="flex min-h-11 flex-col gap-1 text-[11px] text-slate-500">
+                                <span className="sr-only">
+                                  Prioridade de sugestão de {m.collaboratorFullName}. Valores menores
+                                  aparecem primeiro.
+                                </span>
+                                <input
+                                  type="number"
+                                  inputMode="numeric"
+                                  min={1}
+                                  step={1}
+                                  className="sgp-input-app min-h-11 w-24 rounded-lg border border-white/10 bg-sgp-void/80 px-3 py-2 text-sm text-slate-200"
+                                  value={orderDrafts[m.id] ?? String(m.suggestionOrder ?? 1)}
+                                  disabled={savingOrderId === m.id}
+                                  aria-describedby={`suggestion-order-help-${m.id}`}
+                                  onChange={(e) =>
+                                    setOrderDrafts((prev) => ({
+                                      ...prev,
+                                      [m.id]: e.target.value,
+                                    }))
+                                  }
+                                  onBlur={(e) => void saveSuggestionOrder(m, e.target.value)}
+                                />
+                                <span id={`suggestion-order-help-${m.id}`} className="text-[10px] text-slate-600">
+                                  {savingOrderId === m.id ? 'A guardar…' : 'Menor = primeiro'}
+                                </span>
+                              </label>
+                            ) : (
+                              <span className="text-sm text-slate-300">{m.suggestionOrder ?? 1}</span>
                             )}
                           </td>
                           <td className="px-4 py-3">
@@ -623,6 +721,25 @@ export function EquipeDetalhePage() {
                   className="size-4 rounded border-white/20"
                 />
                 Marcar como referência da equipe
+              </label>
+              <label className="flex flex-col gap-1.5 text-xs text-slate-400">
+                <span className="font-semibold uppercase tracking-wide">
+                  Prioridade de sugestão
+                </span>
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  min={1}
+                  step={1}
+                  className="sgp-input min-h-11"
+                  value={editSuggestionOrder}
+                  onChange={(e) => setEditSuggestionOrder(e.target.value)}
+                  aria-describedby="equipe-edit-suggestion-order-help"
+                />
+                <span id="equipe-edit-suggestion-order-help" className="text-[11px] text-slate-500">
+                  Valores menores aparecem primeiro. Iguais formam o mesmo nível. A referência
+                  continua com precedência.
+                </span>
               </label>
             </div>
             <div className="mt-7 flex flex-wrap justify-end gap-2.5 border-t border-white/[0.06] pt-4">

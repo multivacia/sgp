@@ -34,12 +34,14 @@ export const createTeamMemberBodySchema = z.object({
   collaboratorId: z.string().uuid(),
   role: z.union([z.string().trim().max(128), z.null()]).optional(),
   isPrimary: z.boolean().optional(),
+  suggestionOrder: z.number().int().min(1).optional(),
 })
 
 export const patchTeamMemberBodySchema = z.object({
   role: z.union([z.string().trim().max(128), z.null()]).optional(),
   isPrimary: z.boolean().optional(),
   isActive: z.boolean().optional(),
+  suggestionOrder: z.number().int().min(1).optional(),
 })
 
 export type ListTeamsQuery = z.infer<typeof listTeamsQuerySchema>

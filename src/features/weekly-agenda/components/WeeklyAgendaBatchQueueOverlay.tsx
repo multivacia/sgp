@@ -2,7 +2,13 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import type { Collaborator } from '../../../domain/collaborators/collaborator.types'
 import type { OperationalPlanningBacklogItem } from '../../../domain/operational-planning/operational-planning.types'
+import { applyPlanningSuggestionToFields } from '../../../domain/operational-planning/planningCollaboratorSuggestion'
 import { formatHumanMinutes } from '../../../lib/formatters'
+import { PlanningCollaboratorSuggestionCards } from '../../operational-planning/PlanningCollaboratorSuggestionCards'
+import {
+  buildPlanningSuggestionCardViews,
+  planningSuggestionCapacityMessage,
+} from '../../operational-planning/planningSuggestionPresentation'
 import {
   type CapacityRow,
   batchQueueProgress,
@@ -79,14 +85,17 @@ export function WeeklyAgendaBatchQueueOverlay(props: WeeklyAgendaBatchQueueOverl
   const suggestion = useMemo(
     () =>
       findBestBatchQueueSuggestion({
-        collaborators,
+        item: currentItem,
         weekdayDates,
         draftItems,
         capacityRows,
         defaultPlannedDate: selectedPlannedDate || defaultPlannedDate,
+        neededMinutes: currentItem
+          ? Math.max(1, currentItem.pendingMinutes || currentItem.plannedMinutes || 60)
+          : 60,
       }),
     [
-      collaborators,
+      currentItem,
       weekdayDates,
       draftItems,
       capacityRows,
@@ -94,6 +103,23 @@ export function WeeklyAgendaBatchQueueOverlay(props: WeeklyAgendaBatchQueueOverl
       defaultPlannedDate,
     ],
   )
+
+  const suggestionCards = useMemo(() => {
+    if (!suggestion?.result) return []
+    return buildPlanningSuggestionCardViews({
+      result: suggestion.result,
+      weekdayDates,
+      weekdayLabels,
+      selectedCollaboratorId: selectedCollaboratorId ?? suggestion.collaboratorId,
+      selectedDay: selectedPlannedDate || suggestion.plannedDate,
+    })
+  }, [
+    suggestion,
+    weekdayDates,
+    weekdayLabels,
+    selectedCollaboratorId,
+    selectedPlannedDate,
+  ])
 
   const rankedCollaborators = useMemo(
     () =>
@@ -224,32 +250,50 @@ export function WeeklyAgendaBatchQueueOverlay(props: WeeklyAgendaBatchQueueOverl
               </span>
             </div>
 
-            {suggestion ? (
-              <div className="mt-5 rounded-2xl border border-sky-400/35 bg-sky-500/10 p-4 text-left">
-                <p className="text-[11px] uppercase tracking-[0.06em] text-sky-300">Sugestão</p>
-                <p
-                  className="mt-1.5 text-[16px] font-semibold text-slate-50"
-                  data-testid="weekly-agenda-batch-queue-suggestion-name"
-                >
-                  {suggestion.collaboratorName}
-                </p>
-                <p className="mt-0.5 text-[12.5px] text-slate-400">
-                  Tem {formatWeeklyFreeMinutesLabel(suggestion.weeklyFreeMinutes)} essa semana — a
-                  maior folga da equipe.
-                </p>
-                <button
-                  type="button"
-                  className="mt-3.5 w-full rounded-xl border border-sgp-gold/35 bg-sgp-gold/15 px-3 py-3 text-[14px] font-semibold text-slate-50 hover:bg-sgp-gold/25"
-                  data-testid="weekly-agenda-batch-queue-confirm-suggestion"
-                  onClick={() =>
-                    confirmAssign(suggestion.collaboratorId, suggestion.plannedDate)
+            {suggestion?.result ? (
+              <div className="mt-5 text-left">
+                <PlanningCollaboratorSuggestionCards
+                  cards={suggestionCards}
+                  capacityMessage={planningSuggestionCapacityMessage(suggestion.result)}
+                  originalResponsibleName={
+                    suggestion.result.originalResponsible?.fullName ?? null
                   }
-                >
-                  Atribuir a {suggestion.collaboratorName.split(' ')[0]} ·{' '}
-                  {dayLabel(suggestion.plannedDate)}
-                </button>
+                  emptyMessage={
+                    suggestion.result.hasContext
+                      ? 'Não foi encontrado encaixe automático. Escolha outra pessoa ou dia.'
+                      : 'Sem contexto suficiente na esteira. Escolha colaborador e dia manualmente.'
+                  }
+                  onSelect={(card) => {
+                    const next = applyPlanningSuggestionToFields(
+                      {
+                        collaboratorId: activeCollaboratorId ?? '',
+                        day: activePlannedDate,
+                      },
+                      card.option,
+                    )
+                    setSelectedCollaboratorId(next.collaboratorId)
+                    setSelectedPlannedDate(next.day)
+                  }}
+                />
+                {activeCollaboratorId && activePlannedDate ? (
+                  <button
+                    type="button"
+                    className="mt-3.5 w-full rounded-xl border border-sgp-gold/35 bg-sgp-gold/15 px-3 py-3 text-[14px] font-semibold text-slate-50 hover:bg-sgp-gold/25"
+                    data-testid="weekly-agenda-batch-queue-confirm-suggestion"
+                    onClick={() => confirmAssign(activeCollaboratorId, activePlannedDate)}
+                  >
+                    Atribuir a{' '}
+                    {collaborators.find((c) => c.id === activeCollaboratorId)?.fullName?.split(' ')[0] ??
+                      suggestion.collaboratorName.split(' ')[0]}{' '}
+                    · {dayLabel(activePlannedDate)}
+                  </button>
+                ) : null}
               </div>
-            ) : null}
+            ) : (
+              <p className="mt-5 text-left text-[12px] text-slate-500" role="status">
+                Sem encaixe automático. Escolha outra pessoa ou dia.
+              </p>
+            )}
 
             <button
               type="button"

@@ -32,6 +32,11 @@ import type {
   OperationalPlanningWeekActivityItem,
   OperationalPlanningWeekPayload,
 } from '../../domain/operational-planning/operational-planning.types'
+import {
+  applyPlanningSuggestionToFields,
+  initialFieldsFromSuggestion,
+  resolvePlanningCollaboratorSuggestion,
+} from '../../domain/operational-planning/planningCollaboratorSuggestion'
 import type { Collaborator } from '../../domain/collaborators/collaborator.types'
 import { formatHumanMinutes } from '../../lib/formatters'
 import {
@@ -42,6 +47,11 @@ import {
   resolvePlanningCapacityState,
   sumPlanningItemMinutes,
 } from './planningBoardHelpers'
+import { PlanningCollaboratorSuggestionCards } from './PlanningCollaboratorSuggestionCards'
+import {
+  buildPlanningSuggestionCardViews,
+  planningSuggestionCapacityMessage,
+} from './planningSuggestionPresentation'
 import { reportClientError } from '../../lib/errors'
 import { ApiError } from '../../lib/api/apiErrors'
 import { useRegisterTransientContext } from '../../lib/shell/transient-context'
@@ -270,6 +280,49 @@ function draftItemToLocalBacklogItem(it: DraftPlanItem): OperationalPlanningBack
     previousOpenCount: 0,
     isOverdue: false,
     hasAssignees: Boolean(collabId),
+  }
+}
+
+function firstActiveCollaboratorId(
+  collaborators: readonly Collaborator[],
+  preferredId: string | null | undefined,
+): string {
+  if (preferredId && collaborators.some((c) => c.id === preferredId)) return preferredId
+  return collaborators[0]?.id ?? ''
+}
+
+function resolveModalSuggestionSeed(input: {
+  context: OperationalPlanningBacklogItem['suggestionContext']
+  collaborators: readonly Collaborator[]
+  weekdayDates: readonly string[]
+  fallbackDay: string
+  neededMinutes: number
+  capacityRows: NonNullable<OperationalPlanningWeekPayload['capacityByCollaboratorDay']>
+  draftItems: readonly DraftPlanItem[]
+  fallbackCollaboratorId: string | null | undefined
+}): { collaboratorId: string; day: string } {
+  const fallbackDay = input.weekdayDates.includes(input.fallbackDay)
+    ? input.fallbackDay
+    : (input.weekdayDates[0] ?? input.fallbackDay)
+  const result = resolvePlanningCollaboratorSuggestion({
+    context: input.context,
+    selectedDay: fallbackDay,
+    weekdayDates: input.weekdayDates,
+    neededMinutes: input.neededMinutes,
+    capacityRows: input.capacityRows,
+    draftItems: input.draftItems,
+  })
+  const fields = initialFieldsFromSuggestion({
+    result,
+    fallbackCollaboratorId: firstActiveCollaboratorId(
+      input.collaborators,
+      input.fallbackCollaboratorId,
+    ),
+    fallbackDay,
+  })
+  return {
+    collaboratorId: firstActiveCollaboratorId(input.collaborators, fields.collaboratorId),
+    day: input.weekdayDates.includes(fields.day) ? fields.day : fallbackDay,
   }
 }
 
@@ -999,31 +1052,46 @@ export function OperationalPlanningPage() {
   function openAddModal(item: OperationalPlanningBacklogItem) {
     setModalFactoryIntakeItem(null)
     setModalBacklogItem(item)
-    const suggestedCollabId =
-      item.assignedCollaborators?.[0]?.id &&
-      collaborators.some((c) => c.id === item.assignedCollaborators[0].id)
-        ? item.assignedCollaborators[0].id
-        : (collaborators[0]?.id ?? '')
-    setModalCollaboratorId(suggestedCollabId)
-    setModalDay(weekdayDates[0] ?? weekMonday)
-    setModalMinutes(Math.max(1, item.pendingMinutes || item.plannedMinutes || 60))
+    const needed = Math.max(1, item.pendingMinutes || item.plannedMinutes || 60)
+    const fallbackDay = weekdayDates[0] ?? weekMonday
+    const seed = resolveModalSuggestionSeed({
+      context: item.suggestionContext,
+      collaborators,
+      weekdayDates,
+      fallbackDay,
+      neededMinutes: needed,
+      capacityRows: weekPayload?.capacityByCollaboratorDay ?? [],
+      draftItems,
+      fallbackCollaboratorId: item.suggestionContext?.responsibleCollaboratorId,
+    })
+    setModalCollaboratorId(seed.collaboratorId)
+    setModalDay(seed.day)
+    setModalMinutes(needed)
     setModalOpen(true)
   }
 
   function openAddFactoryIntakeModal(item: OperationalPlanningFactoryIntakeItem) {
     setModalBacklogItem(null)
     setModalFactoryIntakeItem(item)
-    const suggestedCollab =
-      item.plannedCollaboratorId && collaborators.some((c) => c.id === item.plannedCollaboratorId)
-        ? item.plannedCollaboratorId
-        : (collaborators[0]?.id ?? '')
-    setModalCollaboratorId(suggestedCollab)
-    const suggestedDay =
+    const needed = Math.max(1, item.plannedMinutes ?? 60)
+    const fallbackDay =
       item.plannedDate && weekdayDates.includes(item.plannedDate)
         ? item.plannedDate
         : (weekdayDates[0] ?? weekMonday)
-    setModalDay(suggestedDay)
-    setModalMinutes(Math.max(1, item.plannedMinutes ?? 60))
+    const seed = resolveModalSuggestionSeed({
+      context: item.suggestionContext,
+      collaborators,
+      weekdayDates,
+      fallbackDay,
+      neededMinutes: needed,
+      capacityRows: weekPayload?.capacityByCollaboratorDay ?? [],
+      draftItems,
+      fallbackCollaboratorId:
+        item.suggestionContext?.responsibleCollaboratorId ?? item.plannedCollaboratorId,
+    })
+    setModalCollaboratorId(seed.collaboratorId)
+    setModalDay(seed.day)
+    setModalMinutes(needed)
     setModalOpen(true)
   }
 
@@ -1423,6 +1491,44 @@ export function OperationalPlanningPage() {
     () => weekPayload?.capacityByCollaboratorDay ?? [],
     [weekPayload?.capacityByCollaboratorDay],
   )
+  const modalSuggestionResult = useMemo(() => {
+    if (!modalOpen) return null
+    const context =
+      modalBacklogItem?.suggestionContext ?? modalFactoryIntakeItem?.suggestionContext ?? null
+    return resolvePlanningCollaboratorSuggestion({
+      context,
+      selectedDay: modalDay || weekdayDates[0] || '',
+      weekdayDates,
+      neededMinutes: Math.max(1, modalMinutes || 0),
+      capacityRows,
+      draftItems,
+    })
+  }, [
+    modalOpen,
+    modalBacklogItem,
+    modalFactoryIntakeItem,
+    modalDay,
+    modalMinutes,
+    weekdayDates,
+    capacityRows,
+    draftItems,
+  ])
+  const modalSuggestionCards = useMemo(() => {
+    if (!modalSuggestionResult) return []
+    return buildPlanningSuggestionCardViews({
+      result: modalSuggestionResult,
+      weekdayDates,
+      weekdayLabels: dayLabels,
+      selectedCollaboratorId: modalCollaboratorId,
+      selectedDay: modalDay,
+    })
+  }, [
+    modalSuggestionResult,
+    weekdayDates,
+    dayLabels,
+    modalCollaboratorId,
+    modalDay,
+  ])
   const planningFilterOptions = useMemo(
     () =>
       buildPlanningFilterOptions(draftItems, {
@@ -2316,8 +2422,15 @@ export function OperationalPlanningPage() {
 
       {modalOpen && (modalBacklogItem || modalFactoryIntakeItem) ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-          <div className="w-full max-w-md rounded-2xl border border-white/[0.08] bg-slate-950 p-6 shadow-xl">
-            <h3 className="text-lg font-semibold text-slate-50">Adicionar ao plano</h3>
+          <div
+            className="w-full max-w-lg rounded-2xl border border-white/[0.08] bg-slate-950 p-6 shadow-xl"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="planning-add-modal-title"
+          >
+            <h3 id="planning-add-modal-title" className="text-lg font-semibold text-slate-50">
+              Adicionar ao plano
+            </h3>
             {modalFactoryIntakeItem ? (
               <p className="mt-1 text-[11px] font-medium uppercase tracking-wide text-violet-300">
                 Plano da Esteira
@@ -2387,6 +2500,28 @@ export function OperationalPlanningPage() {
                 onChange={(e) => setModalMinutes(Number(e.target.value))}
               />
             </label>
+            {modalSuggestionResult ? (
+              <PlanningCollaboratorSuggestionCards
+                cards={modalSuggestionCards}
+                capacityMessage={planningSuggestionCapacityMessage(modalSuggestionResult)}
+                originalResponsibleName={
+                  modalSuggestionResult.originalResponsible?.fullName ?? null
+                }
+                emptyMessage={
+                  modalSuggestionResult.hasContext
+                    ? 'Não foi encontrado encaixe automático. A seleção manual permanece disponível.'
+                    : 'Sem contexto suficiente na esteira para sugerir. Continue com a configuração manual.'
+                }
+                onSelect={(card) => {
+                  const next = applyPlanningSuggestionToFields(
+                    { collaboratorId: modalCollaboratorId, day: modalDay },
+                    card.option,
+                  )
+                  setModalCollaboratorId(next.collaboratorId)
+                  setModalDay(next.day)
+                }}
+              />
+            ) : null}
             <div className="mt-6 flex justify-end gap-2">
               <button
                 type="button"

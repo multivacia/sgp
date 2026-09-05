@@ -1,5 +1,12 @@
 import type { Collaborator } from '../../domain/collaborators/collaborator.types'
-import type { OperationalPlanningWeekPayload } from '../../domain/operational-planning/operational-planning.types'
+import type {
+  OperationalPlanningBacklogItem,
+  OperationalPlanningWeekPayload,
+} from '../../domain/operational-planning/operational-planning.types'
+import {
+  resolvePlanningCollaboratorSuggestion,
+  type PlanningCollaboratorSuggestionResult,
+} from '../../domain/operational-planning/planningCollaboratorSuggestion'
 import { formatPlanningMinutes } from '../operational-planning/planningBoardHelpers'
 import type { DraftPlanItem } from './weeklyAgendaDraft'
 import { applyBacklogToCellDrop } from './weeklyAgendaDnD'
@@ -18,6 +25,7 @@ export type BatchQueueSuggestion = {
   collaboratorName: string
   plannedDate: string
   weeklyFreeMinutes: number
+  result: PlanningCollaboratorSuggestionResult
 }
 
 export function resolveCellCapacityMinutes(
@@ -101,29 +109,47 @@ export function buildCollaboratorFreeMinutesList(input: {
       if (b.weeklyFreeMinutes !== a.weeklyFreeMinutes) {
         return b.weeklyFreeMinutes - a.weeklyFreeMinutes
       }
-      return a.collaboratorName.localeCompare(b.collaboratorName, 'pt-BR')
+      if (a.collaboratorId < b.collaboratorId) return -1
+      if (a.collaboratorId > b.collaboratorId) return 1
+      return 0
     })
 }
 
 export function findBestBatchQueueSuggestion(input: {
-  collaborators: readonly Collaborator[]
+  item: OperationalPlanningBacklogItem | null | undefined
   weekdayDates: readonly string[]
   draftItems: readonly DraftPlanItem[]
   capacityRows: readonly CapacityRow[]
   defaultPlannedDate: string
+  neededMinutes?: number
 }): BatchQueueSuggestion | null {
-  if (input.collaborators.length === 0 || input.weekdayDates.length === 0) return null
-  const ranked = buildCollaboratorFreeMinutesList(input)
-  const top = ranked[0]
-  if (!top) return null
-  const plannedDate = input.weekdayDates.includes(input.defaultPlannedDate)
+  if (input.weekdayDates.length === 0) return null
+  const selectedDay = input.weekdayDates.includes(input.defaultPlannedDate)
     ? input.defaultPlannedDate
     : input.weekdayDates[0]
+  const neededMinutes = Math.max(
+    1,
+    input.neededMinutes ??
+      input.item?.pendingMinutes ??
+      input.item?.plannedMinutes ??
+      60,
+  )
+  const result = resolvePlanningCollaboratorSuggestion({
+    context: input.item?.suggestionContext,
+    selectedDay,
+    weekdayDates: input.weekdayDates,
+    neededMinutes,
+    capacityRows: input.capacityRows,
+    draftItems: input.draftItems,
+  })
+  const option = result.primary ?? result.alternatives[0]
+  if (!option) return null
   return {
-    collaboratorId: top.collaboratorId,
-    collaboratorName: top.collaboratorName,
-    plannedDate,
-    weeklyFreeMinutes: top.weeklyFreeMinutes,
+    collaboratorId: option.collaboratorId,
+    collaboratorName: option.collaboratorFullName,
+    plannedDate: option.day,
+    weeklyFreeMinutes: option.availableMinutes ?? 0,
+    result,
   }
 }
 

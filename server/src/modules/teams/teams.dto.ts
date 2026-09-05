@@ -15,12 +15,14 @@ export type TeamMemberApi = {
   teamId: string
   collaboratorId: string
   collaboratorFullName: string
+  collaboratorCode: string | null
   collaboratorEmail: string | null
   collaboratorStatus: string
   collaboratorIsActive: boolean
   collaboratorDeletedAt: string | null
   role: string | null
   isPrimary: boolean
+  suggestionOrder: number
   isActive: boolean
   createdAt: string
   updatedAt: string
@@ -44,10 +46,12 @@ export type TeamMemberRow = {
   collaborator_id: string
   role: string | null
   is_primary: boolean
+  suggestion_order: number
   is_active: boolean
   created_at: Date
   updated_at: Date
   collaborator_full_name: string
+  collaborator_code: string | null
   collaborator_email: string | null
   collaborator_status: string
   collaborator_is_active: boolean
@@ -79,6 +83,7 @@ export function rowToTeamMemberApi(row: TeamMemberRow): TeamMemberApi {
     teamId: row.team_id,
     collaboratorId: row.collaborator_id,
     collaboratorFullName: row.collaborator_full_name,
+    collaboratorCode: row.collaborator_code,
     collaboratorEmail: row.collaborator_email,
     collaboratorStatus: row.collaborator_status,
     collaboratorIsActive: row.collaborator_is_active,
@@ -87,6 +92,7 @@ export function rowToTeamMemberApi(row: TeamMemberRow): TeamMemberApi {
       : null,
     role: row.role,
     isPrimary: row.is_primary,
+    suggestionOrder: Number(row.suggestion_order) || 1,
     isActive: row.is_active,
     createdAt: row.created_at.toISOString(),
     updatedAt: row.updated_at.toISOString(),

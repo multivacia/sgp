@@ -4,6 +4,32 @@ type DbClient = pg.Pool | pg.PoolClient
 import type { ListTeamsQuery } from './teams.schemas.js'
 import type { TeamListRow, TeamMemberRow, TeamRow } from './teams.dto.js'
 
+const TEAM_MEMBER_SELECT = `
+      tm.id,
+      tm.team_id,
+      tm.collaborator_id,
+      tm.role,
+      tm.is_primary,
+      tm.suggestion_order,
+      tm.is_active,
+      tm.created_at,
+      tm.updated_at,
+      c.full_name AS collaborator_full_name,
+      c.code AS collaborator_code,
+      c.email AS collaborator_email,
+      c.status AS collaborator_status,
+      c.is_active AS collaborator_is_active,
+      c.deleted_at AS collaborator_deleted_at
+`
+
+const TEAM_MEMBER_ORDER_BY = `
+    ORDER BY tm.is_primary DESC,
+             tm.suggestion_order ASC,
+             CASE WHEN NULLIF(BTRIM(COALESCE(c.code, '')), '') IS NULL THEN 1 ELSE 0 END,
+             c.code ASC NULLS LAST,
+             c.id ASC
+`
+
 export function buildTeamListWhere(q: ListTeamsQuery): {
   sql: string
   values: unknown[]
@@ -162,23 +188,11 @@ export async function listActiveMembersForTeam(
   const r = await pool.query<TeamMemberRow>(
     `
     SELECT
-      tm.id,
-      tm.team_id,
-      tm.collaborator_id,
-      tm.role,
-      tm.is_primary,
-      tm.is_active,
-      tm.created_at,
-      tm.updated_at,
-      c.full_name AS collaborator_full_name,
-      c.email AS collaborator_email,
-      c.status AS collaborator_status,
-      c.is_active AS collaborator_is_active,
-      c.deleted_at AS collaborator_deleted_at
+      ${TEAM_MEMBER_SELECT}
     FROM team_members tm
     INNER JOIN collaborators c ON c.id = tm.collaborator_id
     WHERE tm.team_id = $1::uuid AND tm.is_active = true
-    ORDER BY tm.is_primary DESC, c.full_name ASC
+    ${TEAM_MEMBER_ORDER_BY}
     `,
     [teamId],
   )
@@ -193,19 +207,7 @@ export async function findMemberById(
   const r = await pool.query<TeamMemberRow>(
     `
     SELECT
-      tm.id,
-      tm.team_id,
-      tm.collaborator_id,
-      tm.role,
-      tm.is_primary,
-      tm.is_active,
-      tm.created_at,
-      tm.updated_at,
-      c.full_name AS collaborator_full_name,
-      c.email AS collaborator_email,
-      c.status AS collaborator_status,
-      c.is_active AS collaborator_is_active,
-      c.deleted_at AS collaborator_deleted_at
+      ${TEAM_MEMBER_SELECT}
     FROM team_members tm
     INNER JOIN collaborators c ON c.id = tm.collaborator_id
     WHERE tm.team_id = $1::uuid AND tm.id = $2::uuid
@@ -259,6 +261,24 @@ export async function clearPrimaryForTeam(
   }
 }
 
+export async function maxSuggestionOrderForTeam(
+  client: DbClient,
+  teamId: string,
+): Promise<number | null> {
+  const r = await client.query<{ m: string | null }>(
+    `
+    SELECT MAX(suggestion_order)::text AS m
+    FROM team_members
+    WHERE team_id = $1::uuid
+    `,
+    [teamId],
+  )
+  const raw = r.rows[0]?.m
+  if (raw == null || raw === '') return null
+  const n = Number(raw)
+  return Number.isFinite(n) ? Math.floor(n) : null
+}
+
 export async function insertTeamMember(
   client: DbClient,
   input: {
@@ -266,12 +286,13 @@ export async function insertTeamMember(
     collaborator_id: string
     role: string | null
     is_primary: boolean
+    suggestion_order: number
   },
 ): Promise<TeamMemberRow> {
   const ins = await client.query<{ id: string }>(
     `
-    INSERT INTO team_members (team_id, collaborator_id, role, is_primary, is_active)
-    VALUES ($1::uuid, $2::uuid, $3, $4, true)
+    INSERT INTO team_members (team_id, collaborator_id, role, is_primary, is_active, suggestion_order)
+    VALUES ($1::uuid, $2::uuid, $3, $4, true, $5)
     RETURNING id
     `,
     [
@@ -279,25 +300,14 @@ export async function insertTeamMember(
       input.collaborator_id,
       input.role,
       input.is_primary,
+      input.suggestion_order,
     ],
   )
   const id = ins.rows[0]!.id
   const r = await client.query<TeamMemberRow>(
     `
     SELECT
-      tm.id,
-      tm.team_id,
-      tm.collaborator_id,
-      tm.role,
-      tm.is_primary,
-      tm.is_active,
-      tm.created_at,
-      tm.updated_at,
-      c.full_name AS collaborator_full_name,
-      c.email AS collaborator_email,
-      c.status AS collaborator_status,
-      c.is_active AS collaborator_is_active,
-      c.deleted_at AS collaborator_deleted_at
+      ${TEAM_MEMBER_SELECT}
     FROM team_members tm
     INNER JOIN collaborators c ON c.id = tm.collaborator_id
     WHERE tm.id = $1::uuid
@@ -311,7 +321,12 @@ export async function updateTeamMember(
   pool: DbClient,
   teamId: string,
   memberId: string,
-  patch: { role?: string | null; is_primary?: boolean; is_active?: boolean },
+  patch: {
+    role?: string | null
+    is_primary?: boolean
+    is_active?: boolean
+    suggestion_order?: number
+  },
 ): Promise<TeamMemberRow | null> {
   const sets: string[] = []
   const values: unknown[] = []
@@ -329,6 +344,11 @@ export async function updateTeamMember(
   if (patch.is_active !== undefined) {
     sets.push(`is_active = $${n}`)
     values.push(patch.is_active)
+    n += 1
+  }
+  if (patch.suggestion_order !== undefined) {
+    sets.push(`suggestion_order = $${n}`)
+    values.push(patch.suggestion_order)
     n += 1
   }
   if (sets.length === 0) {

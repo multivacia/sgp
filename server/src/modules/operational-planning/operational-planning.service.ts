@@ -51,6 +51,7 @@ import {
   listOperationalPlanningBacklog,
   listWorkPlanItemLinks,
   loadConveyorPlanItemForFactoryLink,
+  loadPlanningSuggestionFactsForSteps,
   loadWorkPlanItemForSyncApply,
   loadStepForPlanningValidation,
   updateWorkPlanItemFromConveyorPlan,
@@ -84,6 +85,14 @@ import {
   mapExecutionOutsidePlanEntryToApi,
 } from './operational-planning.execution-outside-plan.js'
 import { mergeWeekActivityItems } from './operational-planning.week-activity.js'
+import {
+  buildPlanningSuggestionContextMap,
+  isCollaboratorRowEligible,
+  type DirectAssigneeFact,
+  type PlanningSuggestionContext,
+  type TeamAssigneeFact,
+  type TeamMemberFact,
+} from './planningSuggestionContext.js'
 
 function todayIsoLocal(): string {
   const t = new Date()
@@ -112,6 +121,72 @@ function mapNodesForSequence(
     operational_status: n.operational_status,
     is_active: n.is_active,
   }))
+}
+
+async function loadSuggestionContextByActivityNodeId(
+  pool: pg.Pool,
+  activityNodeIds: string[],
+): Promise<Map<string, PlanningSuggestionContext>> {
+  const uniqueIds = [...new Set(activityNodeIds)]
+  const loaded = await loadPlanningSuggestionFactsForSteps(pool, uniqueIds)
+  const factsByNode = new Map<
+    string,
+    { directAssignees: DirectAssigneeFact[]; teamAssignees: TeamAssigneeFact[] }
+  >()
+  for (const id of uniqueIds) {
+    factsByNode.set(id, { directAssignees: [], teamAssignees: [] })
+  }
+  for (const row of loaded.assignees) {
+    const bucket = factsByNode.get(row.activity_node_id)
+    if (!bucket) continue
+    if (row.assignment_type === 'COLLABORATOR' && row.collaborator_id) {
+      bucket.directAssignees.push({
+        id: row.collaborator_id,
+        code: row.collaborator_code,
+        fullName: row.collaborator_full_name ?? '',
+        isPrimary: Boolean(row.is_primary),
+        orderIndex: Number(row.order_index) || 0,
+        createdAt: row.created_at.toISOString(),
+        isEligible: isCollaboratorRowEligible({
+          deleted_at: row.collaborator_deleted_at,
+          is_active: Boolean(row.collaborator_is_active),
+          status: row.collaborator_status,
+        }),
+      })
+    }
+    if (row.assignment_type === 'TEAM' && row.team_id) {
+      bucket.teamAssignees.push({
+        id: row.team_id,
+        name: row.team_name ?? '',
+        isPrimary: Boolean(row.is_primary),
+        orderIndex: Number(row.order_index) || 0,
+        createdAt: row.created_at.toISOString(),
+        isEligible:
+          row.team_deleted_at == null && Boolean(row.team_is_active),
+      })
+    }
+  }
+  const membersByTeamId = new Map<string, TeamMemberFact[]>()
+  for (const row of loaded.members) {
+    const list = membersByTeamId.get(row.team_id) ?? []
+    list.push({
+      teamId: row.team_id,
+      id: row.collaborator_id,
+      code: row.collaborator_code,
+      fullName: row.collaborator_full_name,
+      isPrimary: Boolean(row.is_primary),
+      suggestionOrder: Number(row.suggestion_order) || 1,
+      isEligible:
+        Boolean(row.member_is_active) &&
+        isCollaboratorRowEligible({
+          deleted_at: row.collaborator_deleted_at,
+          is_active: row.collaborator_is_active,
+          status: row.collaborator_status,
+        }),
+    })
+    membersByTeamId.set(row.team_id, list)
+  }
+  return buildPlanningSuggestionContextMap(uniqueIds, factsByNode, membersByTeamId)
 }
 
 export type OperationalPlanningWeekRevisionMeta = {
@@ -1123,6 +1198,7 @@ export type BacklogItemApi = {
   pendingMinutes: number
   assignedCollaborators: Array<{ id: string; fullName: string }>
   assignedTeams: Array<{ id: string; name: string }>
+  suggestionContext: PlanningSuggestionContext
   isOutOfSequence: boolean
   previousOpenCount: number
   isOverdue: boolean
@@ -1152,6 +1228,11 @@ export async function serviceListOperationalPlanningBacklog(
     nodesByConveyor.set(cid, mapNodesForSequence(nodes))
   }
 
+  const suggestionByNode = await loadSuggestionContextByActivityNodeId(
+    pool,
+    raw.map((r) => r.activity_node_id),
+  )
+
   const items: BacklogItemApi[] = raw.map((row) => {
     const seqNodes = nodesByConveyor.get(row.conveyor_id) ?? []
     const seq = analyzeConveyorActivitySequence(seqNodes, row.activity_node_id)
@@ -1176,6 +1257,15 @@ export async function serviceListOperationalPlanningBacklog(
       pendingMinutes: row.pending_minutes,
       assignedCollaborators: collaborators,
       assignedTeams: teams,
+      suggestionContext: suggestionByNode.get(row.activity_node_id) ?? {
+        responsibleCollaboratorId: null,
+        responsibleCollaboratorCode: null,
+        responsibleCollaboratorFullName: null,
+        effectiveTeamId: null,
+        effectiveTeamName: null,
+        members: [],
+        multipleTeamsAssigned: false,
+      },
       isOutOfSequence: seq.isOutOfSequence,
       previousOpenCount: seq.previousOpenCount,
       isOverdue: isDeadlineOverdue(row.estimated_deadline),
@@ -1212,9 +1302,13 @@ export type FactoryIntakeItemApi = {
   totalPlanItems: number
   linkedPlanItems: number
   pendingPlanItems: number
+  suggestionContext: PlanningSuggestionContext
 }
 
-function factoryIntakeRowToApi(row: FactoryIntakeRawRow): FactoryIntakeItemApi {
+function factoryIntakeRowToApi(
+  row: FactoryIntakeRawRow,
+  suggestionContext: PlanningSuggestionContext,
+): FactoryIntakeItemApi {
   return {
     conveyorOperationalPlanId: row.conveyor_operational_plan_id,
     conveyorOperationalPlanItemId: row.conveyor_operational_plan_item_id,
@@ -1241,6 +1335,7 @@ function factoryIntakeRowToApi(row: FactoryIntakeRawRow): FactoryIntakeItemApi {
     totalPlanItems: row.total_plan_items,
     linkedPlanItems: row.linked_plan_items,
     pendingPlanItems: row.pending_plan_items,
+    suggestionContext,
   }
 }
 
@@ -1251,7 +1346,26 @@ export async function serviceListFactoryIntakeItems(
 ): Promise<{ items: FactoryIntakeItemApi[] }> {
   void weekStart
   const raw = await listFactoryIntakeItems(pool)
-  return { items: raw.map(factoryIntakeRowToApi) }
+  const suggestionByNode = await loadSuggestionContextByActivityNodeId(
+    pool,
+    raw.map((r) => r.activity_node_id),
+  )
+  return {
+    items: raw.map((row) =>
+      factoryIntakeRowToApi(
+        row,
+        suggestionByNode.get(row.activity_node_id) ?? {
+          responsibleCollaboratorId: null,
+          responsibleCollaboratorCode: null,
+          responsibleCollaboratorFullName: null,
+          effectiveTeamId: null,
+          effectiveTeamName: null,
+          members: [],
+          multipleTeamsAssigned: false,
+        },
+      ),
+    ),
+  }
 }
 
 /**
