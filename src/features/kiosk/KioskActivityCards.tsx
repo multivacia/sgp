@@ -1,4 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import {
+  SgpToast,
+  type SgpToastVariant,
+} from '../../components/ui/SgpToast'
 import type {
   ProductionCollaboratorSummary,
   ProductionWorkQueueItem,
@@ -12,6 +16,7 @@ import { getProductionWorkQueue } from '../../services/production/productionApiS
 import { ProductionCollaboratorAvatar } from '../production/ProductionCollaboratorAvatar'
 import { KioskActivityCard } from './KioskActivityCard'
 import { KioskExtraActivityModal } from './KioskExtraActivityModal'
+import { KIOSK_ACTIVITY_TOAST } from './kioskExtraActivityModalLogic'
 
 type Props = {
   collaborator: ProductionCollaboratorSummary
@@ -20,6 +25,8 @@ type Props = {
 }
 
 type ViewMode = 'carousel' | 'list'
+
+type ToastState = { message: string; variant: SgpToastVariant } | null
 
 export function KioskActivityCards({ collaborator, initialItems, onExit }: Props) {
   const [items, setItems] = useState(initialItems)
@@ -32,7 +39,12 @@ export function KioskActivityCards({ collaborator, initialItems, onExit }: Props
   // colaborador (volta para a tela de grade), então este estado nunca
   // sobrevive entre sessões diferentes no mesmo tablet.
   const [extraActivityOpen, setExtraActivityOpen] = useState(false)
+  const [toast, setToast] = useState<ToastState>(null)
   const touchStartX = useRef(0)
+
+  const pushToast = useCallback((message: string, variant: SgpToastVariant = 'success') => {
+    setToast({ message, variant })
+  }, [])
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim()
@@ -61,15 +73,27 @@ export function KioskActivityCards({ collaborator, initialItems, onExit }: Props
     [filtered.length],
   )
 
-  const handleCardSuccess = useCallback(async () => {
+  const reloadQueue = useCallback(async (): Promise<boolean> => {
     try {
       const queue = await getProductionWorkQueue()
       setItems(queue.items)
       setCurrentIndex(findInitialKioskCarouselIndex(queue.items))
+      return true
     } catch {
       // mantém items existentes se a recarga falhar
+      return false
     }
   }, [])
+
+  const handleCardSuccess = useCallback(async () => {
+    await reloadQueue()
+  }, [reloadQueue])
+
+  const handleExtraActivitySuccess = useCallback(async () => {
+    pushToast(KIOSK_ACTIVITY_TOAST.extraEntrySaved, 'success')
+    const ok = await reloadQueue()
+    if (!ok) pushToast(KIOSK_ACTIVITY_TOAST.queueReloadFailed, 'neutral')
+  }, [pushToast, reloadQueue])
 
   function handleTouchStart(e: React.TouchEvent) {
     touchStartX.current = e.touches[0].clientX
@@ -329,7 +353,19 @@ export function KioskActivityCards({ collaborator, initialItems, onExit }: Props
       <KioskExtraActivityModal
         open={extraActivityOpen}
         onClose={() => setExtraActivityOpen(false)}
+        onSuccess={() => {
+          void handleExtraActivitySuccess()
+        }}
       />
+
+      {toast ? (
+        <SgpToast
+          fixed
+          message={toast.message}
+          variant={toast.variant}
+          onDismiss={() => setToast(null)}
+        />
+      ) : null}
     </div>
   )
 }

@@ -105,9 +105,9 @@ describe('resolveAppVersionMetadata', () => {
     )
 
     expect(metadata.product).toBe('SGP+')
-    expect(metadata.version).toBe('1.9.4')
+    expect(metadata.version).toBe('1.9.5')
     expect(metadata.releaseName).toBe(
-      'Exportações do planejamento e inclusão tardia de itens',
+      'Toast no kiosk e apontamento extra esteira',
     )
     expect(metadata.environment).toBe('development')
     expect(metadata.commit).toBe('local')
