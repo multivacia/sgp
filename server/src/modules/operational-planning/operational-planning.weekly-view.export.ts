@@ -80,6 +80,13 @@ const DATA_CELL_FONT_SIZE = 11
 export const EXCEL_MAX_ROW_HEIGHT_PT = 409
 
 /**
+ * Margem de segurança (+1 linha visual) e piso mínimo de linhas visuais na altura
+ * aplicada à linha de dados — evita corte em leitores Excel com wrapText.
+ */
+export const SAFETY_EXTRA_VISUAL_LINES = 1
+export const MIN_SAFE_VISUAL_LINES = 5
+
+/**
  * Capacidade aproximada de caracteres por linha visual, dada a largura da coluna (fonte 11pt).
  * Subtrai margem interna da célula para ficar ligeiramente conservador (evita corte).
  */
@@ -163,7 +170,7 @@ export function estimateWrappedCellVisualLineCount(
   return Math.max(1, total)
 }
 
-/** Converte linhas visuais em altura de linha Excel (pt), com teto nativo. */
+/** Converte linhas visuais em altura de linha Excel (pt), com teto nativo (fórmula bruta). */
 export function computeWeeklyViewDataRowHeightPt(visualLineCount: number): number {
   const lines =
     typeof visualLineCount === 'number' && Number.isFinite(visualLineCount)
@@ -174,6 +181,25 @@ export function computeWeeklyViewDataRowHeightPt(visualLineCount: number): numbe
     lines * DATA_ROW_LINE_HEIGHT_PT + DATA_ROW_HEIGHT_PADDING_PT,
   )
   return Math.min(EXCEL_MAX_ROW_HEIGHT_PT, rawHeight)
+}
+
+/**
+ * Política segura de altura: piso mínimo de linhas + margem +1, com teto nativo do Excel.
+ * Usada por `applyDataRowHeightFromWrappedContent` (não a fórmula bruta).
+ */
+export function computeSafeWeeklyViewDataRowHeightPt(estimatedVisualLines: number): number {
+  const estimated =
+    typeof estimatedVisualLines === 'number' && Number.isFinite(estimatedVisualLines)
+      ? Math.max(1, Math.floor(estimatedVisualLines))
+      : 1
+  const safeVisualLines = Math.max(
+    MIN_SAFE_VISUAL_LINES,
+    estimated + SAFETY_EXTRA_VISUAL_LINES,
+  )
+  return Math.min(
+    EXCEL_MAX_ROW_HEIGHT_PT,
+    safeVisualLines * DATA_ROW_LINE_HEIGHT_PT + DATA_ROW_HEIGHT_PADDING_PT,
+  )
 }
 
 const FILL_HEADER: ExcelJS.Fill = {
@@ -435,7 +461,7 @@ function applyDataRowHeightFromWrappedContent(excelRow: ExcelJS.Row): void {
       estimateWrappedCellVisualLineCount(excelRow.getCell(col).value, columnWidth),
     )
   }
-  excelRow.height = computeWeeklyViewDataRowHeightPt(maxVisualLines)
+  excelRow.height = computeSafeWeeklyViewDataRowHeightPt(maxVisualLines)
 }
 
 function formatDateBrPt(date: Date): string {
