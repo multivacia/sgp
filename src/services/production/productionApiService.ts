@@ -9,6 +9,11 @@ import type {
   ProductionTimeEntryResult,
   ProductionWorkQueueResponse,
 } from '../../domain/production/production.types'
+import type {
+  CreateExtraTimeEntryInput,
+  ExtraTimeEntryDescriptionOption,
+  ExtraTimeEntryItem,
+} from '../../domain/my-activities/extraTimeEntries.types'
 
 const BASE = '/api/v1/production'
 
@@ -308,6 +313,77 @@ export async function createProductionTimeEntry(
       })
     }
     throw new ApiError(PRODUCTION_TIME_ENTRY_ERROR_MESSAGE, 503, { cause: e })
+  }
+}
+
+export const PRODUCTION_EXTRA_TIME_ENTRY_ERROR_MESSAGE =
+  'Não foi possível registrar o apontamento extra esteira.'
+
+export const PRODUCTION_EXTRA_TIME_ENTRY_DESCRIPTIONS_ERROR_MESSAGE =
+  'Não foi possível carregar as opções de apontamento extra esteira.'
+
+export const PRODUCTION_EXTRA_TIME_ENTRIES_LIST_ERROR_MESSAGE =
+  'Não foi possível carregar o histórico de apontamentos extra esteira.'
+
+export async function listProductionExtraTimeEntryDescriptions(): Promise<
+  ExtraTimeEntryDescriptionOption[]
+> {
+  try {
+    const data = await productionRequestJson<ExtraTimeEntryDescriptionOption[]>(
+      'GET',
+      `${BASE}/extra-time-entries/descriptions`,
+    )
+    return Array.isArray(data) ? data : []
+  } catch (e) {
+    if (e instanceof ApiError) {
+      throw new ApiError(PRODUCTION_EXTRA_TIME_ENTRY_DESCRIPTIONS_ERROR_MESSAGE, e.status, {
+        code: e.code,
+        cause: e,
+      })
+    }
+    throw new ApiError(PRODUCTION_EXTRA_TIME_ENTRY_DESCRIPTIONS_ERROR_MESSAGE, 503, { cause: e })
+  }
+}
+
+export async function listProductionExtraTimeEntries(options?: {
+  limit?: number
+}): Promise<ExtraTimeEntryItem[]> {
+  try {
+    const sp = new URLSearchParams()
+    if (options?.limit != null) sp.set('limit', String(options.limit))
+    const qs = sp.toString()
+    const path = qs ? `${BASE}/extra-time-entries?${qs}` : `${BASE}/extra-time-entries`
+    const data = await productionRequestJson<ExtraTimeEntryItem[]>('GET', path)
+    return Array.isArray(data) ? data : []
+  } catch (e) {
+    if (e instanceof ApiError) {
+      throw new ApiError(PRODUCTION_EXTRA_TIME_ENTRIES_LIST_ERROR_MESSAGE, e.status, {
+        code: e.code,
+        cause: e,
+      })
+    }
+    throw new ApiError(PRODUCTION_EXTRA_TIME_ENTRIES_LIST_ERROR_MESSAGE, 503, { cause: e })
+  }
+}
+
+export async function createProductionExtraTimeEntry(
+  input: CreateExtraTimeEntryInput,
+): Promise<ExtraTimeEntryItem> {
+  try {
+    const data = await productionRequestJson<ExtraTimeEntryItem>(
+      'POST',
+      `${BASE}/extra-time-entries`,
+      { body: input },
+    )
+    return data
+  } catch (e) {
+    if (e instanceof ApiError) {
+      throw new ApiError(PRODUCTION_EXTRA_TIME_ENTRY_ERROR_MESSAGE, e.status, {
+        code: e.code,
+        cause: e,
+      })
+    }
+    throw new ApiError(PRODUCTION_EXTRA_TIME_ENTRY_ERROR_MESSAGE, 503, { cause: e })
   }
 }
 
