@@ -1,5 +1,16 @@
 # CHANGELOG
 
+## SGP+ v1.9.5 — 2026-09-05
+
+Tipo: Evolução operacional / Kiosk
+
+Inclui:
+
+- Toast de confirmação no kiosk após apontamento de atividade extra esteira
+  (`SgpToast` em `KioskActivityCards`).
+- Feedback quando a recarga da fila falha após o registro.
+- Versão do produto atualizada para 1.9.5.
+
 ## SGP+ v1.9.3 — 2026-08-25
 
 Tipo: Evolução operacional / Planejamento semanal
