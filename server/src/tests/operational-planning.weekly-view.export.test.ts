@@ -3,6 +3,7 @@ import ExcelJS from 'exceljs'
 import {
   buildOperationalPlanningWeeklyViewExportFilename,
   buildOperationalPlanningWeeklyViewExportWorkbookBuffer,
+  computeSafeWeeklyViewDataRowHeightPt,
   computeWeeklyViewDataRowHeightPt,
   countTempoPlanejadoOccurrences,
   countWeeklyViewActivityBlocksInCell,
@@ -20,6 +21,8 @@ import {
   formatWeeklyViewPlannedDurationLabel,
   formatWeeklyViewPositionNotes,
   groupWeeklyViewRowsByCollaborator,
+  MIN_SAFE_VISUAL_LINES,
+  SAFETY_EXTRA_VISUAL_LINES,
   sanitizeExcelText,
   sortOperationalPlanningWeeklyViewRows,
   splitWeeklyViewGroupByWeekday,
@@ -257,9 +260,12 @@ describe('estimateWrappedCellVisualLineCount / altura dinâmica', () => {
     )
     expect(shortCell.split('\n')).toHaveLength(4)
     expect(estimateWrappedCellVisualLineCount(shortCell, weekdayWidth)).toBe(4)
+    // fórmula bruta (sem margem de segurança)
     expect(computeWeeklyViewDataRowHeightPt(4)).toBe(
       4 * DATA_ROW_LINE_HEIGHT_PT + DATA_ROW_HEIGHT_PADDING_PT,
     )
+    // política segura: floor 5 + safety → 79pt
+    expect(computeSafeWeeklyViewDataRowHeightPt(4)).toBe(79)
   })
 
   it('descrições reais longas geram ao menos uma quebra visual adicional', () => {
@@ -269,6 +275,10 @@ describe('estimateWrappedCellVisualLineCount / altura dinâmica', () => {
       'costura da borda e Fechamento do volante',
       'limpreza dos forros de portas (junto das ombreiras )',
       'INSTALAÇÃO DO BOTÃO DE PRESSÃO',
+      'Instatalação da capa do banco dianteiro direito com ajuste de costura',
+      'Aplicação cola na espuma do encosto para fixação do couro',
+      'Aplicar cola para adesão da capa no assento dianteiro',
+      'Verificar se não tem nenhuma peça quebrada no kit de acabamento',
     ]
     for (const title of titles) {
       const cell = formatWeeklyViewActivityCellContent(0, 'OS 7350', title, 240, 0)
@@ -280,7 +290,7 @@ describe('estimateWrappedCellVisualLineCount / altura dinâmica', () => {
       // títulos longos (exceto os que cabem em 1 linha) elevam altura
       if (estimateExplicitLineVisualLines(title, estimateCharsPerWrappedLine(weekdayWidth)) > 1) {
         expect(visual).toBeGreaterThanOrEqual(5)
-        expect(computeWeeklyViewDataRowHeightPt(visual)).toBeGreaterThanOrEqual(79)
+        expect(computeSafeWeeklyViewDataRowHeightPt(visual)).toBeGreaterThanOrEqual(94)
       }
     }
   })
@@ -292,11 +302,22 @@ describe('estimateWrappedCellVisualLineCount / altura dinâmica', () => {
     expect(estimateExplicitLineVisualLines(longWord, 10)).toBe(5)
   })
 
-  it('altura cresce 15pt por linha visual adicional e respeita teto 409', () => {
+  it('fórmula bruta cresce 15pt por linha e respeita teto 409', () => {
     expect(computeWeeklyViewDataRowHeightPt(4)).toBe(64)
     expect(computeWeeklyViewDataRowHeightPt(5)).toBe(79)
     expect(computeWeeklyViewDataRowHeightPt(6)).toBe(94)
     expect(computeWeeklyViewDataRowHeightPt(1000)).toBe(EXCEL_MAX_ROW_HEIGHT_PT)
+  })
+
+  it('política segura: piso 5, margem +1 e teto 409', () => {
+    expect(SAFETY_EXTRA_VISUAL_LINES).toBe(1)
+    expect(MIN_SAFE_VISUAL_LINES).toBe(5)
+    expect(computeSafeWeeklyViewDataRowHeightPt(4)).toBe(79)
+    expect(computeSafeWeeklyViewDataRowHeightPt(5)).toBe(94)
+    expect(computeSafeWeeklyViewDataRowHeightPt(6)).toBe(109)
+    expect(computeSafeWeeklyViewDataRowHeightPt(1000)).toBe(EXCEL_MAX_ROW_HEIGHT_PT)
+    expect(computeSafeWeeklyViewDataRowHeightPt(Number.NaN)).toBe(79)
+    expect(computeSafeWeeklyViewDataRowHeightPt(Number.POSITIVE_INFINITY)).toBe(79)
   })
 })
 
@@ -663,11 +684,14 @@ describe('buildOperationalPlanningWeeklyViewExportWorkbookBuffer — grade por p
     const hLong = sheet.getRow(9).height ?? 0
     const hShortAfter = sheet.getRow(10).height ?? 0
 
-    expect(hShort).toBe(64)
-    expect(hLong).toBeGreaterThanOrEqual(79)
-    expect(hShortAfter).toBe(64)
+    // 4 linhas explícitas → política segura (piso 5) → 79pt; Tempo apontado preservado
+    expect(hShort).toBe(79)
+    expect(hLong).toBeGreaterThan(hShort)
+    expect(hShortAfter).toBe(79)
     expect(hShort).toBeLessThan(hLong)
     expect(hShortAfter).toBeLessThan(hLong)
+    expect(hShort).not.toBe(64)
+    expect(hShortAfter).not.toBe(64)
     expect(hShort).toBeLessThanOrEqual(EXCEL_MAX_ROW_HEIGHT_PT)
     expect(hLong).toBeLessThanOrEqual(EXCEL_MAX_ROW_HEIGHT_PT)
 
@@ -689,13 +713,14 @@ describe('buildOperationalPlanningWeeklyViewExportWorkbookBuffer — grade por p
     expect(String(sheet.getRow(9).getCell(2).value ?? '')).toContain(longTitle)
   })
 
-  it('duas quebras visuais adicionais elevam altura para ~94 pt', async () => {
+  it('duas quebras visuais adicionais elevam altura proporcionalmente (sem regressão a 64)', async () => {
     const veryLongTitle =
       'limpreza dos forros de portas (junto das ombreiras ) e acabamento final completo da peça'
     const cell = formatWeeklyViewActivityCellContent(0, 'OS 7350', veryLongTitle, 90, 0)
     const visual = estimateWrappedCellVisualLineCount(cell, WEEKLY_VIEW_COLUMN_WIDTHS[1]!)
     expect(visual).toBeGreaterThanOrEqual(6)
-    expect(computeWeeklyViewDataRowHeightPt(visual)).toBeGreaterThanOrEqual(94)
+    expect(computeSafeWeeklyViewDataRowHeightPt(visual)).toBeGreaterThanOrEqual(109)
+    expect(computeSafeWeeklyViewDataRowHeightPt(visual)).not.toBe(64)
 
     const buffer = await buildOperationalPlanningWeeklyViewExportWorkbookBuffer({
       meta: sampleMeta({ totalActivities: 1, collaboratorsWithActivityCount: 1 }),
@@ -714,7 +739,9 @@ describe('buildOperationalPlanningWeeklyViewExportWorkbookBuffer — grade por p
     const workbook = new ExcelJS.Workbook()
     await workbook.xlsx.load(buffer)
     const sheet = workbook.getWorksheet('Visão semanal')!
-    expect(sheet.getRow(8).height ?? 0).toBeGreaterThanOrEqual(94)
+    const height = sheet.getRow(8).height ?? 0
+    expect(height).toBeGreaterThanOrEqual(109)
+    expect(height).not.toBe(64)
     expect(String(sheet.getRow(8).getCell(2).value ?? '')).toContain('Tempo apontado: ---')
   })
 
@@ -744,7 +771,8 @@ describe('buildOperationalPlanningWeeklyViewExportWorkbookBuffer — grade por p
     await workbook.xlsx.load(buffer)
     const sheet = workbook.getWorksheet('Visão semanal')!
     // mesma linha física (posição 1): terça longa eleva a altura da linha inteira
-    expect(sheet.getRow(8).height ?? 0).toBeGreaterThanOrEqual(79)
+    // visual >= 5 → safe max(5, visual+1) >= 6 → >= 94pt
+    expect(sheet.getRow(8).height ?? 0).toBeGreaterThanOrEqual(94)
 
     const notesBuffer = await buildOperationalPlanningWeeklyViewExportWorkbookBuffer({
       meta: sampleMeta({ totalActivities: 1, collaboratorsWithActivityCount: 1 }),
@@ -763,16 +791,20 @@ describe('buildOperationalPlanningWeeklyViewExportWorkbookBuffer — grade por p
     const notesWb = new ExcelJS.Workbook()
     await notesWb.xlsx.load(notesBuffer)
     const notesSheet = notesWb.getWorksheet('Visão semanal')!
-    expect(notesSheet.getRow(8).height ?? 0).toBeGreaterThan(64)
+    expect(notesSheet.getRow(8).height ?? 0).toBeGreaterThan(79)
   })
 
-  it('descrições reais cobertas mantêm quarta linha e altura adequada', async () => {
+  it('descrições reais cobertas mantêm quarta linha e altura segura após reabrir .xlsx', async () => {
     const titles = [
       'MONTAR PEÇS DE ACABAMENTO PORTA TRECO',
       'Perfilar couro para dar acabamento(manualmente)',
       'costura da borda e Fechamento do volante',
       'limpreza dos forros de portas (junto das ombreiras )',
       'INSTALAÇÃO DO BOTÃO DE PRESSÃO',
+      'Instatalação da capa do banco dianteiro direito com ajuste de costura',
+      'Aplicação cola na espuma do encosto para fixação do couro',
+      'Aplicar cola para adesão da capa no assento dianteiro',
+      'Verificar se não tem nenhuma peça quebrada no kit de acabamento',
     ]
     const rows = titles.map((activityTitle, idx) =>
       sampleRow({
@@ -798,9 +830,21 @@ describe('buildOperationalPlanningWeeklyViewExportWorkbookBuffer — grade por p
       expect(text).toContain(titles[i]!)
       expect(text).toContain('Tempo planejado:')
       expect(text).toMatch(/Tempo apontado: (45 min|---)/)
-      expect(row.height ?? 0).toBeGreaterThanOrEqual(64)
+      expect(row.height ?? 0).toBeGreaterThanOrEqual(79)
+      expect(row.height ?? 0).not.toBe(64)
       expect(row.height ?? 0).toBeLessThanOrEqual(EXCEL_MAX_ROW_HEIGHT_PT)
       expect(row.getCell(2).font?.size).toBe(11)
+      expect(row.getCell(2).alignment?.wrapText).toBe(true)
+    }
+
+    // conteúdo completo após serializar/reabrir
+    const reopened = new ExcelJS.Workbook()
+    await reopened.xlsx.load(buffer)
+    const reopenedSheet = reopened.getWorksheet('Visão semanal')!
+    for (let i = 0; i < titles.length; i += 1) {
+      const row = reopenedSheet.getRow(8 + i)
+      expect(String(row.getCell(2).value ?? '')).toContain(titles[i]!)
+      expect(row.height ?? 0).toBeGreaterThanOrEqual(79)
       expect(row.getCell(2).alignment?.wrapText).toBe(true)
     }
   })
