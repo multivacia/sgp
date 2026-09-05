@@ -11,6 +11,7 @@ import { resolveSequenceListBadge } from '../../domain/production/production.hel
 import { getProductionWorkQueue } from '../../services/production/productionApiService'
 import { ProductionCollaboratorAvatar } from '../production/ProductionCollaboratorAvatar'
 import { KioskActivityCard } from './KioskActivityCard'
+import { KioskExtraActivityModal } from './KioskExtraActivityModal'
 
 type Props = {
   collaborator: ProductionCollaboratorSummary
@@ -27,6 +28,10 @@ export function KioskActivityCards({ collaborator, initialItems, onExit }: Props
     findInitialKioskCarouselIndex(initialItems),
   )
   const [search, setSearch] = useState('')
+  // `KioskActivityCards` é desmontado por `KioskPage` a cada logout/troca de
+  // colaborador (volta para a tela de grade), então este estado nunca
+  // sobrevive entre sessões diferentes no mesmo tablet.
+  const [extraActivityOpen, setExtraActivityOpen] = useState(false)
   const touchStartX = useRef(0)
 
   const filtered = useMemo(() => {
@@ -147,6 +152,16 @@ export function KioskActivityCards({ collaborator, initialItems, onExit }: Props
               </svg>
             </button>
           </div>
+
+          {/* Atividade extra esteira */}
+          <button
+            type="button"
+            onClick={() => setExtraActivityOpen(true)}
+            title="Registrar atividade extra esteira"
+            className="min-h-10 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-sm font-semibold text-slate-300 transition hover:border-sgp-gold/40 hover:text-sgp-gold"
+          >
+            + Extra
+          </button>
 
           {/* Sair */}
           <button
@@ -310,6 +325,11 @@ export function KioskActivityCards({ collaborator, initialItems, onExit }: Props
           </div>
         </div>
       )}
+
+      <KioskExtraActivityModal
+        open={extraActivityOpen}
+        onClose={() => setExtraActivityOpen(false)}
+      />
     </div>
   )
 }
