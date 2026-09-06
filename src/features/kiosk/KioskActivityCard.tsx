@@ -245,8 +245,8 @@ export function KioskActivityCard({ item, onSuccess, onSheetOpenChange }: Props)
   }
 
   if (success) {
-    return (
-      <div className="flex flex-col items-center justify-center gap-6 px-8 py-16 text-center">
+    return createPortal(
+      <div className="fixed inset-0 z-40 flex flex-col items-center justify-center gap-6 bg-black/80 px-8 py-16 text-center backdrop-blur-sm">
         <div className="flex h-20 w-20 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-400">
           <svg
             className="h-10 w-10"
@@ -271,7 +271,8 @@ export function KioskActivityCard({ item, onSuccess, onSheetOpenChange }: Props)
               : 'Avançando para a próxima atividade…'}
           </p>
         </div>
-      </div>
+      </div>,
+      document.body,
     )
   }
 
