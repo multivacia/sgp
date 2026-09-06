@@ -26,7 +26,7 @@ type Props = {
 
 type ViewMode = 'carousel' | 'list'
 
-type ToastState = { message: string; variant: SgpToastVariant } | null
+type ToastState = { id: number; message: string; variant: SgpToastVariant } | null
 
 export function KioskActivityCards({ collaborator, initialItems, onExit }: Props) {
   const [items, setItems] = useState(initialItems)
@@ -40,11 +40,15 @@ export function KioskActivityCards({ collaborator, initialItems, onExit }: Props
   // sobrevive entre sessões diferentes no mesmo tablet.
   const [extraActivityOpen, setExtraActivityOpen] = useState(false)
   const [toast, setToast] = useState<ToastState>(null)
+  const toastIdRef = useRef(0)
   const touchStartX = useRef(0)
 
   const pushToast = useCallback((message: string, variant: SgpToastVariant = 'success') => {
-    setToast({ message, variant })
+    toastIdRef.current += 1
+    setToast({ id: toastIdRef.current, message, variant })
   }, [])
+
+  const dismissToast = useCallback(() => setToast(null), [])
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim()
@@ -89,11 +93,9 @@ export function KioskActivityCards({ collaborator, initialItems, onExit }: Props
     await reloadQueue()
   }, [reloadQueue])
 
-  const handleExtraActivitySuccess = useCallback(async () => {
+  const handleExtraActivitySuccess = useCallback(() => {
     pushToast(KIOSK_ACTIVITY_TOAST.extraEntrySaved, 'success')
-    const ok = await reloadQueue()
-    if (!ok) pushToast(KIOSK_ACTIVITY_TOAST.queueReloadFailed, 'neutral')
-  }, [pushToast, reloadQueue])
+  }, [pushToast])
 
   function handleTouchStart(e: React.TouchEvent) {
     touchStartX.current = e.touches[0].clientX
@@ -353,17 +355,16 @@ export function KioskActivityCards({ collaborator, initialItems, onExit }: Props
       <KioskExtraActivityModal
         open={extraActivityOpen}
         onClose={() => setExtraActivityOpen(false)}
-        onSuccess={() => {
-          void handleExtraActivitySuccess()
-        }}
+        onSuccess={handleExtraActivitySuccess}
       />
 
       {toast ? (
         <SgpToast
+          key={toast.id}
           fixed
           message={toast.message}
           variant={toast.variant}
-          onDismiss={() => setToast(null)}
+          onDismiss={dismissToast}
         />
       ) : null}
     </div>

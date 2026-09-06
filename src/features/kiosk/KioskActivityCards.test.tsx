@@ -1,6 +1,6 @@
 /** @vitest-environment jsdom */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import type {
   ProductionCollaboratorSummary,
   ProductionWorkQueueItem,
@@ -88,6 +88,42 @@ function mockedService() {
   }
 }
 
+/**
+ * Aguarda o esvaziamento da fila de microtasks pendentes (promises já
+ * resolvidas/rejeitadas pelos mocks de serviço), dentro de `act` para que
+ * as atualizações de estado do React decorrentes sejam corretamente
+ * "flushadas" e commitadas — funciona independente de fake timers, já que
+ * a resolução de Promises nativas não depende do relógio mockado.
+ */
+async function flushMicrotasks() {
+  await act(async () => {
+    await Promise.resolve()
+    await Promise.resolve()
+    await Promise.resolve()
+    await Promise.resolve()
+    await Promise.resolve()
+  })
+}
+
+async function openExtraModal() {
+  fireEvent.click(screen.getByTitle(/registrar atividade extra esteira/i))
+  await flushMicrotasks()
+}
+
+function fillValidExtraForm() {
+  fireEvent.change(screen.getByLabelText(/tipo de atividade/i), {
+    target: { value: 'desc-1' },
+  })
+  fireEvent.change(screen.getByPlaceholderText(/ex\.: 30/i), {
+    target: { value: '30' },
+  })
+}
+
+async function submitExtraForm() {
+  fireEvent.click(screen.getByRole('button', { name: /registrar apontamento/i }))
+  await flushMicrotasks()
+}
+
 describe('KioskActivityCards — toast', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -111,10 +147,11 @@ describe('KioskActivityCards — toast', () => {
 
   afterEach(() => {
     cleanup()
+    vi.useRealTimers()
     vi.restoreAllMocks()
   })
 
-  it('exibe SgpToast de sucesso ao registrar atividade extra esteira', async () => {
+  it('não exibe toast no estado inicial', () => {
     render(
       <KioskActivityCards
         collaborator={collaborator}
@@ -123,32 +160,133 @@ describe('KioskActivityCards — toast', () => {
       />,
     )
 
-    fireEvent.click(screen.getByTitle(/registrar atividade extra esteira/i))
-    await waitFor(() => {
-      expect(mockedService().listProductionExtraTimeEntryDescriptions).toHaveBeenCalled()
-    })
-
-    fireEvent.change(screen.getByLabelText(/tipo de atividade/i), {
-      target: { value: 'desc-1' },
-    })
-    fireEvent.change(screen.getByPlaceholderText(/ex\.: 30/i), {
-      target: { value: '30' },
-    })
-    fireEvent.click(screen.getByRole('button', { name: /registrar apontamento/i }))
-
-    await waitFor(() => {
-      expect(mockedService().createProductionExtraTimeEntry).toHaveBeenCalled()
-    })
-    await waitFor(() => {
-      expect(screen.getByRole('status').textContent).toContain(
-        KIOSK_ACTIVITY_TOAST.extraEntrySaved,
-      )
-    })
-    expect(mockedService().getProductionWorkQueue).toHaveBeenCalled()
+    expect(screen.queryByRole('status')).toBeNull()
   })
 
-  it('exibe toast neutro quando a recarga da fila falha após extra', async () => {
-    mockedService().getProductionWorkQueue.mockRejectedValue(new Error('network'))
+  it('exibe toast de sucesso com o texto exato ao registrar atividade extra, sem recarregar a fila', async () => {
+    render(
+      <KioskActivityCards
+        collaborator={collaborator}
+        initialItems={[sampleItem()]}
+        onExit={vi.fn()}
+      />,
+    )
+
+    await openExtraModal()
+    fillValidExtraForm()
+    await submitExtraForm()
+
+    expect(mockedService().createProductionExtraTimeEntry).toHaveBeenCalled()
+    const status = screen.getByRole('status')
+    expect(status.textContent).toContain(KIOSK_ACTIVITY_TOAST.extraEntrySaved)
+    expect(mockedService().getProductionWorkQueue).not.toHaveBeenCalled()
+  })
+
+  it('toast possui role="status" e aria-live="polite"', async () => {
+    render(
+      <KioskActivityCards
+        collaborator={collaborator}
+        initialItems={[sampleItem()]}
+        onExit={vi.fn()}
+      />,
+    )
+
+    await openExtraModal()
+    fillValidExtraForm()
+    await submitExtraForm()
+
+    const status = screen.getByRole('status')
+    expect(status.getAttribute('aria-live')).toBe('polite')
+  })
+
+  it('toast desaparece automaticamente após ~4200ms', async () => {
+    vi.useFakeTimers()
+    render(
+      <KioskActivityCards
+        collaborator={collaborator}
+        initialItems={[sampleItem()]}
+        onExit={vi.fn()}
+      />,
+    )
+
+    await openExtraModal()
+    fillValidExtraForm()
+    await submitExtraForm()
+
+    expect(screen.getByRole('status')).not.toBeNull()
+
+    act(() => {
+      vi.advanceTimersByTime(4199)
+    })
+    expect(screen.getByRole('status')).not.toBeNull()
+
+    act(() => {
+      vi.advanceTimersByTime(1)
+    })
+    expect(screen.queryByRole('status')).toBeNull()
+  })
+
+  it('um segundo sucesso reinicia o temporizador do toast', async () => {
+    vi.useFakeTimers()
+    render(
+      <KioskActivityCards
+        collaborator={collaborator}
+        initialItems={[sampleItem()]}
+        onExit={vi.fn()}
+      />,
+    )
+
+    await openExtraModal()
+    fillValidExtraForm()
+    await submitExtraForm()
+    expect(screen.getByRole('status')).not.toBeNull()
+
+    act(() => {
+      vi.advanceTimersByTime(3000)
+    })
+    expect(screen.getByRole('status')).not.toBeNull()
+
+    // Segundo sucesso, antes do primeiro toast desaparecer.
+    await openExtraModal()
+    fillValidExtraForm()
+    await submitExtraForm()
+
+    // Total de 6000ms desde o 1º sucesso, mas apenas 3000ms desde o 2º —
+    // o toast deve continuar visível porque o temporizador foi reiniciado.
+    act(() => {
+      vi.advanceTimersByTime(3000)
+    })
+    expect(screen.getByRole('status')).not.toBeNull()
+
+    // Mais ~1300ms (total de 4300ms desde o 2º sucesso) — ultrapassa os
+    // ~4200ms do temporizador reiniciado, então o toast desaparece.
+    act(() => {
+      vi.advanceTimersByTime(1300)
+    })
+    expect(screen.queryByRole('status')).toBeNull()
+  })
+
+  it('fechar o modal sem submeter não exibe toast', async () => {
+    render(
+      <KioskActivityCards
+        collaborator={collaborator}
+        initialItems={[sampleItem()]}
+        onExit={vi.fn()}
+      />,
+    )
+
+    await openExtraModal()
+    fireEvent.click(screen.getByRole('button', { name: /fechar/i }))
+    await flushMicrotasks()
+
+    expect(mockedService().createProductionExtraTimeEntry).not.toHaveBeenCalled()
+    expect(screen.queryByRole('status')).toBeNull()
+  })
+
+  it('erro ao criar o apontamento extra não exibe toast de sucesso', async () => {
+    mockedService().createProductionExtraTimeEntry.mockRejectedValueOnce(
+      new Error('falha ao salvar'),
+    )
 
     render(
       <KioskActivityCards
@@ -158,22 +296,37 @@ describe('KioskActivityCards — toast', () => {
       />,
     )
 
-    fireEvent.click(screen.getByTitle(/registrar atividade extra esteira/i))
-    await waitFor(() => {
-      expect(mockedService().listProductionExtraTimeEntryDescriptions).toHaveBeenCalled()
-    })
-    fireEvent.change(screen.getByLabelText(/tipo de atividade/i), {
-      target: { value: 'desc-1' },
-    })
-    fireEvent.change(screen.getByPlaceholderText(/ex\.: 30/i), {
-      target: { value: '30' },
-    })
-    fireEvent.click(screen.getByRole('button', { name: /registrar apontamento/i }))
+    await openExtraModal()
+    fillValidExtraForm()
+    await submitExtraForm()
 
-    await waitFor(() => {
-      expect(screen.getByRole('status').textContent).toContain(
-        KIOSK_ACTIVITY_TOAST.queueReloadFailed,
-      )
+    expect(mockedService().createProductionExtraTimeEntry).toHaveBeenCalled()
+    expect(screen.queryByRole('status')).toBeNull()
+  })
+
+  it('desmontar com o temporizador do toast pendente não gera warning/erro do React', async () => {
+    vi.useFakeTimers()
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    const { unmount } = render(
+      <KioskActivityCards
+        collaborator={collaborator}
+        initialItems={[sampleItem()]}
+        onExit={vi.fn()}
+      />,
+    )
+
+    await openExtraModal()
+    fillValidExtraForm()
+    await submitExtraForm()
+    expect(screen.getByRole('status')).not.toBeNull()
+
+    unmount()
+
+    act(() => {
+      vi.advanceTimersByTime(5000)
     })
+
+    expect(consoleErrorSpy).not.toHaveBeenCalled()
   })
 })

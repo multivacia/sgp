@@ -6,9 +6,9 @@ Tipo: Evolução operacional / Kiosk
 
 Inclui:
 
-- Toast de confirmação no kiosk após apontamento de atividade extra esteira
-  (`SgpToast` em `KioskActivityCards`).
-- Feedback quando a recarga da fila falha após o registro.
+- Toast de confirmação no kiosk após apontamento de atividade extra
+  ("Apontamento extra registrado com sucesso.") (`SgpToast` em
+  `KioskActivityCards`), sem recarregar a fila de atividades.
 - Versão do produto atualizada para 1.9.5.
 
 ## SGP+ v1.9.3 — 2026-08-25

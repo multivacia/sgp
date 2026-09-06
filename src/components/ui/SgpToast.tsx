@@ -41,6 +41,7 @@ export function SgpToast({
   return (
     <div
       role="status"
+      aria-live="polite"
       className={`flex gap-3 rounded-xl border px-4 py-3 text-sm font-medium leading-snug ${variantClass[variant]} ${base} ${className}`}
     >
       <span

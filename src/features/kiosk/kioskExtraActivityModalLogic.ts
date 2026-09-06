@@ -4,8 +4,7 @@ export const NOTES_MAX_LENGTH = 500
 
 /** Mensagens de toast do kiosk (feedback pós-ação na fila de atividades). */
 export const KIOSK_ACTIVITY_TOAST = {
-  extraEntrySaved: 'Apontamento extra esteira registado com sucesso.',
-  queueReloadFailed: 'Apontamento salvo, mas não foi possível atualizar a fila.',
+  extraEntrySaved: 'Apontamento extra registrado com sucesso.',
 } as const
 
 export function todayIsoDate(): string {
