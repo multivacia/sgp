@@ -22,14 +22,14 @@ describe('frontend version metadata', () => {
     ;(globalThis as TestGlobal).__SGP_APP_BASE_METADATA__ = {
       product: 'SGP+',
       version: '1.9.5',
-      releaseName: 'Toast no kiosk e apontamento extra esteira',
+      releaseName: 'Sugestões no planejamento, apontamento extra no Kiosk e ajustes no Excel',
     }
     const metadata = resolveFrontendVersionMetadata()
 
     expect(metadata.product).toBe('SGP+')
     expect(metadata.version).toBe('1.9.5')
     expect(metadata.releaseName).toBe(
-      'Toast no kiosk e apontamento extra esteira',
+      'Sugestões no planejamento, apontamento extra no Kiosk e ajustes no Excel',
     )
     expect(metadata.environment).toBe('development')
     expect(metadata.commitSha).toBe('local')
@@ -40,7 +40,7 @@ describe('frontend version metadata', () => {
     ;(globalThis as TestGlobal).__SGP_APP_BASE_METADATA__ = {
       product: 'SGP+',
       version: '1.9.5',
-      releaseName: 'Toast no kiosk e apontamento extra esteira',
+      releaseName: 'Sugestões no planejamento, apontamento extra no Kiosk e ajustes no Excel',
     }
     vi.stubEnv('VITE_APP_VERSION', '1.9.5-rc.1')
     vi.stubEnv('VITE_APP_RELEASE_NAME', 'rc-kiosk-contrast')
