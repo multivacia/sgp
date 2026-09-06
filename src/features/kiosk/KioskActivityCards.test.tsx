@@ -7,6 +7,7 @@ import type {
 } from '../../domain/production/production.types'
 import { KioskActivityCards } from './KioskActivityCards'
 import { KIOSK_ACTIVITY_TOAST } from './kioskExtraActivityModalLogic'
+import { KIOSK_OTHER_ACTIVITY_TOAST } from './kioskOutraAtividadeFlowLogic'
 import * as productionApiService from '../../services/production/productionApiService'
 
 vi.mock('../../services/production/productionApiService', () => ({
@@ -14,6 +15,8 @@ vi.mock('../../services/production/productionApiService', () => ({
   listProductionExtraTimeEntryDescriptions: vi.fn(),
   listProductionExtraTimeEntries: vi.fn(),
   createProductionExtraTimeEntry: vi.fn(),
+  listProductionTimeEntryCandidates: vi.fn(),
+  createProductionUnassignedTimeEntry: vi.fn(),
   PRODUCTION_EXTRA_TIME_ENTRY_ERROR_MESSAGE:
     'Não foi possível registrar o apontamento extra esteira.',
 }))
@@ -29,6 +32,20 @@ vi.mock('./KioskActivityCard', () => ({
     <div data-testid={`card-${item.workPlanItemId}`}>
       <button type="button" onClick={onSuccess}>
         Simular sucesso card
+      </button>
+    </div>
+  ),
+}))
+
+// "Outra Atividade" tem fluxo próprio (busca, seleção, justificativa,
+// confirmação) já coberto por `KioskOutraAtividadeFlow.test.ts` e
+// `kioskOutraAtividadeFlowLogic.test.ts`. Aqui testamos apenas a fiação com
+// `KioskActivityCards` (botão, toast com texto próprio, reload da fila).
+vi.mock('./KioskOutraAtividadeFlow', () => ({
+  KioskOutraAtividadeFlow: ({ onSuccess }: { onSuccess: () => void }) => (
+    <div data-testid="other-activity-flow">
+      <button type="button" onClick={onSuccess}>
+        Simular sucesso outra atividade
       </button>
     </div>
   ),
@@ -85,6 +102,8 @@ function mockedService() {
     listProductionExtraTimeEntryDescriptions: ReturnType<typeof vi.fn>
     listProductionExtraTimeEntries: ReturnType<typeof vi.fn>
     createProductionExtraTimeEntry: ReturnType<typeof vi.fn>
+    listProductionTimeEntryCandidates: ReturnType<typeof vi.fn>
+    createProductionUnassignedTimeEntry: ReturnType<typeof vi.fn>
   }
 }
 
@@ -328,5 +347,71 @@ describe('KioskActivityCards — toast', () => {
     })
 
     expect(consoleErrorSpy).not.toHaveBeenCalled()
+  })
+})
+
+describe('KioskActivityCards — "+ Outra" (atividade fora da alocação)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    const svc = mockedService()
+    svc.getProductionWorkQueue.mockResolvedValue({ items: [sampleItem()] })
+  })
+
+  afterEach(() => {
+    cleanup()
+    vi.useRealTimers()
+    vi.restoreAllMocks()
+  })
+
+  it('exibe o botão "+ Outra" com título distinto do "+ Extra"', () => {
+    render(
+      <KioskActivityCards
+        collaborator={collaborator}
+        initialItems={[sampleItem()]}
+        onExit={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByTitle(/registrar atividade extra esteira/i)).not.toBeNull()
+    expect(screen.getByTitle(/registrar atividade fora da sua alocação/i)).not.toBeNull()
+  })
+
+  it('abre o fluxo "Outra Atividade" ao clicar em "+ Outra"', async () => {
+    render(
+      <KioskActivityCards
+        collaborator={collaborator}
+        initialItems={[sampleItem()]}
+        onExit={vi.fn()}
+      />,
+    )
+
+    expect(screen.queryByTestId('other-activity-flow')).toBeNull()
+    fireEvent.click(screen.getByTitle(/registrar atividade fora da sua alocação/i))
+    await flushMicrotasks()
+    expect(screen.queryByTestId('other-activity-flow')).not.toBeNull()
+  })
+
+  it('ao suceder, exibe toast com texto próprio (diferente do "+Extra") e recarrega a fila', async () => {
+    render(
+      <KioskActivityCards
+        collaborator={collaborator}
+        initialItems={[sampleItem()]}
+        onExit={vi.fn()}
+      />,
+    )
+
+    fireEvent.click(screen.getByTitle(/registrar atividade fora da sua alocação/i))
+    await flushMicrotasks()
+
+    fireEvent.click(screen.getByRole('button', { name: /simular sucesso outra atividade/i }))
+    await flushMicrotasks()
+
+    const status = screen.getByRole('status')
+    expect(status.textContent).toContain(KIOSK_OTHER_ACTIVITY_TOAST.entrySaved)
+    expect(status.textContent).not.toContain(KIOSK_ACTIVITY_TOAST.extraEntrySaved)
+
+    // Diferente do "+Extra" (que não recarrega a fila): "Outra Atividade"
+    // aponta tempo real num step existente e deve recarregar.
+    expect(mockedService().getProductionWorkQueue).toHaveBeenCalled()
   })
 })

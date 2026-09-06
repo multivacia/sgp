@@ -37,3 +37,29 @@ export const productionTimeEntryBodySchema = productionTimeEntryBodyBaseSchema.s
 )
 
 export type ProductionTimeEntryBody = z.infer<typeof productionTimeEntryBodySchema>
+
+/**
+ * POST /production/time-entries/unassigned-exception — apontamento em
+ * atividade real (esteira/step) fora da alocação atual do colaborador no
+ * kiosk. Distinto de `productionTimeEntryBodySchema` (apontamento normal,
+ * já alocado) e do módulo `production-extra-time-entries` ("+Extra", sem
+ * vínculo com esteira/step).
+ */
+export const productionUnassignedTimeEntryBodySchema = z.object({
+  conveyorId: z.string().uuid(),
+  stepNodeId: z.string().uuid(),
+  minutes: z.number().int().min(1),
+  note: z.union([z.string().max(2000), z.null()]).optional(),
+  /** Obrigatória quando o colaborador não tem alocação ativa no STEP. */
+  exceptionJustification: z.union([z.string().max(4000), z.null()]).optional(),
+  exceptionJustificationId: z.string().uuid().optional(),
+  exceptionJustificationComplement: z.union([z.string().max(2000), z.null()]).optional(),
+  /** Obrigatória quando a atividade está fora da sequência recomendada. */
+  outOfSequenceJustification: z.union([z.string().max(4000), z.null()]).optional(),
+  outOfSequenceJustificationId: z.string().uuid().optional(),
+  outOfSequenceJustificationComplement: z.union([z.string().max(2000), z.null()]).optional(),
+})
+
+export type ProductionUnassignedTimeEntryBody = z.infer<
+  typeof productionUnassignedTimeEntryBodySchema
+>

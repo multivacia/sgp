@@ -15,6 +15,8 @@ import {
   getProductionExtraTimeEntryDescriptions,
   postProductionExtraTimeEntry,
 } from './production-extra-time-entries.controller.js'
+import { getProductionTimeEntryCandidates } from './production-time-entry-candidates.controller.js'
+import { postProductionUnassignedTimeEntry } from './production-unassigned-time-entries.controller.js'
 import { requireProductionAuth, requireProductionPinChanged } from './production-auth.middleware.js'
 import { requireKioskToken } from './production-kiosk.middleware.js'
 
@@ -45,6 +47,18 @@ export function productionRouter(): Router {
     requireProductionAuth(),
     requireProductionPinChanged(),
     asyncRoute(postProductionTimeEntry),
+  )
+  r.get(
+    '/production/me/time-entry-candidates',
+    requireProductionAuth(),
+    requireProductionPinChanged(),
+    asyncRoute(getProductionTimeEntryCandidates),
+  )
+  r.post(
+    '/production/time-entries/unassigned-exception',
+    requireProductionAuth(),
+    requireProductionPinChanged(),
+    asyncRoute(postProductionUnassignedTimeEntry),
   )
   r.get(
     '/production/time-entry-justifications',

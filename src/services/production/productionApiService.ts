@@ -7,6 +7,7 @@ import type {
   ProductionSession,
   ProductionTimeEntryPayload,
   ProductionTimeEntryResult,
+  ProductionUnassignedTimeEntryPayload,
   ProductionWorkQueueResponse,
 } from '../../domain/production/production.types'
 import type {
@@ -14,6 +15,7 @@ import type {
   ExtraTimeEntryDescriptionOption,
   ExtraTimeEntryItem,
 } from '../../domain/my-activities/extraTimeEntries.types'
+import type { TimeEntryCandidateItem } from '../../domain/my-activities/my-activities.types'
 
 const BASE = '/api/v1/production'
 
@@ -313,6 +315,67 @@ export async function createProductionTimeEntry(
       })
     }
     throw new ApiError(PRODUCTION_TIME_ENTRY_ERROR_MESSAGE, 503, { cause: e })
+  }
+}
+
+export const PRODUCTION_OTHER_ACTIVITY_ENTRY_ERROR_MESSAGE =
+  'Não foi possível registrar o apontamento em outra atividade.'
+
+export const PRODUCTION_OTHER_ACTIVITY_CANDIDATES_ERROR_MESSAGE =
+  'Não foi possível buscar outras atividades.'
+
+/** Candidatos de apontamento (esteira/step) para o colaborador do kiosk. */
+export async function listProductionTimeEntryCandidates(options: {
+  q: string
+  limit?: number
+  includeUnassigned?: boolean
+}): Promise<TimeEntryCandidateItem[]> {
+  try {
+    const params = new URLSearchParams()
+    if (options.q.trim()) params.set('q', options.q.trim())
+    if (options.limit != null) params.set('limit', String(options.limit))
+    if (options.includeUnassigned) params.set('includeUnassigned', 'true')
+    const query = params.toString()
+    const data = await productionRequestJson<TimeEntryCandidateItem[]>(
+      'GET',
+      query ? `${BASE}/me/time-entry-candidates?${query}` : `${BASE}/me/time-entry-candidates`,
+    )
+    return Array.isArray(data) ? data : []
+  } catch (e) {
+    if (e instanceof ApiError) {
+      throw new ApiError(PRODUCTION_OTHER_ACTIVITY_CANDIDATES_ERROR_MESSAGE, e.status, {
+        code: e.code,
+        cause: e,
+      })
+    }
+    throw new ApiError(PRODUCTION_OTHER_ACTIVITY_CANDIDATES_ERROR_MESSAGE, 503, { cause: e })
+  }
+}
+
+/**
+ * Apontamento em atividade real (esteira/step) fora da alocação atual do
+ * colaborador — endpoint próprio (`/production/time-entries/unassigned-exception`),
+ * distinto de `createProductionTimeEntry` (apontamento normal) e de
+ * `createProductionExtraTimeEntry` (catálogo genérico, sem vínculo com esteira/step).
+ */
+export async function createProductionUnassignedTimeEntry(
+  input: ProductionUnassignedTimeEntryPayload,
+): Promise<ProductionTimeEntryResult> {
+  try {
+    const data = await productionRequestJson<ProductionTimeEntryResult>(
+      'POST',
+      `${BASE}/time-entries/unassigned-exception`,
+      { body: input },
+    )
+    return data
+  } catch (e) {
+    if (e instanceof ApiError) {
+      throw new ApiError(PRODUCTION_OTHER_ACTIVITY_ENTRY_ERROR_MESSAGE, e.status, {
+        code: e.code,
+        cause: e,
+      })
+    }
+    throw new ApiError(PRODUCTION_OTHER_ACTIVITY_ENTRY_ERROR_MESSAGE, 503, { cause: e })
   }
 }
 

@@ -2,12 +2,16 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { ApiError } from '../../lib/api/apiErrors'
 import {
   createProductionTimeEntry,
+  createProductionUnassignedTimeEntry,
   getProductionSession,
   getProductionWorkQueue,
   listProductionCollaborators,
+  listProductionTimeEntryCandidates,
   loginProduction,
   logoutProduction,
   mapProductionLoginError,
+  PRODUCTION_OTHER_ACTIVITY_CANDIDATES_ERROR_MESSAGE,
+  PRODUCTION_OTHER_ACTIVITY_ENTRY_ERROR_MESSAGE,
   PRODUCTION_PIN_INVALID_MESSAGE,
   PRODUCTION_LIST_KIOSK_MESSAGE,
   PRODUCTION_TIME_ENTRY_ERROR_MESSAGE,
@@ -270,6 +274,78 @@ describe('productionApiService', () => {
       await expect(
         createProductionTimeEntry({ conveyorId: 'cv-1', stepNodeId: 'step-1', minutes: 10 }),
       ).rejects.toMatchObject({ message: PRODUCTION_TIME_ENTRY_ERROR_MESSAGE, status: 503 })
+    })
+  })
+
+  describe('listProductionTimeEntryCandidates', () => {
+    it('consulta candidatos de apontamento pela rota do kiosk com query params', async () => {
+      mockRequest.mockResolvedValue([])
+      await listProductionTimeEntryCandidates({ q: 'OS', limit: 50, includeUnassigned: true })
+      expect(mockRequest).toHaveBeenCalledWith(
+        'GET',
+        '/api/v1/production/me/time-entry-candidates?q=OS&limit=50&includeUnassigned=true',
+      )
+    })
+
+    it('sem query params: chama a rota base sem querystring', async () => {
+      mockRequest.mockResolvedValue([])
+      await listProductionTimeEntryCandidates({ q: '' })
+      expect(mockRequest).toHaveBeenCalledWith(
+        'GET',
+        '/api/v1/production/me/time-entry-candidates',
+      )
+    })
+
+    it('resposta inválida retorna lista vazia', async () => {
+      mockRequest.mockResolvedValue(null)
+      const result = await listProductionTimeEntryCandidates({ q: 'x' })
+      expect(result).toEqual([])
+    })
+
+    it('erro genérico retorna mensagem amigável', async () => {
+      mockRequest.mockRejectedValue(new ApiError('falhou', 500))
+      await expect(listProductionTimeEntryCandidates({ q: 'x' })).rejects.toMatchObject({
+        message: PRODUCTION_OTHER_ACTIVITY_CANDIDATES_ERROR_MESSAGE,
+        status: 500,
+      })
+    })
+  })
+
+  describe('createProductionUnassignedTimeEntry', () => {
+    it('registra exceção de atividade não alocada na rota específica', async () => {
+      mockRequest.mockResolvedValue({ id: 'entry-1', minutes: 30, entryOrigin: 'UNASSIGNED_EXCEPTION' })
+      await createProductionUnassignedTimeEntry({
+        conveyorId: 'cv-1',
+        stepNodeId: 'step-1',
+        minutes: 30,
+        exceptionJustification: 'Apoio na atividade',
+      })
+      expect(mockRequest).toHaveBeenCalledWith(
+        'POST',
+        '/api/v1/production/time-entries/unassigned-exception',
+        {
+          body: {
+            conveyorId: 'cv-1',
+            stepNodeId: 'step-1',
+            minutes: 30,
+            exceptionJustification: 'Apoio na atividade',
+          },
+        },
+      )
+    })
+
+    it('erro genérico retorna mensagem amigável', async () => {
+      mockRequest.mockRejectedValue(new ApiError('falhou', 422))
+      await expect(
+        createProductionUnassignedTimeEntry({
+          conveyorId: 'cv-1',
+          stepNodeId: 'step-1',
+          minutes: 30,
+        }),
+      ).rejects.toMatchObject({
+        message: PRODUCTION_OTHER_ACTIVITY_ENTRY_ERROR_MESSAGE,
+        status: 422,
+      })
     })
   })
 })

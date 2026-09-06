@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { productionTimeEntryBodySchema } from '../modules/production/production-time-entries.schemas.js'
+import {
+  productionTimeEntryBodySchema,
+  productionUnassignedTimeEntryBodySchema,
+} from '../modules/production/production-time-entries.schemas.js'
 
 const baseBody = {
   conveyorId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
@@ -40,5 +43,55 @@ describe('productionTimeEntryBodySchema', () => {
     expect(() =>
       productionTimeEntryBodySchema.parse({ ...baseBody, minutes: -1 }),
     ).toThrow(/negativo/i)
+  })
+})
+
+describe('productionUnassignedTimeEntryBodySchema', () => {
+  it('aceita apontamento não alocado com justificativa por catálogo', () => {
+    expect(
+      productionUnassignedTimeEntryBodySchema.parse({
+        ...baseBody,
+        minutes: 30,
+        exceptionJustificationId: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
+      }),
+    ).toMatchObject({ minutes: 30 })
+  })
+
+  it('aceita apontamento não alocado com justificativa em texto livre', () => {
+    expect(
+      productionUnassignedTimeEntryBodySchema.parse({
+        ...baseBody,
+        minutes: 15,
+        exceptionJustification: 'Cobrindo colega em pausa.',
+      }),
+    ).toMatchObject({ minutes: 15, exceptionJustification: 'Cobrindo colega em pausa.' })
+  })
+
+  it('aceita sem nenhuma justificativa no corpo (obrigatoriedade é regra de negócio no service)', () => {
+    expect(
+      productionUnassignedTimeEntryBodySchema.parse({ ...baseBody, minutes: 20 }),
+    ).toMatchObject({ minutes: 20 })
+  })
+
+  it('rejeita minutos zerados', () => {
+    expect(() =>
+      productionUnassignedTimeEntryBodySchema.parse({ ...baseBody, minutes: 0 }),
+    ).toThrow()
+  })
+
+  it('rejeita minutos negativos', () => {
+    expect(() =>
+      productionUnassignedTimeEntryBodySchema.parse({ ...baseBody, minutes: -5 }),
+    ).toThrow()
+  })
+
+  it('rejeita conveyorId/stepNodeId inválidos', () => {
+    expect(() =>
+      productionUnassignedTimeEntryBodySchema.parse({
+        conveyorId: 'not-a-uuid',
+        stepNodeId: baseBody.stepNodeId,
+        minutes: 10,
+      }),
+    ).toThrow()
   })
 })
