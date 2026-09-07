@@ -871,14 +871,6 @@ export async function serviceAppendConveyorStructureItem(
         ''
       await client.query('COMMIT')
     } else {
-      if (conveyor.operational_status !== 'EM_ANDAMENTO') {
-        throw new AppError(
-          'Inclusão tardia de item só é permitida em esteira em andamento.',
-          422,
-          ErrorCodes.VALIDATION_ERROR,
-        )
-      }
-
       const occurredIso = new Date().toISOString()
       const stepMetadata = {
         lateAddToWeeklyBacklog: true,

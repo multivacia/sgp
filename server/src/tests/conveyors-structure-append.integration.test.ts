@@ -303,14 +303,24 @@ describe.skipIf(!hasDb)('conveyor structure append HTTP (integração)', () => {
     expect(replay.body.data.operationalStatus).toBe('EM_ANDAMENTO')
   })
 
-  it('status inválido (não EM_ANDAMENTO) → 422', async () => {
-    const created = await serviceCreateConveyor(pool, minimalConveyorBody(`Elab ${randomUUID().slice(0, 8)}`))
+  it.each([
+    'EM_ELABORACAO',
+    'A_INICIAR',
+    'EM_ANDAMENTO',
+    'FINALIZADA',
+    'CANCELADA',
+  ] as const)('inclusão tardia liberada independentemente do status: %s → 200', async (status) => {
+    const created = await serviceCreateConveyor(pool, minimalConveyorBody(`Status-${status} ${randomUUID().slice(0, 8)}`))
+    await setConveyorProductionStatusForIntegration(pool, created.id, status)
     const res = await request(app)
       .post(`/api/v1/conveyors/${created.id}/structure/items`)
       .set('Cookie', await adminCookie())
       .set('Idempotency-Key', randomUUID())
       .send(appendBody())
-    expect(res.status).toBe(422)
+    expect(res.status).toBe(200)
+    expect(res.body.meta.addedOptionId).toBeTruthy()
+    // Append tardio não altera o ciclo de vida da esteira
+    expect(res.body.data.operationalStatus).toBe(status)
   })
 
   it('sem conveyors.create → 403', async () => {

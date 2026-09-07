@@ -1,20 +1,18 @@
 import type { ConveyorOperationalStatus } from '../../domain/conveyors/conveyor.types'
 
-/** Espelha `canReplaceConveyorStructure` no backend (`conveyors.service.ts`). */
+/**
+ * Espelha `canReplaceConveyorStructure` no backend (`conveyors.service.ts`).
+ *
+ * Nota: inclusão tardia (append-only, "Incluir novo item") é liberada em
+ * qualquer status da esteira — ver `showLateAppendAction` em
+ * `ConveyorCreateEditPage.tsx` — e não depende desta função. Isso NÃO libera
+ * a substituição completa da estrutura via PATCH `/structure`, que continua
+ * restrita aos status abaixo.
+ */
 export function canReplaceConveyorStructure(
   status: ConveyorOperationalStatus,
 ): boolean {
   return status === 'EM_ELABORACAO' || status === 'AGUARDANDO_PLANEJAMENTO'
-}
-
-/**
- * Inclusão tardia (append-only) — só em EM_ANDAMENTO.
- * Não libera PATCH /structure.
- */
-export function canAppendLateStructureItem(
-  status: ConveyorOperationalStatus,
-): boolean {
-  return status === 'EM_ANDAMENTO'
 }
 
 export const STRUCTURE_TAB_BLOCKED_UX_MESSAGE =

@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest'
 import {
-  canAppendLateStructureItem,
   canReplaceConveyorStructure,
   resolveCanSaveConveyorChanges,
   resolveConveyorEditSubmitPlan,
@@ -131,21 +130,23 @@ describe('conveyorEditSavePolicy', () => {
     })
   })
 
-  describe('canAppendLateStructureItem', () => {
-    it('permite inclusão tardia só em EM_ANDAMENTO', () => {
-      expect(canAppendLateStructureItem('EM_ANDAMENTO')).toBe(true)
-    })
-
-    it('bloqueia inclusão tardia fora de EM_ANDAMENTO', () => {
-      expect(canAppendLateStructureItem('EM_ELABORACAO')).toBe(false)
-      expect(canAppendLateStructureItem('AGUARDANDO_PLANEJAMENTO')).toBe(false)
-      expect(canAppendLateStructureItem('A_INICIAR')).toBe(false)
-      expect(canAppendLateStructureItem('FINALIZADA')).toBe(false)
-    })
-
-    it('não libera PATCH structure via canReplace quando append é permitido', () => {
-      expect(canAppendLateStructureItem('EM_ANDAMENTO')).toBe(true)
+  describe('inclusão tardia de item (append-only)', () => {
+    // A checagem de status para "Incluir novo item" foi removida da regra de
+    // negócio (agora liberada em qualquer status). Não há mais uma função
+    // dedicada em `conveyorEditSavePolicy.ts` para isso — a exibição do botão
+    // é controlada diretamente em `ConveyorCreateEditPage.tsx`
+    // (`showLateAppendAction = mode === 'edit' && canAlterConveyor`).
+    //
+    // Este bloco reforça que a liberação da inclusão tardia em qualquer
+    // status NÃO libera, por efeito colateral, a substituição completa da
+    // estrutura via PATCH /structure (`canReplaceConveyorStructure`), que
+    // continua restrita a EM_ELABORACAO/AGUARDANDO_PLANEJAMENTO.
+    it('canReplaceConveyorStructure continua bloqueada em EM_ANDAMENTO', () => {
       expect(canReplaceConveyorStructure('EM_ANDAMENTO')).toBe(false)
+    })
+
+    it('canReplaceConveyorStructure continua bloqueada em FINALIZADA', () => {
+      expect(canReplaceConveyorStructure('FINALIZADA')).toBe(false)
     })
   })
 })

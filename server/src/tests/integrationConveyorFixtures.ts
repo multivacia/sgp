@@ -1,7 +1,14 @@
 import type pg from 'pg'
 import { mondayOfWeekContaining } from '../modules/operational-planning/operational-planning.week.js'
 
-export type ConveyorProductionStatus = 'A_INICIAR' | 'EM_ANDAMENTO'
+export type ConveyorProductionStatus =
+  | 'EM_ELABORACAO'
+  | 'AGUARDANDO_PLANEJAMENTO'
+  | 'EM_PLANEJAMENTO'
+  | 'A_INICIAR'
+  | 'EM_ANDAMENTO'
+  | 'FINALIZADA'
+  | 'CANCELADA'
 
 function todayIsoLocal(): string {
   const t = new Date()

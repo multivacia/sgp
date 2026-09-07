@@ -70,7 +70,6 @@ import {
   hasPersistableStructureChanges,
 } from './conveyorEditStructureSnapshot'
 import {
-  canAppendLateStructureItem,
   canReplaceConveyorStructure,
   LATE_STRUCTURE_APPEND_SUCCESS_MESSAGE,
   resolveCanSaveConveyorChanges,
@@ -531,11 +530,10 @@ export function ConveyorCreateEditPage({ mode }: { mode: Mode }) {
   const canReplaceStructure =
     operationalStatus != null ? canReplaceConveyorStructure(operationalStatus) : true
   const structureEditLocked = mode === 'edit' && !canReplaceStructure
-  const showLateAppendAction =
-    mode === 'edit' &&
-    canAlterConveyor &&
-    operationalStatus != null &&
-    canAppendLateStructureItem(operationalStatus)
+  // Inclusão tardia de item ("Incluir novo item") é liberada em qualquer
+  // status da esteira. Isso NÃO libera substituição de estrutura via
+  // PATCH /structure — ver `canReplaceStructure`/`structureEditLocked` acima.
+  const showLateAppendAction = mode === 'edit' && canAlterConveyor
   const pendenciasRevisao = useMemo(() => {
     const basePendencias = pendenciasParaResumo(dados.nome, manualRoots, manualAloc)
     if (!hasDadosChanges && !hasStructureChanges) {
