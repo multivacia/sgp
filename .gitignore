@@ -16,6 +16,9 @@ sgp-print-agent/sgp-print-agent.config.local.json
 # Local editor
 .vscode
 
+# Claude Code agent worktrees (ephemeral, per-session)
+.claude/worktrees/
+
 # Dependencies
 node_modules
 server/node_modules
