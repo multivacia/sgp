@@ -1,14 +1,22 @@
 import { ApiError } from '../../lib/api/apiErrors'
-import { productionRequestJson } from '../../lib/production/productionApiClient'
+import {
+  productionRequestJson,
+  productionRequestJsonEnvelope,
+} from '../../lib/production/productionApiClient'
 import { getProductionKioskToken } from '../../lib/api/env'
 import type {
   ProductionCollaboratorSummary,
   ProductionCollaboratorsList,
+  ProductionExtraTimeEntry,
+  ProductionExtraTimeEntryDescriptionOption,
+  ProductionExtraTimeEntryPayload,
   ProductionSession,
   ProductionTimeEntryPayload,
   ProductionTimeEntryResult,
+  ProductionUnassignedTimeEntryPayload,
   ProductionWorkQueueResponse,
 } from '../../domain/production/production.types'
+import type { TimeEntryCandidateItem } from '../../domain/my-activities/my-activities.types'
 
 const BASE = '/api/v1/production'
 
@@ -331,5 +339,155 @@ export async function getProductionWorkQueue(
       })
     }
     throw new ApiError(PRODUCTION_WORK_QUEUE_ERROR_MESSAGE, 503, { cause: e })
+  }
+}
+
+export const PRODUCTION_EXTRA_TIME_ENTRY_ERROR_MESSAGE =
+  'Não foi possível registrar o apontamento extra esteira.'
+
+/** GET /api/v1/production/extra-time-entries/descriptions — catálogo "Extra esteira" (Kiosk). */
+export async function listProductionExtraTimeEntryDescriptions(): Promise<
+  ProductionExtraTimeEntryDescriptionOption[]
+> {
+  try {
+    const data = await productionRequestJson<ProductionExtraTimeEntryDescriptionOption[]>(
+      'GET',
+      `${BASE}/extra-time-entries/descriptions`,
+    )
+    return Array.isArray(data) ? data : []
+  } catch (e) {
+    if (e instanceof ApiError) {
+      throw new ApiError(PRODUCTION_EXTRA_TIME_ENTRY_ERROR_MESSAGE, e.status, {
+        code: e.code,
+        cause: e,
+      })
+    }
+    throw new ApiError(PRODUCTION_EXTRA_TIME_ENTRY_ERROR_MESSAGE, 503, { cause: e })
+  }
+}
+
+/** GET /api/v1/production/extra-time-entries — histórico recente (Kiosk). */
+export async function listProductionExtraTimeEntries(
+  limit?: number,
+): Promise<ProductionExtraTimeEntry[]> {
+  try {
+    const path =
+      limit != null
+        ? `${BASE}/extra-time-entries?limit=${encodeURIComponent(String(limit))}`
+        : `${BASE}/extra-time-entries`
+    const data = await productionRequestJson<ProductionExtraTimeEntry[]>('GET', path)
+    return Array.isArray(data) ? data : []
+  } catch (e) {
+    if (e instanceof ApiError) {
+      throw new ApiError(PRODUCTION_EXTRA_TIME_ENTRY_ERROR_MESSAGE, e.status, {
+        code: e.code,
+        cause: e,
+      })
+    }
+    throw new ApiError(PRODUCTION_EXTRA_TIME_ENTRY_ERROR_MESSAGE, 503, { cause: e })
+  }
+}
+
+/** POST /api/v1/production/extra-time-entries — apontamento avulso "Extra esteira" (Kiosk). */
+export async function createProductionExtraTimeEntry(
+  payload: ProductionExtraTimeEntryPayload,
+): Promise<ProductionExtraTimeEntry> {
+  try {
+    return await productionRequestJson<ProductionExtraTimeEntry>(
+      'POST',
+      `${BASE}/extra-time-entries`,
+      { body: payload },
+    )
+  } catch (e) {
+    if (e instanceof ApiError) {
+      throw new ApiError(PRODUCTION_EXTRA_TIME_ENTRY_ERROR_MESSAGE, e.status, {
+        code: e.code,
+        cause: e,
+      })
+    }
+    throw new ApiError(PRODUCTION_EXTRA_TIME_ENTRY_ERROR_MESSAGE, 503, { cause: e })
+  }
+}
+
+export const PRODUCTION_TIME_ENTRY_CANDIDATES_ERROR_MESSAGE =
+  'Não foi possível buscar atividades.'
+
+export type ProductionTimeEntryCandidatesResult = {
+  items: TimeEntryCandidateItem[]
+  collaboratorId: string | null
+  unavailableReason: string | null
+}
+
+/**
+ * GET /api/v1/production/me/time-entry-candidates — atividades apontáveis para "Outra
+ * atividade" (Kiosk); mesmo formato de `listTimeEntryCandidates` (fluxo web).
+ */
+export async function listProductionTimeEntryCandidates(options?: {
+  q?: string
+  limit?: number
+  includeUnassigned?: boolean
+}): Promise<ProductionTimeEntryCandidatesResult> {
+  try {
+    const sp = new URLSearchParams()
+    if (options?.q?.trim()) sp.set('q', options.q.trim())
+    if (options?.limit != null) sp.set('limit', String(options.limit))
+    if (options?.includeUnassigned) sp.set('includeUnassigned', 'true')
+    const qs = sp.toString()
+    const path = qs
+      ? `${BASE}/me/time-entry-candidates?${qs}`
+      : `${BASE}/me/time-entry-candidates`
+    const { data, meta } = await productionRequestJsonEnvelope<TimeEntryCandidateItem[]>(
+      'GET',
+      path,
+    )
+    return {
+      items: Array.isArray(data) ? data : [],
+      collaboratorId: (meta.collaboratorId as string | null | undefined) ?? null,
+      unavailableReason: (meta.unavailableReason as string | null | undefined) ?? null,
+    }
+  } catch (e) {
+    if (e instanceof ApiError) {
+      throw new ApiError(PRODUCTION_TIME_ENTRY_CANDIDATES_ERROR_MESSAGE, e.status, {
+        code: e.code,
+        cause: e,
+      })
+    }
+    throw new ApiError(PRODUCTION_TIME_ENTRY_CANDIDATES_ERROR_MESSAGE, 503, { cause: e })
+  }
+}
+
+/**
+ * POST /api/v1/production/time-entries/unassigned-exception — "Outra atividade" (Kiosk):
+ * apontamento excepcional em atividade real de esteira, sem tornar o colaborador responsável.
+ */
+export async function createProductionUnassignedTimeEntry(
+  payload: ProductionUnassignedTimeEntryPayload,
+): Promise<ProductionTimeEntryResult> {
+  try {
+    return await productionRequestJson<ProductionTimeEntryResult>(
+      'POST',
+      `${BASE}/time-entries/unassigned-exception`,
+      { body: payload },
+    )
+  } catch (e) {
+    if (e instanceof ApiError) {
+      if (e.code === TIME_ENTRY_UNASSIGNED_CODE) {
+        throw new ApiError(PRODUCTION_TIME_ENTRY_UNASSIGNED_MESSAGE, e.status, {
+          code: e.code,
+          cause: e,
+        })
+      }
+      if (e.status === 401) {
+        throw new ApiError('Sua sessão expirou. Entre novamente.', e.status, {
+          code: e.code,
+          cause: e,
+        })
+      }
+      throw new ApiError(PRODUCTION_TIME_ENTRY_ERROR_MESSAGE, e.status, {
+        code: e.code,
+        cause: e,
+      })
+    }
+    throw new ApiError(PRODUCTION_TIME_ENTRY_ERROR_MESSAGE, 503, { cause: e })
   }
 }
