@@ -1,22 +1,11 @@
-import type { ConveyorOperationalStatus } from '../../domain/conveyors/conveyor.types'
-
 /**
- * Espelha `canReplaceConveyorStructure` no backend (`conveyors.service.ts`).
- *
- * Nota: inclusão tardia (append-only, "Incluir novo item") é liberada em
- * qualquer status da esteira — ver `showLateAppendAction` em
- * `ConveyorCreateEditPage.tsx` — e não depende desta função. Isso NÃO libera
- * a substituição completa da estrutura via PATCH `/structure`, que continua
- * restrita aos status abaixo.
+ * Política de salvar (aba Estrutura). Desde o diff incremental de estrutura
+ * (PATCH /conveyors/:id/structure preserva ids, funciona em qualquer status),
+ * não há mais bloqueio "tudo ou nada" por status — a estrutura pode ser
+ * editada em qualquer status operacional. Inclusão tardia (append-only,
+ * "Incluir novo item") continua disponível como ação adicional — ver
+ * `showLateAppendAction` em `ConveyorCreateEditPage.tsx`.
  */
-export function canReplaceConveyorStructure(
-  status: ConveyorOperationalStatus,
-): boolean {
-  return status === 'EM_ELABORACAO' || status === 'AGUARDANDO_PLANEJAMENTO'
-}
-
-export const STRUCTURE_TAB_BLOCKED_UX_MESSAGE =
-  'A alteração da estrutura da esteira só é permitida enquanto a esteira está em elaboração ou aguardando planejamento. Os dados principais podem ser alterados sem afetar o histórico operacional.'
 
 export const LATE_STRUCTURE_APPEND_SUCCESS_MESSAGE =
   'Novo item incluído. As novas atividades estão disponíveis no Backlog do Planejamento Semanal.'
@@ -25,11 +14,10 @@ export function resolveCanSaveConveyorChanges(input: {
   hasDadosChanges: boolean
   hasStructureChanges: boolean
   estruturaOk: boolean
-  canReplaceStructure: boolean
 }): boolean {
   if (input.hasDadosChanges) return true
   if (!input.hasStructureChanges) return false
-  return input.estruturaOk && input.canReplaceStructure
+  return input.estruturaOk
 }
 
 export function shouldValidateStructureOnSubmit(input: {
@@ -43,13 +31,12 @@ export function resolveConveyorEditSubmitPlan(input: {
   mode: 'create' | 'edit'
   hasDadosChanges: boolean
   hasStructureChanges: boolean
-  canReplaceStructure: boolean
 }): { patchDados: boolean; patchStructure: boolean } {
   if (input.mode === 'create') {
     return { patchDados: false, patchStructure: false }
   }
   return {
     patchDados: input.hasDadosChanges,
-    patchStructure: input.hasStructureChanges && input.canReplaceStructure,
+    patchStructure: input.hasStructureChanges,
   }
 }

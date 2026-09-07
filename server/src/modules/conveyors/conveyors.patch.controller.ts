@@ -8,10 +8,11 @@ import {
   patchConveyorDadosBodySchema,
   patchConveyorStructureBodySchema,
 } from './conveyors.schemas.js'
+import { servicePatchConveyorDados } from './conveyors.service.js'
 import {
-  servicePatchConveyorDados,
-  serviceReplaceConveyorStructure,
-} from './conveyors.service.js'
+  parseIdempotencyKeyHeader,
+  serviceApplyConveyorStructureDiff,
+} from './conveyor-structure-diff.service.js'
 
 export async function patchConveyorDados(
   req: Request,
@@ -27,6 +28,10 @@ export async function patchConveyorDados(
   res.status(200).json(ok(data))
 }
 
+/**
+ * PATCH /conveyors/:id/structure — diff incremental (insert/update/soft-delete),
+ * preserva ids, funciona em qualquer status. Exige header `Idempotency-Key`.
+ */
 export async function patchConveyorStructure(
   req: Request,
   res: Response,
@@ -34,9 +39,26 @@ export async function patchConveyorStructure(
   const id = conveyorIdParamSchema.parse(req.params.id)
   const body = patchConveyorStructureBodySchema.parse(req.body)
   const pool = req.app.locals.pool as pg.Pool
-  const data = await serviceReplaceConveyorStructure(pool, id, body)
-  if (!data) {
-    throw new AppError('Esteira não encontrada.', 404, ErrorCodes.NOT_FOUND)
-  }
-  res.status(200).json(ok(data))
+  const idempotencyKey = parseIdempotencyKeyHeader(
+    typeof req.headers['idempotency-key'] === 'string'
+      ? req.headers['idempotency-key']
+      : Array.isArray(req.headers['idempotency-key'])
+        ? req.headers['idempotency-key'][0]
+        : null,
+  )
+  const out = await serviceApplyConveyorStructureDiff(pool, {
+    conveyorId: id,
+    actorAppUserId: req.authUser!.id,
+    idempotencyKey,
+    body,
+  })
+  res.status(200).json(
+    ok(out.detail, {
+      structureUpdateIdempotent: out.idempotent,
+      insertCount: out.summary.insertCount,
+      updateCount: out.summary.updateCount,
+      removeCount: out.summary.removeCount,
+      reorderCount: out.summary.reorderCount,
+    }),
+  )
 }

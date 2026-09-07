@@ -121,6 +121,7 @@ describe.skipIf(!hasDb)('conveyors PATCH structure/dados (integração)', () => 
     const res = await request(app)
       .patch(`/api/v1/conveyors/${cid}/structure`)
       .set('Cookie', await sessionCookieForUser(pool, GOV_ADMIN_USER_ID, GOV_ADMIN_EMAIL))
+      .set('Idempotency-Key', randomUUID())
       .send({
         originType: 'MANUAL',
         baseId: null,
@@ -230,7 +231,7 @@ describe.skipIf(!hasDb)('conveyors PATCH structure/dados (integração)', () => 
     expect(res.body.error?.errorRef).not.toBe('SGP-API-HANDLER-001')
   })
 
-  it('PATCH structure com plano operacional vinculado retorna erro de domínio (não 500)', async () => {
+  it('PATCH structure com item de plano operacional vinculado ao STEP removido: sucesso (soft-delete), sem bloqueio', async () => {
     const { cid, body } = await createConveyor()
     const det = await request(app)
       .get(`/api/v1/conveyors/${cid}`)
@@ -249,6 +250,7 @@ describe.skipIf(!hasDb)('conveyors PATCH structure/dados (integração)', () => 
       ) VALUES ($1::uuid, $2::uuid, 'DRAFT', 1, 'NOT_SCHEDULED', now(), now())`,
       [planId, cid],
     )
+    const planItemId = randomUUID()
     await pool.query(
       `INSERT INTO conveyor_operational_plan_items (
         id, plan_id, conveyor_id, activity_node_id, planned_date, planned_order,
@@ -257,20 +259,55 @@ describe.skipIf(!hasDb)('conveyors PATCH structure/dados (integração)', () => 
         $1::uuid, $2::uuid, $3::uuid, $4::uuid, CURRENT_DATE, 0,
         30, 'PLANNED', 'MANUAL', now(), now()
       )`,
-      [randomUUID(), planId, cid, stepId],
+      [planItemId, planId, cid, stepId],
     )
 
+    // Omitir a OPTION inteira (sem `id`) → toda a árvore soft-deletada, incluindo o STEP com plano vinculado.
     const res = await request(app)
       .patch(`/api/v1/conveyors/${cid}/structure`)
       .set('Cookie', await sessionCookieForUser(pool, GOV_ADMIN_USER_ID, GOV_ADMIN_EMAIL))
+      .set('Idempotency-Key', randomUUID())
       .send({
         originType: body.originType,
-        options: body.options,
+        options: [
+          {
+            titulo: 'Nova opção substituta',
+            orderIndex: 1,
+            sourceOrigin: 'manual',
+            areas: [
+              {
+                titulo: 'Nova área',
+                orderIndex: 1,
+                sourceOrigin: 'manual',
+                steps: [
+                  {
+                    titulo: 'Nova etapa',
+                    orderIndex: 1,
+                    plannedMinutes: 15,
+                    sourceOrigin: 'manual',
+                    required: true,
+                  },
+                ],
+              },
+            ],
+          },
+        ],
       })
-    expect(res.status).toBe(409)
-    expect(res.body.error?.code).toBe('CONVEYOR_STRUCTURE_REPLACE_HAS_DEPENDENCIES')
+    expect(res.status).toBe(200)
     expect(res.body.error?.errorRef).not.toBe('SGP-API-HANDLER-001')
-    expect(res.body.error?.message).toContain('planejamento')
+
+    const stepRow = await pool.query<{ deleted_at: Date | null }>(
+      `SELECT deleted_at FROM conveyor_nodes WHERE id = $1::uuid`,
+      [stepId],
+    )
+    expect(stepRow.rows[0]?.deleted_at).not.toBeNull()
+
+    const planItemRow = await pool.query<{ deleted_at: Date | null; activity_node_id: string }>(
+      `SELECT deleted_at, activity_node_id::text FROM conveyor_operational_plan_items WHERE id = $1::uuid`,
+      [planItemId],
+    )
+    expect(planItemRow.rows[0]?.activity_node_id).toBe(stepId)
+    expect(planItemRow.rows[0]?.deleted_at).toBeNull()
   })
 
   it('PATCH structure com plannedQuantity inválida retorna 422 específico', async () => {

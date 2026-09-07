@@ -247,6 +247,30 @@ export type PatchConveyorStructureBody = {
   options: CreateConveyorOptionInput[]
 }
 
+/**
+ * Variante de edição do PATCH /api/v1/conveyors/:id/structure — diff incremental.
+ * Cada nó pode trazer `id?`: presente = nó existente (UPDATE), ausente = nó novo
+ * (INSERT). Nó omitido = removido (soft-delete no servidor). Distinto do tipo
+ * usado por `POST /conveyors` (`CreateConveyorInput`), que nunca carrega `id`.
+ */
+export type PatchConveyorStructureEditStepInput = CreateConveyorStepInput & {
+  id?: string
+}
+
+export type PatchConveyorStructureEditAreaInput = Omit<CreateConveyorAreaInput, 'steps'> & {
+  id?: string
+  steps: PatchConveyorStructureEditStepInput[]
+}
+
+export type PatchConveyorStructureEditOptionInput = Omit<CreateConveyorOptionInput, 'areas'> & {
+  id?: string
+  areas: PatchConveyorStructureEditAreaInput[]
+}
+
+export type PatchConveyorStructureEditBody = Omit<PatchConveyorStructureBody, 'options'> & {
+  options: PatchConveyorStructureEditOptionInput[]
+}
+
 /** POST /api/v1/conveyors/:id/structure/items — inclusão tardia multinível (append-only). */
 export type StructureAppendKind = 'OPTION' | 'AREA' | 'STEP'
 

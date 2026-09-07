@@ -55,50 +55,55 @@ export const postConveyorStepAssigneeSchema = z
     }
   })
 
-export const postConveyorStepSchema = z
-  .object({
-    titulo: z.string().min(1),
-    orderIndex: z.number().int().min(1),
-    plannedMinutes: z.number().int().min(0),
-    /** Aceito no POST por compatibilidade; o service persiste sempre 1 na criação. */
-    plannedQuantity: z.number().int().min(1).optional().default(1),
-    sourceOrigin: sourceOriginNodeSchema,
-    required: z.boolean().optional().default(true),
-    sourceKey: z.string().max(100).nullable().optional(),
-    assignees: z.array(postConveyorStepAssigneeSchema).optional().default([]),
-  })
-  .superRefine((step, ctx) => {
-    const a = step.assignees
-    if (a.length === 0) return
-    const collaboratorRows = a.filter((x) => (x.type ?? 'COLLABORATOR') === 'COLLABORATOR')
-    const prim = collaboratorRows.filter((x) => x.isPrimary)
-    if (collaboratorRows.length > 0 && prim.length !== 1) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message:
-          'Cada etapa com colaboradores deve ter exatamente um responsável principal.',
-        path: ['assignees'],
-      })
-    }
-    const collaboratorIds = collaboratorRows.map((x) => x.collaboratorId!).filter(Boolean)
-    const ids = new Set(collaboratorIds)
-    if (ids.size !== collaboratorIds.length) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: 'Colaborador duplicado na etapa.',
-        path: ['assignees'],
-      })
-    }
-    const teamRows = a.filter((x) => x.type === 'TEAM')
-    const teamIds = teamRows.map((x) => x.teamId!).filter(Boolean)
-    if (new Set(teamIds).size !== teamIds.length) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: 'Time duplicado na etapa.',
-        path: ['assignees'],
-      })
-    }
-  })
+const postConveyorStepBaseSchema = z.object({
+  titulo: z.string().min(1),
+  orderIndex: z.number().int().min(1),
+  plannedMinutes: z.number().int().min(0),
+  /** Aceito no POST por compatibilidade; o service persiste sempre 1 na criação. */
+  plannedQuantity: z.number().int().min(1).optional().default(1),
+  sourceOrigin: sourceOriginNodeSchema,
+  required: z.boolean().optional().default(true),
+  sourceKey: z.string().max(100).nullable().optional(),
+  assignees: z.array(postConveyorStepAssigneeSchema).optional().default([]),
+})
+
+function refineStepAssignees(
+  step: z.infer<typeof postConveyorStepBaseSchema>,
+  ctx: z.RefinementCtx,
+): void {
+  const a = step.assignees
+  if (a.length === 0) return
+  const collaboratorRows = a.filter((x) => (x.type ?? 'COLLABORATOR') === 'COLLABORATOR')
+  const prim = collaboratorRows.filter((x) => x.isPrimary)
+  if (collaboratorRows.length > 0 && prim.length !== 1) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message:
+        'Cada etapa com colaboradores deve ter exatamente um responsável principal.',
+      path: ['assignees'],
+    })
+  }
+  const collaboratorIds = collaboratorRows.map((x) => x.collaboratorId!).filter(Boolean)
+  const ids = new Set(collaboratorIds)
+  if (ids.size !== collaboratorIds.length) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'Colaborador duplicado na etapa.',
+      path: ['assignees'],
+    })
+  }
+  const teamRows = a.filter((x) => x.type === 'TEAM')
+  const teamIds = teamRows.map((x) => x.teamId!).filter(Boolean)
+  if (new Set(teamIds).size !== teamIds.length) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'Time duplicado na etapa.',
+      path: ['assignees'],
+    })
+  }
+}
+
+export const postConveyorStepSchema = postConveyorStepBaseSchema.superRefine(refineStepAssignees)
 
 export const postConveyorAreaSchema = z.object({
   titulo: z.string().min(1),
@@ -113,6 +118,38 @@ export const postConveyorOptionSchema = z.object({
   sourceOrigin: sourceOriginNodeSchema,
   areas: z.array(postConveyorAreaSchema).min(1),
 })
+
+/**
+ * Variantes de edição (PATCH /conveyors/:id/structure) — ganham `id?` opcional
+ * em cada nível. Presente = nó existente (UPDATE); ausente = nó novo (INSERT).
+ * Não afeta os schemas de criação (`postConveyor*Schema`) usados por POST /conveyors
+ * e pela inclusão tardia (`postConveyorStructureItemBodySchema`).
+ */
+const nodeIdOptionalSchema = z.string().uuid().optional()
+
+export const patchConveyorStructureStepSchema = postConveyorStepBaseSchema
+  .extend({ id: nodeIdOptionalSchema })
+  .superRefine(refineStepAssignees)
+
+export const patchConveyorStructureAreaSchema = z.object({
+  id: nodeIdOptionalSchema,
+  titulo: z.string().min(1),
+  orderIndex: z.number().int().min(1),
+  sourceOrigin: sourceOriginNodeSchema,
+  steps: z.array(patchConveyorStructureStepSchema).min(1),
+})
+
+export const patchConveyorStructureOptionSchema = z.object({
+  id: nodeIdOptionalSchema,
+  titulo: z.string().min(1),
+  orderIndex: z.number().int().min(1),
+  sourceOrigin: sourceOriginNodeSchema,
+  areas: z.array(patchConveyorStructureAreaSchema).min(1),
+})
+
+export type PatchConveyorStructureStepBody = z.infer<typeof patchConveyorStructureStepSchema>
+export type PatchConveyorStructureAreaBody = z.infer<typeof patchConveyorStructureAreaSchema>
+export type PatchConveyorStructureOptionBody = z.infer<typeof patchConveyorStructureOptionSchema>
 
 export const postConveyorDadosSchema = z.object({
   nome: z.string().min(1),
@@ -278,7 +315,11 @@ export const patchConveyorDadosBodySchema = postConveyorDadosSchema
 
 export type PatchConveyorDadosBody = z.infer<typeof patchConveyorDadosBodySchema>
 
-/** PATCH /api/v1/conveyors/:id/structure — substitui árvore (regras no serviço). */
+/**
+ * PATCH /api/v1/conveyors/:id/structure — diff incremental (regras no serviço).
+ * Cada nó de `options` pode trazer `id?`: presente = nó existente (UPDATE),
+ * ausente = nó novo (INSERT). Nó omitido = soft-delete (`conveyor_nodes.deleted_at`).
+ */
 export const patchConveyorStructureBodySchema = z.object({
   originType: z.enum(['MANUAL', 'BASE', 'HYBRID']),
   baseId: z.string().nullable().optional(),
@@ -286,7 +327,7 @@ export const patchConveyorStructureBodySchema = z.object({
   baseName: z.string().nullable().optional(),
   baseVersion: z.number().int().positive().nullable().optional(),
   matrixRootItemId: z.string().uuid().nullable().optional(),
-  options: z.array(postConveyorOptionSchema).min(1),
+  options: z.array(patchConveyorStructureOptionSchema).min(1),
 })
 
 export type PatchConveyorStructureBody = z.infer<

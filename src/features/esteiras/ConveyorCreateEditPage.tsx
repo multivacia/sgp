@@ -70,13 +70,12 @@ import {
   hasPersistableStructureChanges,
 } from './conveyorEditStructureSnapshot'
 import {
-  canReplaceConveyorStructure,
   LATE_STRUCTURE_APPEND_SUCCESS_MESSAGE,
   resolveCanSaveConveyorChanges,
   resolveConveyorEditSubmitPlan,
   shouldValidateStructureOnSubmit,
-  STRUCTURE_TAB_BLOCKED_UX_MESSAGE,
 } from './conveyorEditSavePolicy'
+import { buildConveyorStructureEditInput } from './nova-esteira/buildConveyorStructureEditInput'
 import {
   buildDadosParaApi,
   parseWizardExtrasFromPersisted,
@@ -186,7 +185,7 @@ export function ConveyorCreateEditPage({ mode }: { mode: Mode }) {
   const [baselineExtras, setBaselineExtras] = useState<WizardExtras>(extrasVazio)
   const [detailId, setDetailId] = useState<string | null>(null)
   const [detail, setDetail] = useState<ConveyorDetail | null>(null)
-  const [operationalStatus, setOperationalStatus] = useState<ConveyorOperationalStatus | null>(null)
+  const [, setOperationalStatus] = useState<ConveyorOperationalStatus | null>(null)
   const [patchStatusLoading, setPatchStatusLoading] = useState(false)
   const [patchError, setPatchError] = useState<string | null>(null)
   const [routeToast, setRouteToast] = useState<string | null>(null)
@@ -527,12 +526,10 @@ export function ConveyorCreateEditPage({ mode }: { mode: Mode }) {
     mode === 'edit'
       ? hasPersistableStructureChanges(manualRoots, manualAloc, baselineStructureSig)
       : true
-  const canReplaceStructure =
-    operationalStatus != null ? canReplaceConveyorStructure(operationalStatus) : true
-  const structureEditLocked = mode === 'edit' && !canReplaceStructure
-  // Inclusão tardia de item ("Incluir novo item") é liberada em qualquer
-  // status da esteira. Isso NÃO libera substituição de estrutura via
-  // PATCH /structure — ver `canReplaceStructure`/`structureEditLocked` acima.
+  // A aba Estrutura não é mais bloqueada por status: o PATCH /structure agora
+  // aplica um diff incremental (preserva ids, nunca hard-delete) e funciona em
+  // qualquer status operacional. Inclusão tardia ("Incluir novo item")
+  // continua disponível como ação adicional, independente disso.
   const showLateAppendAction = mode === 'edit' && canAlterConveyor
   const pendenciasRevisao = useMemo(() => {
     const basePendencias = pendenciasParaResumo(dados.nome, manualRoots, manualAloc)
@@ -545,7 +542,6 @@ export function ConveyorCreateEditPage({ mode }: { mode: Mode }) {
     hasDadosChanges,
     hasStructureChanges,
     estruturaOk,
-    canReplaceStructure,
   })
 
   // Em edição, alinhar o guard de saída à política de "Salvar alterações" (baseline),
@@ -765,21 +761,14 @@ export function ConveyorCreateEditPage({ mode }: { mode: Mode }) {
         mode,
         hasDadosChanges,
         hasStructureChanges,
-        canReplaceStructure,
       })
       if (submitPlan.patchDados) {
         await patchConveyorDados(detailId, dirtyDadosPatch as PatchConveyorDadosBody)
       }
       if (submitPlan.patchStructure) {
-        const body = buildManualConveyorInput(dadosApi, manualRoots, assignMap)
-        await patchConveyorStructure(detailId, {
-          originType: body.originType,
-          baseId: body.baseId ?? null,
-          baseCode: body.baseCode ?? null,
-          baseName: body.baseName ?? null,
-          baseVersion: body.baseVersion ?? null,
-          matrixRootItemId: body.matrixRootItemId ?? null,
-          options: body.options,
+        const body = buildConveyorStructureEditInput(manualRoots, assignMap)
+        await patchConveyorStructure(detailId, body, {
+          idempotencyKey: crypto.randomUUID(),
         })
       }
       navigate(`/app/esteiras/${encodeURIComponent(detailId)}`, {
@@ -1099,13 +1088,10 @@ export function ConveyorCreateEditPage({ mode }: { mode: Mode }) {
 
         {aba === 'estrutura' && (
           <section className="space-y-4">
-            {structureEditLocked ? (
-              <SgpInlineBanner variant="neutral" message={STRUCTURE_TAB_BLOCKED_UX_MESSAGE} />
-            ) : null}
             {showLateAppendAction ? (
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <p className="text-xs text-slate-400">
-                  Estrutura existente em somente leitura. Você pode incluir um novo item ao final.
+                  Você também pode incluir um novo item ao final (inclusão tardia, com auditoria própria).
                 </p>
                 <button
                   type="button"
@@ -1122,15 +1108,13 @@ export function ConveyorCreateEditPage({ mode }: { mode: Mode }) {
                 type="button"
                 className="flex w-full items-center justify-between rounded-xl border border-white/[0.1] bg-white/[0.04] px-3 py-2.5 text-left text-sm font-semibold text-slate-200 xl:hidden"
                 onClick={() => setCatalogDrawerOpenEdit((o) => !o)}
-                disabled={structureEditLocked}
               >
                 Bases e extras
                 <span className="text-sgp-gold">{catalogDrawerOpenEdit ? '▲' : '▼'}</span>
               </button>
 
               <aside
-                className={`min-h-0 space-y-3 xl:block ${catalogDrawerOpenEdit ? 'block' : 'hidden'} xl:max-h-[calc(100vh-10rem)] xl:overflow-y-auto ${structureEditLocked ? 'pointer-events-none opacity-60' : ''}`}
-                aria-disabled={structureEditLocked}
+                className={`min-h-0 space-y-3 xl:block ${catalogDrawerOpenEdit ? 'block' : 'hidden'} xl:max-h-[calc(100vh-10rem)] xl:overflow-y-auto`}
               >
                 <NovaEsteiraCatalogoPanel
                   totemLayout
@@ -1140,24 +1124,22 @@ export function ConveyorCreateEditPage({ mode }: { mode: Mode }) {
                   treeByMatrixId={treeByMatrixId}
                   treesLoading={treesLoading}
                   treesError={treesError}
-                  onRemoveDraftOption={structureEditLocked ? () => {} : removeDraftOptionKey}
-                  onUseMatrixAsBase={structureEditLocked ? () => {} : useMatrixAsBase}
-                  onSwapMatrixBase={structureEditLocked ? () => {} : swapMatrixBase}
-                  onAddManualTask={structureEditLocked ? () => {} : addManualTask}
+                  onRemoveDraftOption={removeDraftOptionKey}
+                  onUseMatrixAsBase={useMatrixAsBase}
+                  onSwapMatrixBase={swapMatrixBase}
+                  onAddManualTask={addManualTask}
                   manualRoots={manualRoots}
                 />
               </aside>
 
               <main
                 className="min-h-[320px] min-w-0 rounded-2xl border border-white/[0.08] bg-white/[0.03] p-4 xl:max-h-[calc(100vh-10rem)] xl:overflow-y-auto"
-                aria-disabled={structureEditLocked}
                 onDragOver={(e) => {
-                  if (structureEditLocked) return
                   if (!e.dataTransfer.types.includes(NOVA_ESTEIRA_DRAG_MIME)) return
                   e.preventDefault()
                   e.dataTransfer.dropEffect = 'copy'
                 }}
-                onDrop={structureEditLocked ? undefined : handleDropOnRascunho}
+                onDrop={handleDropOnRascunho}
               >
                 <div className="flex flex-wrap items-end justify-between gap-2 border-b border-white/[0.06] pb-3">
                   <div>
@@ -1181,13 +1163,8 @@ export function ConveyorCreateEditPage({ mode }: { mode: Mode }) {
                     teamLoading={teamLoading}
                     teamError={teamError}
                     variant="totem"
-                    readOnly={structureEditLocked}
-                    canAbortStep={
-                      structureEditLocked ? canAbortManualStep : undefined
-                    }
-                    onRequestAbortStep={
-                      structureEditLocked ? handleRequestAbortStep : undefined
-                    }
+                    canAbortStep={canAbortManualStep}
+                    onRequestAbortStep={handleRequestAbortStep}
                     abortingStepId={stepAbortingId}
                   />
                 </div>

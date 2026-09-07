@@ -58,8 +58,9 @@ type Props = {
    */
   readOnly?: boolean
   /**
-   * Ação de domínio permitida mesmo em readOnly (Dispensar atividade).
-   * Quando omitido, o botão não é exibido.
+   * Ação de domínio independente de `readOnly` (Dispensar atividade) — exibida
+   * sempre que `canAbortStep(step)` for verdadeiro. Quando omitido, o botão
+   * não é exibido.
    */
   onRequestAbortStep?: (step: { stepNodeId: string; stepName: string }) => void
   canAbortStep?: (step: ManualStepDraft) => boolean
@@ -721,9 +722,7 @@ export function NovaEsteiraComposicaoManual({
                               )}
                             </div>
 
-                            {readOnly &&
-                            onRequestAbortStep &&
-                            canAbortStep?.(st) ? (
+                            {onRequestAbortStep && canAbortStep?.(st) ? (
                               <div className="mt-3">
                                 <button
                                   type="button"

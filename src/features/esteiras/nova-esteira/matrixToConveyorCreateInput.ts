@@ -189,12 +189,24 @@ export type ManualOptionDraft = {
   areas: ManualAreaDraft[]
   /** Dedup de catálogo (ex.: `m:<matrixItemId>` ou `t:<taskNodeId>`). */
   catalogSourceKey?: string
+  /**
+   * Id real do nó no servidor — presente somente quando este OPTION veio do
+   * baseline carregado da API (`structureToManualRootsFromApiDetail`);
+   * `undefined` para nós criados nesta sessão de edição.
+   * Distinto de `key` (que é sempre um UUID, novo ou existente) — usado pelo
+   * builder de payload de edição (`buildConveyorStructureEditInput.ts`) para
+   * decidir INSERT (sem `id`) vs UPDATE (com `id`). NÃO usado por
+   * `buildManualConveyorInput` (criação).
+   */
+  id?: string
 }
 
 export type ManualAreaDraft = {
   key: string
   titulo: string
   steps: ManualStepDraft[]
+  /** Ver `ManualOptionDraft.id`. */
+  id?: string
 }
 
 export type ManualStepDraft = {
@@ -209,6 +221,8 @@ export type ManualStepDraft = {
    * Ausente em rascunhos de criação; usado só para ações de domínio (ex.: dispensar).
    */
   operationalStatus?: ConveyorNodeStepOperationalStatus
+  /** Ver `ManualOptionDraft.id`. */
+  id?: string
 }
 
 export function buildManualConveyorInput(

@@ -9,6 +9,7 @@ import type {
   PatchConveyorStatusBody,
   PatchConveyorStepCompletionBody,
   PatchConveyorStructureBody,
+  PatchConveyorStructureEditBody,
   PostConveyorStructureItemBody,
 } from '../../domain/conveyors/conveyor.types'
 import type {
@@ -201,16 +202,20 @@ export async function patchConveyorDados(
 }
 
 /**
- * Substituição da estrutura (opções/áreas/etapas) — PATCH /api/v1/conveyors/:id/structure
+ * Diff incremental de estrutura (insert/update/soft-delete, preserva ids) —
+ * PATCH /api/v1/conveyors/:id/structure. Requer header Idempotency-Key
+ * estável (mesmo padrão de `appendConveyorStructureItem`).
  */
 export async function patchConveyorStructure(
   id: string,
-  body: PatchConveyorStructureBody,
+  body: PatchConveyorStructureBody | PatchConveyorStructureEditBody,
+  options?: { idempotencyKey?: string },
 ): Promise<ConveyorDetail> {
+  const idempotencyKey = options?.idempotencyKey?.trim() || crypto.randomUUID()
   return requestJson<ConveyorDetail>(
     'PATCH',
     `${BASE}/conveyors/${encodeURIComponent(id)}/structure`,
-    { body },
+    { body, headers: { 'Idempotency-Key': idempotencyKey } },
   )
 }
 

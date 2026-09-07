@@ -1,5 +1,4 @@
 import { randomUUID } from 'node:crypto'
-import { DatabaseError } from 'pg'
 import type pg from 'pg'
 import { AppError } from '../../shared/errors/AppError.js'
 import { ErrorCodes } from '../../shared/errors/errorCodes.js'
@@ -19,8 +18,6 @@ import type {
   ConveyorStructureStepAssigneeApi,
 } from './conveyors.dto.js'
 import {
-  countActiveTimeEntriesByConveyor,
-  deleteConveyorAssigneesAndNodes,
   findConveyorById,
   findConveyorDeleteBlockingDeps,
   physicalDeleteConveyor,
@@ -31,7 +28,6 @@ import {
   newNodeId,
   updateConveyorDados,
   updateConveyorOperationalStatus,
-  updateConveyorStructureMeta,
   type CompletedAtUpdateMode,
   type ConveyorDetailRow,
   type ConveyorListRow,
@@ -42,7 +38,6 @@ import {
 } from './conveyors.repository.js'
 import type {
   PatchConveyorDadosBody,
-  PatchConveyorStructureBody,
   PostConveyorBody,
 } from './conveyors.schemas.js'
 import {
@@ -57,10 +52,6 @@ import {
   CONVEYOR_DELETE_HAS_TIME_ENTRIES_MESSAGE,
   CONVEYOR_OPERATIONAL_STATUS_DEFAULT,
   CONVEYOR_FINISH_REQUIRES_MANAGER_MESSAGE,
-  CONVEYOR_STRUCTURE_REPLACE_HAS_DEPENDENCIES_MESSAGE,
-  CONVEYOR_STRUCTURE_REPLACE_STATUS_MESSAGE,
-  isConveyorOperationalStatusDb,
-  mapLegacyConveyorOperationalStatus,
   resolveCompletedAtMode,
 } from './conveyorOperationalStatus.js'
 import { serviceGetConveyorPendingMinutes } from './conveyorNodeWorkload.service.js'
@@ -123,20 +114,6 @@ function normalizePriority(
 ): 'alta' | 'media' | 'baixa' {
   if (p === 'alta' || p === 'media' || p === 'baixa') return p
   return 'media'
-}
-
-function resolveOperationalStatusForPolicy(
-  status: string,
-): ConveyorOperationalStatusDb | null {
-  if (isConveyorOperationalStatusDb(status)) return status
-  return mapLegacyConveyorOperationalStatus(status)
-}
-
-function canReplaceConveyorStructure(status: string): boolean {
-  const normalized = resolveOperationalStatusForPolicy(status)
-  return (
-    normalized === 'EM_ELABORACAO' || normalized === 'AGUARDANDO_PLANEJAMENTO'
-  )
 }
 
 function assertUniqueOrderIndices(
@@ -469,7 +446,8 @@ export async function serviceListConveyors(
   return rows.map(mapListRowToApi)
 }
 
-function revalidateStructureOptions(
+/** Exportado: reaproveitado por `conveyor-structure-diff.service.ts` (mesma regra de unicidade de orderIndex). */
+export function revalidateStructureOptions(
   options: PostConveyorBody['options'],
 ): void {
   const sortedOptions = [...options].sort((a, b) => a.orderIndex - b.orderIndex)
@@ -793,7 +771,8 @@ export async function serviceCreateConveyor(
   }
 }
 
-function mergeConveyorMetadata(
+/** Exportado: reaproveitado por `conveyor-structure-diff.service.ts`. */
+export function mergeConveyorMetadata(
   current: unknown,
   patch: {
     colaboradorId?: string | null
@@ -901,144 +880,6 @@ export async function servicePatchConveyorDados(
   const nodes = await listConveyorNodesByConveyorId(pool, conveyorId)
   const structure = await loadConveyorStructureWithAssignees(pool, conveyorId, nodes)
   return mapDetailRowToApi(updated, structure)
-}
-
-export async function serviceReplaceConveyorStructure(
-  pool: pg.Pool,
-  conveyorId: string,
-  body: PatchConveyorStructureBody,
-): Promise<ConveyorDetailApi | null> {
-  const existing = await findConveyorById(pool, conveyorId)
-  if (!existing) return null
-
-  if (!canReplaceConveyorStructure(existing.operational_status)) {
-    throw new AppError(
-      CONVEYOR_STRUCTURE_REPLACE_STATUS_MESSAGE,
-      422,
-      ErrorCodes.VALIDATION_ERROR,
-    )
-  }
-
-  const nEntries = await countActiveTimeEntriesByConveyor(pool, conveyorId)
-  if (nEntries > 0) {
-    throw new AppError(
-      'Não é possível substituir a estrutura: existem apontamentos registados nesta esteira.',
-      422,
-      ErrorCodes.VALIDATION_ERROR,
-    )
-  }
-
-  const structureDeps = await findConveyorDeleteBlockingDeps(pool, conveyorId)
-  assertConveyorStructureReplaceNoBlockingDeps(structureDeps)
-
-  revalidateStructureOptions(body.options)
-  const assigneeTargets = collectAssigneeTargetsFromOptions(body.options)
-  for (const cid of assigneeTargets.collaboratorIds) {
-    const ok = await collaboratorActiveForOperations(pool, cid)
-    if (!ok) {
-      throw new AppError(
-        'Colaborador de alocação inexistente, inativo ou indisponível.',
-        422,
-        ErrorCodes.VALIDATION_ERROR,
-      )
-    }
-  }
-  for (const tid of assigneeTargets.teamIds) {
-    const t = await findTeamById(pool, tid)
-    if (!t || !t.is_active || t.deleted_at) {
-      throw new AppError(
-        'Time de alocação inexistente ou inativo.',
-        422,
-        ErrorCodes.VALIDATION_ERROR,
-      )
-    }
-  }
-
-  const officialRollupPatch = detectSyntheticSubtreeRollupInCreatePayload(body)
-  if (officialRollupPatch.length > 0) {
-    throw new AppError(
-      'A estrutura contém uma etapa sintética de Matriz. Remova o item agregado e mantenha apenas as atividades reais.',
-      422,
-      ErrorCodes.CONVEYOR_SYNTHETIC_ROLLUP_STEP,
-      { findings: officialRollupPatch },
-      {
-        errorRef: ErrorRefs.CONVEYOR_CREATE_FAILED,
-        category: 'BUSINESS',
-        severity: 'warning',
-      },
-    )
-  }
-
-  const totals = computeTotalsForOptions(body.options)
-  const metaNext = mergeConveyorMetadata(existing.metadata_json, {
-    matrixRootItemId:
-      body.matrixRootItemId === undefined ? undefined : body.matrixRootItemId,
-  })
-
-  const client = await pool.connect()
-  try {
-    await client.query('BEGIN')
-
-    await deleteConveyorAssigneesAndNodes(client, conveyorId)
-
-    await updateConveyorStructureMeta(client, conveyorId, {
-      origin_register: body.originType,
-      base_ref_snapshot: body.baseId ?? null,
-      base_code_snapshot: body.baseCode ?? null,
-      base_name_snapshot: body.baseName ?? null,
-      base_version_snapshot: body.baseVersion ?? null,
-      metadata_json: metaNext,
-      total_options: totals.totalOptions,
-      total_areas: totals.totalAreas,
-      total_steps: totals.totalSteps,
-      total_planned_minutes: totals.totalPlannedMinutes,
-    })
-
-    await materializeConveyorOptions(client, conveyorId, body.options)
-
-    await client.query('COMMIT')
-  } catch (err) {
-    try {
-      await client.query('ROLLBACK')
-    } catch {
-      /* ignore */
-    }
-    rethrowStructureReplacePgError(err)
-  } finally {
-    client.release()
-  }
-
-  const row = await findConveyorById(pool, conveyorId)
-  if (!row) return null
-  const nodes = await listConveyorNodesByConveyorId(pool, conveyorId)
-  const structure = await loadConveyorStructureWithAssignees(pool, conveyorId, nodes)
-  return mapDetailRowToApi(row, structure)
-}
-
-function rethrowStructureReplacePgError(err: unknown): never {
-  if (err instanceof DatabaseError && err.code === '23503') {
-    throw new AppError(
-      CONVEYOR_STRUCTURE_REPLACE_HAS_DEPENDENCIES_MESSAGE,
-      409,
-      ErrorCodes.CONVEYOR_STRUCTURE_REPLACE_HAS_DEPENDENCIES,
-    )
-  }
-  throw err
-}
-
-function assertConveyorStructureReplaceNoBlockingDeps(
-  deps: Awaited<ReturnType<typeof findConveyorDeleteBlockingDeps>>,
-): void {
-  if (
-    deps.hasOperationalWorkPlanItems ||
-    deps.hasConveyorOperationalPlanItems
-  ) {
-    throw new AppError(
-      CONVEYOR_STRUCTURE_REPLACE_HAS_DEPENDENCIES_MESSAGE,
-      409,
-      ErrorCodes.CONVEYOR_STRUCTURE_REPLACE_HAS_DEPENDENCIES,
-    )
-  }
 }
 
 const CONVEYOR_DELETE_DEPENDENCIES_MESSAGE =

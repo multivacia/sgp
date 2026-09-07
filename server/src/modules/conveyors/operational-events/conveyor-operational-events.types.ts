@@ -11,6 +11,8 @@ export const conveyorOperationalEventTypeValues = [
   'CONVEYOR_RETURNED_TO_PLANNING',
   /** Inclusão tardia de OPTION/AREA/STEP em esteira EM_ANDAMENTO. */
   'CONVEYOR_STRUCTURE_ITEM_ADDED',
+  /** PATCH /conveyors/:id/structure — diff incremental (insert/update/soft-delete). */
+  'CONVEYOR_STRUCTURE_UPDATED',
   'MANUAL_NOTE',
 ] as const
 

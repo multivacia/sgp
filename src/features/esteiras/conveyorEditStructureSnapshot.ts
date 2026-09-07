@@ -48,16 +48,19 @@ export function structureToManualRootsFromApiDetail(
     .sort((a, b) => a.orderIndex - b.orderIndex)
     .map((op) => ({
       key: op.id,
+      id: op.id,
       titulo: op.name,
       areas: [...op.areas]
         .sort((a, b) => a.orderIndex - b.orderIndex)
         .map((ar) => ({
           key: ar.id,
+          id: ar.id,
           titulo: ar.name,
           steps: [...ar.steps]
             .sort((a, b) => a.orderIndex - b.orderIndex)
             .map((st) => ({
               key: st.id,
+              id: st.id,
               titulo: st.name,
               plannedMinutes: Math.max(0, Math.floor(Number(st.plannedMinutes ?? 0))),
               plannedQuantity: Math.max(1, Math.floor(Number(st.plannedQuantity ?? 1))),
