@@ -37,3 +37,25 @@ export const productionTimeEntryBodySchema = productionTimeEntryBodyBaseSchema.s
 )
 
 export type ProductionTimeEntryBody = z.infer<typeof productionTimeEntryBodySchema>
+
+/** Apontamento em "Outra Atividade" — atividade real de uma esteira, sem alocação/responsabilidade. */
+export const productionUnassignedTimeEntryBodySchema = z.object({
+  conveyorId: z.string().uuid(),
+  stepNodeId: z.string().uuid(),
+  minutes: z.number().int().min(1, { message: 'minutes deve ser maior que 0.' }),
+  note: z.union([z.string().max(2000).trim(), z.null()]).optional(),
+  exceptionJustification: z
+    .union([z.string().max(PRODUCTION_OUT_OF_SEQUENCE_JUSTIFICATION_MAX), z.null()])
+    .optional(),
+  exceptionJustificationId: z.string().uuid().optional(),
+  exceptionJustificationComplement: z.union([z.string().max(2000), z.null()]).optional(),
+  outOfSequenceJustification: z
+    .union([z.string().max(PRODUCTION_OUT_OF_SEQUENCE_JUSTIFICATION_MAX), z.null()])
+    .optional(),
+  outOfSequenceJustificationId: z.string().uuid().optional(),
+  outOfSequenceJustificationComplement: z.union([z.string().max(2000), z.null()]).optional(),
+})
+
+export type ProductionUnassignedTimeEntryBody = z.infer<
+  typeof productionUnassignedTimeEntryBodySchema
+>

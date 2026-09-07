@@ -11,6 +11,8 @@ import { resolveSequenceListBadge } from '../../domain/production/production.hel
 import { getProductionWorkQueue } from '../../services/production/productionApiService'
 import { ProductionCollaboratorAvatar } from '../production/ProductionCollaboratorAvatar'
 import { KioskActivityCard } from './KioskActivityCard'
+import { KioskExtraEsteiraFlow } from './KioskExtraEsteiraFlow'
+import { KioskOutraAtividadeFlow } from './KioskOutraAtividadeFlow'
 
 type Props = {
   collaborator: ProductionCollaboratorSummary
@@ -19,6 +21,7 @@ type Props = {
 }
 
 type ViewMode = 'carousel' | 'list'
+type ActiveFlow = 'extra-esteira' | 'outra-atividade' | null
 
 export function KioskActivityCards({ collaborator, initialItems, onExit }: Props) {
   const [items, setItems] = useState(initialItems)
@@ -27,6 +30,7 @@ export function KioskActivityCards({ collaborator, initialItems, onExit }: Props
     findInitialKioskCarouselIndex(initialItems),
   )
   const [search, setSearch] = useState('')
+  const [activeFlow, setActiveFlow] = useState<ActiveFlow>(null)
   const touchStartX = useRef(0)
 
   const filtered = useMemo(() => {
@@ -147,6 +151,22 @@ export function KioskActivityCards({ collaborator, initialItems, onExit }: Props
               </svg>
             </button>
           </div>
+
+          {/* Apontamentos avulsos */}
+          <button
+            type="button"
+            onClick={() => setActiveFlow('extra-esteira')}
+            className="sgp-cta-secondary min-h-10 px-3 text-sm whitespace-nowrap"
+          >
+            + Extra esteira
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveFlow('outra-atividade')}
+            className="sgp-cta-secondary min-h-10 px-3 text-sm whitespace-nowrap"
+          >
+            + Outra atividade
+          </button>
 
           {/* Sair */}
           <button
@@ -309,6 +329,21 @@ export function KioskActivityCards({ collaborator, initialItems, onExit }: Props
             ))}
           </div>
         </div>
+      )}
+
+      {activeFlow === 'extra-esteira' && (
+        <KioskExtraEsteiraFlow
+          collaborator={collaborator}
+          onClose={() => setActiveFlow(null)}
+          onSuccess={() => setActiveFlow(null)}
+        />
+      )}
+      {activeFlow === 'outra-atividade' && (
+        <KioskOutraAtividadeFlow
+          collaborator={collaborator}
+          onClose={() => setActiveFlow(null)}
+          onSuccess={() => setActiveFlow(null)}
+        />
       )}
     </div>
   )

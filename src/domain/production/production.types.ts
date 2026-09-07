@@ -120,3 +120,42 @@ export type ProductionWorkQueueResponse = {
 }
 
 export type ProductionWorkQueueFilter = 'all' | 'pending' | 'completed'
+
+/** GET /api/v1/production/extra-time-entries/descriptions — catálogo (Kiosk). */
+export type ProductionExtraTimeEntryDescriptionOption = {
+  id: string
+  description: string
+}
+
+/** GET /api/v1/production/extra-time-entries — histórico recente (Kiosk). */
+export type ProductionExtraTimeEntry = {
+  id: string
+  descriptionId: string
+  description: string
+  entryDate: string
+  minutes: number
+  notes: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+export type ProductionExtraTimeEntryPayload = {
+  descriptionId: string
+  entryDate?: string
+  minutes: number
+  notes?: string | null
+}
+
+/** POST /api/v1/production/time-entries/unassigned-exception — "Outra atividade" (Kiosk). */
+export type ProductionUnassignedTimeEntryPayload = {
+  conveyorId: string
+  stepNodeId: string
+  minutes: number
+  note?: string | null
+  exceptionJustification?: string | null
+  exceptionJustificationId?: string | null
+  exceptionJustificationComplement?: string | null
+  outOfSequenceJustification?: string | null
+  outOfSequenceJustificationId?: string | null
+  outOfSequenceJustificationComplement?: string | null
+}
