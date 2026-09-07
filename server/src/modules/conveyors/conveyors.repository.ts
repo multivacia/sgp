@@ -747,22 +747,6 @@ export async function listConveyors(
   }))
 }
 
-export async function countActiveTimeEntriesByConveyor(
-  pool: pg.Pool,
-  conveyorId: string,
-): Promise<number> {
-  const r = await pool.query<{ c: string }>(
-    `
-    SELECT COUNT(*)::text AS c
-    FROM conveyor_time_entries
-    WHERE conveyor_id = $1::uuid AND deleted_at IS NULL
-    `,
-    [conveyorId],
-  )
-  const raw = r.rows[0]?.c ?? '0'
-  return Number.parseInt(raw, 10) || 0
-}
-
 /** Dependências que impedem exclusão física (Alternativa B do GATE). */
 export type ConveyorDeleteBlockingDeps = {
   hasTimeEntries: boolean
@@ -828,41 +812,6 @@ export async function physicalDeleteConveyor(
     [conveyorId],
   )
   return (r.rowCount ?? 0) > 0
-}
-
-/**
- * Remove alocações e nós da esteira (para substituir a estrutura).
- * Exige que não existam apontamentos (`conveyor_time_entries`) ativos.
- */
-export async function deleteConveyorAssigneesAndNodes(
-  client: pg.PoolClient,
-  conveyorId: string,
-): Promise<void> {
-  await client.query(
-    `DELETE FROM conveyor_node_assignees WHERE conveyor_id = $1::uuid`,
-    [conveyorId],
-  )
-  await client.query(
-    `
-    DELETE FROM conveyor_nodes
-    WHERE conveyor_id = $1::uuid AND node_type = 'STEP'
-    `,
-    [conveyorId],
-  )
-  await client.query(
-    `
-    DELETE FROM conveyor_nodes
-    WHERE conveyor_id = $1::uuid AND node_type = 'AREA'
-    `,
-    [conveyorId],
-  )
-  await client.query(
-    `
-    DELETE FROM conveyor_nodes
-    WHERE conveyor_id = $1::uuid AND node_type = 'OPTION'
-    `,
-    [conveyorId],
-  )
 }
 
 export type PatchConveyorDadosFields = {

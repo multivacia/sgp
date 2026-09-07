@@ -58,9 +58,6 @@ export const ErrorCodes = {
   CONVEYOR_DELETE_HAS_TIME_ENTRIES: 'CONVEYOR_DELETE_HAS_TIME_ENTRIES',
   /** Exclusão física: plano da esteira ou planejamento semanal. */
   CONVEYOR_DELETE_HAS_DEPENDENCIES: 'CONVEYOR_DELETE_HAS_DEPENDENCIES',
-  /** Substituição de estrutura: itens de planejamento vinculados a atividades. */
-  CONVEYOR_STRUCTURE_REPLACE_HAS_DEPENDENCIES:
-    'CONVEYOR_STRUCTURE_REPLACE_HAS_DEPENDENCIES',
   /** Apontamento bloqueado pelo status da esteira. */
   CONVEYOR_TIME_ENTRY_STATUS_NOT_ALLOWED: 'CONVEYOR_TIME_ENTRY_STATUS_NOT_ALLOWED',
   /** Finalização exige gestor/admin (conveyors.edit_status). */

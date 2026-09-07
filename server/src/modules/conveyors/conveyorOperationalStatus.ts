@@ -154,12 +154,6 @@ export const CONVEYOR_RETURN_TO_PLANNING_BLOCKED_MESSAGE =
 export const CONVEYOR_RETURN_REASON_REQUIRED_MESSAGE =
   'Informe o motivo para continuar.'
 
-export const CONVEYOR_STRUCTURE_REPLACE_STATUS_MESSAGE =
-  'Substituição de estrutura só é permitida enquanto a esteira está em elaboração ou aguardando planejamento.'
-
-export const CONVEYOR_STRUCTURE_REPLACE_HAS_DEPENDENCIES_MESSAGE =
-  'Não é possível alterar a estrutura: existem itens de planejamento vinculados às atividades desta esteira. Remova o planejamento ou volte a esteira para elaboração antes de editar a estrutura.'
-
 export function canReturnConveyorToBacklog(
   from: ConveyorOperationalStatusDb,
 ): boolean {
