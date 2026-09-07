@@ -27,6 +27,7 @@ export function KioskActivityCards({ collaborator, initialItems, onExit }: Props
     findInitialKioskCarouselIndex(initialItems),
   )
   const [search, setSearch] = useState('')
+  const [isAnySheetOpen, setIsAnySheetOpen] = useState(false)
   const touchStartX = useRef(0)
 
   const filtered = useMemo(() => {
@@ -50,11 +51,14 @@ export function KioskActivityCards({ collaborator, initialItems, onExit }: Props
   const safeIndex = Math.min(currentIndex, Math.max(0, filtered.length - 1))
   const activeItem = filtered[safeIndex] ?? null
 
-  const prev = useCallback(() => setCurrentIndex((i) => Math.max(0, i - 1)), [])
-  const next = useCallback(
-    () => setCurrentIndex((i) => Math.min(filtered.length - 1, i + 1)),
-    [filtered.length],
-  )
+  const prev = useCallback(() => {
+    if (isAnySheetOpen) return
+    setCurrentIndex((i) => Math.max(0, i - 1))
+  }, [isAnySheetOpen])
+  const next = useCallback(() => {
+    if (isAnySheetOpen) return
+    setCurrentIndex((i) => Math.min(filtered.length - 1, i + 1))
+  }, [isAnySheetOpen, filtered.length])
 
   const handleCardSuccess = useCallback(async () => {
     try {
@@ -67,10 +71,12 @@ export function KioskActivityCards({ collaborator, initialItems, onExit }: Props
   }, [])
 
   function handleTouchStart(e: React.TouchEvent) {
+    if (isAnySheetOpen) return
     touchStartX.current = e.touches[0].clientX
   }
 
   function handleTouchEnd(e: React.TouchEvent) {
+    if (isAnySheetOpen) return
     const dx = e.changedTouches[0].clientX - touchStartX.current
     if (dx < -50) next()
     else if (dx > 50) prev()
@@ -81,20 +87,22 @@ export function KioskActivityCards({ collaborator, initialItems, onExit }: Props
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
       {/* Barra de header */}
-      <div className="shrink-0 border-b border-white/[0.07] px-4 py-3">
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="flex min-w-0 flex-1 items-center gap-3">
+      <div className="shrink-0 border-b border-white/[0.07] px-3 py-2">
+        <div className="flex items-center gap-2">
+          <div className="flex min-w-0 shrink items-center gap-2">
             <ProductionCollaboratorAvatar collaborator={collaborator} size="md" />
             <div className="min-w-0">
-              <p className="truncate text-sm font-semibold text-white">
+              <p className="truncate text-xs font-semibold text-white">
                 {collaborator.fullName}
               </p>
-              <p className="text-[10px] font-bold uppercase tracking-wider text-sgp-gold">
+              <p className="whitespace-nowrap text-[9px] font-bold uppercase tracking-wider text-sgp-gold">
                 {filtered.length} atividade
                 {filtered.length !== 1 ? 's' : ''}
               </p>
             </div>
           </div>
+
+          <div className="min-w-0 flex-1" />
 
           {/* Busca */}
           <input
@@ -103,18 +111,18 @@ export function KioskActivityCards({ collaborator, initialItems, onExit }: Props
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Buscar atividade…"
             autoComplete="off"
-            className="w-36 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white placeholder:text-slate-600 focus:border-sgp-gold/40 focus:outline-none focus:ring-1 focus:ring-sgp-gold/20 sm:w-48"
+            className="w-28 min-w-0 shrink rounded-lg border border-white/10 bg-white/[0.04] px-2 py-1.5 text-xs text-white placeholder:text-slate-600 focus:border-sgp-gold/40 focus:outline-none focus:ring-1 focus:ring-sgp-gold/20 sm:w-40"
           />
 
           {/* Alternador de modo */}
-          <div className="flex overflow-hidden rounded-xl border border-white/10">
+          <div className="flex shrink-0 overflow-hidden rounded-lg border border-white/10">
             <button
               type="button"
               onClick={() => setViewMode('carousel')}
               title="Modo carrossel"
               aria-pressed={viewMode === 'carousel'}
               className={[
-                'px-3 py-2 text-sm transition-colors',
+                'px-2 py-1.5 text-sm transition-colors',
                 viewMode === 'carousel'
                   ? 'bg-sgp-gold/15 text-sgp-gold'
                   : 'bg-transparent text-slate-400 hover:text-white',
@@ -133,7 +141,7 @@ export function KioskActivityCards({ collaborator, initialItems, onExit }: Props
               title="Modo lista"
               aria-pressed={viewMode === 'list'}
               className={[
-                'border-l border-white/10 px-3 py-2 text-sm transition-colors',
+                'border-l border-white/10 px-2 py-1.5 text-sm transition-colors',
                 viewMode === 'list'
                   ? 'bg-sgp-gold/15 text-sgp-gold'
                   : 'bg-transparent text-slate-400 hover:text-white',
@@ -152,7 +160,7 @@ export function KioskActivityCards({ collaborator, initialItems, onExit }: Props
           <button
             type="button"
             onClick={onExit}
-            className="sgp-cta-secondary min-h-10 px-4 text-sm"
+            className="sgp-cta-secondary min-h-8 shrink-0 px-3 text-xs"
           >
             Sair
           </button>
@@ -212,6 +220,7 @@ export function KioskActivityCards({ collaborator, initialItems, onExit }: Props
                   <KioskActivityCard
                     item={item}
                     onSuccess={() => void handleCardSuccess()}
+                    onSheetOpenChange={setIsAnySheetOpen}
                   />
                 </div>
               ))}
@@ -223,7 +232,7 @@ export function KioskActivityCards({ collaborator, initialItems, onExit }: Props
             <button
               type="button"
               onClick={prev}
-              disabled={safeIndex === 0}
+              disabled={safeIndex === 0 || isAnySheetOpen}
               aria-label="Atividade anterior"
               className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-slate-300 transition hover:border-white/25 hover:text-white disabled:cursor-not-allowed disabled:opacity-25"
             >
@@ -239,7 +248,11 @@ export function KioskActivityCards({ collaborator, initialItems, onExit }: Props
                   <button
                     key={i}
                     type="button"
-                    onClick={() => setCurrentIndex(i)}
+                    onClick={() => {
+                      if (isAnySheetOpen) return
+                      setCurrentIndex(i)
+                    }}
+                    disabled={isAnySheetOpen}
                     aria-label={`Ir para atividade ${i + 1}`}
                     className={[
                       'rounded-full transition-all',
@@ -259,7 +272,7 @@ export function KioskActivityCards({ collaborator, initialItems, onExit }: Props
             <button
               type="button"
               onClick={next}
-              disabled={safeIndex === filtered.length - 1}
+              disabled={safeIndex === filtered.length - 1 || isAnySheetOpen}
               aria-label="Próxima atividade"
               className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-slate-300 transition hover:border-white/25 hover:text-white disabled:cursor-not-allowed disabled:opacity-25"
             >
