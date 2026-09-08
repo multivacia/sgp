@@ -38,6 +38,22 @@ function normalizeAllocRowsForSnapshot(
   return out
 }
 
+export function collectPersistedNodeIdsFromStructure(
+  structure: ConveyorStructure,
+): Set<string> {
+  const ids = new Set<string>()
+  for (const op of structure.options) {
+    ids.add(op.id)
+    for (const ar of op.areas) {
+      ids.add(ar.id)
+      for (const st of ar.steps) {
+        ids.add(st.id)
+      }
+    }
+  }
+  return ids
+}
+
 /**
  * Detalhe da API: ids de opção/área/etapa vêm do servidor e alinham com `conveyor_node_assignees`.
  */

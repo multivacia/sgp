@@ -1241,6 +1241,10 @@ export async function hardDeleteAssigneesForNodes(
  * Deps por node ids: time_entries ativos OR work_plan_items OR operational_plan_items.
  * Retorna o subconjunto de ids que possuem pelo menos uma dep.
  */
+/**
+ * Nós com histórico/deps que impedem hard delete na edição incremental:
+ * time entries, itens de plano, eventos operacionais, ou STEP COMPLETED/ABORTED.
+ */
 export async function findNodeIdsWithStructureDeps(
   client: pg.Pool | pg.PoolClient,
   nodeIds: string[],
@@ -1264,6 +1268,21 @@ export async function findNodeIdsWithStructureDeps(
         FROM conveyor_operational_plan_items
        WHERE activity_node_id = ANY($1::uuid[])
          AND deleted_at IS NULL
+      UNION
+      SELECT node_id AS node_id
+        FROM conveyor_operational_events
+       WHERE node_id = ANY($1::uuid[])
+      UNION
+      SELECT id AS node_id
+        FROM conveyor_nodes
+       WHERE id = ANY($1::uuid[])
+         AND deleted_at IS NULL
+         AND node_type = 'STEP'
+         AND (
+           operational_status IN ('COMPLETED', 'ABORTED')
+           OR operational_completed_at IS NOT NULL
+           OR aborted_at IS NOT NULL
+         )
     ) x
     `,
     [nodeIds],

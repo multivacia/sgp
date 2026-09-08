@@ -27,6 +27,8 @@ export function getOperationalEventDisplayLabel(eventType: string): string {
       return 'Dispensa restaurada'
     case 'CONVEYOR_STRUCTURE_ITEM_ADDED':
       return 'Item incluído na esteira'
+    case 'CONVEYOR_STRUCTURE_UPDATED':
+      return 'Estrutura da esteira atualizada'
     case 'CONVEYOR_STEP_BLOCKED':
       return 'Atividade bloqueada'
     case 'CONVEYOR_STEP_UNBLOCKED':
@@ -59,6 +61,8 @@ export function getOperationalEventCategory(eventType: string): OperationalEvent
     case 'CONVEYOR_STEP_ABORTED':
       return 'other'
     case 'CONVEYOR_STRUCTURE_ITEM_ADDED':
+      return 'other'
+    case 'CONVEYOR_STRUCTURE_UPDATED':
       return 'other'
     case 'CONVEYOR_STEP_BLOCKED':
     case 'CONVEYOR_STEP_UNBLOCKED':
@@ -136,6 +140,8 @@ export function getOperationalEventSeverity(eventType: string): OperationalEvent
     case 'CONVEYOR_STEP_ABORTED':
       return 'warning'
     case 'CONVEYOR_STRUCTURE_ITEM_ADDED':
+      return 'info'
+    case 'CONVEYOR_STRUCTURE_UPDATED':
       return 'info'
     case 'CONVEYOR_STEP_BLOCKED':
       return 'critical'

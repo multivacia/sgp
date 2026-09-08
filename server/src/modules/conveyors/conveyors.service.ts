@@ -62,6 +62,8 @@ import {
   CONVEYOR_DELETE_HAS_TIME_ENTRIES_MESSAGE,
   CONVEYOR_OPERATIONAL_STATUS_DEFAULT,
   CONVEYOR_FINISH_REQUIRES_MANAGER_MESSAGE,
+  isConveyorOperationalStatusDb,
+  mapLegacyConveyorOperationalStatus,
   resolveCompletedAtMode,
 } from './conveyorOperationalStatus.js'
 import { serviceGetConveyorPendingMinutes } from './conveyorNodeWorkload.service.js'
@@ -82,7 +84,6 @@ import {
   INCREMENTAL_STRUCTURE_EDIT_REASON,
   partitionRemovalSubtrees,
   shouldMarkLateAddForNewSteps,
-  stepIdsInRemovals,
   type StructureDiffAssignee,
 } from './conveyor-structure-diff.js'
 
@@ -133,6 +134,13 @@ function normalizePriority(
 ): 'alta' | 'media' | 'baixa' {
   if (p === 'alta' || p === 'media' || p === 'baixa') return p
   return 'media'
+}
+
+function resolveOperationalStatusForPolicy(
+  status: string,
+): ConveyorOperationalStatusDb | null {
+  if (isConveyorOperationalStatusDb(status)) return status
+  return mapLegacyConveyorOperationalStatus(status)
 }
 
 function assertUniqueOrderIndices(
@@ -373,7 +381,7 @@ export async function serviceGetConveyorById(
 ): Promise<ConveyorDetailApi | null> {
   const row = await findConveyorById(pool, id)
   if (!row) return null
-  const nodes = await listConveyorNodesByConveyorId(pool, id)
+  const nodes = await listActiveConveyorNodesByConveyorId(pool, id)
   const structure = await loadConveyorStructureWithAssignees(pool, id, nodes)
   if (isConveyorCreateDiagnosticsEnabled()) {
     const synth = detectSyntheticSubtreeRollupNodesFromDetailStructure(structure)
@@ -453,7 +461,7 @@ export async function servicePatchConveyorStatus(
     occurredAt: new Date(),
   })
 
-  const nodes = await listConveyorNodesByConveyorId(pool, conveyorId)
+  const nodes = await listActiveConveyorNodesByConveyorId(pool, conveyorId)
   const structure = await loadConveyorStructureWithAssignees(pool, conveyorId, nodes)
   return mapDetailRowToApi(updated, structure)
 }
@@ -895,7 +903,7 @@ export async function servicePatchConveyorDados(
     occurredAt: new Date(),
   })
 
-  const nodes = await listConveyorNodesByConveyorId(pool, conveyorId)
+  const nodes = await listActiveConveyorNodesByConveyorId(pool, conveyorId)
   const structure = await loadConveyorStructureWithAssignees(pool, conveyorId, nodes)
   return mapDetailRowToApi(updated, structure)
 }
@@ -983,7 +991,10 @@ export async function serviceApplyConveyorStructureDiff(
         body.matrixRootItemId === undefined ? undefined : body.matrixRootItemId,
     })
 
-    const markLateAdd = shouldMarkLateAddForNewSteps(existing.operational_status)
+    const statusForLateAdd =
+      resolveOperationalStatusForPolicy(existing.operational_status) ??
+      existing.operational_status
+    const markLateAdd = shouldMarkLateAddForNewSteps(statusForLateAdd)
     const occurredIso = new Date().toISOString()
     const lateStepMetadata = markLateAdd
       ? {
@@ -1101,9 +1112,10 @@ export async function serviceApplyConveyorStructureDiff(
     const hardDeletedIds: string[] = []
     const subtrees = partitionRemovalSubtrees(diff.removals)
     for (const subtree of subtrees) {
-      const stepIds = stepIdsInRemovals(subtree)
-      const deps = await findNodeIdsWithStructureDeps(client, stepIds)
       const nodeIds = subtree.map((r) => r.id)
+      // Deps em qualquer nó da subárvore (não só STEPs): time entries, plano,
+      // eventos e STEP COMPLETED/ABORTED forçam soft-deactivate.
+      const deps = await findNodeIdsWithStructureDeps(client, nodeIds)
       if (deps.size > 0) {
         await softDeactivateConveyorNodes(client, { conveyorId, nodeIds })
         softDeactivatedIds.push(...nodeIds)

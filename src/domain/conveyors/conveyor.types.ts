@@ -33,6 +33,8 @@ export type CreateConveyorStepAssigneeInput = {
 }
 
 export type CreateConveyorStepInput = {
+  /** Presente no PATCH incremental quando o STEP já existe na esteira. */
+  id?: string
   titulo: string
   orderIndex: number
   plannedMinutes: number
@@ -46,6 +48,8 @@ export type CreateConveyorStepInput = {
 }
 
 export type CreateConveyorAreaInput = {
+  /** Presente no PATCH incremental quando a AREA já existe na esteira. */
+  id?: string
   titulo: string
   orderIndex: number
   sourceOrigin: ConveyorSourceOrigin
@@ -53,6 +57,8 @@ export type CreateConveyorAreaInput = {
 }
 
 export type CreateConveyorOptionInput = {
+  /** Presente no PATCH incremental quando a OPTION já existe na esteira. */
+  id?: string
   titulo: string
   orderIndex: number
   sourceOrigin: ConveyorSourceOrigin
