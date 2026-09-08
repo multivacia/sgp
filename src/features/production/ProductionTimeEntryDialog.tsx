@@ -85,6 +85,7 @@ export function ProductionTimeEntryDialog({ item, onClose, onSuccess }: Props) {
           ...buildProductionTimeEntryJustificationPayload(item, justification),
         })
         setState({ status: 'success' })
+        setJustification(emptyJustificationValue())
         onSuccess()
       } catch (err) {
         const msg =

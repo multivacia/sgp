@@ -1,10 +1,6 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { TimeEntryJustificationOption } from '../../domain/operational-settings/timeEntryJustifications.types'
-import {
-  buildJustificationFieldFromOption,
-  OPERATIONAL_JUSTIFICATION_MESSAGES,
-  pickPreferredJustificationId,
-} from '../../domain/operational/timeEntryJustificationField'
+import { OPERATIONAL_JUSTIFICATION_MESSAGES } from '../../domain/operational/timeEntryJustificationField'
 import {
   listMyTimeEntryJustifications,
   listProductionTimeEntryJustifications,
@@ -26,9 +22,16 @@ export type JustificationSelectProps = {
   }) => void
   disabled?: boolean
   idPrefix?: string
-  /** Categoria sugerida para pré-seleção (ex.: SEQUENCE, SUBSTITUTION). */
+  /**
+   * @deprecated No-op. Mantido por compatibilidade com call sites.
+   * Não pré-seleciona mais a justificativa — o estado inicial permanece vazio
+   * (`justificationId: null`) até o usuário escolher.
+   */
   preferredCategory?: string | null
-  /** Dica de label para refinar pré-seleção dentro da categoria. */
+  /**
+   * @deprecated No-op. Mantido por compatibilidade com call sites.
+   * Não pré-seleciona mais a justificativa.
+   */
   preferredLabelHint?: string | null
   /** Quando true, exibe indicador de obrigatoriedade (exceção/OOS). */
   required?: boolean
@@ -52,22 +55,22 @@ export function JustificationSelect({
   onChange,
   disabled = false,
   idPrefix = 'justification',
-  preferredCategory = null,
-  preferredLabelHint = null,
+  preferredCategory: _preferredCategory = null,
+  preferredLabelHint: _preferredLabelHint = null,
   required = false,
   onCatalogStateChange,
 }: JustificationSelectProps) {
+  void _preferredCategory
+  void _preferredLabelHint
   const [options, setOptions] = useState<TimeEntryJustificationOption[]>([])
   const [loading, setLoading] = useState(true)
   const [loadFailed, setLoadFailed] = useState(false)
   const [catalogEmpty, setCatalogEmpty] = useState(false)
-  const preselectAppliedRef = useRef(false)
 
   const load = useCallback(async () => {
     setLoading(true)
     setLoadFailed(false)
     setCatalogEmpty(false)
-    preselectAppliedRef.current = false
     try {
       const data =
         channel === 'production'
@@ -102,28 +105,6 @@ export function JustificationSelect({
       selectedRequiresComplement: selected?.requiresComplement ?? false,
     })
   }, [useFallback, selected, onCatalogStateChange])
-
-  useEffect(() => {
-    if (loading || useFallback || preselectAppliedRef.current || value || !preferredCategory) return
-    const preferredId = pickPreferredJustificationId(
-      options,
-      preferredCategory,
-      preferredLabelHint,
-    )
-    if (!preferredId) return
-    const opt = options.find((o) => o.id === preferredId)
-    if (!opt) return
-    preselectAppliedRef.current = true
-    onChange(buildJustificationFieldFromOption(opt))
-  }, [
-    loading,
-    useFallback,
-    value,
-    options,
-    preferredCategory,
-    preferredLabelHint,
-    onChange,
-  ])
 
   if (loading) {
     return <p className="text-xs text-slate-500">Carregando justificativas…</p>
