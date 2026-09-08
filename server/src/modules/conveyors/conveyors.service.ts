@@ -81,11 +81,32 @@ import { detectAndRecordConveyorDelayTransition } from './operational-events/con
 import { serviceCreateConveyorOperationalEvent } from './operational-events/conveyor-operational-events.service.js'
 import {
   computeConveyorStructureDiff,
+  CONVEYOR_EDIT_REASON_CODE,
   INCREMENTAL_STRUCTURE_EDIT_REASON,
   partitionRemovalSubtrees,
   shouldMarkLateAddForNewSteps,
   type StructureDiffAssignee,
 } from './conveyor-structure-diff.js'
+
+/** Backlog operacional = EM_ELABORACAO. Fora disso, PATCH exige motivo do usuário. */
+function requireUserReasonOutsideBacklog(
+  operationalStatus: string,
+  reason: string | undefined,
+): string | undefined {
+  const status =
+    resolveOperationalStatusForPolicy(operationalStatus) ?? operationalStatus
+  if (status === 'EM_ELABORACAO') {
+    return reason
+  }
+  if (reason == null || reason === '') {
+    throw new AppError(
+      'Motivo deve ter entre 3 e 500 caracteres.',
+      422,
+      ErrorCodes.VALIDATION_ERROR,
+    )
+  }
+  return reason
+}
 
 const PRAZO_INICIO_RE = /In[ií]cio previsto:\s*(.+?)(?:\s*[·•|]\s*|$)/i
 const PRAZO_FIM_RE = /Fim previsto:\s*(.+)$/i
@@ -829,46 +850,66 @@ export async function servicePatchConveyorDados(
   pool: pg.Pool,
   conveyorId: string,
   body: PatchConveyorDadosBody,
+  options?: { actorUserId?: string | null },
 ): Promise<ConveyorDetailApi | null> {
   const existing = await findConveyorById(pool, conveyorId)
   if (!existing) return null
   const beforePendingMinutes = (await serviceGetConveyorPendingMinutes(pool, conveyorId)) ?? 0
 
+  // reason nunca vai para colunas de conveyors — só evento operacional.
+  const { reason: reasonFromBody, ...dadosFields } = body
+  const editReason = requireUserReasonOutsideBacklog(
+    existing.operational_status,
+    reasonFromBody,
+  )
+
   const patch: PatchConveyorDadosFields = {}
+  const changedFields: string[] = []
 
-  if (body.nome !== undefined) {
-    patch.name = body.nome.trim()
+  if (dadosFields.nome !== undefined) {
+    patch.name = dadosFields.nome.trim()
+    changedFields.push('nome')
   }
-  if (body.cliente !== undefined) {
-    patch.client_name = emptyToNull(body.cliente)
+  if (dadosFields.cliente !== undefined) {
+    patch.client_name = emptyToNull(dadosFields.cliente)
+    changedFields.push('cliente')
   }
-  if (body.veiculo !== undefined) {
-    patch.vehicle = emptyToNull(body.veiculo)
+  if (dadosFields.veiculo !== undefined) {
+    patch.vehicle = emptyToNull(dadosFields.veiculo)
+    changedFields.push('veiculo')
   }
-  if (body.modeloVersao !== undefined) {
-    patch.model_version = emptyToNull(body.modeloVersao)
+  if (dadosFields.modeloVersao !== undefined) {
+    patch.model_version = emptyToNull(dadosFields.modeloVersao)
+    changedFields.push('modeloVersao')
   }
-  if (body.placa !== undefined) {
-    patch.plate = emptyToNull(body.placa)
+  if (dadosFields.placa !== undefined) {
+    patch.plate = emptyToNull(dadosFields.placa)
+    changedFields.push('placa')
   }
-  if (body.observacoes !== undefined) {
-    patch.initial_notes = emptyToNull(stripConveyorPlanningTempoFromNotes(body.observacoes))
-  }
-  if (body.responsavel !== undefined) {
-    patch.responsible = emptyToNull(body.responsavel)
-  }
-  if (body.prazoEstimado !== undefined) {
-    patch.estimated_deadline = emptyToNull(
-      normalizePrazoEstimadoForPersistence(body.prazoEstimado),
+  if (dadosFields.observacoes !== undefined) {
+    patch.initial_notes = emptyToNull(
+      stripConveyorPlanningTempoFromNotes(dadosFields.observacoes),
     )
+    changedFields.push('observacoes')
   }
-  if (body.prioridade !== undefined && body.prioridade !== '') {
-    patch.priority = normalizePriority(body.prioridade)
+  if (dadosFields.responsavel !== undefined) {
+    patch.responsible = emptyToNull(dadosFields.responsavel)
+    changedFields.push('responsavel')
+  }
+  if (dadosFields.prazoEstimado !== undefined) {
+    patch.estimated_deadline = emptyToNull(
+      normalizePrazoEstimadoForPersistence(dadosFields.prazoEstimado),
+    )
+    changedFields.push('prazoEstimado')
+  }
+  if (dadosFields.prioridade !== undefined && dadosFields.prioridade !== '') {
+    patch.priority = normalizePriority(dadosFields.prioridade)
+    changedFields.push('prioridade')
   }
 
-  if (body.colaboradorId !== undefined) {
-    if (body.colaboradorId) {
-      const ok = await collaboratorExists(pool, body.colaboradorId)
+  if (dadosFields.colaboradorId !== undefined) {
+    if (dadosFields.colaboradorId) {
+      const ok = await collaboratorExists(pool, dadosFields.colaboradorId)
       if (!ok) {
         throw new AppError(
           'Colaborador (responsável) não encontrado.',
@@ -878,8 +919,9 @@ export async function servicePatchConveyorDados(
       }
     }
     patch.metadata_json = mergeConveyorMetadata(existing.metadata_json, {
-      colaboradorId: body.colaboradorId,
+      colaboradorId: dadosFields.colaboradorId,
     })
+    changedFields.push('colaboradorId')
   }
 
   const updated = await updateConveyorDados(pool, conveyorId, patch)
@@ -903,6 +945,30 @@ export async function servicePatchConveyorDados(
     occurredAt: new Date(),
   })
 
+  if (
+    (resolveOperationalStatusForPolicy(existing.operational_status) ??
+      existing.operational_status) !== 'EM_ELABORACAO' &&
+    editReason
+  ) {
+    await serviceCreateConveyorOperationalEvent(pool, {
+      conveyorId,
+      nodeId: null,
+      eventType: 'MANUAL_NOTE',
+      previousValue: null,
+      newValue: null,
+      reason: CONVEYOR_EDIT_REASON_CODE,
+      source: 'USER_ACTION',
+      occurredAt: new Date().toISOString(),
+      createdBy: options?.actorUserId ?? null,
+      metadataJson: {
+        kind: CONVEYOR_EDIT_REASON_CODE,
+        section: 'DATA',
+        changedFields,
+        reason: editReason,
+      },
+    })
+  }
+
   const nodes = await listActiveConveyorNodesByConveyorId(pool, conveyorId)
   const structure = await loadConveyorStructureWithAssignees(pool, conveyorId, nodes)
   return mapDetailRowToApi(updated, structure)
@@ -912,12 +978,20 @@ export async function serviceApplyConveyorStructureDiff(
   pool: pg.Pool,
   conveyorId: string,
   body: PatchConveyorStructureBody,
+  options?: { actorUserId?: string | null },
 ): Promise<ConveyorDetailApi | null> {
   const existingProbe = await findConveyorById(pool, conveyorId)
   if (!existingProbe) return null
 
-  revalidateStructureOptions(body.options)
-  const assigneeTargets = collectAssigneeTargetsFromOptions(body.options)
+  // reason nunca vai para colunas de conveyors — só metadata do evento.
+  const { reason: reasonFromBody, ...structureBody } = body
+  const editReason = requireUserReasonOutsideBacklog(
+    existingProbe.operational_status,
+    reasonFromBody,
+  )
+
+  revalidateStructureOptions(structureBody.options)
+  const assigneeTargets = collectAssigneeTargetsFromOptions(structureBody.options)
   for (const cid of assigneeTargets.collaboratorIds) {
     const ok = await collaboratorActiveForOperations(pool, cid)
     if (!ok) {
@@ -939,7 +1013,7 @@ export async function serviceApplyConveyorStructureDiff(
     }
   }
 
-  const officialRollupPatch = detectSyntheticSubtreeRollupInCreatePayload(body)
+  const officialRollupPatch = detectSyntheticSubtreeRollupInCreatePayload(structureBody)
   if (officialRollupPatch.length > 0) {
     throw new AppError(
       'A estrutura contém uma etapa sintética de Matriz. Remova o item agregado e mantenha apenas as atividades reais.',
@@ -954,7 +1028,7 @@ export async function serviceApplyConveyorStructureDiff(
     )
   }
 
-  const totals = computeTotalsForOptions(body.options)
+  const totals = computeTotalsForOptions(structureBody.options)
 
   const client = await pool.connect()
   try {
@@ -968,7 +1042,7 @@ export async function serviceApplyConveyorStructureDiff(
 
     const activeNodes = await listActiveConveyorNodesByConveyorId(client, conveyorId)
     const computed = computeConveyorStructureDiff({
-      options: body.options,
+      options: structureBody.options,
       activeNodes: activeNodes.map((n) => ({
         id: n.id,
         parent_id: n.parent_id,
@@ -988,7 +1062,9 @@ export async function serviceApplyConveyorStructureDiff(
 
     const metaNext = mergeConveyorMetadata(existing.metadata_json, {
       matrixRootItemId:
-        body.matrixRootItemId === undefined ? undefined : body.matrixRootItemId,
+        structureBody.matrixRootItemId === undefined
+          ? undefined
+          : structureBody.matrixRootItemId,
     })
 
     const statusForLateAdd =
@@ -1126,11 +1202,11 @@ export async function serviceApplyConveyorStructureDiff(
     }
 
     await updateConveyorStructureMeta(client, conveyorId, {
-      origin_register: body.originType,
-      base_ref_snapshot: body.baseId ?? null,
-      base_code_snapshot: body.baseCode ?? null,
-      base_name_snapshot: body.baseName ?? null,
-      base_version_snapshot: body.baseVersion ?? null,
+      origin_register: structureBody.originType,
+      base_ref_snapshot: structureBody.baseId ?? null,
+      base_code_snapshot: structureBody.baseCode ?? null,
+      base_name_snapshot: structureBody.baseName ?? null,
+      base_version_snapshot: structureBody.baseVersion ?? null,
       metadata_json: metaNext,
       total_options: totals.totalOptions,
       total_areas: totals.totalAreas,
@@ -1147,13 +1223,14 @@ export async function serviceApplyConveyorStructureDiff(
       reason: INCREMENTAL_STRUCTURE_EDIT_REASON,
       source: 'USER_ACTION',
       occurredAt: occurredIso,
-      createdBy: null,
+      createdBy: options?.actorUserId ?? null,
       metadataJson: {
         updatedNodeIds: updatedIds,
         insertedNodeIds: insertedIds,
         softDeactivatedNodeIds: softDeactivatedIds,
         hardDeletedNodeIds: hardDeletedIds,
         lateAddApplied: markLateAdd,
+        ...(editReason ? { reason: editReason } : {}),
       },
     })
 

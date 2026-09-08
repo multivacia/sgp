@@ -353,3 +353,6 @@ export function shouldMarkLateAddForNewSteps(operationalStatus: string): boolean
 }
 
 export const INCREMENTAL_STRUCTURE_EDIT_REASON = 'INCREMENTAL_STRUCTURE_EDIT'
+
+/** Código curto na coluna `reason` (VARCHAR 120) para edição de dados fora do backlog. */
+export const CONVEYOR_EDIT_REASON_CODE = 'CONVEYOR_EDIT'

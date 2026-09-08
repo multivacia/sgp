@@ -136,6 +136,27 @@ describe('formatOperationalEventReasonLine', () => {
     ).toBe('Peça complementar solicitada pelo cliente')
   })
 
+  it('MANUAL_NOTE e CONVEYOR_STRUCTURE_UPDATED preferem metadata.reason', () => {
+    expect(
+      formatOperationalEventReasonLine(
+        ev({
+          eventType: 'MANUAL_NOTE',
+          reason: 'CONVEYOR_EDIT',
+          metadataJson: { reason: 'Correção de placa solicitada pelo cliente' },
+        }),
+      ),
+    ).toBe('Correção de placa solicitada pelo cliente')
+    expect(
+      formatOperationalEventReasonLine(
+        ev({
+          eventType: 'CONVEYOR_STRUCTURE_UPDATED',
+          reason: 'INCREMENTAL_STRUCTURE_EDIT',
+          metadataJson: { reason: 'Inclusão de etapa complementar' },
+        }),
+      ),
+    ).toBe('Inclusão de etapa complementar')
+  })
+
   it('LATE_STRUCTURE_APPEND sem metadata', () => {
     expect(
       formatOperationalEventReasonLine(

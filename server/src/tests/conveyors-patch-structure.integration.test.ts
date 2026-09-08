@@ -116,6 +116,107 @@ describe.skipIf(!hasDb)('conveyors PATCH structure/dados (integração)', () => 
     expect(res.body.error?.errorRef).not.toBe('SGP-API-HANDLER-001')
   })
 
+  it('PATCH dados em EM_ELABORACAO ok sem reason; EM_ANDAMENTO 422 sem e OK com reason+MANUAL_NOTE', async () => {
+    const { cid } = await createConveyor()
+    const okElab = await request(app)
+      .patch(`/api/v1/conveyors/${cid}`)
+      .set('Cookie', await sessionCookieForUser(pool, GOV_ADMIN_USER_ID, GOV_ADMIN_EMAIL))
+      .send({ nome: 'Ainda no backlog' })
+    expect(okElab.status).toBe(200)
+
+    await pool.query(
+      `UPDATE conveyors SET operational_status = 'EM_ANDAMENTO' WHERE id = $1::uuid`,
+      [cid],
+    )
+
+    const denied = await request(app)
+      .patch(`/api/v1/conveyors/${cid}`)
+      .set('Cookie', await sessionCookieForUser(pool, GOV_ADMIN_USER_ID, GOV_ADMIN_EMAIL))
+      .send({ nome: 'Sem motivo' })
+    expect(denied.status).toBe(422)
+    expect(denied.body.error?.code).toBe('VALIDATION_ERROR')
+
+    const userReason = 'Correção de nome solicitada pelo cliente'
+    const ok = await request(app)
+      .patch(`/api/v1/conveyors/${cid}`)
+      .set('Cookie', await sessionCookieForUser(pool, GOV_ADMIN_USER_ID, GOV_ADMIN_EMAIL))
+      .send({ nome: 'Com motivo', reason: userReason })
+    expect(ok.status).toBe(200)
+    expect(ok.body.data.name).toBe('Com motivo')
+
+    const ev = await pool.query<{
+      event_type: string
+      reason: string | null
+      metadata_json: {
+        kind?: string
+        section?: string
+        changedFields?: string[]
+        reason?: string
+      } | null
+    }>(
+      `SELECT event_type, reason, metadata_json FROM conveyor_operational_events
+       WHERE conveyor_id = $1::uuid AND event_type = 'MANUAL_NOTE'
+       ORDER BY created_at DESC LIMIT 1`,
+      [cid],
+    )
+    expect(ev.rows[0]?.reason).toBe('CONVEYOR_EDIT')
+    expect(ev.rows[0]?.metadata_json?.kind).toBe('CONVEYOR_EDIT')
+    expect(ev.rows[0]?.metadata_json?.section).toBe('DATA')
+    expect(ev.rows[0]?.metadata_json?.changedFields).toContain('nome')
+    expect(ev.rows[0]?.metadata_json?.reason).toBe(userReason)
+  })
+
+  it('PATCH structure em EM_ANDAMENTO sem reason retorna 422', async () => {
+    const { cid } = await createConveyor()
+    const det = await request(app)
+      .get(`/api/v1/conveyors/${cid}`)
+      .set('Cookie', await sessionCookieForUser(pool, GOV_ADMIN_USER_ID, GOV_ADMIN_EMAIL))
+    const optionId = det.body.data.structure.options[0].id as string
+    const areaId = det.body.data.structure.options[0].areas[0].id as string
+    const stepId = det.body.data.structure.options[0].areas[0].steps[0].id as string
+
+    await pool.query(
+      `UPDATE conveyors SET operational_status = 'EM_ANDAMENTO' WHERE id = $1::uuid`,
+      [cid],
+    )
+
+    const res = await request(app)
+      .patch(`/api/v1/conveyors/${cid}/structure`)
+      .set('Cookie', await sessionCookieForUser(pool, GOV_ADMIN_USER_ID, GOV_ADMIN_EMAIL))
+      .send({
+        originType: 'MANUAL',
+        options: [
+          {
+            id: optionId,
+            titulo: 'Opção A',
+            orderIndex: 1,
+            sourceOrigin: 'manual',
+            areas: [
+              {
+                id: areaId,
+                titulo: 'Área 1',
+                orderIndex: 1,
+                sourceOrigin: 'manual',
+                steps: [
+                  {
+                    id: stepId,
+                    titulo: 'Etapa sem motivo',
+                    orderIndex: 1,
+                    plannedMinutes: 30,
+                    sourceOrigin: 'manual',
+                    required: true,
+                    assignees: [],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      })
+    expect(res.status).toBe(422)
+    expect(res.body.error?.code).toBe('VALIDATION_ERROR')
+  })
+
   it('PATCH /api/v1/conveyors/:id/structure substitui estrutura em EM_ELABORACAO', async () => {
     const { cid } = await createConveyor()
     const res = await request(app)
@@ -224,7 +325,10 @@ describe.skipIf(!hasDb)('conveyors PATCH structure/dados (integração)', () => 
     const res = await request(app)
       .patch(`/api/v1/conveyors/${cid}`)
       .set('Cookie', await sessionCookieForUser(pool, GOV_ADMIN_USER_ID, GOV_ADMIN_EMAIL))
-      .send({ nome: 'Só dados atualizados' })
+      .send({
+        nome: 'Só dados atualizados',
+        reason: 'Atualização cadastral com plano operacional vinculado',
+      })
     expect(res.status).toBe(200)
     expect(res.body.data.name).toBe('Só dados atualizados')
     expect(res.body.error?.errorRef).not.toBe('SGP-API-HANDLER-001')
@@ -268,6 +372,7 @@ describe.skipIf(!hasDb)('conveyors PATCH structure/dados (integração)', () => 
       .send({
         originType: body.originType,
         options: body.options,
+        reason: 'Reestruturação com plano operacional vinculado',
       })
     expect(res.status).toBe(200)
     expect(res.body.error?.errorRef).not.toBe('SGP-API-HANDLER-001')
@@ -404,6 +509,7 @@ describe.skipIf(!hasDb)('conveyors PATCH structure/dados (integração)', () => 
         .set('Cookie', await sessionCookieForUser(pool, GOV_ADMIN_USER_ID, GOV_ADMIN_EMAIL))
         .send({
           originType: 'MANUAL',
+          reason: `Ajuste estrutural em status ${status}`,
           options: [
             {
               id: optionId,
@@ -436,6 +542,18 @@ describe.skipIf(!hasDb)('conveyors PATCH structure/dados (integração)', () => 
       expect(res.body.data.operationalStatus).toBe(status)
       expect(res.body.data.structure.options[0].areas[0].steps[0].id).toBe(stepId)
       expect(res.body.data.structure.options[0].areas[0].steps[0].name).toBe(`Etapa ${status}`)
+
+      const ev = await pool.query<{
+        reason: string | null
+        metadata_json: { reason?: string } | null
+      }>(
+        `SELECT reason, metadata_json FROM conveyor_operational_events
+         WHERE conveyor_id = $1::uuid AND event_type = 'CONVEYOR_STRUCTURE_UPDATED'
+         ORDER BY created_at DESC LIMIT 1`,
+        [cid],
+      )
+      expect(ev.rows[0]?.reason).toBe('INCREMENTAL_STRUCTURE_EDIT')
+      expect(ev.rows[0]?.metadata_json?.reason).toBe(`Ajuste estrutural em status ${status}`)
     }
   })
 
@@ -458,6 +576,7 @@ describe.skipIf(!hasDb)('conveyors PATCH structure/dados (integração)', () => 
       .set('Cookie', await sessionCookieForUser(pool, GOV_ADMIN_USER_ID, GOV_ADMIN_EMAIL))
       .send({
         originType: 'MANUAL',
+        reason: 'Inclusão tardia via sync incremental',
         options: [
           {
             id: optionId,
@@ -506,6 +625,18 @@ describe.skipIf(!hasDb)('conveyors PATCH structure/dados (integração)', () => 
     )
     expect(meta.rows[0]?.metadata_json?.lateAddToWeeklyBacklog).toBe(true)
     expect(meta.rows[0]?.metadata_json?.lateAddReason).toBe('INCREMENTAL_STRUCTURE_EDIT')
+
+    const ev = await pool.query<{
+      reason: string | null
+      metadata_json: { reason?: string } | null
+    }>(
+      `SELECT reason, metadata_json FROM conveyor_operational_events
+       WHERE conveyor_id = $1::uuid AND event_type = 'CONVEYOR_STRUCTURE_UPDATED'
+       ORDER BY created_at DESC LIMIT 1`,
+      [cid],
+    )
+    expect(ev.rows[0]?.reason).toBe('INCREMENTAL_STRUCTURE_EDIT')
+    expect(ev.rows[0]?.metadata_json?.reason).toBe('Inclusão tardia via sync incremental')
   })
 
   it('PATCH structure com id de outra esteira retorna 422', async () => {

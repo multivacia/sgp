@@ -269,11 +269,35 @@ export const postConveyorBodySchema = z.object({
 
 export type PostConveyorBody = z.infer<typeof postConveyorBodySchema>
 
-/** PATCH /api/v1/conveyors/:id — pelo menos um campo. */
+/**
+ * Motivo livre do usuário (3..500).
+ * A coluna `conveyor_operational_events.reason` é VARCHAR(120) — não gravar este texto lá;
+ * usar código curto na coluna e o texto em `metadata_json.reason` (padrão late-append).
+ */
+export const conveyorUserReasonSchema = z
+  .string()
+  .transform((s) => s.trim())
+  .pipe(
+    z
+      .string()
+      .min(3, 'Motivo deve ter entre 3 e 500 caracteres.')
+      .max(500, 'Motivo deve ter entre 3 e 500 caracteres.'),
+  )
+
+/** @deprecated Preferir `conveyorUserReasonSchema` (mesmo contrato). */
+const lateAppendReasonSchema = conveyorUserReasonSchema
+
+/** PATCH /api/v1/conveyors/:id — pelo menos um campo de dados (reason não conta). */
 export const patchConveyorDadosBodySchema = postConveyorDadosSchema
   .partial()
+  .extend({
+    reason: conveyorUserReasonSchema.optional(),
+  })
   .superRefine((data, ctx) => {
-    const keys = Object.keys(data).filter((k) => data[k as keyof typeof data] !== undefined)
+    const keys = Object.keys(data).filter((k) => {
+      if (k === 'reason') return false
+      return data[k as keyof typeof data] !== undefined
+    })
     if (keys.length === 0) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
@@ -293,6 +317,7 @@ export const patchConveyorStructureBodySchema = z.object({
   baseVersion: z.number().int().positive().nullable().optional(),
   matrixRootItemId: z.string().uuid().nullable().optional(),
   options: z.array(postConveyorOptionSchema).min(1),
+  reason: conveyorUserReasonSchema.optional(),
 })
 
 export type PatchConveyorStructureBody = z.infer<
@@ -300,16 +325,6 @@ export type PatchConveyorStructureBody = z.infer<
 >
 
 export type PostConveyorOptionBody = z.infer<typeof postConveyorOptionSchema>
-
-const lateAppendReasonSchema = z
-  .string()
-  .transform((s) => s.trim())
-  .pipe(
-    z
-      .string()
-      .min(3, 'Motivo deve ter entre 3 e 500 caracteres.')
-      .max(500, 'Motivo deve ter entre 3 e 500 caracteres.'),
-  )
 
 const lateAppendCommonFields = {
   reason: lateAppendReasonSchema,

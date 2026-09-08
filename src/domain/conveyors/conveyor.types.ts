@@ -240,7 +240,10 @@ export type ConveyorDetail = {
 }
 
 /** PATCH /api/v1/conveyors/:id — campos opcionais (≥1). */
-export type PatchConveyorDadosBody = Partial<CreateConveyorDados>
+export type PatchConveyorDadosBody = Partial<CreateConveyorDados> & {
+  /** Motivo 3..500 obrigatório fora de EM_ELABORACAO; vai para metadata do evento. */
+  reason?: string
+}
 
 /** PATCH /api/v1/conveyors/:id/structure — substitui árvore (regras no servidor). */
 export type PatchConveyorStructureBody = {
@@ -251,6 +254,8 @@ export type PatchConveyorStructureBody = {
   baseVersion?: number | null
   matrixRootItemId?: string | null
   options: CreateConveyorOptionInput[]
+  /** Motivo 3..500 obrigatório fora de EM_ELABORACAO; vai para metadata do evento. */
+  reason?: string
 }
 
 /** POST /api/v1/conveyors/:id/structure/items — inclusão tardia multinível (append-only). */

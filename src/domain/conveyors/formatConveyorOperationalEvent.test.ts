@@ -90,4 +90,20 @@ describe('formatConveyorOperationalEvent', () => {
     expect(out.label).toBe('Evento operacional')
     expect(out.category).toBe('other')
   })
+
+  it('MANUAL_NOTE e CONVEYOR_STRUCTURE_UPDATED preferem metadata.reason na descrição', () => {
+    const note = formatConveyorOperationalEvent({
+      ...base('MANUAL_NOTE'),
+      reason: 'CONVEYOR_EDIT',
+      metadataJson: { reason: 'Correção de placa solicitada pelo cliente' },
+    })
+    expect(note.description).toBe('Correção de placa solicitada pelo cliente')
+
+    const structure = formatConveyorOperationalEvent({
+      ...base('CONVEYOR_STRUCTURE_UPDATED'),
+      reason: 'INCREMENTAL_STRUCTURE_EDIT',
+      metadataJson: { reason: 'Inclusão de etapa complementar' },
+    })
+    expect(structure.description).toBe('Inclusão de etapa complementar')
+  })
 })

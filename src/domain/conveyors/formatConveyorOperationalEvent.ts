@@ -137,8 +137,20 @@ export function formatConveyorOperationalEvent(
         event.reason?.trim() ||
           'A esteira saiu da fila de produção para ajuste de planejamento.',
       )
-    case 'MANUAL_NOTE':
-      return baseDisplay(event, event.reason?.trim() || 'Observação operacional registrada.')
+    case 'CONVEYOR_STRUCTURE_UPDATED': {
+      const reasonLine = formatOperationalEventReasonLine(event)
+      return baseDisplay(
+        event,
+        reasonLine ?? 'A estrutura da esteira foi atualizada.',
+      )
+    }
+    case 'MANUAL_NOTE': {
+      const reasonLine = formatOperationalEventReasonLine(event)
+      return baseDisplay(
+        event,
+        reasonLine || 'Observação operacional registrada.',
+      )
+    }
     default:
       return baseDisplay(event, event.reason?.trim() || 'Evento operacional registrado.')
   }

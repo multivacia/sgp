@@ -75,8 +75,12 @@ import {
   LATE_STRUCTURE_APPEND_SUCCESS_MESSAGE,
   resolveCanSaveConveyorChanges,
   resolveConveyorEditSubmitPlan,
+  shouldPromptEditReason,
   shouldValidateStructureOnSubmit,
+  validateConveyorEditReason,
+  withSharedEditReason,
 } from './conveyorEditSavePolicy'
+import { ConveyorEditReasonDialog } from './ConveyorEditReasonDialog'
 import {
   buildDadosParaApi,
   parseWizardExtrasFromPersisted,
@@ -217,6 +221,9 @@ export function ConveyorCreateEditPage({ mode }: { mode: Mode }) {
 
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
+  const [editReasonOpen, setEditReasonOpen] = useState(false)
+  const [editReasonDraft, setEditReasonDraft] = useState('')
+  const [editReasonError, setEditReasonError] = useState<string | null>(null)
   const [dupHint, setDupHint] = useState<string | null>(null)
   const [estruturaHint, setEstruturaHint] = useState<string | null>(null)
   const [abortDialog, setAbortDialog] = useState<{
@@ -740,66 +747,167 @@ export function ConveyorCreateEditPage({ mode }: { mode: Mode }) {
     ],
   )
 
+  async function persistEditChanges(editReason?: string) {
+    if (!detailId) throw new Error('ID da esteira ausente para atualização.')
+    const dadosApi = buildDadosParaApi(dados, extras)
+    const assignMap: Record<string, CreateConveyorStepAssigneeInput[]> = {}
+    for (const op of manualRoots)
+      for (const ar of op.areas)
+        for (const st of ar.steps) {
+          const rows = manualAloc[st.key] ?? []
+          if (rows.length > 0) assignMap[st.key] = manualAssigneeRowsToApi(rows)
+        }
+    const submitPlan = resolveConveyorEditSubmitPlan({
+      mode,
+      hasDadosChanges,
+      hasStructureChanges,
+      canReplaceStructure,
+    })
+    const reason =
+      editReason?.trim() &&
+      shouldPromptEditReason({
+        mode,
+        status: operationalStatus,
+        patchDados: submitPlan.patchDados,
+        patchStructure: submitPlan.patchStructure,
+      })
+        ? editReason.trim()
+        : undefined
+
+    if (submitPlan.patchDados) {
+      await patchConveyorDados(
+        detailId,
+        withSharedEditReason(dirtyDadosPatch as PatchConveyorDadosBody, reason),
+      )
+    }
+    if (submitPlan.patchStructure) {
+      const body = buildManualConveyorInput(dadosApi, manualRoots, assignMap, {
+        persistedNodeIds: baselinePersistedNodeIds,
+      })
+      await patchConveyorStructure(
+        detailId,
+        withSharedEditReason(
+          {
+            originType: body.originType,
+            baseId: body.baseId ?? null,
+            baseCode: body.baseCode ?? null,
+            baseName: body.baseName ?? null,
+            baseVersion: body.baseVersion ?? null,
+            matrixRootItemId: body.matrixRootItemId ?? null,
+            options: body.options,
+          },
+          reason,
+        ),
+      )
+    }
+    setEditReasonOpen(false)
+    setEditReasonDraft('')
+    setEditReasonError(null)
+    navigate(`/app/esteiras/${encodeURIComponent(detailId)}`, {
+      replace: true,
+      state: { sgpToast: 'Esteira atualizada com sucesso.', fromNovaEsteira: false },
+    })
+  }
+
   async function handleSubmit() {
     if (shouldValidateStructureOnSubmit({ mode, hasStructureChanges })) {
       const s = validateManualStructure(manualRoots)
       const a = validateManualStepAssignees(manualRoots, manualAloc)
       if (s || a) return setSubmitError(s ?? a ?? null)
     }
-    const assignMap: Record<string, CreateConveyorStepAssigneeInput[]> = {}
-    for (const op of manualRoots) for (const ar of op.areas) for (const st of ar.steps) {
-      const rows = manualAloc[st.key] ?? []
-      if (rows.length > 0) assignMap[st.key] = manualAssigneeRowsToApi(rows)
-    }
     setSubmitError(null)
-    setSubmitting(true)
-    try {
-      const dadosApi = buildDadosParaApi(dados, extras)
-      if (mode === 'create') {
-        const created = await createConveyor(buildManualConveyorInput(dadosApi, manualRoots, assignMap))
+    if (mode === 'create') {
+      setSubmitting(true)
+      try {
+        const dadosApi = buildDadosParaApi(dados, extras)
+        const assignMap: Record<string, CreateConveyorStepAssigneeInput[]> = {}
+        for (const op of manualRoots)
+          for (const ar of op.areas)
+            for (const st of ar.steps) {
+              const rows = manualAloc[st.key] ?? []
+              if (rows.length > 0) assignMap[st.key] = manualAssigneeRowsToApi(rows)
+            }
+        const created = await createConveyor(
+          buildManualConveyorInput(dadosApi, manualRoots, assignMap),
+        )
         navigate(`/app/esteiras/${encodeURIComponent(created.id)}`, {
           replace: true,
           state: { sgpToast: 'Esteira criada com sucesso.', fromNovaEsteira: true },
         })
-        return
+      } catch (e) {
+        const n = reportClientError(e, {
+          module: 'esteiras',
+          action: 'nova_esteira_create_manual',
+          route: pathname,
+          entityId: detailId ?? undefined,
+        })
+        if (isBlockingSeverity(n.severity)) presentBlocking(n)
+        else setSubmitError(formatUserError(n))
+      } finally {
+        setSubmitting(false)
       }
-      if (!detailId) throw new Error('ID da esteira ausente para atualização.')
-      const submitPlan = resolveConveyorEditSubmitPlan({
+      return
+    }
+
+    const submitPlan = resolveConveyorEditSubmitPlan({
+      mode,
+      hasDadosChanges,
+      hasStructureChanges,
+      canReplaceStructure,
+    })
+    if (
+      shouldPromptEditReason({
         mode,
-        hasDadosChanges,
-        hasStructureChanges,
-        canReplaceStructure,
+        status: operationalStatus,
+        patchDados: submitPlan.patchDados,
+        patchStructure: submitPlan.patchStructure,
       })
-      if (submitPlan.patchDados) {
-        await patchConveyorDados(detailId, dirtyDadosPatch as PatchConveyorDadosBody)
-      }
-      if (submitPlan.patchStructure) {
-        const body = buildManualConveyorInput(dadosApi, manualRoots, assignMap, {
-          persistedNodeIds: baselinePersistedNodeIds,
-        })
-        await patchConveyorStructure(detailId, {
-          originType: body.originType,
-          baseId: body.baseId ?? null,
-          baseCode: body.baseCode ?? null,
-          baseName: body.baseName ?? null,
-          baseVersion: body.baseVersion ?? null,
-          matrixRootItemId: body.matrixRootItemId ?? null,
-          options: body.options,
-        })
-      }
-      navigate(`/app/esteiras/${encodeURIComponent(detailId)}`, {
-        replace: true,
-        state: { sgpToast: 'Esteira atualizada com sucesso.', fromNovaEsteira: false },
-      })
+    ) {
+      setEditReasonError(null)
+      setEditReasonOpen(true)
+      return
+    }
+
+    setSubmitting(true)
+    try {
+      await persistEditChanges()
     } catch (e) {
       const n = reportClientError(e, {
         module: 'esteiras',
-        action: mode === 'create' ? 'nova_esteira_create_manual' : 'alterar_esteira_submit',
+        action: 'alterar_esteira_submit',
         route: pathname,
         entityId: detailId ?? undefined,
       })
       if (isBlockingSeverity(n.severity)) presentBlocking(n)
       else setSubmitError(formatUserError(n))
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  async function handleConfirmEditReason() {
+    const err = validateConveyorEditReason(editReasonDraft)
+    if (err) {
+      setEditReasonError(err)
+      return
+    }
+    setEditReasonError(null)
+    setSubmitError(null)
+    setSubmitting(true)
+    try {
+      await persistEditChanges(editReasonDraft)
+    } catch (e) {
+      const n = reportClientError(e, {
+        module: 'esteiras',
+        action: 'alterar_esteira_submit',
+        route: pathname,
+        entityId: detailId ?? undefined,
+      })
+      if (isBlockingSeverity(n.severity)) presentBlocking(n)
+      else {
+        // Erro mantém o motivo no modal e o draft da esteira.
+        setSubmitError(formatUserError(n))
+      }
     } finally {
       setSubmitting(false)
     }
@@ -888,6 +996,24 @@ export function ConveyorCreateEditPage({ mode }: { mode: Mode }) {
           setStepAbortError(null)
         }}
         onConfirm={(payload) => void handleConfirmAbortStep(payload)}
+      />
+      <ConveyorEditReasonDialog
+        open={editReasonOpen}
+        busy={submitting}
+        reason={editReasonDraft}
+        reasonError={editReasonError}
+        submitError={editReasonOpen ? submitError : null}
+        onReasonChange={(value) => {
+          setEditReasonDraft(value)
+          if (editReasonError) setEditReasonError(null)
+        }}
+        onCancel={() => {
+          if (submitting) return
+          // Cancelar preserva o draft da esteira; só fecha o modal.
+          setEditReasonOpen(false)
+          setEditReasonError(null)
+        }}
+        onConfirm={() => void handleConfirmEditReason()}
       />
       <LateStructureAppendDrawer
         key={lateAppendIdempotencyKey ?? 'late-append-closed'}

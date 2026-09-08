@@ -1,9 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import {
   canReplaceConveyorStructure,
+  requiresEditReason,
   resolveCanSaveConveyorChanges,
   resolveConveyorEditSubmitPlan,
+  shouldPromptEditReason,
   shouldValidateStructureOnSubmit,
+  validateConveyorEditReason,
+  withSharedEditReason,
 } from './conveyorEditSavePolicy'
 
 describe('conveyorEditSavePolicy', () => {
@@ -119,6 +123,81 @@ describe('conveyorEditSavePolicy', () => {
     })
   })
 
+  describe('requiresEditReason / modal gate', () => {
+    it('não exige motivo em create', () => {
+      expect(requiresEditReason({ mode: 'create', status: 'EM_ANDAMENTO' })).toBe(false)
+    })
+
+    it('não exige motivo em EM_ELABORACAO (backlog)', () => {
+      expect(requiresEditReason({ mode: 'edit', status: 'EM_ELABORACAO' })).toBe(false)
+    })
+
+    it('não exige motivo com status null', () => {
+      expect(requiresEditReason({ mode: 'edit', status: null })).toBe(false)
+    })
+
+    it('exige motivo fora do backlog', () => {
+      expect(requiresEditReason({ mode: 'edit', status: 'EM_ANDAMENTO' })).toBe(true)
+      expect(requiresEditReason({ mode: 'edit', status: 'AGUARDANDO_PLANEJAMENTO' })).toBe(
+        true,
+      )
+    })
+
+    it('modal só abre com alteração real', () => {
+      expect(
+        shouldPromptEditReason({
+          mode: 'edit',
+          status: 'EM_ANDAMENTO',
+          patchDados: false,
+          patchStructure: false,
+        }),
+      ).toBe(false)
+      expect(
+        shouldPromptEditReason({
+          mode: 'edit',
+          status: 'EM_ANDAMENTO',
+          patchDados: true,
+          patchStructure: false,
+        }),
+      ).toBe(true)
+      expect(
+        shouldPromptEditReason({
+          mode: 'edit',
+          status: 'EM_ELABORACAO',
+          patchDados: true,
+          patchStructure: true,
+        }),
+      ).toBe(false)
+    })
+
+    it('valida motivo 3..500', () => {
+      expect(validateConveyorEditReason('ab')).toBe(
+        'Motivo deve ter entre 3 e 500 caracteres.',
+      )
+      expect(validateConveyorEditReason('   ')).toBe(
+        'Motivo deve ter entre 3 e 500 caracteres.',
+      )
+      expect(validateConveyorEditReason('ok.')).toBeNull()
+      expect(validateConveyorEditReason('x'.repeat(501))).toBe(
+        'Motivo deve ter entre 3 e 500 caracteres.',
+      )
+    })
+
+    it('mesmo reason nos dois patches quando ambos dirty', () => {
+      const reason = 'Ajuste solicitado pelo gestor de esteira'
+      const dados = withSharedEditReason({ nome: 'Novo' }, reason)
+      const structure = withSharedEditReason({ originType: 'MANUAL' as const }, reason)
+      expect(dados.reason).toBe(reason)
+      expect(structure.reason).toBe(reason)
+      expect(dados.reason).toBe(structure.reason)
+    })
+
+    it('cancel/sucesso: withSharedEditReason sem texto não anexa reason', () => {
+      expect(withSharedEditReason({ nome: 'A' }, undefined).reason).toBeUndefined()
+      expect(withSharedEditReason({ nome: 'A' }, '').reason).toBeUndefined()
+    })
+  })
+
   describe('canReplaceConveyorStructure (sync incremental)', () => {
     it('permite edição estrutural em EM_ELABORACAO e AGUARDANDO_PLANEJAMENTO', () => {
       expect(canReplaceConveyorStructure('EM_ELABORACAO')).toBe(true)
@@ -141,14 +220,6 @@ describe('conveyorEditSavePolicy', () => {
   })
 
   describe('inclusão tardia de item (append-only)', () => {
-    // A checagem de status para "Incluir novo item" foi removida da regra de
-    // negócio (agora liberada em qualquer status). Não há mais uma função
-    // dedicada em `conveyorEditSavePolicy.ts` para isso — a exibição do botão
-    // é controlada diretamente em `ConveyorCreateEditPage.tsx`
-    // (`showLateAppendAction = mode === 'edit' && canAlterConveyor`).
-    //
-    // Sync incremental também libera PATCH /structure em qualquer status;
-    // o botão de inclusão tardia permanece como atalho UX.
     it('canReplaceConveyorStructure liberada em EM_ANDAMENTO e FINALIZADA', () => {
       expect(canReplaceConveyorStructure('EM_ANDAMENTO')).toBe(true)
       expect(canReplaceConveyorStructure('FINALIZADA')).toBe(true)

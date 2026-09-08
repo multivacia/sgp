@@ -20,7 +20,9 @@ export async function patchConveyorDados(
   const id = conveyorIdParamSchema.parse(req.params.id)
   const body = patchConveyorDadosBodySchema.parse(req.body)
   const pool = req.app.locals.pool as pg.Pool
-  const data = await servicePatchConveyorDados(pool, id, body)
+  const data = await servicePatchConveyorDados(pool, id, body, {
+    actorUserId: req.authUser?.id ?? null,
+  })
   if (!data) {
     throw new AppError('Esteira não encontrada.', 404, ErrorCodes.NOT_FOUND)
   }
@@ -34,7 +36,9 @@ export async function patchConveyorStructure(
   const id = conveyorIdParamSchema.parse(req.params.id)
   const body = patchConveyorStructureBodySchema.parse(req.body)
   const pool = req.app.locals.pool as pg.Pool
-  const data = await serviceReplaceConveyorStructure(pool, id, body)
+  const data = await serviceReplaceConveyorStructure(pool, id, body, {
+    actorUserId: req.authUser?.id ?? null,
+  })
   if (!data) {
     throw new AppError('Esteira não encontrada.', 404, ErrorCodes.NOT_FOUND)
   }

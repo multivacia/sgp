@@ -268,7 +268,12 @@ export function formatOperationalEventReasonLine(event: ConveyorOperationalEvent
       (typeof m.lateAddReason === 'string' && m.lateAddReason.trim()) ||
       (typeof m.reason === 'string' && m.reason.trim()) ||
       null
-    if (event.eventType === 'CONVEYOR_STRUCTURE_ITEM_ADDED' && lateReason) {
+    if (
+      (event.eventType === 'CONVEYOR_STRUCTURE_ITEM_ADDED' ||
+        event.eventType === 'CONVEYOR_STRUCTURE_UPDATED' ||
+        event.eventType === 'MANUAL_NOTE') &&
+      lateReason
+    ) {
       return lateReason.length > 160 ? `${lateReason.slice(0, 157)}…` : lateReason
     }
     const snap =
@@ -301,6 +306,8 @@ export function formatOperationalEventReasonLine(event: ConveyorOperationalEvent
   if (!r) return null
   const u = r.toUpperCase()
   if (u === 'LATE_STRUCTURE_APPEND') return 'Inclusão tardia de item na estrutura.'
+  if (u === 'INCREMENTAL_STRUCTURE_EDIT') return 'Alteração incremental da estrutura.'
+  if (u === 'CONVEYOR_EDIT') return 'Alteração de dados da esteira.'
   if (u === 'EXPLICITLY_COMPLETED') return 'Conclusão registrada manualmente.'
   if (u === 'EXPLICITLY_REOPENED') return 'Reabertura registrada manualmente.'
   if (u === 'EXPLICITLY_RESTORED_FROM_ABORTED') return 'Restauração explícita de dispensa.'
