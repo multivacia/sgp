@@ -67,6 +67,7 @@ import { NOVA_ESTEIRA_DRAG_MIME, parseDragPayload } from './nova-esteira/novaEst
 import { useNovaEsteiraResponsaveisOptions } from './nova-esteira/useNovaEsteiraResponsaveisOptions'
 import {
   buildStructureBaselineFromApiDetail,
+  collectPersistedNodeIdsFromStructure,
   hasPersistableStructureChanges,
 } from './conveyorEditStructureSnapshot'
 import {
@@ -75,7 +76,6 @@ import {
   resolveCanSaveConveyorChanges,
   resolveConveyorEditSubmitPlan,
   shouldValidateStructureOnSubmit,
-  STRUCTURE_TAB_BLOCKED_UX_MESSAGE,
 } from './conveyorEditSavePolicy'
 import {
   buildDadosParaApi,
@@ -211,6 +211,9 @@ export function ConveyorCreateEditPage({ mode }: { mode: Mode }) {
   const [manualRoots, setManualRoots] = useState<ManualOptionDraft[]>([])
   const [manualAloc, setManualAloc] = useState<Record<string, NovaEsteiraAlocacaoLinha[]>>({})
   const [baselineStructureSig, setBaselineStructureSig] = useState('')
+  const [baselinePersistedNodeIds, setBaselinePersistedNodeIds] = useState<ReadonlySet<string>>(
+    () => new Set(),
+  )
 
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
@@ -266,6 +269,7 @@ export function ConveyorCreateEditPage({ mode }: { mode: Mode }) {
     setManualRoots(structureBaseline.roots)
     setManualAloc(structureBaseline.manualAloc)
     setBaselineStructureSig(structureBaseline.baselineStructureSig)
+    setBaselinePersistedNodeIds(collectPersistedNodeIdsFromStructure(loadedDetail.structure))
   }, [])
 
   useEffect(() => {
@@ -529,10 +533,9 @@ export function ConveyorCreateEditPage({ mode }: { mode: Mode }) {
       : true
   const canReplaceStructure =
     operationalStatus != null ? canReplaceConveyorStructure(operationalStatus) : true
-  const structureEditLocked = mode === 'edit' && !canReplaceStructure
-  // Inclusão tardia de item ("Incluir novo item") é liberada em qualquer
-  // status da esteira. Isso NÃO libera substituição de estrutura via
-  // PATCH /structure — ver `canReplaceStructure`/`structureEditLocked` acima.
+  // Sync incremental: estrutura editável em qualquer status (RBAC permanece).
+  const structureEditLocked = false
+  // Atalho UX de inclusão tardia (append-only) — permanece disponível.
   const showLateAppendAction = mode === 'edit' && canAlterConveyor
   const pendenciasRevisao = useMemo(() => {
     const basePendencias = pendenciasParaResumo(dados.nome, manualRoots, manualAloc)
@@ -771,7 +774,9 @@ export function ConveyorCreateEditPage({ mode }: { mode: Mode }) {
         await patchConveyorDados(detailId, dirtyDadosPatch as PatchConveyorDadosBody)
       }
       if (submitPlan.patchStructure) {
-        const body = buildManualConveyorInput(dadosApi, manualRoots, assignMap)
+        const body = buildManualConveyorInput(dadosApi, manualRoots, assignMap, {
+          persistedNodeIds: baselinePersistedNodeIds,
+        })
         await patchConveyorStructure(detailId, {
           originType: body.originType,
           baseId: body.baseId ?? null,
@@ -1099,13 +1104,10 @@ export function ConveyorCreateEditPage({ mode }: { mode: Mode }) {
 
         {aba === 'estrutura' && (
           <section className="space-y-4">
-            {structureEditLocked ? (
-              <SgpInlineBanner variant="neutral" message={STRUCTURE_TAB_BLOCKED_UX_MESSAGE} />
-            ) : null}
             {showLateAppendAction ? (
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <p className="text-xs text-slate-400">
-                  Estrutura existente em somente leitura. Você pode incluir um novo item ao final.
+                  Edite a estrutura normalmente ou use o atalho para incluir um novo item ao final.
                 </p>
                 <button
                   type="button"
@@ -1182,11 +1184,9 @@ export function ConveyorCreateEditPage({ mode }: { mode: Mode }) {
                     teamError={teamError}
                     variant="totem"
                     readOnly={structureEditLocked}
-                    canAbortStep={
-                      structureEditLocked ? canAbortManualStep : undefined
-                    }
+                    canAbortStep={mode === 'edit' ? canAbortManualStep : undefined}
                     onRequestAbortStep={
-                      structureEditLocked ? handleRequestAbortStep : undefined
+                      mode === 'edit' ? handleRequestAbortStep : undefined
                     }
                     abortingStepId={stepAbortingId}
                   />

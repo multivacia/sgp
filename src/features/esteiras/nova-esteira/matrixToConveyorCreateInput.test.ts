@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   buildCreateConveyorFromMatrixInput,
+  buildManualConveyorInput,
   listMatrixActivitySlots,
   manualAssigneeRowsToApi,
   mapMatrixTreeToConveyorOptions,
@@ -250,5 +251,66 @@ describe('manualAssigneeRowsToApi', () => {
       teamId: TEAM_ID,
       isPrimary: false,
     })
+  })
+})
+
+describe('buildManualConveyorInput (PATCH incremental)', () => {
+  it('omite id na criação (sem persistedNodeIds)', () => {
+    const roots: ManualOptionDraft[] = [
+      {
+        key: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+        titulo: 'Opção',
+        areas: [
+          {
+            key: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+            titulo: 'Área',
+            steps: [
+              {
+                key: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
+                titulo: 'Etapa',
+                plannedMinutes: 10,
+              },
+            ],
+          },
+        ],
+      },
+    ]
+    const input = buildManualConveyorInput({ nome: 'X' }, roots, {})
+    expect(input.options[0].id).toBeUndefined()
+    expect(input.options[0].areas[0].id).toBeUndefined()
+    expect(input.options[0].areas[0].steps[0].id).toBeUndefined()
+  })
+
+  it('envia id apenas para nós persistidos no baseline', () => {
+    const persistedOp = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+    const persistedAr = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'
+    const persistedSt = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc'
+    const newSt = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd'
+    const roots: ManualOptionDraft[] = [
+      {
+        key: persistedOp,
+        titulo: 'Opção',
+        areas: [
+          {
+            key: persistedAr,
+            titulo: 'Área',
+            steps: [
+              { key: persistedSt, titulo: 'Etapa antiga', plannedMinutes: 10 },
+              { key: newSt, titulo: 'Etapa nova', plannedMinutes: 5 },
+            ],
+          },
+        ],
+      },
+    ]
+    const input = buildManualConveyorInput(
+      { nome: 'X' },
+      roots,
+      {},
+      { persistedNodeIds: new Set([persistedOp, persistedAr, persistedSt]) },
+    )
+    expect(input.options[0].id).toBe(persistedOp)
+    expect(input.options[0].areas[0].id).toBe(persistedAr)
+    expect(input.options[0].areas[0].steps[0].id).toBe(persistedSt)
+    expect(input.options[0].areas[0].steps[1].id).toBeUndefined()
   })
 })

@@ -230,12 +230,13 @@ describe.skipIf(!hasDb)('conveyors PATCH structure/dados (integração)', () => 
     expect(res.body.error?.errorRef).not.toBe('SGP-API-HANDLER-001')
   })
 
-  it('PATCH structure com plano operacional vinculado retorna erro de domínio (não 500)', async () => {
+  it('PATCH structure com plano operacional vinculado soft-desativa STEP com deps (não 409)', async () => {
     const { cid, body } = await createConveyor()
     const det = await request(app)
       .get(`/api/v1/conveyors/${cid}`)
       .set('Cookie', await sessionCookieForUser(pool, GOV_ADMIN_USER_ID, GOV_ADMIN_EMAIL))
     const stepId = det.body.data.structure.options[0].areas[0].steps[0].id as string
+    const optionId = det.body.data.structure.options[0].id as string
 
     await pool.query(
       `UPDATE conveyors SET operational_status = 'AGUARDANDO_PLANEJAMENTO' WHERE id = $1::uuid`,
@@ -260,6 +261,7 @@ describe.skipIf(!hasDb)('conveyors PATCH structure/dados (integração)', () => 
       [randomUUID(), planId, cid, stepId],
     )
 
+    // Payload sem ids → remoção híbrida do STEP com plano (soft) + insert novo
     const res = await request(app)
       .patch(`/api/v1/conveyors/${cid}/structure`)
       .set('Cookie', await sessionCookieForUser(pool, GOV_ADMIN_USER_ID, GOV_ADMIN_EMAIL))
@@ -267,10 +269,83 @@ describe.skipIf(!hasDb)('conveyors PATCH structure/dados (integração)', () => 
         originType: body.originType,
         options: body.options,
       })
-    expect(res.status).toBe(409)
-    expect(res.body.error?.code).toBe('CONVEYOR_STRUCTURE_REPLACE_HAS_DEPENDENCIES')
+    expect(res.status).toBe(200)
     expect(res.body.error?.errorRef).not.toBe('SGP-API-HANDLER-001')
-    expect(res.body.error?.message).toContain('planejamento')
+
+    const oldStep = await pool.query<{ is_active: boolean }>(
+      `SELECT is_active FROM conveyor_nodes WHERE id = $1::uuid`,
+      [stepId],
+    )
+    expect(oldStep.rows[0]?.is_active).toBe(false)
+
+    // Detalhe não expõe nó inativo
+    const activeOptionIds = (res.body.data.structure.options as Array<{ id: string }>).map(
+      (o) => o.id,
+    )
+    expect(activeOptionIds).not.toContain(optionId)
+    expect(
+      res.body.data.structure.options[0].areas[0].steps.some(
+        (s: { id: string }) => s.id === stepId,
+      ),
+    ).toBe(false)
+  })
+
+  it('PATCH structure com ids preserva STEP e emite CONVEYOR_STRUCTURE_UPDATED', async () => {
+    const { cid } = await createConveyor()
+    const det = await request(app)
+      .get(`/api/v1/conveyors/${cid}`)
+      .set('Cookie', await sessionCookieForUser(pool, GOV_ADMIN_USER_ID, GOV_ADMIN_EMAIL))
+    const optionId = det.body.data.structure.options[0].id as string
+    const areaId = det.body.data.structure.options[0].areas[0].id as string
+    const stepId = det.body.data.structure.options[0].areas[0].steps[0].id as string
+
+    const res = await request(app)
+      .patch(`/api/v1/conveyors/${cid}/structure`)
+      .set('Cookie', await sessionCookieForUser(pool, GOV_ADMIN_USER_ID, GOV_ADMIN_EMAIL))
+      .send({
+        originType: 'MANUAL',
+        options: [
+          {
+            id: optionId,
+            titulo: 'Opção A',
+            orderIndex: 1,
+            sourceOrigin: 'manual',
+            areas: [
+              {
+                id: areaId,
+                titulo: 'Área 1',
+                orderIndex: 1,
+                sourceOrigin: 'manual',
+                steps: [
+                  {
+                    id: stepId,
+                    titulo: 'Etapa preservada',
+                    orderIndex: 1,
+                    plannedMinutes: 40,
+                    sourceOrigin: 'manual',
+                    required: true,
+                    assignees: [],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      })
+    expect(res.status).toBe(200)
+    expect(res.body.data.structure.options[0].areas[0].steps[0].id).toBe(stepId)
+    expect(res.body.data.structure.options[0].areas[0].steps[0].name).toBe(
+      'Etapa preservada',
+    )
+    expect(res.body.data.totalPlannedMinutes).toBe(40)
+
+    const ev = await pool.query<{ event_type: string }>(
+      `SELECT event_type FROM conveyor_operational_events
+       WHERE conveyor_id = $1::uuid AND event_type = 'CONVEYOR_STRUCTURE_UPDATED'
+       ORDER BY created_at DESC LIMIT 1`,
+      [cid],
+    )
+    expect(ev.rows[0]?.event_type).toBe('CONVEYOR_STRUCTURE_UPDATED')
   })
 
   it('PATCH structure com plannedQuantity inválida retorna 422 específico', async () => {
@@ -307,5 +382,244 @@ describe.skipIf(!hasDb)('conveyors PATCH structure/dados (integração)', () => 
     expect(res.status).toBe(422)
     expect(res.body.error?.errorRef).not.toBe('SGP-API-HANDLER-001')
     expect(res.body.error?.code).toBe('VALIDATION_ERROR')
+  })
+
+  it('PATCH structure em EM_ANDAMENTO e FINALIZADA preserva IDs e status da esteira', async () => {
+    for (const status of ['EM_ANDAMENTO', 'FINALIZADA', 'CANCELADA'] as const) {
+      const { cid } = await createConveyor()
+      const det = await request(app)
+        .get(`/api/v1/conveyors/${cid}`)
+        .set('Cookie', await sessionCookieForUser(pool, GOV_ADMIN_USER_ID, GOV_ADMIN_EMAIL))
+      const optionId = det.body.data.structure.options[0].id as string
+      const areaId = det.body.data.structure.options[0].areas[0].id as string
+      const stepId = det.body.data.structure.options[0].areas[0].steps[0].id as string
+
+      await pool.query(
+        `UPDATE conveyors SET operational_status = $2 WHERE id = $1::uuid`,
+        [cid, status],
+      )
+
+      const res = await request(app)
+        .patch(`/api/v1/conveyors/${cid}/structure`)
+        .set('Cookie', await sessionCookieForUser(pool, GOV_ADMIN_USER_ID, GOV_ADMIN_EMAIL))
+        .send({
+          originType: 'MANUAL',
+          options: [
+            {
+              id: optionId,
+              titulo: 'Opção A',
+              orderIndex: 1,
+              sourceOrigin: 'manual',
+              areas: [
+                {
+                  id: areaId,
+                  titulo: 'Área 1',
+                  orderIndex: 1,
+                  sourceOrigin: 'manual',
+                  steps: [
+                    {
+                      id: stepId,
+                      titulo: `Etapa ${status}`,
+                      orderIndex: 1,
+                      plannedMinutes: 55,
+                      sourceOrigin: 'manual',
+                      required: true,
+                      assignees: [],
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+        })
+      expect(res.status).toBe(200)
+      expect(res.body.data.operationalStatus).toBe(status)
+      expect(res.body.data.structure.options[0].areas[0].steps[0].id).toBe(stepId)
+      expect(res.body.data.structure.options[0].areas[0].steps[0].name).toBe(`Etapa ${status}`)
+    }
+  })
+
+  it('PATCH structure com STEP novo em status avançado marca lateAddToWeeklyBacklog', async () => {
+    const { cid } = await createConveyor()
+    const det = await request(app)
+      .get(`/api/v1/conveyors/${cid}`)
+      .set('Cookie', await sessionCookieForUser(pool, GOV_ADMIN_USER_ID, GOV_ADMIN_EMAIL))
+    const optionId = det.body.data.structure.options[0].id as string
+    const areaId = det.body.data.structure.options[0].areas[0].id as string
+    const stepId = det.body.data.structure.options[0].areas[0].steps[0].id as string
+
+    await pool.query(
+      `UPDATE conveyors SET operational_status = 'EM_ANDAMENTO' WHERE id = $1::uuid`,
+      [cid],
+    )
+
+    const res = await request(app)
+      .patch(`/api/v1/conveyors/${cid}/structure`)
+      .set('Cookie', await sessionCookieForUser(pool, GOV_ADMIN_USER_ID, GOV_ADMIN_EMAIL))
+      .send({
+        originType: 'MANUAL',
+        options: [
+          {
+            id: optionId,
+            titulo: 'Opção A',
+            orderIndex: 1,
+            sourceOrigin: 'manual',
+            areas: [
+              {
+                id: areaId,
+                titulo: 'Área 1',
+                orderIndex: 1,
+                sourceOrigin: 'manual',
+                steps: [
+                  {
+                    id: stepId,
+                    titulo: 'Etapa 1',
+                    orderIndex: 1,
+                    plannedMinutes: 30,
+                    sourceOrigin: 'manual',
+                    required: true,
+                    assignees: [],
+                  },
+                  {
+                    titulo: 'Etapa tardia',
+                    orderIndex: 2,
+                    plannedMinutes: 15,
+                    sourceOrigin: 'manual',
+                    required: true,
+                    assignees: [],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      })
+    expect(res.status).toBe(200)
+    const newStepId = (
+      res.body.data.structure.options[0].areas[0].steps as Array<{ id: string; name: string }>
+    ).find((s) => s.name === 'Etapa tardia')?.id
+    expect(newStepId).toBeTruthy()
+
+    const meta = await pool.query<{ metadata_json: { lateAddToWeeklyBacklog?: boolean; lateAddReason?: string } }>(
+      `SELECT metadata_json FROM conveyor_nodes WHERE id = $1::uuid`,
+      [newStepId],
+    )
+    expect(meta.rows[0]?.metadata_json?.lateAddToWeeklyBacklog).toBe(true)
+    expect(meta.rows[0]?.metadata_json?.lateAddReason).toBe('INCREMENTAL_STRUCTURE_EDIT')
+  })
+
+  it('PATCH structure com id de outra esteira retorna 422', async () => {
+    const a = await createConveyor()
+    const b = await createConveyor()
+    const detB = await request(app)
+      .get(`/api/v1/conveyors/${b.cid}`)
+      .set('Cookie', await sessionCookieForUser(pool, GOV_ADMIN_USER_ID, GOV_ADMIN_EMAIL))
+    const foreignStepId = detB.body.data.structure.options[0].areas[0].steps[0].id as string
+
+    const detA = await request(app)
+      .get(`/api/v1/conveyors/${a.cid}`)
+      .set('Cookie', await sessionCookieForUser(pool, GOV_ADMIN_USER_ID, GOV_ADMIN_EMAIL))
+    const optionId = detA.body.data.structure.options[0].id as string
+    const areaId = detA.body.data.structure.options[0].areas[0].id as string
+
+    const res = await request(app)
+      .patch(`/api/v1/conveyors/${a.cid}/structure`)
+      .set('Cookie', await sessionCookieForUser(pool, GOV_ADMIN_USER_ID, GOV_ADMIN_EMAIL))
+      .send({
+        originType: 'MANUAL',
+        options: [
+          {
+            id: optionId,
+            titulo: 'Opção A',
+            orderIndex: 1,
+            sourceOrigin: 'manual',
+            areas: [
+              {
+                id: areaId,
+                titulo: 'Área 1',
+                orderIndex: 1,
+                sourceOrigin: 'manual',
+                steps: [
+                  {
+                    id: foreignStepId,
+                    titulo: 'Cross',
+                    orderIndex: 1,
+                    plannedMinutes: 10,
+                    sourceOrigin: 'manual',
+                    required: true,
+                    assignees: [],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      })
+    expect(res.status).toBe(422)
+    expect(res.body.error?.code).toBe('VALIDATION_ERROR')
+  })
+
+  it('PATCH structure soft-desativa STEP COMPLETED sem time entry', async () => {
+    const { cid } = await createConveyor()
+    const det = await request(app)
+      .get(`/api/v1/conveyors/${cid}`)
+      .set('Cookie', await sessionCookieForUser(pool, GOV_ADMIN_USER_ID, GOV_ADMIN_EMAIL))
+    const optionId = det.body.data.structure.options[0].id as string
+    const areaId = det.body.data.structure.options[0].areas[0].id as string
+    const stepId = det.body.data.structure.options[0].areas[0].steps[0].id as string
+
+    await pool.query(
+      `UPDATE conveyor_nodes
+          SET operational_status = 'COMPLETED',
+              operational_completed_at = now()
+        WHERE id = $1::uuid`,
+      [stepId],
+    )
+
+    const res = await request(app)
+      .patch(`/api/v1/conveyors/${cid}/structure`)
+      .set('Cookie', await sessionCookieForUser(pool, GOV_ADMIN_USER_ID, GOV_ADMIN_EMAIL))
+      .send({
+        originType: 'MANUAL',
+        options: [
+          {
+            id: optionId,
+            titulo: 'Opção A',
+            orderIndex: 1,
+            sourceOrigin: 'manual',
+            areas: [
+              {
+                id: areaId,
+                titulo: 'Área 1',
+                orderIndex: 1,
+                sourceOrigin: 'manual',
+                steps: [
+                  {
+                    titulo: 'Substituto',
+                    orderIndex: 1,
+                    plannedMinutes: 20,
+                    sourceOrigin: 'manual',
+                    required: true,
+                    assignees: [],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      })
+    expect(res.status).toBe(200)
+    const row = await pool.query<{
+      is_active: boolean
+      operational_status: string
+      operational_completed_at: Date | null
+    }>(
+      `SELECT is_active, operational_status, operational_completed_at
+         FROM conveyor_nodes WHERE id = $1::uuid`,
+      [stepId],
+    )
+    expect(row.rows[0]?.is_active).toBe(false)
+    expect(row.rows[0]?.operational_status).toBe('COMPLETED')
+    expect(row.rows[0]?.operational_completed_at).toBeTruthy()
   })
 })

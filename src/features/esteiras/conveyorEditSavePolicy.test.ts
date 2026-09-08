@@ -41,15 +41,15 @@ describe('conveyorEditSavePolicy', () => {
       ).toBe(false)
     })
 
-    it('bloqueia salvar de estrutura em produção mesmo com estruturaOk=true', () => {
+    it('habilita salvar estrutura quando canReplaceStructure=true e estruturaOk=true', () => {
       expect(
         resolveCanSaveConveyorChanges({
           hasDadosChanges: false,
           hasStructureChanges: true,
           estruturaOk: true,
-          canReplaceStructure: false,
+          canReplaceStructure: true,
         }),
-      ).toBe(false)
+      ).toBe(true)
     })
   })
 
@@ -80,7 +80,7 @@ describe('conveyorEditSavePolicy', () => {
           mode: 'edit',
           hasDadosChanges: true,
           hasStructureChanges: false,
-          canReplaceStructure: false,
+          canReplaceStructure: true,
         }),
       ).toEqual({ patchDados: true, patchStructure: false })
     })
@@ -96,18 +96,18 @@ describe('conveyorEditSavePolicy', () => {
       ).toEqual({ patchDados: true, patchStructure: false })
     })
 
-    it('não chama PATCH structure em produção mesmo com hasStructureChanges=true', () => {
+    it('chama PATCH structure em EM_ANDAMENTO quando há alteração estrutural', () => {
       expect(
         resolveConveyorEditSubmitPlan({
           mode: 'edit',
           hasDadosChanges: true,
           hasStructureChanges: true,
-          canReplaceStructure: false,
+          canReplaceStructure: true,
         }),
-      ).toEqual({ patchDados: true, patchStructure: false })
+      ).toEqual({ patchDados: true, patchStructure: true })
     })
 
-    it('chama ambos quando há alterações e substituição é permitida', () => {
+    it('chama ambos quando há alterações e sync incremental é permitido', () => {
       expect(
         resolveConveyorEditSubmitPlan({
           mode: 'edit',
@@ -119,14 +119,24 @@ describe('conveyorEditSavePolicy', () => {
     })
   })
 
-  describe('canReplaceConveyorStructure', () => {
-    it('permite substituição em EM_ELABORACAO e AGUARDANDO_PLANEJAMENTO', () => {
+  describe('canReplaceConveyorStructure (sync incremental)', () => {
+    it('permite edição estrutural em EM_ELABORACAO e AGUARDANDO_PLANEJAMENTO', () => {
       expect(canReplaceConveyorStructure('EM_ELABORACAO')).toBe(true)
       expect(canReplaceConveyorStructure('AGUARDANDO_PLANEJAMENTO')).toBe(true)
     })
 
-    it('bloqueia substituição em EM_ANDAMENTO', () => {
-      expect(canReplaceConveyorStructure('EM_ANDAMENTO')).toBe(false)
+    it('permite edição estrutural em EM_ANDAMENTO', () => {
+      expect(canReplaceConveyorStructure('EM_ANDAMENTO')).toBe(true)
+    })
+
+    it('permite edição estrutural em FINALIZADA e CANCELADA', () => {
+      expect(canReplaceConveyorStructure('FINALIZADA')).toBe(true)
+      expect(canReplaceConveyorStructure('CANCELADA')).toBe(true)
+    })
+
+    it('permite edição estrutural em A_INICIAR e EM_PLANEJAMENTO', () => {
+      expect(canReplaceConveyorStructure('A_INICIAR')).toBe(true)
+      expect(canReplaceConveyorStructure('EM_PLANEJAMENTO')).toBe(true)
     })
   })
 
@@ -137,16 +147,11 @@ describe('conveyorEditSavePolicy', () => {
     // é controlada diretamente em `ConveyorCreateEditPage.tsx`
     // (`showLateAppendAction = mode === 'edit' && canAlterConveyor`).
     //
-    // Este bloco reforça que a liberação da inclusão tardia em qualquer
-    // status NÃO libera, por efeito colateral, a substituição completa da
-    // estrutura via PATCH /structure (`canReplaceConveyorStructure`), que
-    // continua restrita a EM_ELABORACAO/AGUARDANDO_PLANEJAMENTO.
-    it('canReplaceConveyorStructure continua bloqueada em EM_ANDAMENTO', () => {
-      expect(canReplaceConveyorStructure('EM_ANDAMENTO')).toBe(false)
-    })
-
-    it('canReplaceConveyorStructure continua bloqueada em FINALIZADA', () => {
-      expect(canReplaceConveyorStructure('FINALIZADA')).toBe(false)
+    // Sync incremental também libera PATCH /structure em qualquer status;
+    // o botão de inclusão tardia permanece como atalho UX.
+    it('canReplaceConveyorStructure liberada em EM_ANDAMENTO e FINALIZADA', () => {
+      expect(canReplaceConveyorStructure('EM_ANDAMENTO')).toBe(true)
+      expect(canReplaceConveyorStructure('FINALIZADA')).toBe(true)
     })
   })
 })

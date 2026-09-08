@@ -215,16 +215,21 @@ export function buildManualConveyorInput(
   dados: CreateConveyorDados,
   roots: ManualOptionDraft[],
   assigneesByStepKey: Record<string, CreateConveyorStepAssigneeInput[]>,
+  options?: { persistedNodeIds?: ReadonlySet<string> },
 ): CreateConveyorInput {
-  const options: CreateConveyorOptionInput[] = roots.map((op, oi) => ({
+  const persisted = options?.persistedNodeIds
+  const optionsPayload: CreateConveyorOptionInput[] = roots.map((op, oi) => ({
+    ...(persisted?.has(op.key) ? { id: op.key } : {}),
     titulo: op.titulo.trim(),
     orderIndex: oi + 1,
     sourceOrigin: 'manual',
     areas: op.areas.map((ar, ai) => ({
+      ...(persisted?.has(ar.key) ? { id: ar.key } : {}),
       titulo: ar.titulo.trim(),
       orderIndex: ai + 1,
       sourceOrigin: 'manual',
       steps: ar.steps.map((st, si) => ({
+        ...(persisted?.has(st.key) ? { id: st.key } : {}),
         titulo: st.titulo.trim(),
         orderIndex: si + 1,
         plannedMinutes: Math.max(0, Math.floor(st.plannedMinutes)),
@@ -244,7 +249,7 @@ export function buildManualConveyorInput(
     baseName: null,
     baseVersion: null,
     matrixRootItemId: null,
-    options,
+    options: optionsPayload,
   }
 }
 
