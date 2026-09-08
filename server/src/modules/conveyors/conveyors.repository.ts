@@ -82,6 +82,7 @@ export type ConveyorNodeFlatRow = {
   planned_minutes: number | null
   planned_quantity: number
   source_origin: 'manual' | 'reaproveitada' | 'base'
+  is_active: boolean
   /** Apenas STEPs; OPTION/AREA = null. */
   operational_status: ConveyorNodeStepOperationalStatusDb | null
   operational_completed_at: string | null
@@ -202,6 +203,7 @@ export async function listConveyorNodesByConveyorId(
     planned_minutes: number | null
     planned_quantity: number
     source_origin: 'manual' | 'reaproveitada' | 'base'
+    is_active: boolean
     operational_status: ConveyorNodeStepOperationalStatusDb | null
     operational_completed_at: Date | null
     operational_completed_by: string | null
@@ -223,6 +225,7 @@ export async function listConveyorNodesByConveyorId(
       cn.planned_minutes,
       cn.planned_quantity,
       cn.source_origin,
+      cn.is_active,
       cn.operational_status,
       cn.operational_completed_at,
       cn.operational_completed_by::text,
@@ -249,6 +252,7 @@ export async function listConveyorNodesByConveyorId(
     planned_minutes: row.planned_minutes,
     planned_quantity: row.planned_quantity,
     source_origin: row.source_origin,
+    is_active: row.is_active,
     operational_status: row.operational_status,
     operational_completed_at: row.operational_completed_at
       ? row.operational_completed_at.toISOString()
@@ -262,6 +266,15 @@ export async function listConveyorNodesByConveyorId(
     abort_reason_text: row.abort_reason_text,
     abort_reason_label_snapshot: row.abort_reason_label_snapshot,
   }))
+}
+
+/** Nós ativos (is_active) da esteira — edição incremental / detalhe. */
+export async function listActiveConveyorNodesByConveyorId(
+  pool: pg.Pool | pg.PoolClient,
+  conveyorId: string,
+): Promise<ConveyorNodeFlatRow[]> {
+  const all = await listConveyorNodesByConveyorId(pool, conveyorId)
+  return all.filter((n) => n.is_active)
 }
 
 /** Campos mínimos para linearização OPTION → AREA → STEP (sequência recomendada). */
@@ -1081,4 +1094,272 @@ export async function updateConveyorStructureMeta(
       row.total_planned_minutes,
     ],
   )
+}
+
+export type UpdateConveyorNodeStructureFields = {
+  name: string
+  order_index: number
+  source_origin: 'manual' | 'reaproveitada' | 'base'
+  parent_id: string | null
+  root_id: string
+  planned_minutes: number | null
+  required: boolean
+  source_key: string | null
+  metadata_json?: unknown | null
+}
+
+/** Atualiza campos estruturais do nó. Não altera operational_status / COMPLETED / ABORTED. */
+export async function updateConveyorNodeStructureFields(
+  client: pg.PoolClient,
+  input: {
+    conveyorId: string
+    nodeId: string
+    fields: UpdateConveyorNodeStructureFields
+  },
+): Promise<boolean> {
+  const f = input.fields
+  const r = await client.query<{ id: string }>(
+    `
+    UPDATE conveyor_nodes SET
+      name = $3,
+      order_index = $4,
+      source_origin = $5,
+      parent_id = $6,
+      root_id = $7,
+      planned_minutes = $8,
+      required = $9,
+      source_key = $10,
+      metadata_json = CASE
+        WHEN $11::boolean THEN $12::jsonb
+        ELSE metadata_json
+      END,
+      updated_at = now()
+    WHERE id = $2::uuid
+      AND conveyor_id = $1::uuid
+      AND deleted_at IS NULL
+    RETURNING id::text
+    `,
+    [
+      input.conveyorId,
+      input.nodeId,
+      f.name,
+      f.order_index,
+      f.source_origin,
+      f.parent_id,
+      f.root_id,
+      f.planned_minutes,
+      f.required,
+      f.source_key,
+      f.metadata_json !== undefined,
+      f.metadata_json === null || f.metadata_json === undefined
+        ? null
+        : JSON.stringify(f.metadata_json),
+    ],
+  )
+  return Boolean(r.rows[0])
+}
+
+/** Soft-deactivate: is_active = false (preserva histórico / FKs). */
+export async function softDeactivateConveyorNodes(
+  client: pg.PoolClient,
+  input: { conveyorId: string; nodeIds: string[] },
+): Promise<number> {
+  if (input.nodeIds.length === 0) return 0
+  const r = await client.query(
+    `
+    UPDATE conveyor_nodes SET
+      is_active = FALSE,
+      updated_at = now()
+    WHERE conveyor_id = $1::uuid
+      AND deleted_at IS NULL
+      AND id = ANY($2::uuid[])
+    `,
+    [input.conveyorId, input.nodeIds],
+  )
+  return r.rowCount ?? 0
+}
+
+/**
+ * Hard-delete subárvore de nós (assignees primeiro; nós bottom-up STEP→AREA→OPTION).
+ * Exige ausência de deps (time entries / planos) — senão FK RESTRICT.
+ */
+export async function hardDeleteConveyorNodeSubtree(
+  client: pg.PoolClient,
+  input: { conveyorId: string; nodeIds: string[] },
+): Promise<void> {
+  if (input.nodeIds.length === 0) return
+  await client.query(
+    `DELETE FROM conveyor_node_assignees
+     WHERE conveyor_id = $1::uuid
+       AND conveyor_node_id = ANY($2::uuid[])`,
+    [input.conveyorId, input.nodeIds],
+  )
+  await client.query(
+    `
+    DELETE FROM conveyor_nodes
+    WHERE conveyor_id = $1::uuid
+      AND node_type = 'STEP'
+      AND id = ANY($2::uuid[])
+    `,
+    [input.conveyorId, input.nodeIds],
+  )
+  await client.query(
+    `
+    DELETE FROM conveyor_nodes
+    WHERE conveyor_id = $1::uuid
+      AND node_type = 'AREA'
+      AND id = ANY($2::uuid[])
+    `,
+    [input.conveyorId, input.nodeIds],
+  )
+  await client.query(
+    `
+    DELETE FROM conveyor_nodes
+    WHERE conveyor_id = $1::uuid
+      AND node_type = 'OPTION'
+      AND id = ANY($2::uuid[])
+    `,
+    [input.conveyorId, input.nodeIds],
+  )
+}
+
+/** Hard-delete assignees de STEPs matched (sync delete+reinsert). */
+export async function hardDeleteAssigneesForNodes(
+  client: pg.PoolClient,
+  input: { conveyorId: string; nodeIds: string[] },
+): Promise<void> {
+  if (input.nodeIds.length === 0) return
+  await client.query(
+    `DELETE FROM conveyor_node_assignees
+     WHERE conveyor_id = $1::uuid
+       AND conveyor_node_id = ANY($2::uuid[])`,
+    [input.conveyorId, input.nodeIds],
+  )
+}
+
+/**
+ * Deps por node ids: time_entries ativos OR work_plan_items OR operational_plan_items.
+ * Retorna o subconjunto de ids que possuem pelo menos uma dep.
+ */
+export async function findNodeIdsWithStructureDeps(
+  client: pg.Pool | pg.PoolClient,
+  nodeIds: string[],
+): Promise<Set<string>> {
+  if (nodeIds.length === 0) return new Set()
+  const r = await client.query<{ node_id: string }>(
+    `
+    SELECT DISTINCT x.node_id::text AS node_id
+    FROM (
+      SELECT conveyor_node_id AS node_id
+        FROM conveyor_time_entries
+       WHERE conveyor_node_id = ANY($1::uuid[])
+         AND deleted_at IS NULL
+      UNION
+      SELECT activity_node_id AS node_id
+        FROM operational_work_plan_items
+       WHERE activity_node_id = ANY($1::uuid[])
+         AND deleted_at IS NULL
+      UNION
+      SELECT activity_node_id AS node_id
+        FROM conveyor_operational_plan_items
+       WHERE activity_node_id = ANY($1::uuid[])
+         AND deleted_at IS NULL
+    ) x
+    `,
+    [nodeIds],
+  )
+  return new Set(r.rows.map((row) => row.node_id))
+}
+
+/** Lock do cabeçalho da esteira (FOR UPDATE) — início de TX de estrutura. */
+export async function lockConveyorForStructureUpdate(
+  client: pg.PoolClient,
+  conveyorId: string,
+): Promise<ConveyorDetailRow | null> {
+  const r = await client.query<{
+    id: string
+    code: string | null
+    name: string
+    client_name: string | null
+    vehicle: string | null
+    model_version: string | null
+    plate: string | null
+    initial_notes: string | null
+    responsible: string | null
+    priority: 'alta' | 'media' | 'baixa'
+    origin_register: 'MANUAL' | 'BASE' | 'HYBRID'
+    base_ref_snapshot: string | null
+    base_code_snapshot: string | null
+    base_name_snapshot: string | null
+    base_version_snapshot: number | null
+    metadata_json: unknown | null
+    operational_status: ConveyorOperationalStatusDb
+    created_at: Date
+    completed_at: Date | null
+    estimated_deadline: string | null
+    total_options: number
+    total_areas: number
+    total_steps: number
+    total_planned_minutes: number
+  }>(
+    `
+    SELECT
+      id::text,
+      code,
+      name,
+      client_name,
+      vehicle,
+      model_version,
+      plate,
+      initial_notes,
+      responsible,
+      priority,
+      origin_register,
+      base_ref_snapshot,
+      base_code_snapshot,
+      base_name_snapshot,
+      base_version_snapshot,
+      metadata_json,
+      operational_status,
+      created_at,
+      completed_at,
+      estimated_deadline,
+      total_options,
+      total_areas,
+      total_steps,
+      total_planned_minutes
+    FROM conveyors
+    WHERE id = $1::uuid AND deleted_at IS NULL
+    FOR UPDATE
+    `,
+    [conveyorId],
+  )
+  const row = r.rows[0]
+  if (!row) return null
+  return {
+    id: row.id,
+    code: row.code,
+    name: row.name,
+    client_name: row.client_name,
+    vehicle: row.vehicle,
+    model_version: row.model_version,
+    plate: row.plate,
+    initial_notes: row.initial_notes,
+    responsible: row.responsible,
+    priority: row.priority,
+    origin_register: row.origin_register,
+    base_ref_snapshot: row.base_ref_snapshot,
+    base_code_snapshot: row.base_code_snapshot,
+    base_name_snapshot: row.base_name_snapshot,
+    base_version_snapshot: row.base_version_snapshot,
+    metadata_json: row.metadata_json,
+    operational_status: row.operational_status,
+    created_at: row.created_at.toISOString(),
+    completed_at: row.completed_at ? row.completed_at.toISOString() : null,
+    estimated_deadline: row.estimated_deadline,
+    total_options: row.total_options,
+    total_areas: row.total_areas,
+    total_steps: row.total_steps,
+    total_planned_minutes: row.total_planned_minutes,
+  }
 }

@@ -57,6 +57,8 @@ export const postConveyorStepAssigneeSchema = z
 
 export const postConveyorStepSchema = z
   .object({
+    /** Só usado no PATCH incremental; create/append ignoram e geram UUID novo. */
+    id: z.string().uuid().optional(),
     titulo: z.string().min(1),
     orderIndex: z.number().int().min(1),
     plannedMinutes: z.number().int().min(0),
@@ -101,6 +103,8 @@ export const postConveyorStepSchema = z
   })
 
 export const postConveyorAreaSchema = z.object({
+  /** Só usado no PATCH incremental; create/append ignoram e geram UUID novo. */
+  id: z.string().uuid().optional(),
   titulo: z.string().min(1),
   orderIndex: z.number().int().min(1),
   sourceOrigin: sourceOriginNodeSchema,
@@ -108,6 +112,8 @@ export const postConveyorAreaSchema = z.object({
 })
 
 export const postConveyorOptionSchema = z.object({
+  /** Só usado no PATCH incremental; create/append ignoram e geram UUID novo. */
+  id: z.string().uuid().optional(),
   titulo: z.string().min(1),
   orderIndex: z.number().int().min(1),
   sourceOrigin: sourceOriginNodeSchema,
@@ -278,7 +284,7 @@ export const patchConveyorDadosBodySchema = postConveyorDadosSchema
 
 export type PatchConveyorDadosBody = z.infer<typeof patchConveyorDadosBodySchema>
 
-/** PATCH /api/v1/conveyors/:id/structure — substitui árvore (regras no serviço). */
+/** PATCH /api/v1/conveyors/:id/structure — sync incremental da árvore (regras no serviço). */
 export const patchConveyorStructureBodySchema = z.object({
   originType: z.enum(['MANUAL', 'BASE', 'HYBRID']),
   baseId: z.string().nullable().optional(),

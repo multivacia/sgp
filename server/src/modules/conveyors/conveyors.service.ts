@@ -19,17 +19,22 @@ import type {
   ConveyorStructureStepAssigneeApi,
 } from './conveyors.dto.js'
 import {
-  countActiveTimeEntriesByConveyor,
-  deleteConveyorAssigneesAndNodes,
   findConveyorById,
   findConveyorDeleteBlockingDeps,
+  findNodeIdsWithStructureDeps,
+  hardDeleteAssigneesForNodes,
+  hardDeleteConveyorNodeSubtree,
   physicalDeleteConveyor,
   insertConveyor,
   insertConveyorNode,
+  listActiveConveyorNodesByConveyorId,
   listConveyorNodesByConveyorId,
   listConveyors,
+  lockConveyorForStructureUpdate,
   newNodeId,
+  softDeactivateConveyorNodes,
   updateConveyorDados,
+  updateConveyorNodeStructureFields,
   updateConveyorOperationalStatus,
   updateConveyorStructureMeta,
   type CompletedAtUpdateMode,
@@ -57,10 +62,6 @@ import {
   CONVEYOR_DELETE_HAS_TIME_ENTRIES_MESSAGE,
   CONVEYOR_OPERATIONAL_STATUS_DEFAULT,
   CONVEYOR_FINISH_REQUIRES_MANAGER_MESSAGE,
-  CONVEYOR_STRUCTURE_REPLACE_HAS_DEPENDENCIES_MESSAGE,
-  CONVEYOR_STRUCTURE_REPLACE_STATUS_MESSAGE,
-  isConveyorOperationalStatusDb,
-  mapLegacyConveyorOperationalStatus,
   resolveCompletedAtMode,
 } from './conveyorOperationalStatus.js'
 import { serviceGetConveyorPendingMinutes } from './conveyorNodeWorkload.service.js'
@@ -75,6 +76,15 @@ import {
   summarizePostConveyorBodyForDiagnostics,
 } from './conveyorCreateDiagnostics.js'
 import { detectAndRecordConveyorDelayTransition } from './operational-events/conveyor-delay-events.service.js'
+import { serviceCreateConveyorOperationalEvent } from './operational-events/conveyor-operational-events.service.js'
+import {
+  computeConveyorStructureDiff,
+  INCREMENTAL_STRUCTURE_EDIT_REASON,
+  partitionRemovalSubtrees,
+  shouldMarkLateAddForNewSteps,
+  stepIdsInRemovals,
+  type StructureDiffAssignee,
+} from './conveyor-structure-diff.js'
 
 const PRAZO_INICIO_RE = /In[ií]cio previsto:\s*(.+?)(?:\s*[·•|]\s*|$)/i
 const PRAZO_FIM_RE = /Fim previsto:\s*(.+)$/i
@@ -123,20 +133,6 @@ function normalizePriority(
 ): 'alta' | 'media' | 'baixa' {
   if (p === 'alta' || p === 'media' || p === 'baixa') return p
   return 'media'
-}
-
-function resolveOperationalStatusForPolicy(
-  status: string,
-): ConveyorOperationalStatusDb | null {
-  if (isConveyorOperationalStatusDb(status)) return status
-  return mapLegacyConveyorOperationalStatus(status)
-}
-
-function canReplaceConveyorStructure(status: string): boolean {
-  const normalized = resolveOperationalStatusForPolicy(status)
-  return (
-    normalized === 'EM_ELABORACAO' || normalized === 'AGUARDANDO_PLANEJAMENTO'
-  )
 }
 
 function assertUniqueOrderIndices(
@@ -282,7 +278,8 @@ function isTransitionAllowed(
 export function buildConveyorStructureFromNodes(
   rows: ConveyorNodeFlatRow[],
 ): ConveyorStructureApi {
-  const options = rows
+  const active = rows.filter((r) => r.is_active !== false)
+  const options = active
     .filter((r) => r.node_type === 'OPTION')
     .sort((a, b) => a.order_index - b.order_index)
   return {
@@ -290,14 +287,14 @@ export function buildConveyorStructureFromNodes(
       id: opt.id,
       name: opt.name,
       orderIndex: opt.order_index,
-      areas: rows
+      areas: active
         .filter((r) => r.parent_id === opt.id && r.node_type === 'AREA')
         .sort((a, b) => a.order_index - b.order_index)
         .map((area) => ({
           id: area.id,
           name: area.name,
           orderIndex: area.order_index,
-          steps: rows
+          steps: active
             .filter((r) => r.parent_id === area.id && r.node_type === 'STEP')
             .sort((a, b) => a.order_index - b.order_index)
             .map((st) => {
@@ -903,33 +900,13 @@ export async function servicePatchConveyorDados(
   return mapDetailRowToApi(updated, structure)
 }
 
-export async function serviceReplaceConveyorStructure(
+export async function serviceApplyConveyorStructureDiff(
   pool: pg.Pool,
   conveyorId: string,
   body: PatchConveyorStructureBody,
 ): Promise<ConveyorDetailApi | null> {
-  const existing = await findConveyorById(pool, conveyorId)
-  if (!existing) return null
-
-  if (!canReplaceConveyorStructure(existing.operational_status)) {
-    throw new AppError(
-      CONVEYOR_STRUCTURE_REPLACE_STATUS_MESSAGE,
-      422,
-      ErrorCodes.VALIDATION_ERROR,
-    )
-  }
-
-  const nEntries = await countActiveTimeEntriesByConveyor(pool, conveyorId)
-  if (nEntries > 0) {
-    throw new AppError(
-      'Não é possível substituir a estrutura: existem apontamentos registados nesta esteira.',
-      422,
-      ErrorCodes.VALIDATION_ERROR,
-    )
-  }
-
-  const structureDeps = await findConveyorDeleteBlockingDeps(pool, conveyorId)
-  assertConveyorStructureReplaceNoBlockingDeps(structureDeps)
+  const existingProbe = await findConveyorById(pool, conveyorId)
+  if (!existingProbe) return null
 
   revalidateStructureOptions(body.options)
   const assigneeTargets = collectAssigneeTargetsFromOptions(body.options)
@@ -970,16 +947,171 @@ export async function serviceReplaceConveyorStructure(
   }
 
   const totals = computeTotalsForOptions(body.options)
-  const metaNext = mergeConveyorMetadata(existing.metadata_json, {
-    matrixRootItemId:
-      body.matrixRootItemId === undefined ? undefined : body.matrixRootItemId,
-  })
 
   const client = await pool.connect()
   try {
     await client.query('BEGIN')
 
-    await deleteConveyorAssigneesAndNodes(client, conveyorId)
+    const existing = await lockConveyorForStructureUpdate(client, conveyorId)
+    if (!existing) {
+      await client.query('ROLLBACK')
+      return null
+    }
+
+    const activeNodes = await listActiveConveyorNodesByConveyorId(client, conveyorId)
+    const computed = computeConveyorStructureDiff({
+      options: body.options,
+      activeNodes: activeNodes.map((n) => ({
+        id: n.id,
+        parent_id: n.parent_id,
+        node_type: n.node_type,
+        order_index: n.order_index,
+        name: n.name,
+        is_active: n.is_active,
+      })),
+    })
+    if (computed.error) {
+      throw new AppError(computed.error.message, 422, ErrorCodes.VALIDATION_ERROR, {
+        code: computed.error.code,
+        nodeId: computed.error.nodeId,
+      })
+    }
+    const diff = computed.diff
+
+    const metaNext = mergeConveyorMetadata(existing.metadata_json, {
+      matrixRootItemId:
+        body.matrixRootItemId === undefined ? undefined : body.matrixRootItemId,
+    })
+
+    const markLateAdd = shouldMarkLateAddForNewSteps(existing.operational_status)
+    const occurredIso = new Date().toISOString()
+    const lateStepMetadata = markLateAdd
+      ? {
+          lateAddToWeeklyBacklog: true,
+          lateAddAt: occurredIso,
+          lateAddReason: INCREMENTAL_STRUCTURE_EDIT_REASON,
+        }
+      : null
+
+    /** tempKey / id existente → UUID persistido */
+    const idMap = new Map<string, string>()
+    for (const n of activeNodes) {
+      idMap.set(n.id, n.id)
+    }
+
+    const resolveRef = (ref: string | null): string | null => {
+      if (ref == null) return null
+      const resolved = idMap.get(ref)
+      if (!resolved) {
+        throw new AppError(
+          `Referência de nó inválida no sync de estrutura: ${ref}`,
+          500,
+          ErrorCodes.INTERNAL,
+        )
+      }
+      return resolved
+    }
+
+    // 1) Inserts OPTION → AREA → STEP
+    const insertedIds: string[] = []
+    for (const ins of diff.inserts) {
+      const newId = newNodeId()
+      idMap.set(ins.tempKey, newId)
+      insertedIds.push(newId)
+
+      const parentId = resolveRef(ins.parentRef)
+      const rootId = resolveRef(ins.rootRef)!
+      const levelDepth =
+        ins.nodeType === 'OPTION' ? 0 : ins.nodeType === 'AREA' ? 1 : 2
+
+      await insertConveyorNode(client, {
+        id: newId,
+        conveyor_id: conveyorId,
+        parent_id: parentId,
+        root_id: rootId,
+        node_type: ins.nodeType,
+        source_origin: ins.sourceOrigin,
+        code: null,
+        name: ins.name,
+        description: null,
+        order_index: ins.orderIndex,
+        level_depth: levelDepth,
+        is_active: true,
+        planned_minutes: ins.plannedMinutes,
+        planned_quantity: resolveInitialConveyorStepPlannedQuantity(),
+        default_responsible_id: null,
+        required: ins.required,
+        source_key: ins.sourceKey,
+        metadata_json:
+          ins.nodeType === 'STEP' && lateStepMetadata ? lateStepMetadata : null,
+        operational_status: ins.nodeType === 'STEP' ? 'PENDING' : null,
+        operational_completed_at: null,
+        operational_completed_by: null,
+      })
+
+      if (ins.nodeType === 'STEP') {
+        await insertStepAssigneesForStructure(client, {
+          conveyorId,
+          stepId: newId,
+          assignees: ins.assignees,
+        })
+      }
+    }
+
+    // 2) Updates (campos + parent/root; sem tocar operational_status)
+    const updatedIds: string[] = []
+    for (const upd of diff.updates) {
+      updatedIds.push(upd.id)
+      const parentId = resolveRef(upd.parentRef)
+      const rootId = resolveRef(upd.rootRef)!
+      await updateConveyorNodeStructureFields(client, {
+        conveyorId,
+        nodeId: upd.id,
+        fields: {
+          name: upd.name,
+          order_index: upd.orderIndex,
+          source_origin: upd.sourceOrigin,
+          parent_id: parentId,
+          root_id: rootId,
+          planned_minutes: upd.plannedMinutes,
+          required: upd.required,
+          source_key: upd.sourceKey,
+        },
+      })
+    }
+
+    // 3) Assignees sync só em STEPs matched
+    if (diff.matchedStepIds.length > 0) {
+      await hardDeleteAssigneesForNodes(client, {
+        conveyorId,
+        nodeIds: diff.matchedStepIds,
+      })
+      for (const upd of diff.updates) {
+        if (upd.nodeType !== 'STEP' || !upd.assignees) continue
+        await insertStepAssigneesForStructure(client, {
+          conveyorId,
+          stepId: upd.id,
+          assignees: upd.assignees,
+        })
+      }
+    }
+
+    // 4) Remoções híbridas por subárvore
+    const softDeactivatedIds: string[] = []
+    const hardDeletedIds: string[] = []
+    const subtrees = partitionRemovalSubtrees(diff.removals)
+    for (const subtree of subtrees) {
+      const stepIds = stepIdsInRemovals(subtree)
+      const deps = await findNodeIdsWithStructureDeps(client, stepIds)
+      const nodeIds = subtree.map((r) => r.id)
+      if (deps.size > 0) {
+        await softDeactivateConveyorNodes(client, { conveyorId, nodeIds })
+        softDeactivatedIds.push(...nodeIds)
+      } else {
+        await hardDeleteConveyorNodeSubtree(client, { conveyorId, nodeIds })
+        hardDeletedIds.push(...nodeIds)
+      }
+    }
 
     await updateConveyorStructureMeta(client, conveyorId, {
       origin_register: body.originType,
@@ -994,7 +1126,24 @@ export async function serviceReplaceConveyorStructure(
       total_planned_minutes: totals.totalPlannedMinutes,
     })
 
-    await materializeConveyorOptions(client, conveyorId, body.options)
+    await serviceCreateConveyorOperationalEvent(client, {
+      conveyorId,
+      nodeId: null,
+      eventType: 'CONVEYOR_STRUCTURE_UPDATED',
+      previousValue: null,
+      newValue: null,
+      reason: INCREMENTAL_STRUCTURE_EDIT_REASON,
+      source: 'USER_ACTION',
+      occurredAt: occurredIso,
+      createdBy: null,
+      metadataJson: {
+        updatedNodeIds: updatedIds,
+        insertedNodeIds: insertedIds,
+        softDeactivatedNodeIds: softDeactivatedIds,
+        hardDeletedNodeIds: hardDeletedIds,
+        lateAddApplied: markLateAdd,
+      },
+    })
 
     await client.query('COMMIT')
   } catch (err) {
@@ -1010,35 +1159,50 @@ export async function serviceReplaceConveyorStructure(
 
   const row = await findConveyorById(pool, conveyorId)
   if (!row) return null
-  const nodes = await listConveyorNodesByConveyorId(pool, conveyorId)
+  const nodes = await listActiveConveyorNodesByConveyorId(pool, conveyorId)
   const structure = await loadConveyorStructureWithAssignees(pool, conveyorId, nodes)
   return mapDetailRowToApi(row, structure)
+}
+
+/** Alias retrocompatível — controller e imports legados. */
+export const serviceReplaceConveyorStructure = serviceApplyConveyorStructureDiff
+
+async function insertStepAssigneesForStructure(
+  client: pg.PoolClient,
+  input: {
+    conveyorId: string
+    stepId: string
+    assignees: StructureDiffAssignee[]
+  },
+): Promise<void> {
+  const assignees = input.assignees ?? []
+  for (let i = 0; i < assignees.length; i++) {
+    const a = assignees[i]!
+    const t = a.type ?? 'COLLABORATOR'
+    await insertConveyorNodeAssignee(client, {
+      id: newAssignmentId(),
+      conveyor_id: input.conveyorId,
+      conveyor_node_id: input.stepId,
+      assignment_type: t,
+      collaborator_id: t === 'COLLABORATOR' ? (a.collaboratorId ?? null) : null,
+      team_id: t === 'TEAM' ? (a.teamId ?? null) : null,
+      is_primary: a.isPrimary,
+      assignment_origin: a.assignmentOrigin ?? 'base',
+      order_index: a.orderIndex ?? i,
+      metadata_json: null,
+    })
+  }
 }
 
 function rethrowStructureReplacePgError(err: unknown): never {
   if (err instanceof DatabaseError && err.code === '23503') {
     throw new AppError(
-      CONVEYOR_STRUCTURE_REPLACE_HAS_DEPENDENCIES_MESSAGE,
+      'Não é possível alterar a estrutura: dependência referencial impede a remoção física de um nó.',
       409,
       ErrorCodes.CONVEYOR_STRUCTURE_REPLACE_HAS_DEPENDENCIES,
     )
   }
   throw err
-}
-
-function assertConveyorStructureReplaceNoBlockingDeps(
-  deps: Awaited<ReturnType<typeof findConveyorDeleteBlockingDeps>>,
-): void {
-  if (
-    deps.hasOperationalWorkPlanItems ||
-    deps.hasConveyorOperationalPlanItems
-  ) {
-    throw new AppError(
-      CONVEYOR_STRUCTURE_REPLACE_HAS_DEPENDENCIES_MESSAGE,
-      409,
-      ErrorCodes.CONVEYOR_STRUCTURE_REPLACE_HAS_DEPENDENCIES,
-    )
-  }
 }
 
 const CONVEYOR_DELETE_DEPENDENCIES_MESSAGE =

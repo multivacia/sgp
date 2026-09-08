@@ -155,10 +155,14 @@ export const CONVEYOR_RETURN_REASON_REQUIRED_MESSAGE =
   'Informe o motivo para continuar.'
 
 export const CONVEYOR_STRUCTURE_REPLACE_STATUS_MESSAGE =
-  'Substituição de estrutura só é permitida enquanto a esteira está em elaboração ou aguardando planejamento.'
+  'Edição de estrutura não é permitida no status atual da esteira.'
 
 export const CONVEYOR_STRUCTURE_REPLACE_HAS_DEPENDENCIES_MESSAGE =
-  'Não é possível alterar a estrutura: existem itens de planejamento vinculados às atividades desta esteira. Remova o planejamento ou volte a esteira para elaboração antes de editar a estrutura.'
+  'Não foi possível remover nós com dependências operacionais; a remoção híbrida deve desativar (is_active=false) em vez de apagar.'
+
+/** Motivo padrão gravado em metadata de STEPs novos via PATCH incremental. */
+export const CONVEYOR_STRUCTURE_INCREMENTAL_LATE_ADD_REASON =
+  'INCREMENTAL_STRUCTURE_EDIT'
 
 export function canReturnConveyorToBacklog(
   from: ConveyorOperationalStatusDb,
