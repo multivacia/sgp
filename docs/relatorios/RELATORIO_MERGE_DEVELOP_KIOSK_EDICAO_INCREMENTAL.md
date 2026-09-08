@@ -12,7 +12,7 @@
 | DEVELOP_ANTES (real no gate) | `2efec505c7cab4b63d724819613552c207db8165` |
 | FEATURE_HEAD | `3ab6e3be66317295f553cffeb2cded42ddb715ec` |
 | MERGE_COMMIT | `08c83c342dbba4ba530d60c27511a1c4ea674d70` |
-| DEVELOP_DEPOIS | (confirmado pós-push; tip local pré-push `065cb6e0474bfc18074b82c436e7ca7381f81835`) |
+| DEVELOP_DEPOIS | `ffc16127c8ce6ff9b2390abc0bdafbe0338971e1` |
 | MAIN_ALTERADA | **NÃO** (`origin/main` permanece `6b768c852a18b7428e3dadf761bad7e35c1d61ef`) |
 
 ## Divergência do gate
