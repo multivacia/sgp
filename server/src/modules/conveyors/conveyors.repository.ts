@@ -892,7 +892,7 @@ export type PatchConveyorDadosFields = {
 }
 
 export async function updateConveyorDados(
-  pool: pg.Pool,
+  pool: pg.Pool | pg.PoolClient,
   conveyorId: string,
   patch: PatchConveyorDadosFields,
 ): Promise<ConveyorDetailRow | null> {

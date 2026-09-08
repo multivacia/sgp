@@ -38,7 +38,7 @@ function buildIdempotencyKey(input: {
 }
 
 export async function detectAndRecordConveyorDelayTransition(
-  pool: pg.Pool,
+  pool: pg.Pool | pg.PoolClient,
   input: DetectAndRecordConveyorDelayTransitionInput,
 ): Promise<{ created: boolean; event: ConveyorOperationalEventRow } | null> {
   const beforeState = calculateConveyorDelayState(input.before)

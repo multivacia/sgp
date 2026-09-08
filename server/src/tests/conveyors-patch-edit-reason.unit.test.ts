@@ -173,6 +173,17 @@ function conveyorRow(status: string) {
   }
 }
 
+function mockTxnPool() {
+  const client = {
+    query: vi.fn().mockResolvedValue({ rows: [] }),
+    release: vi.fn(),
+  }
+  const pool = {
+    connect: vi.fn().mockResolvedValue(client),
+  }
+  return { pool, client }
+}
+
 describe('servicePatchConveyorDados — justificativa fora do backlog', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -187,13 +198,20 @@ describe('servicePatchConveyorDados — justificativa fora do backlog', () => {
     const row = conveyorRow('EM_ELABORACAO')
     repoMocks.findConveyorById.mockResolvedValue(row)
     repoMocks.updateConveyorDados.mockResolvedValue({ ...row, name: 'Novo' })
+    const { pool, client } = mockTxnPool()
 
-    await servicePatchConveyorDados({} as never, 'c-1', { nome: 'Novo' })
+    await servicePatchConveyorDados(pool as never, 'c-1', { nome: 'Novo' })
 
-    expect(repoMocks.updateConveyorDados).toHaveBeenCalled()
+    expect(repoMocks.updateConveyorDados).toHaveBeenCalledWith(
+      client,
+      'c-1',
+      expect.objectContaining({ name: 'Novo' }),
+    )
     const patchArg = repoMocks.updateConveyorDados.mock.calls[0]![2] as Record<string, unknown>
     expect(patchArg).not.toHaveProperty('reason')
     expect(eventsMocks.createEvent).not.toHaveBeenCalled()
+    expect(client.query).toHaveBeenCalledWith('BEGIN')
+    expect(client.query).toHaveBeenCalledWith('COMMIT')
   })
 
   it('EM_ANDAMENTO sem reason → 422', async () => {
@@ -211,16 +229,17 @@ describe('servicePatchConveyorDados — justificativa fora do backlog', () => {
     const row = conveyorRow('EM_ANDAMENTO')
     repoMocks.findConveyorById.mockResolvedValue(row)
     repoMocks.updateConveyorDados.mockResolvedValue({ ...row, name: 'Novo' })
+    const { pool, client } = mockTxnPool()
 
     await servicePatchConveyorDados(
-      {} as never,
+      pool as never,
       'c-1',
       { nome: 'Novo', reason: 'Correção solicitada pelo gestor' },
       { actorUserId: 'user-1' },
     )
 
     expect(eventsMocks.createEvent).toHaveBeenCalledWith(
-      expect.anything(),
+      client,
       expect.objectContaining({
         eventType: 'MANUAL_NOTE',
         reason: 'CONVEYOR_EDIT',
@@ -230,6 +249,87 @@ describe('servicePatchConveyorDados — justificativa fora do backlog', () => {
           section: 'DATA',
           changedFields: ['nome'],
           reason: 'Correção solicitada pelo gestor',
+        }),
+      }),
+    )
+    expect(repoMocks.updateConveyorDados).toHaveBeenCalledWith(
+      client,
+      'c-1',
+      expect.objectContaining({ name: 'Novo' }),
+    )
+    expect(delayMocks.detectAndRecordConveyorDelayTransition).toHaveBeenCalledWith(
+      client,
+      expect.objectContaining({ conveyorId: 'c-1' }),
+    )
+  })
+
+  it('rollback quando createEvent falha após update', async () => {
+    const row = conveyorRow('EM_ANDAMENTO')
+    repoMocks.findConveyorById.mockResolvedValue(row)
+    repoMocks.updateConveyorDados.mockResolvedValue({ ...row, name: 'Novo' })
+    eventsMocks.createEvent.mockRejectedValue(new Error('evento falhou'))
+    const { pool, client } = mockTxnPool()
+
+    await expect(
+      servicePatchConveyorDados(
+        pool as never,
+        'c-1',
+        { nome: 'Novo', reason: 'Correção solicitada pelo gestor' },
+        { actorUserId: 'user-1' },
+      ),
+    ).rejects.toThrow('evento falhou')
+
+    expect(client.query).toHaveBeenCalledWith('BEGIN')
+    expect(client.query).toHaveBeenCalledWith('ROLLBACK')
+    expect(client.query).not.toHaveBeenCalledWith('COMMIT')
+    expect(eventsMocks.createEvent).toHaveBeenCalledWith(
+      client,
+      expect.objectContaining({ eventType: 'MANUAL_NOTE' }),
+    )
+    expect(client.release).toHaveBeenCalled()
+  })
+
+  it('sem mudança efetiva: EM_ANDAMENTO body igual ao persistido sem reason → OK', async () => {
+    const row = conveyorRow('EM_ANDAMENTO')
+    repoMocks.findConveyorById.mockResolvedValue(row)
+
+    const result = await servicePatchConveyorDados({} as never, 'c-1', { nome: 'Esteira' })
+
+    expect(result).toMatchObject({ id: 'c-1', name: 'Esteira' })
+    expect(repoMocks.updateConveyorDados).not.toHaveBeenCalled()
+    expect(eventsMocks.createEvent).not.toHaveBeenCalled()
+    expect(delayMocks.detectAndRecordConveyorDelayTransition).not.toHaveBeenCalled()
+  })
+
+  it('trim igual ao persistido não conta como mudança; nome diferente + reason atualiza e emite evento', async () => {
+    const row = conveyorRow('EM_ANDAMENTO')
+    repoMocks.findConveyorById.mockResolvedValue(row)
+
+    await servicePatchConveyorDados({} as never, 'c-1', { nome: '  Esteira  ' })
+    expect(repoMocks.updateConveyorDados).not.toHaveBeenCalled()
+    expect(eventsMocks.createEvent).not.toHaveBeenCalled()
+
+    repoMocks.updateConveyorDados.mockResolvedValue({ ...row, name: 'Outro' })
+    const { pool, client } = mockTxnPool()
+    await servicePatchConveyorDados(
+      pool as never,
+      'c-1',
+      { nome: 'Outro', reason: 'Ajuste de nomenclatura' },
+      { actorUserId: 'user-2' },
+    )
+
+    expect(repoMocks.updateConveyorDados).toHaveBeenCalledWith(
+      client,
+      'c-1',
+      expect.objectContaining({ name: 'Outro' }),
+    )
+    expect(eventsMocks.createEvent).toHaveBeenCalledWith(
+      client,
+      expect.objectContaining({
+        eventType: 'MANUAL_NOTE',
+        metadataJson: expect.objectContaining({
+          changedFields: ['nome'],
+          reason: 'Ajuste de nomenclatura',
         }),
       }),
     )

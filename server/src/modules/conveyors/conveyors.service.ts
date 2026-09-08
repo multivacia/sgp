@@ -858,116 +858,176 @@ export async function servicePatchConveyorDados(
 
   // reason nunca vai para colunas de conveyors — só evento operacional.
   const { reason: reasonFromBody, ...dadosFields } = body
-  const editReason = requireUserReasonOutsideBacklog(
-    existing.operational_status,
-    reasonFromBody,
-  )
 
   const patch: PatchConveyorDadosFields = {}
   const changedFields: string[] = []
 
   if (dadosFields.nome !== undefined) {
-    patch.name = dadosFields.nome.trim()
-    changedFields.push('nome')
+    const next = dadosFields.nome.trim()
+    if (next !== existing.name) {
+      patch.name = next
+      changedFields.push('nome')
+    }
   }
   if (dadosFields.cliente !== undefined) {
-    patch.client_name = emptyToNull(dadosFields.cliente)
-    changedFields.push('cliente')
+    const next = emptyToNull(dadosFields.cliente)
+    if (next !== existing.client_name) {
+      patch.client_name = next
+      changedFields.push('cliente')
+    }
   }
   if (dadosFields.veiculo !== undefined) {
-    patch.vehicle = emptyToNull(dadosFields.veiculo)
-    changedFields.push('veiculo')
+    const next = emptyToNull(dadosFields.veiculo)
+    if (next !== existing.vehicle) {
+      patch.vehicle = next
+      changedFields.push('veiculo')
+    }
   }
   if (dadosFields.modeloVersao !== undefined) {
-    patch.model_version = emptyToNull(dadosFields.modeloVersao)
-    changedFields.push('modeloVersao')
+    const next = emptyToNull(dadosFields.modeloVersao)
+    if (next !== existing.model_version) {
+      patch.model_version = next
+      changedFields.push('modeloVersao')
+    }
   }
   if (dadosFields.placa !== undefined) {
-    patch.plate = emptyToNull(dadosFields.placa)
-    changedFields.push('placa')
+    const next = emptyToNull(dadosFields.placa)
+    if (next !== existing.plate) {
+      patch.plate = next
+      changedFields.push('placa')
+    }
   }
   if (dadosFields.observacoes !== undefined) {
-    patch.initial_notes = emptyToNull(
+    const next = emptyToNull(
       stripConveyorPlanningTempoFromNotes(dadosFields.observacoes),
     )
-    changedFields.push('observacoes')
+    if (next !== existing.initial_notes) {
+      patch.initial_notes = next
+      changedFields.push('observacoes')
+    }
   }
   if (dadosFields.responsavel !== undefined) {
-    patch.responsible = emptyToNull(dadosFields.responsavel)
-    changedFields.push('responsavel')
+    const next = emptyToNull(dadosFields.responsavel)
+    if (next !== existing.responsible) {
+      patch.responsible = next
+      changedFields.push('responsavel')
+    }
   }
   if (dadosFields.prazoEstimado !== undefined) {
-    patch.estimated_deadline = emptyToNull(
+    const next = emptyToNull(
       normalizePrazoEstimadoForPersistence(dadosFields.prazoEstimado),
     )
-    changedFields.push('prazoEstimado')
+    if (next !== existing.estimated_deadline) {
+      patch.estimated_deadline = next
+      changedFields.push('prazoEstimado')
+    }
   }
   if (dadosFields.prioridade !== undefined && dadosFields.prioridade !== '') {
-    patch.priority = normalizePriority(dadosFields.prioridade)
-    changedFields.push('prioridade')
+    const next = normalizePriority(dadosFields.prioridade)
+    if (next !== existing.priority) {
+      patch.priority = next
+      changedFields.push('prioridade')
+    }
   }
 
   if (dadosFields.colaboradorId !== undefined) {
-    if (dadosFields.colaboradorId) {
-      const ok = await collaboratorExists(pool, dadosFields.colaboradorId)
-      if (!ok) {
-        throw new AppError(
-          'Colaborador (responsável) não encontrado.',
-          422,
-          ErrorCodes.VALIDATION_ERROR,
-        )
+    const currentMeta = parseConveyorMetadataJson(existing.metadata_json)
+    if (dadosFields.colaboradorId !== currentMeta.colaboradorId) {
+      if (dadosFields.colaboradorId) {
+        const ok = await collaboratorExists(pool, dadosFields.colaboradorId)
+        if (!ok) {
+          throw new AppError(
+            'Colaborador (responsável) não encontrado.',
+            422,
+            ErrorCodes.VALIDATION_ERROR,
+          )
+        }
       }
+      patch.metadata_json = mergeConveyorMetadata(existing.metadata_json, {
+        colaboradorId: dadosFields.colaboradorId,
+      })
+      changedFields.push('colaboradorId')
     }
-    patch.metadata_json = mergeConveyorMetadata(existing.metadata_json, {
-      colaboradorId: dadosFields.colaboradorId,
-    })
-    changedFields.push('colaboradorId')
   }
 
-  const updated = await updateConveyorDados(pool, conveyorId, patch)
-  if (!updated) return null
-  const afterPendingMinutes = (await serviceGetConveyorPendingMinutes(pool, conveyorId)) ?? 0
-  await detectAndRecordConveyorDelayTransition(pool, {
-    conveyorId,
-    before: {
-      operationalStatus: existing.operational_status,
-      estimatedDeadline: existing.estimated_deadline,
-      pendingMinutes: beforePendingMinutes,
-      now: new Date(),
-    },
-    after: {
-      operationalStatus: updated.operational_status,
-      estimatedDeadline: updated.estimated_deadline,
-      pendingMinutes: afterPendingMinutes,
-      now: new Date(),
-    },
-    source: 'USER_ACTION',
-    occurredAt: new Date(),
-  })
+  if (changedFields.length === 0) {
+    const nodes = await listActiveConveyorNodesByConveyorId(pool, conveyorId)
+    const structure = await loadConveyorStructureWithAssignees(pool, conveyorId, nodes)
+    return mapDetailRowToApi(existing, structure)
+  }
 
-  if (
-    (resolveOperationalStatusForPolicy(existing.operational_status) ??
-      existing.operational_status) !== 'EM_ELABORACAO' &&
-    editReason
-  ) {
-    await serviceCreateConveyorOperationalEvent(pool, {
+  const editReason = requireUserReasonOutsideBacklog(
+    existing.operational_status,
+    reasonFromBody,
+  )
+
+  const client = await pool.connect()
+  let updated: ConveyorDetailRow | null = null
+  try {
+    await client.query('BEGIN')
+
+    updated = await updateConveyorDados(client, conveyorId, patch)
+    if (!updated) {
+      await client.query('ROLLBACK')
+      return null
+    }
+
+    // Patch de dados não altera carga pendente; reusa before na txn (atomicidade do delay).
+    await detectAndRecordConveyorDelayTransition(client, {
       conveyorId,
-      nodeId: null,
-      eventType: 'MANUAL_NOTE',
-      previousValue: null,
-      newValue: null,
-      reason: CONVEYOR_EDIT_REASON_CODE,
-      source: 'USER_ACTION',
-      occurredAt: new Date().toISOString(),
-      createdBy: options?.actorUserId ?? null,
-      metadataJson: {
-        kind: CONVEYOR_EDIT_REASON_CODE,
-        section: 'DATA',
-        changedFields,
-        reason: editReason,
+      before: {
+        operationalStatus: existing.operational_status,
+        estimatedDeadline: existing.estimated_deadline,
+        pendingMinutes: beforePendingMinutes,
+        now: new Date(),
       },
+      after: {
+        operationalStatus: updated.operational_status,
+        estimatedDeadline: updated.estimated_deadline,
+        pendingMinutes: beforePendingMinutes,
+        now: new Date(),
+      },
+      source: 'USER_ACTION',
+      occurredAt: new Date(),
     })
+
+    if (
+      (resolveOperationalStatusForPolicy(existing.operational_status) ??
+        existing.operational_status) !== 'EM_ELABORACAO' &&
+      editReason
+    ) {
+      await serviceCreateConveyorOperationalEvent(client, {
+        conveyorId,
+        nodeId: null,
+        eventType: 'MANUAL_NOTE',
+        previousValue: null,
+        newValue: null,
+        reason: CONVEYOR_EDIT_REASON_CODE,
+        source: 'USER_ACTION',
+        occurredAt: new Date().toISOString(),
+        createdBy: options?.actorUserId ?? null,
+        metadataJson: {
+          kind: CONVEYOR_EDIT_REASON_CODE,
+          section: 'DATA',
+          changedFields,
+          reason: editReason,
+        },
+      })
+    }
+
+    await client.query('COMMIT')
+  } catch (err) {
+    try {
+      await client.query('ROLLBACK')
+    } catch {
+      /* ignore */
+    }
+    throw err
+  } finally {
+    client.release()
   }
+
+  if (!updated) return null
 
   const nodes = await listActiveConveyorNodesByConveyorId(pool, conveyorId)
   const structure = await loadConveyorStructureWithAssignees(pool, conveyorId, nodes)
