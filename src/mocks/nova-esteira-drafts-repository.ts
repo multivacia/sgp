@@ -148,7 +148,13 @@ export function duplicarRascunhoNovaEsteira(
 ): NovaEsteiraRascunhoPersistido | null {
   const src = obterRascunhoPorId(idOrigem)
   if (!src) return null
-  const now = timestampIso()
+  // Evita colisão de milissegundo com a origem (create + duplicate no mesmo ms).
+  const nowRaw = timestampIso()
+  const anchor = src.updatedAt ?? src.createdAt
+  const now =
+    nowRaw <= anchor
+      ? new Date(Date.parse(anchor) + 1).toISOString()
+      : nowRaw
   const draftClone = structuredClone(src.draft) as NovaEsteiraDraft
   const novo: NovaEsteiraRascunhoPersistido = recomputeDerived({
     id: novoIdRascunhoNovaEsteira(),
