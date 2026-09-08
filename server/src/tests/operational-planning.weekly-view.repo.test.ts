@@ -162,6 +162,8 @@ describe.skipIf(!hasDb)('listItemsForWorkPlanWeeklyView (integração)', () => {
       expect(anaRow?.notes).toBe('Nota')
       expect(anaRow?.conveyor_title).toBeTruthy()
       expect(typeof anaRow?.conveyor_title).toBe('string')
+      expect(anaRow?.sector_title).toBe('Setor WeeklyView')
+      expect(anaRow?.task_title).toBe('Tarefa WeeklyView')
       expect(anaRow).toHaveProperty('realized_minutes')
       expect(typeof anaRow?.realized_minutes).toBe('number')
       expect(anaRow?.realized_minutes).toBe(0)
