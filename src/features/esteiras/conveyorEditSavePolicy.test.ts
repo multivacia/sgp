@@ -137,10 +137,14 @@ describe('conveyorEditSavePolicy', () => {
     })
 
     it('exige motivo fora do backlog', () => {
-      expect(requiresEditReason({ mode: 'edit', status: 'EM_ANDAMENTO' })).toBe(true)
       expect(requiresEditReason({ mode: 'edit', status: 'AGUARDANDO_PLANEJAMENTO' })).toBe(
         true,
       )
+      expect(requiresEditReason({ mode: 'edit', status: 'EM_PLANEJAMENTO' })).toBe(true)
+      expect(requiresEditReason({ mode: 'edit', status: 'A_INICIAR' })).toBe(true)
+      expect(requiresEditReason({ mode: 'edit', status: 'EM_ANDAMENTO' })).toBe(true)
+      expect(requiresEditReason({ mode: 'edit', status: 'FINALIZADA' })).toBe(true)
+      expect(requiresEditReason({ mode: 'edit', status: 'CANCELADA' })).toBe(true)
     })
 
     it('modal só abre com alteração real', () => {
