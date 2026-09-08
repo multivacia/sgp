@@ -1890,6 +1890,10 @@ export type PlanItemWeeklyViewRow = {
   /** Nome/descrição da esteira (`conveyors.name`). */
   conveyor_title: string | null
   activity_title: string
+  /** Nome do setor (`AREA` ancestral do STEP). */
+  sector_title: string
+  /** Nome da tarefa (`OPTION` ancestral do STEP). */
+  task_title: string
   notes: string | null
   /** Soma de `conveyor_time_entries.minutes` do STEP (`deleted_at IS NULL`). */
   realized_minutes: number
@@ -1898,8 +1902,9 @@ export type PlanItemWeeklyViewRow = {
 /**
  * Query dedicada ao export Excel "Visão semanal" (matriz colaborador × dia) — NÃO reaproveita
  * nem altera `listEnrichedItemsForWorkPlan`/`listEnrichedItemsForWorkPlanExport`.
- * Inclui o nome da esteira (`conveyors.name`) e o total apontado (`realized_minutes`) via
- * agregação por `conveyor_node_id` (mesmo padrão de `listEnrichedItemsForWorkPlan`).
+ * Inclui o nome da esteira (`conveyors.name`), setor/tarefa (AREA/OPTION) e o total apontado
+ * (`realized_minutes`) via agregação por `conveyor_node_id` (mesmo padrão de
+ * `listEnrichedItemsForWorkPlan`).
  * Nenhum join com "todos os colaboradores ativos" — só aparecem colaboradores com item no plano.
  */
 export async function listItemsForWorkPlanWeeklyView(
@@ -1915,6 +1920,8 @@ export async function listItemsForWorkPlanWeeklyView(
     planned_minutes: number | null
     conveyor_title: string | null
     activity_title: string
+    sector_title: string
+    task_title: string
     notes: string | null
     realized_minutes: string
   }>(
@@ -1934,12 +1941,22 @@ export async function listItemsForWorkPlanWeeklyView(
       i.planned_minutes,
       cv.name AS conveyor_title,
       step.name AS activity_title,
+      area.name AS sector_title,
+      opt.name AS task_title,
       i.notes,
       COALESCE(realized.realized, 0)::text AS realized_minutes
     FROM operational_work_plan_items i
     INNER JOIN conveyor_nodes step
       ON step.id = i.activity_node_id
       AND step.deleted_at IS NULL
+    INNER JOIN conveyor_nodes area
+      ON area.id = step.parent_id
+      AND area.node_type = 'AREA'
+      AND area.deleted_at IS NULL
+    INNER JOIN conveyor_nodes opt
+      ON opt.id = area.parent_id
+      AND opt.node_type = 'OPTION'
+      AND opt.deleted_at IS NULL
     INNER JOIN conveyors cv
       ON cv.id = step.conveyor_id
       AND cv.deleted_at IS NULL
@@ -1966,6 +1983,8 @@ export async function listItemsForWorkPlanWeeklyView(
     planned_minutes: row.planned_minutes,
     conveyor_title: row.conveyor_title,
     activity_title: row.activity_title,
+    sector_title: row.sector_title,
+    task_title: row.task_title,
     notes: row.notes,
     realized_minutes: parsePlanItemRealizedMinutes(row.realized_minutes),
   }))

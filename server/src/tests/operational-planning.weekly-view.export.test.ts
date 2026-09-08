@@ -50,6 +50,8 @@ function sampleRow(
     plannedMinutes: 60,
     conveyorTitle: null,
     activityTitle: 'Atividade A',
+    sectorTitle: null,
+    taskTitle: null,
     notes: 'Observação',
     realizedMinutes: 0,
     ...partial,
@@ -185,19 +187,41 @@ describe('formatWeeklyViewApontadoDurationLabel', () => {
 })
 
 describe('formatWeeklyViewActivityCellContent', () => {
-  it('gera quatro linhas com esteira e três sem (sempre com Tempo apontado)', () => {
-    expect(formatWeeklyViewActivityCellContent(0, 'Reforma', 'Retirada', 90, 45)).toBe(
-      '1º Reforma\nRetirada\nTempo planejado: 1h30 min\nTempo apontado: 45 min',
+  it('insere Setor · Tarefa após o título e antes dos tempos; omite se ambos vazios', () => {
+    expect(
+      formatWeeklyViewActivityCellContent(0, 'Reforma', 'Retirada', 90, 45, 'Funilaria', 'Desmontagem'),
+    ).toBe(
+      '1º Reforma\nRetirada\nFunilaria · Desmontagem\nTempo planejado: 1h30 min\nTempo apontado: 45 min',
+    )
+    expect(formatWeeklyViewActivityCellContent(0, null, 'Retirada', 60, 0, 'Elétrica', 'Montagem')).toBe(
+      '1º Retirada\nElétrica · Montagem\nTempo planejado: 1h\nTempo apontado: ---',
+    )
+    expect(
+      formatWeeklyViewActivityCellContent(0, '  Revisão  ', '  Remoção  ', 60, null, '  Setor  ', '  Tarefa  '),
+    ).toBe('1º Revisão\nRemoção\nSetor · Tarefa\nTempo planejado: 1h\nTempo apontado: ---')
+    expect(formatWeeklyViewActivityCellContent(0, 'OS', 'Ativ', 30, 15, 'Só setor', null)).toBe(
+      '1º OS\nAtiv\nSó setor\nTempo planejado: 30 min\nTempo apontado: 15 min',
+    )
+    expect(formatWeeklyViewActivityCellContent(0, 'OS', 'Ativ', 30, 15, null, 'Só tarefa')).toBe(
+      '1º OS\nAtiv\nSó tarefa\nTempo planejado: 30 min\nTempo apontado: 15 min',
+    )
+    expect(formatWeeklyViewActivityCellContent(0, 'OS', 'Ativ', 30, 15, null, null)).toBe(
+      '1º OS\nAtiv\nTempo planejado: 30 min\nTempo apontado: 15 min',
     )
     expect(formatWeeklyViewActivityCellContent(0, null, 'Retirada', 60, 0)).toBe(
       '1º Retirada\nTempo planejado: 1h\nTempo apontado: ---',
     )
-    expect(formatWeeklyViewActivityCellContent(0, '  Revisão  ', '  Remoção  ', 60, null)).toBe(
-      '1º Revisão\nRemoção\nTempo planejado: 1h\nTempo apontado: ---',
+    const withEsteiraESetor = formatWeeklyViewActivityCellContent(
+      0,
+      'OS',
+      'Ativ',
+      30,
+      15,
+      'Setor',
+      'Tarefa',
     )
-    const withEsteira = formatWeeklyViewActivityCellContent(0, 'OS', 'Ativ', 30, 15)
-    expect(withEsteira.split('\n')).toHaveLength(4)
-    expect(withEsteira.split('\n').some((l) => l.trim() === '')).toBe(false)
+    expect(withEsteiraESetor.split('\n')).toHaveLength(5)
+    expect(withEsteiraESetor.split('\n').some((l) => l.trim() === '')).toBe(false)
     expect(formatWeeklyViewActivityCellLabel('A', 'B')).toBe('A — B')
   })
 })
@@ -321,6 +345,8 @@ describe('buildOperationalPlanningWeeklyViewExportWorkbookBuffer — grade por p
           plannedDate: '2026-09-07',
           conveyorTitle: 'Esteira',
           activityTitle: 'Com apontamento',
+          sectorTitle: 'Funilaria',
+          taskTitle: 'Desmontagem',
           plannedMinutes: 90,
           realizedMinutes: 45,
         }),
@@ -329,6 +355,8 @@ describe('buildOperationalPlanningWeeklyViewExportWorkbookBuffer — grade por p
           plannedDate: '2026-09-08',
           conveyorTitle: null,
           activityTitle: 'Sem apontamento',
+          sectorTitle: 'Elétrica',
+          taskTitle: 'Montagem',
           plannedMinutes: 60,
           realizedMinutes: 0,
         }),
@@ -340,9 +368,11 @@ describe('buildOperationalPlanningWeeklyViewExportWorkbookBuffer — grade por p
     const mon = String(sheet.getRow(8).getCell(2).value ?? '')
     const tue = String(sheet.getRow(8).getCell(3).value ?? '')
     expect(mon).toBe(
-      '1º Esteira\nCom apontamento\nTempo planejado: 1h30 min\nTempo apontado: 45 min',
+      '1º Esteira\nCom apontamento\nFunilaria · Desmontagem\nTempo planejado: 1h30 min\nTempo apontado: 45 min',
     )
-    expect(tue).toBe('1º Sem apontamento\nTempo planejado: 1h\nTempo apontado: ---')
+    expect(tue).toBe(
+      '1º Sem apontamento\nElétrica · Montagem\nTempo planejado: 1h\nTempo apontado: ---',
+    )
     expect((mon.match(/Tempo apontado:/g) ?? []).length).toBe(1)
     expect((tue.match(/Tempo apontado:/g) ?? []).length).toBe(1)
   })

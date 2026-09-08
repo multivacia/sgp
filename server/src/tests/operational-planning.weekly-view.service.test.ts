@@ -21,6 +21,8 @@ function samplePlanItemRow(overrides: Partial<PlanItemWeeklyViewRow> = {}): Plan
     planned_minutes: 90,
     conveyor_title: 'Esteira Demo',
     activity_title: 'Atividade A',
+    sector_title: 'Setor Demo',
+    task_title: 'Tarefa Demo',
     notes: null,
     realized_minutes: 0,
     ...overrides,
@@ -164,5 +166,28 @@ describe('serviceExportOperationalPlanningWeeklyViewXlsx', () => {
 
     const call = spyBuild.mock.calls[0]?.[0]
     expect(call?.rows.map((r) => r.realizedMinutes)).toEqual([75, 0])
+  })
+
+  it('transporta sectorTitle e taskTitle do repository para o exportador', async () => {
+    vi.spyOn(repo, 'findDraftOperationalWorkPlanByWeekStart').mockResolvedValue(
+      samplePlanRow('DRAFT', 'plan-1'),
+    )
+    vi.spyOn(repo, 'findPublishedOperationalWorkPlanByWeekStart').mockResolvedValue(null)
+    vi.spyOn(repo, 'listItemsForWorkPlanWeeklyView').mockResolvedValue([
+      samplePlanItemRow({ sector_title: 'Funilaria', task_title: 'Desmontagem' }),
+    ])
+
+    const buildBuffer = await import(
+      '../modules/operational-planning/operational-planning.weekly-view.export.js'
+    )
+    const spyBuild = vi.spyOn(buildBuffer, 'buildOperationalPlanningWeeklyViewExportWorkbookBuffer')
+
+    await serviceExportOperationalPlanningWeeklyViewXlsx(pool, '2026-09-07')
+
+    const call = spyBuild.mock.calls[0]?.[0]
+    expect(call?.rows[0]).toMatchObject({
+      sectorTitle: 'Funilaria',
+      taskTitle: 'Desmontagem',
+    })
   })
 })

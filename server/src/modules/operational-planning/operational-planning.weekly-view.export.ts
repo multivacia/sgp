@@ -40,6 +40,10 @@ export type OperationalPlanningWeeklyViewExportRow = {
   /** Nome/descrição da esteira (`conveyors.name`). */
   conveyorTitle: string | null
   activityTitle: string
+  /** Nome do setor (`AREA` ancestral do STEP). */
+  sectorTitle: string | null
+  /** Nome da tarefa (`OPTION` ancestral do STEP). */
+  taskTitle: string | null
   notes: string | null
   /** Total apontado do STEP (`SUM(conveyor_time_entries.minutes)` com `deleted_at IS NULL`). */
   realizedMinutes: number
@@ -200,13 +204,30 @@ export function formatWeeklyViewApontadoDurationLabel(
 }
 
 /**
+ * Linha `Setor · Tarefa` (mesmo separador da UI). Omite se ambos vazios; usa só o preenchido.
+ */
+export function formatWeeklyViewSectorTaskLine(
+  sectorTitle: string | null | undefined,
+  taskTitle: string | null | undefined,
+): string | null {
+  const sector = (sectorTitle ?? '').trim()
+  const task = (taskTitle ?? '').trim()
+  if (sector && task) return `${sector} · ${task}`
+  if (sector) return sector
+  if (task) return task
+  return null
+}
+
+/**
  * Conteúdo multilinha de **uma** atividade na célula do dia.
  *
  * Com esteira:
- * `1º Nome da esteira\nNome da atividade\nTempo planejado: 1h30 min\nTempo apontado: 45 min`
+ * `1º Nome da esteira\nNome da atividade\nSetor · Tarefa\nTempo planejado: 1h30 min\nTempo apontado: 45 min`
  *
  * Sem esteira / sem apontamento:
- * `1º Nome da atividade\nTempo planejado: 1h30 min\nTempo apontado: ---`
+ * `1º Nome da atividade\nSetor · Tarefa\nTempo planejado: 1h30 min\nTempo apontado: ---`
+ *
+ * A linha de setor/tarefa é omitida quando ambos estão vazios.
  */
 export function formatWeeklyViewActivityCellContent(
   plannedOrder: number,
@@ -214,21 +235,27 @@ export function formatWeeklyViewActivityCellContent(
   activityTitle: string | null | undefined,
   plannedMinutes: number | null | undefined,
   realizedMinutes: number | null | undefined = 0,
+  sectorTitle: string | null | undefined = null,
+  taskTitle: string | null | undefined = null,
 ): string {
   const orderPrefix = `${plannedOrder + 1}º`
   const description = (conveyorTitle ?? '').trim()
   const activity = (activityTitle ?? '').trim()
   const plannedLine = `Tempo planejado: ${formatWeeklyViewPlannedDurationLabel(plannedMinutes)}`
   const apontadoLine = `Tempo apontado: ${formatWeeklyViewApontadoDurationLabel(realizedMinutes)}`
+  const sectorTaskLine = formatWeeklyViewSectorTaskLine(sectorTitle, taskTitle)
+  const timeBlock = sectorTaskLine
+    ? `${sectorTaskLine}\n${plannedLine}\n${apontadoLine}`
+    : `${plannedLine}\n${apontadoLine}`
 
   if (description && activity) {
-    return `${orderPrefix} ${description}\n${activity}\n${plannedLine}\n${apontadoLine}`
+    return `${orderPrefix} ${description}\n${activity}\n${timeBlock}`
   }
   const title = activity || description
   if (title) {
-    return `${orderPrefix} ${title}\n${plannedLine}\n${apontadoLine}`
+    return `${orderPrefix} ${title}\n${timeBlock}`
   }
-  return `${orderPrefix}\n${plannedLine}\n${apontadoLine}`
+  return `${orderPrefix}\n${timeBlock}`
 }
 
 /**
@@ -534,6 +561,8 @@ export async function buildOperationalPlanningWeeklyViewExportWorkbookBuffer(inp
             item.activityTitle,
             item.plannedMinutes,
             item.realizedMinutes,
+            item.sectorTitle,
+            item.taskTitle,
           ),
         )
       }
