@@ -53,12 +53,7 @@ describe('kioskOutraAtividadeFlowLogic', () => {
     const ok = canSubmitKioskOutraAtividadeForm({
       candidate: candidate({ isAssignedToMe: true }),
       minutes: 15,
-      exceptionJustification: {
-        value: emptyJustificationValue(),
-        useFallback: false,
-        requiresComplement: false,
-      },
-      outOfSequenceJustification: {
+      operationalJustification: {
         value: emptyJustificationValue(),
         useFallback: false,
         requiresComplement: false,
@@ -72,12 +67,7 @@ describe('kioskOutraAtividadeFlowLogic', () => {
     const withoutJustification = canSubmitKioskOutraAtividadeForm({
       candidate: notAssigned,
       minutes: 15,
-      exceptionJustification: {
-        value: emptyJustificationValue(),
-        useFallback: false,
-        requiresComplement: false,
-      },
-      outOfSequenceJustification: {
+      operationalJustification: {
         value: emptyJustificationValue(),
         useFallback: false,
         requiresComplement: false,
@@ -88,13 +78,33 @@ describe('kioskOutraAtividadeFlowLogic', () => {
     const withJustification = canSubmitKioskOutraAtividadeForm({
       candidate: notAssigned,
       minutes: 15,
-      exceptionJustification: {
+      operationalJustification: {
         value: { justificationId: 'j1', justificationComplement: '', legacyText: 'Motivo' },
         useFallback: false,
         requiresComplement: false,
       },
-      outOfSequenceJustification: {
+    })
+    expect(withJustification).toBe(true)
+  })
+
+  it('canSubmitKioskOutraAtividadeForm: uma única justificativa cobre exceção + fora de sequência simultâneas', () => {
+    const notAssignedAndOos = candidate({ isAssignedToMe: false, isOutOfSequence: true })
+    const withoutJustification = canSubmitKioskOutraAtividadeForm({
+      candidate: notAssignedAndOos,
+      minutes: 15,
+      operationalJustification: {
         value: emptyJustificationValue(),
+        useFallback: false,
+        requiresComplement: false,
+      },
+    })
+    expect(withoutJustification).toBe(false)
+
+    const withJustification = canSubmitKioskOutraAtividadeForm({
+      candidate: notAssignedAndOos,
+      minutes: 15,
+      operationalJustification: {
+        value: { justificationId: 'j1', justificationComplement: '', legacyText: 'Motivo' },
         useFallback: false,
         requiresComplement: false,
       },
@@ -108,12 +118,11 @@ describe('kioskOutraAtividadeFlowLogic', () => {
       candidate: notAssigned,
       minutes: 20,
       note: '',
-      exceptionJustification: {
+      operationalJustification: {
         justificationId: 'j1',
         justificationComplement: '',
         legacyText: 'Motivo',
       },
-      outOfSequenceJustification: emptyJustificationValue(),
     })
     expect(payload).toEqual({
       conveyorId: 'conv-1',
@@ -130,18 +139,40 @@ describe('kioskOutraAtividadeFlowLogic', () => {
       candidate: assigned,
       minutes: 20,
       note: 'obs',
-      exceptionJustification: {
+      operationalJustification: {
         justificationId: 'j1',
         justificationComplement: '',
         legacyText: 'Motivo',
       },
-      outOfSequenceJustification: emptyJustificationValue(),
     })
     expect(payload).toEqual({
       conveyorId: 'conv-1',
       stepNodeId: 'step-1',
       minutes: 20,
       note: 'obs',
+    })
+  })
+
+  it('buildKioskUnassignedTimeEntryPayload distribui a MESMA justificativa pros dois campos quando exceção + fora de sequência coexistem', () => {
+    const notAssignedAndOos = candidate({ isAssignedToMe: false, isOutOfSequence: true })
+    const payload = buildKioskUnassignedTimeEntryPayload({
+      candidate: notAssignedAndOos,
+      minutes: 20,
+      note: '',
+      operationalJustification: {
+        justificationId: 'j1',
+        justificationComplement: '',
+        legacyText: 'Motivo único',
+      },
+    })
+    expect(payload).toEqual({
+      conveyorId: 'conv-1',
+      stepNodeId: 'step-1',
+      minutes: 20,
+      exceptionJustificationId: 'j1',
+      exceptionJustification: 'Motivo único',
+      outOfSequenceJustificationId: 'j1',
+      outOfSequenceJustification: 'Motivo único',
     })
   })
 })

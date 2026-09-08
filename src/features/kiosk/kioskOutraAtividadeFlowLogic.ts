@@ -46,23 +46,20 @@ function justificationValidationError(state: JustificationState): string | null 
   })
 }
 
+export function candidateNeedsOperationalJustification(c: TimeEntryCandidateItem): boolean {
+  return candidateNeedsExceptionJustification(c) || candidateNeedsOutOfSequenceJustification(c)
+}
+
 export function canSubmitKioskOutraAtividadeForm(input: {
   candidate: TimeEntryCandidateItem | null
   minutes: number
-  exceptionJustification: JustificationState
-  outOfSequenceJustification: JustificationState
+  operationalJustification: JustificationState
 }): boolean {
   if (!input.candidate) return false
   if (!isValidKioskOutraAtividadeMinutes(input.minutes)) return false
   if (
-    candidateNeedsExceptionJustification(input.candidate) &&
-    justificationValidationError(input.exceptionJustification)
-  ) {
-    return false
-  }
-  if (
-    candidateNeedsOutOfSequenceJustification(input.candidate) &&
-    justificationValidationError(input.outOfSequenceJustification)
+    candidateNeedsOperationalJustification(input.candidate) &&
+    justificationValidationError(input.operationalJustification)
   ) {
     return false
   }
@@ -100,12 +97,17 @@ function appendJustification(
   }
 }
 
+/**
+ * Uma única seleção de justificativa operacional é feita pelo colaborador, e é distribuída
+ * pros dois destinos do payload (`exceptionJustification*` e/ou `outOfSequenceJustification*`),
+ * conforme a atividade exigir — mesma semântica de `buildTimeEntryPayload`
+ * (`quickTimeEntryDrawerLogic.ts`).
+ */
 export function buildKioskUnassignedTimeEntryPayload(input: {
   candidate: TimeEntryCandidateItem
   minutes: number
   note: string
-  exceptionJustification: JustificationFieldValue
-  outOfSequenceJustification: JustificationFieldValue
+  operationalJustification: JustificationFieldValue
 }): ProductionUnassignedTimeEntryPayload {
   const needsException = candidateNeedsExceptionJustification(input.candidate)
   const needsOos = candidateNeedsOutOfSequenceJustification(input.candidate)
@@ -118,8 +120,8 @@ export function buildKioskUnassignedTimeEntryPayload(input: {
     ...(note ? { note } : {}),
   }
 
-  if (needsException) appendJustification(payload, 'exception', input.exceptionJustification)
-  if (needsOos) appendJustification(payload, 'outOfSequence', input.outOfSequenceJustification)
+  if (needsException) appendJustification(payload, 'exception', input.operationalJustification)
+  if (needsOos) appendJustification(payload, 'outOfSequence', input.operationalJustification)
 
   return payload
 }

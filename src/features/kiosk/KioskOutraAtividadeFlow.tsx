@@ -43,14 +43,10 @@ export function KioskOutraAtividadeFlow({ collaborator, onClose, onSuccess }: Pr
   const [preset, setPreset] = useState<number | null>(null)
   const [minutesCustom, setMinutesCustom] = useState('')
   const [note, setNote] = useState('')
-  const [exceptionJustification, setExceptionJustification] =
+  const [operationalJustification, setOperationalJustification] =
     useState<JustificationFieldValue>(emptyJustificationValue())
-  const [exceptionUseFallback, setExceptionUseFallback] = useState(false)
-  const [exceptionRequiresComplement, setExceptionRequiresComplement] = useState(false)
-  const [oosJustification, setOosJustification] =
-    useState<JustificationFieldValue>(emptyJustificationValue())
-  const [oosUseFallback, setOosUseFallback] = useState(false)
-  const [oosRequiresComplement, setOosRequiresComplement] = useState(false)
+  const [justificationUseFallback, setJustificationUseFallback] = useState(false)
+  const [justificationRequiresComplement, setJustificationRequiresComplement] = useState(false)
 
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -91,8 +87,7 @@ export function KioskOutraAtividadeFlow({ collaborator, onClose, onSuccess }: Pr
     setPreset(null)
     setMinutesCustom('')
     setNote('')
-    setExceptionJustification(emptyJustificationValue())
-    setOosJustification(emptyJustificationValue())
+    setOperationalJustification(emptyJustificationValue())
     setError(null)
     setStep('form')
   }
@@ -105,15 +100,10 @@ export function KioskOutraAtividadeFlow({ collaborator, onClose, onSuccess }: Pr
   const canGoToReview = canSubmitKioskOutraAtividadeForm({
     candidate,
     minutes,
-    exceptionJustification: {
-      value: exceptionJustification,
-      useFallback: exceptionUseFallback,
-      requiresComplement: exceptionRequiresComplement,
-    },
-    outOfSequenceJustification: {
-      value: oosJustification,
-      useFallback: oosUseFallback,
-      requiresComplement: oosRequiresComplement,
+    operationalJustification: {
+      value: operationalJustification,
+      useFallback: justificationUseFallback,
+      requiresComplement: justificationRequiresComplement,
     },
   })
 
@@ -137,8 +127,7 @@ export function KioskOutraAtividadeFlow({ collaborator, onClose, onSuccess }: Pr
           candidate,
           minutes,
           note,
-          exceptionJustification,
-          outOfSequenceJustification: oosJustification,
+          operationalJustification,
         }),
       )
       setStep('success')
@@ -151,7 +140,7 @@ export function KioskOutraAtividadeFlow({ collaborator, onClose, onSuccess }: Pr
     } finally {
       setSubmitting(false)
     }
-  }, [candidate, canGoToReview, minutes, note, exceptionJustification, oosJustification, onSuccess])
+  }, [candidate, canGoToReview, minutes, note, operationalJustification, onSuccess])
 
   return (
     <div
@@ -235,19 +224,11 @@ export function KioskOutraAtividadeFlow({ collaborator, onClose, onSuccess }: Pr
                     <dd className="font-medium text-slate-200">{note.trim()}</dd>
                   </div>
                 ) : null}
-                {needsException && exceptionJustification.legacyText.trim() ? (
+                {(needsException || needsOos) && operationalJustification.legacyText.trim() ? (
                   <div>
-                    <dt className="text-xs text-slate-500">Justificativa (sem alocação)</dt>
+                    <dt className="text-xs text-slate-500">Justificativa</dt>
                     <dd className="font-medium text-slate-200">
-                      {exceptionJustification.legacyText.trim()}
-                    </dd>
-                  </div>
-                ) : null}
-                {needsOos && oosJustification.legacyText.trim() ? (
-                  <div>
-                    <dt className="text-xs text-slate-500">Justificativa (fora de sequência)</dt>
-                    <dd className="font-medium text-slate-200">
-                      {oosJustification.legacyText.trim()}
+                      {operationalJustification.legacyText.trim()}
                     </dd>
                   </div>
                 ) : null}
@@ -332,45 +313,21 @@ export function KioskOutraAtividadeFlow({ collaborator, onClose, onSuccess }: Pr
                 ) : null}
               </div>
 
-              {needsOos ? (
+              {needsException || needsOos ? (
                 <JustificationSelect
                   channel="production"
-                  idPrefix={`kiosk-outra-atividade-oos-${candidate.stepNodeId}`}
-                  value={oosJustification.justificationId ?? ''}
-                  complement={oosJustification.justificationComplement}
-                  legacyText={oosJustification.legacyText}
+                  idPrefix={`kiosk-outra-atividade-justificativa-${candidate.stepNodeId}`}
+                  value={operationalJustification.justificationId ?? ''}
+                  complement={operationalJustification.justificationComplement}
+                  legacyText={operationalJustification.legacyText}
                   required
                   disabled={submitting}
                   onCatalogStateChange={({ useFallback, selectedRequiresComplement }) => {
-                    setOosUseFallback(useFallback)
-                    setOosRequiresComplement(selectedRequiresComplement)
+                    setJustificationUseFallback(useFallback)
+                    setJustificationRequiresComplement(selectedRequiresComplement)
                   }}
                   onChange={(next) => {
-                    setOosJustification({
-                      justificationId: next.justificationId,
-                      justificationComplement: next.justificationComplement,
-                      legacyText: next.legacyText,
-                    })
-                    setError(null)
-                  }}
-                />
-              ) : null}
-
-              {needsException ? (
-                <JustificationSelect
-                  channel="production"
-                  idPrefix={`kiosk-outra-atividade-exc-${candidate.stepNodeId}`}
-                  value={exceptionJustification.justificationId ?? ''}
-                  complement={exceptionJustification.justificationComplement}
-                  legacyText={exceptionJustification.legacyText}
-                  required
-                  disabled={submitting}
-                  onCatalogStateChange={({ useFallback, selectedRequiresComplement }) => {
-                    setExceptionUseFallback(useFallback)
-                    setExceptionRequiresComplement(selectedRequiresComplement)
-                  }}
-                  onChange={(next) => {
-                    setExceptionJustification({
+                    setOperationalJustification({
                       justificationId: next.justificationId,
                       justificationComplement: next.justificationComplement,
                       legacyText: next.legacyText,

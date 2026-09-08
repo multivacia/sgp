@@ -9,14 +9,19 @@ import {
 } from '../conveyors/conveyorAssignments.service.js'
 import { findAssigneeIdForStepAndCollaborator } from '../conveyors/conveyorAssignments.repository.js'
 import type { TimeEntryCreatedDto } from '../conveyors/conveyorAssignments.dto.js'
+import { resolveProductionStepAssigneeId } from './production-plan-assignee.js'
 import type { ProductionUnassignedTimeEntryBody } from './production-time-entries.schemas.js'
 
 /**
- * Apontamento excepcional de tempo em uma atividade real de uma esteira ("Outra Atividade") —
- * Modo Fábrica. Nunca cria/altera alocação (`conveyor_node_assignees`): quando o colaborador já
- * está alocado ao STEP, o apontamento é `ASSIGNED` (lendo a alocação existente); caso contrário
- * é `UNASSIGNED_EXCEPTION`, exigindo justificativa (validada dentro de
- * `serviceCreateConveyorTimeEntry`, não duplicada aqui).
+ * Apontamento de tempo em uma atividade real de uma esteira ("Outra Atividade") — Modo
+ * Fábrica. Resolve a alocação seguindo a mesma regra canônica de
+ * `serviceCreateConveyorTimeEntryForAppUser` (`conveyorAssignments.service.ts`):
+ * 1. Alocação estrutural existente (`findAssigneeIdForStepAndCollaborator`) → `ASSIGNED`.
+ * 2. Sem alocação estrutural, mas com item no planejamento semanal publicado vigente
+ *    (`resolveProductionStepAssigneeId`) → cria alocação de apoio (`is_primary=false`) e
+ *    também resulta em `ASSIGNED`.
+ * 3. Nenhuma das duas → `UNASSIGNED_EXCEPTION`, exigindo justificativa (validada dentro de
+ *    `serviceCreateConveyorTimeEntry`, não duplicada aqui).
  */
 export async function serviceCreateProductionUnassignedTimeEntry(
   pool: pg.Pool,
@@ -40,12 +45,19 @@ export async function serviceCreateProductionUnassignedTimeEntry(
     )
   }
 
-  const assigneeId = await findAssigneeIdForStepAndCollaborator(
+  let assigneeId = await findAssigneeIdForStepAndCollaborator(
     pool,
     body.conveyorId,
     body.stepNodeId,
     collaboratorId,
   )
+  if (!assigneeId) {
+    assigneeId = await resolveProductionStepAssigneeId(pool, {
+      collaboratorId,
+      conveyorId: body.conveyorId,
+      stepNodeId: body.stepNodeId,
+    })
+  }
 
   const actorAppUserId = await findAppUserIdByCollaboratorId(pool, collaboratorId)
 

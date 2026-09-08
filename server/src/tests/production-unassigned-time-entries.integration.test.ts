@@ -12,8 +12,14 @@ import {
   seedProductionPinForCollaborator,
   SEED_COLLABORATOR_MARIA_ID,
 } from './productionTestHelpers.js'
-import { ensureMariaCollaboratorSeedForIntegration } from './integrationSeedFixtures.js'
-import { setConveyorProductionStatusForIntegration } from './integrationConveyorFixtures.js'
+import {
+  ensureMariaCollaboratorSeedForIntegration,
+  MARIA_APP_USER_ID,
+} from './integrationSeedFixtures.js'
+import {
+  seedOperationalWorkPlanItemsForSteps,
+  setConveyorProductionStatusForIntegration,
+} from './integrationConveyorFixtures.js'
 import { ErrorCodes } from '../shared/errors/errorCodes.js'
 
 loadDotenvFiles()
@@ -241,6 +247,59 @@ describe.skipIf(!hasDb)('production unassigned time entries + candidates (integr
         [stepId],
       )
       expect(afterAssignees.rows[0]?.count).toBe(beforeAssignees.rows[0]?.count)
+    })
+
+    it('colaborador sem alocação estrutural, mas com item no plano semanal publicado → 201, entry_origin=ASSIGNED, cria alocação de apoio, sem exigir justificativa de exceção', async () => {
+      const conv = await serviceCreateConveyor(
+        pool,
+        minimalConveyorBody(`UOA-Plan-${Date.now()}`),
+      )
+      await setConveyorProductionStatusForIntegration(pool, conv.id)
+      const stepId = await firstStepId(pool, conv.id)
+
+      await seedOperationalWorkPlanItemsForSteps(pool, {
+        createdByUserId: MARIA_APP_USER_ID,
+        conveyorId: conv.id,
+        steps: [{ activityNodeId: stepId, collaboratorId: UOA_UNASSIGNED_COLLAB_ID }],
+      })
+
+      const beforeAssignees = await pool.query<{ count: string }>(
+        `SELECT COUNT(*)::text AS count FROM conveyor_node_assignees
+         WHERE conveyor_node_id = $1::uuid AND deleted_at IS NULL`,
+        [stepId],
+      )
+      expect(beforeAssignees.rows[0]?.count).toBe('0')
+
+      const cookie = productionSessionCookie(UOA_UNASSIGNED_COLLAB_ID)
+      const res = await request(app)
+        .post('/api/v1/production/time-entries/unassigned-exception')
+        .set('Cookie', cookie)
+        .send({ conveyorId: conv.id, stepNodeId: stepId, minutes: 9 })
+      expect(res.status).toBe(201)
+      const entryId = (res.body.data as { id: string }).id
+
+      const row = await pool.query<{
+        collaborator_id: string
+        entry_origin: string
+        conveyor_node_assignee_id: string | null
+      }>(
+        `SELECT collaborator_id::text, entry_origin, conveyor_node_assignee_id::text
+         FROM conveyor_time_entries WHERE id = $1::uuid`,
+        [entryId],
+      )
+      expect(row.rows[0]?.collaborator_id).toBe(UOA_UNASSIGNED_COLLAB_ID)
+      expect(row.rows[0]?.entry_origin).toBe('ASSIGNED')
+      expect(row.rows[0]?.conveyor_node_assignee_id).not.toBeNull()
+
+      const assignee = await pool.query<{
+        is_primary: boolean
+        metadata_json: { source?: string } | null
+      }>(
+        `SELECT is_primary, metadata_json FROM conveyor_node_assignees WHERE id = $1::uuid`,
+        [row.rows[0]?.conveyor_node_assignee_id],
+      )
+      expect(assignee.rows[0]?.is_primary).toBe(false)
+      expect(assignee.rows[0]?.metadata_json?.source).toBe('production_published_plan')
     })
 
     it('colaborador alocado no STEP → 201, entry_origin=ASSIGNED, collaborator vindo da sessão', async () => {
