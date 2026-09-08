@@ -34,7 +34,10 @@ export type JustificationPreferredContext = {
   requiresExcessTime?: boolean
 }
 
-/** Categoria sugerida para pré-seleção conforme o contexto do apontamento. */
+/**
+ * Categoria sugerida conforme o contexto do apontamento.
+ * Ainda usada pelos call sites para hints/UX; o `JustificationSelect` não pré-seleciona mais.
+ */
 export function resolvePreferredJustificationCategory(
   context: JustificationPreferredContext,
 ): string | null {
@@ -48,7 +51,10 @@ function sortByOrder(options: TimeEntryJustificationOption[]): TimeEntryJustific
   return [...options].sort((a, b) => a.sortOrder - b.sortOrder)
 }
 
-/** Escolhe a justificativa ativa mais compatível com o contexto (sem travar o usuário). */
+/**
+ * Utilitário legado: escolhe id preferido por categoria/hint.
+ * Mantido para testes e possíveis usos futuros; o `JustificationSelect` NÃO chama mais esta função.
+ */
 export function pickPreferredJustificationId(
   options: TimeEntryJustificationOption[],
   preferredCategory?: string | null,

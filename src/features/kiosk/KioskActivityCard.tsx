@@ -161,6 +161,7 @@ export function KioskActivityCard({ item, onSuccess }: Props) {
     setPreset(INITIAL_KIOSK_TIME_ENTRY_FORM.preset)
     setMinutesCustom(INITIAL_KIOSK_TIME_ENTRY_FORM.minutesCustom)
     setMarkAsDone(INITIAL_KIOSK_TIME_ENTRY_FORM.markAsDone)
+    setOutOfSequenceJustification(emptyJustificationValue())
     setError(null)
     setConfirmLowPct(false)
   }

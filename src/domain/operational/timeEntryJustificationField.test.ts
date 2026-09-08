@@ -48,13 +48,13 @@ describe('timeEntryJustificationField', () => {
     ).toBe('SUBSTITUTION')
   })
 
-  it('pré-seleciona justificativa da categoria SEQUENCE', () => {
+  it('utilitário legado pickPreferredJustificationId resolve categoria SEQUENCE (não usado pelo select)', () => {
     expect(
       pickPreferredJustificationId(OPTIONS, 'SEQUENCE', 'outro colaborador'),
     ).toBe('seq-1')
   })
 
-  it('não pré-seleciona sem categoria preferida', () => {
+  it('utilitário legado pickPreferredJustificationId retorna null sem categoria preferida', () => {
     expect(pickPreferredJustificationId(OPTIONS, null)).toBeNull()
   })
 
