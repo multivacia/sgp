@@ -227,7 +227,7 @@ export function KioskActivityCards({ collaborator, initialItems, onExit }: Props
               {filtered.map((item) => (
                 <div
                   key={item.workPlanItemId}
-                  className="h-full min-w-full overflow-y-auto"
+                  className="h-full min-w-full overflow-y-auto overscroll-contain touch-pan-y"
                 >
                   <KioskActivityCard
                     item={item}
@@ -291,7 +291,7 @@ export function KioskActivityCards({ collaborator, initialItems, onExit }: Props
         /* Modo lista — min-h-0 fecha a cadeia flex para o overflow-y-auto limitar à viewport */
         <div
           data-testid="kiosk-activity-list-scroll"
-          className="min-h-0 flex-1 overflow-y-auto p-5"
+          className="min-h-0 flex-1 overflow-y-auto overscroll-contain touch-pan-y p-5"
         >
           <div className="flex flex-col gap-6">
             {listSections.map((section) => (

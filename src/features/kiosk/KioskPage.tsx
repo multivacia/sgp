@@ -70,7 +70,7 @@ export function KioskPage() {
       data-sgp-surface="kiosk"
       className="fixed inset-0 flex flex-col overflow-hidden bg-sgp-void select-none touch-manipulation"
     >
-      <div className="min-h-0 flex-1 overflow-hidden">
+      <div className="flex min-h-0 flex-1 overflow-hidden">
         {screen.view === 'grid' && (
           <KioskCollaboratorGrid onSelect={handleCollaboratorSelect} />
         )}

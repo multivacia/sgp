@@ -93,13 +93,15 @@ afterEach(() => {
 })
 
 describe('KioskActivityCards — rolagem do modo lista', () => {
-  it('modo lista usa container rolável com min-h-0 e overflow-y-auto', () => {
+  it('modo lista usa container rolável com min-h-0, overflow-y-auto e pan vertical', () => {
     renderKiosk()
     fireEvent.click(screen.getByRole('button', { name: 'Modo lista' }))
     const scroll = screen.getByTestId('kiosk-activity-list-scroll')
     expect(scroll.className).toMatch(/\bmin-h-0\b/)
     expect(scroll.className).toMatch(/\bflex-1\b/)
     expect(scroll.className).toMatch(/\boverflow-y-auto\b/)
+    expect(scroll.className).toMatch(/\boverscroll-contain\b/)
+    expect(scroll.className).toMatch(/\btouch-pan-y\b/)
   })
 
   it('troca carrossel → lista mantém Extra esteira e Outra atividade acessíveis', () => {

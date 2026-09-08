@@ -63,8 +63,8 @@ export function KioskCollaboratorGrid({ onSelect }: Props) {
   }
 
   return (
-    <div className="flex flex-1 flex-col overflow-hidden">
-      {/* Header */}
+    <div className="flex h-full min-h-0 flex-col overflow-hidden">
+      {/* Header — fora da área rolável */}
       <div className="shrink-0 border-b border-white/[0.07] px-6 py-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
@@ -106,9 +106,11 @@ export function KioskCollaboratorGrid({ onSelect }: Props) {
         )}
       </div>
 
-      {/* Grid */}
-      <div className="min-h-0 flex-1 overflow-y-auto p-6">
-        {loading ? (
+      {/* Grid — única área com scroll vertical (touch/desktop) */}
+      <div
+        data-testid="kiosk-collaborator-grid-scroll"
+        className="min-h-0 flex-1 overflow-y-auto overscroll-contain touch-pan-y p-6"
+      >        {loading ? (
           <p className="py-20 text-center text-slate-400">
             Carregando colaboradores…
           </p>
