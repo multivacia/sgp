@@ -131,6 +131,7 @@ export function KioskOutraAtividadeFlow({ collaborator, onClose, onSuccess }: Pr
         }),
       )
       setStep('success')
+      setOperationalJustification(emptyJustificationValue())
       setTimeout(() => {
         onSuccess()
       }, 2000)
