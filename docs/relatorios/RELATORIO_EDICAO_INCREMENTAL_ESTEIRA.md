@@ -3,7 +3,7 @@
 STATUS_FINAL: CONCLUÍDO COM RESSALVAS  
 BRANCH: `cursor/edicao-incremental-estrutura-esteira-c836`  
 BASE_ORIGIN_MAIN: `6b768c852a18b7428e3dadf761bad7e35c1d61ef`  
-COMMIT: `7f15c21722fb97b0d4f642620a9c6090274f644d`  
+COMMIT: tip da branch (push atual)  
 MIGRATION: NÃO NECESSÁRIA
 
 ---
