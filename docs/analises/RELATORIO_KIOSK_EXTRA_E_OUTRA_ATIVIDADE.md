@@ -1,6 +1,8 @@
 # Relatório — Kiosk Extra esteira / Outra atividade
 
-STATUS_FINAL: CONCLUÍDO — PASSA COM RESSALVAS (revisão de teste independente)
+STATUS_FINAL: CONCLUÍDO — PASSA COM RESSALVAS (revisão de teste independente); ver também
+seção "Correção — alinhamento de Outra atividade com regra canônica do SGP" abaixo, que
+corrigiu uma divergência encontrada em validação manual pós-promoção para `develop`.
 
 BRANCH: `claude/kiosk-extra-esteira-outra-atividade-9qo8bn`
 
@@ -15,6 +17,129 @@ PUSH_REALIZADO: SIM (`origin/claude/kiosk-extra-esteira-outra-atividade-9qo8bn`)
 > (`claude/kiosk-extra-esteira-outra-atividade-9qo8bn`), que já estava exatamente no SHA de
 > `origin/main` no início do trabalho (`6b768c8`), sem nenhum commit próprio anterior — ou
 > seja, tecnicamente equivalente a partir limpo de `origin/main`, só com outro nome de branch.
+
+## Correção — alinhamento de Outra atividade com regra canônica do SGP
+
+BRANCH_CORRECAO: `fix/kiosk-outra-atividade-alinhar-regra-sgp`
+
+BASE_ORIGIN_DEVELOP: `41c672df7cd111d73047c144012cb2f3260e9c4b`
+
+COMMIT_CORRECAO: `04219a3`
+
+SHA_FINAL_DEVELOP: `04219a3a294379b944b91aa2b52bdc5f68146197`
+
+MIGRATION_NOVA: NÃO
+
+### Causa encontrada
+Validação manual encontrou o erro "Essa atividade não permite apontamento agora." ao confirmar
+um apontamento de "Outra Atividade" numa atividade que estava presente no planejamento semanal
+publicado do colaborador, mas ainda sem alocação estrutural (`conveyor_node_assignees`).
+
+Causa raiz confirmada em código:
+`server/src/modules/production/production-unassigned-time-entries.service.ts` decidia
+`ASSIGNED` vs `UNASSIGNED_EXCEPTION` olhando só para
+`findAssigneeIdForStepAndCollaborator` (alocação estrutural), sem tentar o fallback do
+planejamento semanal publicado (`resolveProductionStepAssigneeId`). A busca de candidatos
+(`serviceListTimeEntryCandidates`) já classificava essa atividade como `isAssignedToMe: true`
+por causa do plano publicado, então o frontend corretamente não coletava justificativa de "sem
+alocação" — mas o backend, sem o fallback, caía em `UNASSIGNED_EXCEPTION` e exigia essa
+justificativa nunca enviada, retornando 422.
+
+### Regra anterior incorreta
+```
+alocação estrutural?  → ASSIGNED
+qualquer outro caso   → UNASSIGNED_EXCEPTION (exige justificativa de exceção)
+```
+Isso divergia do fluxo web canônico já existente e tratava incorretamente atividades do plano
+publicado como "fora da alocação".
+
+### Comportamento canônico utilizado
+Replicado de `serviceCreateConveyorTimeEntryForAppUser`
+(`server/src/modules/conveyors/conveyorAssignments.service.ts`), já usado pelo fluxo web:
+```
+1. alocação estrutural (findAssigneeIdForStepAndCollaborator)     → ASSIGNED
+2. sem estrutural, mas no plano semanal publicado vigente
+   (resolveProductionStepAssigneeId cria/reaproveita alocação
+   de apoio, is_primary=false, metadata production_published_plan) → ASSIGNED
+3. nenhum dos dois                                                 → UNASSIGNED_EXCEPTION
+   (exige justificativa, conveyorNodeAssigneeId=NULL, nenhuma
+   alocação criada)
+```
+Fora de sequência (`serviceAnalyzeConveyorActivitySequence`) continua avaliado de forma
+independente e ortogonal a essa decisão, nos 3 casos.
+
+Ajuste adicional no frontend: `KioskOutraAtividadeFlow.tsx` pedia duas seleções de
+justificativa separadas ("sem alocação" e "fora de sequência") quando os dois casos
+coexistiam. Consolidado para uma única seleção de justificativa operacional, distribuída para
+os dois campos do payload quando ambos aplicam — mesma semântica já usada em
+`quickTimeEntryDrawerLogic.ts`/`QuickTimeEntryDrawer.tsx` (não alterados).
+
+### Arquivos modificados
+- `server/src/modules/production/production-unassigned-time-entries.service.ts` — fallback
+  para `resolveProductionStepAssigneeId`; comentário JSDoc corrigido (removida a afirmação
+  incorreta de que o fluxo "nunca cria/altera alocação").
+- `server/src/tests/production-unassigned-time-entries.integration.test.ts` — novo caso: só
+  plano publicado (sem alocação estrutural) → 201, `ASSIGNED`, alocação de apoio criada.
+- `src/features/kiosk/KioskOutraAtividadeFlow.tsx` — estado único de justificativa
+  operacional, um único `JustificationSelect`.
+- `src/features/kiosk/kioskOutraAtividadeFlowLogic.ts` — `canSubmitKioskOutraAtividadeForm` e
+  `buildKioskUnassignedTimeEntryPayload` passam a receber uma única justificativa e distribuí-la.
+- `src/features/kiosk/kioskOutraAtividadeFlowLogic.test.ts` — testes adaptados pra justificativa
+  única; novo caso cobrindo exceção + fora de sequência simultâneos.
+
+Nada alterado em `production-plan-assignee.ts`, `production-time-entries.service.ts`,
+`conveyorAssignments.service.ts`, `QuickTimeEntryDrawer.tsx`/`quickTimeEntryDrawerLogic.ts`,
+fluxo "+ Extra esteira" ou migration `0052`.
+
+### Testes mantidos
+- `server/src/tests/production-unassigned-time-entries.integration.test.ts` (adaptado, com
+  novo caso B).
+- `server/src/tests/production-plan-assignee.test.ts` (não alterado, usado como regressão de
+  contrato de `resolveProductionStepAssigneeId`).
+- `server/src/tests/production-time-entries.integration.test.ts` (não alterado, prova que o
+  apontamento normal continua intacto).
+- `src/features/kiosk/kioskOutraAtividadeFlowLogic.test.ts` (adaptado).
+- `src/features/kiosk/KioskActivityCards.test.tsx` (não alterado, continua verde).
+
+### Testes descartados
+Nenhum teste exploratório foi mantido no commit final.
+
+### Validação
+- `npx tsc -b` (raiz): exit 0. `npx tsc -p tsconfig.json --noEmit` (server): exit 0.
+- `npm run build`: exit 0.
+- `npm run lint`: exit 1 (93 erros/23 warnings), idêntico à baseline — nenhum dos 5 arquivos
+  tocados por esta correção aparece na lista.
+- Testes relacionados (rodados de forma independente por um segundo agente, sem confiar no
+  relatório do implementador):
+  - `production-plan-assignee.test.ts`: 6/6 passou.
+  - `production-time-entries.integration.test.ts`: 31/31 passou.
+  - `production-unassigned-time-entries.integration.test.ts`: 7 passed / 1 failed. A falha
+    (teste "busca por nome (>= 2 chars)") foi confirmada, por investigação direta no banco
+    (contagem de registros `Etapa UOA` crescendo a cada execução, 3 execuções isoladas com
+    falha idêntica e determinística, e diff do arquivo de teste não tocando esse bloco), como
+    poluição de dados acumulados no Postgres local reutilizado entre sessões deste ambiente —
+    **não é regressão desta correção**. Query afetada
+    (`listTimeEntryUnassignedOpenStepsForCollaborator`, em `my-activities.repository.ts`) não
+    foi tocada por este diff.
+  - `kioskOutraAtividadeFlowLogic.test.ts`: 8/8 passou.
+  - `KioskActivityCards.test.tsx`: 6/6 passou.
+- Veredito da revisão independente (`sgp-test-reviewer`): **PASSA COM RESSALVAS** — ressalva
+  única é a poluição de dados de teste no ambiente local (não bloqueante), registrada como
+  débito abaixo.
+
+### Validação manual
+Não realizada nesta sessão (sem tablet físico/navegador interativo disponível). Pendente,
+mesma limitação já registrada na entrega original — roteiro sugerido pela revisão
+independente: no Kiosk, apontar "Outra Atividade" numa atividade só do plano publicado (sem
+alocação estrutural) e confirmar que completa sem pedir justificativa e sem erro 422; conferir
+visualmente que a revisão mostra só uma seção "Justificativa" quando os dois motivos coexistem.
+
+### Débito registrado (fora do escopo desta correção)
+O Postgres local de desenvolvimento deste ambiente é reutilizado entre sessões de trabalho e
+acumula dados de teste (ex.: dezenas de nós `Etapa UOA`) sem limpeza — isso já mascarou um
+teste nesta correção e pode mascarar outros no futuro. Recomendado (não feito aqui, fora de
+escopo): adicionar cleanup por prefixo no `afterEach`/`afterAll` desses testes de integração,
+ou tornar os nomes de nó gerados exclusivos por execução (não só o nome da esteira).
 
 ## Implementação
 
