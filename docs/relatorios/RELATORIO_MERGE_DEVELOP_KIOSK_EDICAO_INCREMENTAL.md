@@ -12,7 +12,7 @@
 | DEVELOP_ANTES (real no gate) | `2efec505c7cab4b63d724819613552c207db8165` |
 | FEATURE_HEAD | `3ab6e3be66317295f553cffeb2cded42ddb715ec` |
 | MERGE_COMMIT | `08c83c342dbba4ba530d60c27511a1c4ea674d70` |
-| DEVELOP_DEPOIS | `ffc16127c8ce6ff9b2390abc0bdafbe0338971e1` |
+| DEVELOP_DEPOIS | `72003df9ba52ce5d89b0ee57797733695dc9ac8a` (tip com CI verde; commits docs posteriores não alteram o merge) |
 | MAIN_ALTERADA | **NÃO** (`origin/main` permanece `6b768c852a18b7428e3dadf761bad7e35c1d61ef`) |
 
 ## Divergência do gate
@@ -173,17 +173,22 @@ Integração tentada e **skipped** (exit 0, 56 testes skipped):
 
 ## CI
 
-Acompanhar após o push em `develop` (workflow(s) do repositório). Este relatório registra o estado pré-acompanhamento; atualizar se CI falhar por causa do merge.
+| Tip | Run | Resultado |
+|-----|-----|-----------|
+| `ffc16127…` | [34259248109](https://github.com/multivacia/sgp/actions/runs/34259248109) | **success** |
+| `72003df9…` (tip develop verificado) | [34259289460](https://github.com/multivacia/sgp/actions/runs/34259289460) | **success** (`Verify deploy readiness` / job `verify`) |
 
 ## PUSH
 
 ```bash
 git push origin HEAD:develop
+# 2efec505..ffc16127  HEAD -> develop  (merge + relatório)
+# ffc16127..72003df9  HEAD -> develop  (ajuste docs DEVELOP_DEPOIS/CI)
 # sem --force / --force-with-lease
 ```
 
-PR draft de rastreio da branch de integração: `#23` (base `develop`).  
-PR `#22` (feature) **não** fechada / **não** mergeada em `main` / **não** retargetada.
+PR draft de rastreio da branch de integração: `#23` (base `develop`; GitHub marcou MERGED após o push direto).  
+PR `#22` (feature) permanece **OPEN** / draft / base `main` — **não** fechada / **não** mergeada em `main` / **não** retargetada.
 
 ## Diff relativo
 
