@@ -237,7 +237,6 @@ describe.skipIf(!hasDb)('conveyors PATCH structure/dados (integração)', () => 
       .set('Cookie', await sessionCookieForUser(pool, GOV_ADMIN_USER_ID, GOV_ADMIN_EMAIL))
     const stepId = det.body.data.structure.options[0].areas[0].steps[0].id as string
     const optionId = det.body.data.structure.options[0].id as string
-    const areaId = det.body.data.structure.options[0].areas[0].id as string
 
     await pool.query(
       `UPDATE conveyors SET operational_status = 'AGUARDANDO_PLANEJAMENTO' WHERE id = $1::uuid`,
@@ -280,16 +279,15 @@ describe.skipIf(!hasDb)('conveyors PATCH structure/dados (integração)', () => 
     expect(oldStep.rows[0]?.is_active).toBe(false)
 
     // Detalhe não expõe nó inativo
-    const activeIds = (res.body.data.structure.options as Array<{ id: string }>).map(
+    const activeOptionIds = (res.body.data.structure.options as Array<{ id: string }>).map(
       (o) => o.id,
     )
-    expect(activeIds).not.toContain(optionId)
+    expect(activeOptionIds).not.toContain(optionId)
     expect(
       res.body.data.structure.options[0].areas[0].steps.some(
         (s: { id: string }) => s.id === stepId,
       ),
     ).toBe(false)
-    void areaId
   })
 
   it('PATCH structure com ids preserva STEP e emite CONVEYOR_STRUCTURE_UPDATED', async () => {
