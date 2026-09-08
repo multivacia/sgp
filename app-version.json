@@ -1,7 +1,7 @@
 {
   "product": "SGP+",
-  "version": "1.9.4",
-  "releaseName": "Exportações do planejamento e inclusão tardia de itens",
-  "releaseDate": "2026-09-04",
+  "version": "1.9.5",
+  "releaseName": "Kiosk, edição incremental e melhorias no planejamento",
+  "releaseDate": "2026-09-08",
   "channel": "production"
 }
