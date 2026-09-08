@@ -92,6 +92,36 @@ afterEach(() => {
   vi.clearAllMocks()
 })
 
+describe('KioskActivityCards — rolagem do modo lista', () => {
+  it('modo lista usa container rolável com min-h-0 e overflow-y-auto', () => {
+    renderKiosk()
+    fireEvent.click(screen.getByRole('button', { name: 'Modo lista' }))
+    const scroll = screen.getByTestId('kiosk-activity-list-scroll')
+    expect(scroll.className).toMatch(/\bmin-h-0\b/)
+    expect(scroll.className).toMatch(/\bflex-1\b/)
+    expect(scroll.className).toMatch(/\boverflow-y-auto\b/)
+  })
+
+  it('troca carrossel → lista mantém Extra esteira e Outra atividade acessíveis', () => {
+    renderKiosk()
+    expect(screen.getByRole('button', { name: 'Modo carrossel' }).getAttribute('aria-pressed')).toBe(
+      'true',
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Modo lista' }))
+    expect(screen.getByRole('button', { name: 'Modo lista' }).getAttribute('aria-pressed')).toBe(
+      'true',
+    )
+    expect(screen.getByTestId('kiosk-activity-list-scroll')).toBeTruthy()
+    expect(screen.getByRole('button', { name: '+ Extra esteira' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: '+ Outra atividade' })).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Modo carrossel' }))
+    expect(screen.queryByTestId('kiosk-activity-list-scroll')).toBeNull()
+    expect(screen.getByRole('button', { name: 'Modo carrossel' }).getAttribute('aria-pressed')).toBe(
+      'true',
+    )
+  })
+})
+
 describe('KioskActivityCards — apontamentos avulsos', () => {
   it('exibe os botões "+ Extra esteira" e "+ Outra atividade" no header', () => {
     renderKiosk()

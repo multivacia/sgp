@@ -83,7 +83,7 @@ export function KioskActivityCards({ collaborator, initialItems, onExit }: Props
   const DOTS_MAX = 10
 
   return (
-    <div className="flex flex-1 flex-col overflow-hidden">
+    <div className="flex h-full min-h-0 flex-col overflow-hidden">
       {/* Barra de header */}
       <div className="shrink-0 border-b border-white/[0.07] px-4 py-3">
         <div className="flex flex-wrap items-center gap-3">
@@ -189,7 +189,7 @@ export function KioskActivityCards({ collaborator, initialItems, onExit }: Props
           </p>
         </div>
       ) : viewMode === 'carousel' ? (
-        <div className="flex flex-1 flex-col overflow-hidden">
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
           {activeItem ? (
             <div className="shrink-0 border-b border-white/[0.07] px-5 py-2">
               {(() => {
@@ -288,8 +288,11 @@ export function KioskActivityCards({ collaborator, initialItems, onExit }: Props
           </div>
         </div>
       ) : (
-        /* Modo lista */
-        <div className="flex-1 overflow-y-auto p-5">
+        /* Modo lista — min-h-0 fecha a cadeia flex para o overflow-y-auto limitar à viewport */
+        <div
+          data-testid="kiosk-activity-list-scroll"
+          className="min-h-0 flex-1 overflow-y-auto p-5"
+        >
           <div className="flex flex-col gap-6">
             {listSections.map((section) => (
               <section key={section.id} className="flex flex-col gap-3">
