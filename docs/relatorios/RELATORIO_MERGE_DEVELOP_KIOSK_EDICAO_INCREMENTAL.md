@@ -12,7 +12,7 @@
 | DEVELOP_ANTES (real no gate) | `2efec505c7cab4b63d724819613552c207db8165` |
 | FEATURE_HEAD | `3ab6e3be66317295f553cffeb2cded42ddb715ec` |
 | MERGE_COMMIT | `08c83c342dbba4ba530d60c27511a1c4ea674d70` |
-| DEVELOP_DEPOIS | `08c83c342dbba4ba530d60c27511a1c4ea674d70` (após `git push origin HEAD:develop`) |
+| DEVELOP_DEPOIS | `435f9bce60b811433726d10beaffca9c8d71ecf4` (merge + relatório; após `git push origin HEAD:develop`) |
 | MAIN_ALTERADA | **NÃO** (`origin/main` permanece `6b768c852a18b7428e3dadf761bad7e35c1d61ef`) |
 
 ## Divergência do gate
