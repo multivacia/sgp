@@ -110,6 +110,7 @@ import {
 } from './planningBoardFilters'
 import { buildPlanningBacklogExecutionLookup } from './planningExecutionHelpers'
 import {
+  resolveDefaultAddToPlanDay,
   resolveDefaultPlanningDailySelectedDay,
   type PlanningDailySelectedDay,
   type PlanningViewMode,
@@ -757,6 +758,11 @@ export function OperationalPlanningPage() {
     () => weekPayload?.week.weekdayDates ?? [],
     [weekPayload?.week.weekdayDates],
   )
+  const todayIso = useMemo(() => localTodayIsoDate(), [])
+  const todayInDisplayedWeek = useMemo(
+    () => isIsoDateInWeekdays(todayIso, weekdayDates),
+    [todayIso, weekdayDates],
+  )
   const dayLabels = weekdayLabelsPt()
 
   const plannedActivityIds = useMemo(
@@ -1005,7 +1011,7 @@ export function OperationalPlanningPage() {
         ? item.assignedCollaborators[0].id
         : (collaborators[0]?.id ?? '')
     setModalCollaboratorId(suggestedCollabId)
-    setModalDay(weekdayDates[0] ?? weekMonday)
+    setModalDay(resolveDefaultAddToPlanDay(weekdayDates, todayIso, weekMonday))
     setModalMinutes(Math.max(1, item.pendingMinutes || item.plannedMinutes || 60))
     setModalOpen(true)
   }
@@ -1407,12 +1413,6 @@ export function OperationalPlanningPage() {
   const syncIssueItems = useMemo(
     () => listPlanningSyncIssues(weekPlanItemsForSync),
     [weekPlanItemsForSync],
-  )
-
-  const todayIso = useMemo(() => localTodayIsoDate(), [])
-  const todayInDisplayedWeek = useMemo(
-    () => isIsoDateInWeekdays(todayIso, weekdayDates),
-    [todayIso, weekdayDates],
   )
 
   useEffect(() => {
