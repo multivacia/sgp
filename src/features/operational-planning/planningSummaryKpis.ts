@@ -28,3 +28,10 @@ export const PLANNING_INLINE_PRINT_HELP_HIDDEN_SNIPPETS = [
   'Agente local indisponível',
   'Testar impressora térmica',
 ] as const
+
+/** Ação de tickets que permanece na barra abaixo dos filtros do quadro. */
+export const PLANNING_BOARD_ACTIONS_VISIBLE_LABEL = 'Imprimir tickets visíveis'
+
+/** Controle auxiliar removido da barra de ações do quadro. */
+export const PLANNING_BOARD_ACTIONS_HIDDEN_PLACEHOLDER =
+  'Filtrar colaboradores no quadro…'

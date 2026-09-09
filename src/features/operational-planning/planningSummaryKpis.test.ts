@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
+  PLANNING_BOARD_ACTIONS_HIDDEN_PLACEHOLDER,
+  PLANNING_BOARD_ACTIONS_VISIBLE_LABEL,
   PLANNING_INLINE_PRINT_HELP_HIDDEN_SNIPPETS,
   PLANNING_SUMMARY_HIDDEN_KPI_LABELS,
   PLANNING_SUMMARY_KPI_GRID_CLASS,
@@ -74,5 +76,13 @@ describe('Resumo operacional e ajuda de impressão (apresentação)', () => {
   it('preserva flags de abas secundárias e principais desvios ocultos', () => {
     expect(SHOW_PLANNING_SECONDARY_TABS).toBe(false)
     expect(SHOW_PLANNING_PRINCIPAL_DEVIATIONS).toBe(false)
+  })
+})
+
+describe('barra de ações do quadro (apresentação)', () => {
+  it('mantém Imprimir tickets visíveis e oculta Filtrar colaboradores no quadro', () => {
+    expect(PLANNING_BOARD_ACTIONS_VISIBLE_LABEL).toBe('Imprimir tickets visíveis')
+    expect(PLANNING_BOARD_ACTIONS_HIDDEN_PLACEHOLDER).toBe('Filtrar colaboradores no quadro…')
+    expect(PLANNING_BOARD_ACTIONS_VISIBLE_LABEL).not.toContain('Filtrar colaboradores')
   })
 })

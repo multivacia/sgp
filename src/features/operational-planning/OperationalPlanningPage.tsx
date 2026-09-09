@@ -702,7 +702,6 @@ export function OperationalPlanningPage() {
   const [factoryIntakeFilters, setFactoryIntakeFilters] = useState<FactoryIntakeFilters>(
     () => ({ ...DEFAULT_FACTORY_INTAKE_FILTERS }),
   )
-  const [boardCollabQ, setBoardCollabQ] = useState('')
   const [planningFilters, setPlanningFilters] = useState<PlanningBoardFilters>(
     () => ({ ...DEFAULT_PLANNING_BOARD_FILTERS }),
   )
@@ -988,12 +987,6 @@ export function OperationalPlanningPage() {
       }
     })()
   }, [])
-
-  const filteredCollaborators = useMemo(() => {
-    const q = boardCollabQ.trim().toLowerCase()
-    if (!q) return collaborators
-    return collaborators.filter((c) => c.fullName.toLowerCase().includes(q))
-  }, [collaborators, boardCollabQ])
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }))
 
@@ -1453,10 +1446,10 @@ export function OperationalPlanningPage() {
     const fid = planningFilters.collaboratorId
     if (fid === PLANNING_COLLABORATOR_UNASSIGNED) return []
     if (fid && fid !== PLANNING_COLLABORATOR_ALL) {
-      return filteredCollaborators.filter((c) => c.id === fid)
+      return collaborators.filter((c) => c.id === fid)
     }
-    return filteredCollaborators
-  }, [filteredCollaborators, planningFilters.collaboratorId])
+    return collaborators
+  }, [collaborators, planningFilters.collaboratorId])
 
   const showUnassignedBoardRow = useMemo(() => {
     const fid = planningFilters.collaboratorId
@@ -1879,14 +1872,6 @@ export function OperationalPlanningPage() {
                   Imprimir tickets visíveis
                   {ticketBatchSources.length > 0 ? ` (${ticketBatchSources.length})` : ''}
                 </button>
-                {planningViewMode === 'week' ? (
-                  <input
-                    className="rounded-xl border border-white/[0.08] bg-white/[0.04] px-3 py-2 text-[13px] text-slate-100 placeholder:text-slate-600"
-                    placeholder="Filtrar colaboradores no quadro…"
-                    value={boardCollabQ}
-                    onChange={(e) => setBoardCollabQ(e.target.value)}
-                  />
-                ) : null}
               </div>
             </div>
           ) : null}
