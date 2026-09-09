@@ -32,17 +32,6 @@ export const TIME_EFFICIENCY_STATUS_LABELS: Record<ActivityTimeEfficiency['statu
   CRITICO: 'Crítico',
 }
 
-export const TIME_EFFICIENCY_CLASSIFICATION_LABELS: Record<
-  NonNullable<ActivityTimeEfficiency['classification']>,
-  string
-> = {
-  MAIS_RAPIDO: 'Mais rápido que previsto',
-  DENTRO_DO_PREVISTO: 'Dentro do previsto',
-  LEVE_DESVIO: 'Leve desvio',
-  ATENCAO: 'Atenção',
-  CRITICO: 'Crítico',
-}
-
 export function formatTimeEfficiencyPercent(value: number | null | undefined): string {
   if (value == null) return '—'
   return `${percentFormatter.format(value)}%`
@@ -58,13 +47,6 @@ export function formatTimeEfficiencyDeviationPercent(value: number | null | unde
   if (value == null) return '—'
   if (value === 0) return '0%'
   return `${value > 0 ? '+' : '−'}${percentFormatter.format(Math.abs(value))}%`
-}
-
-export function formatTimeEfficiencyClassification(
-  classification: ActivityTimeEfficiency['classification'],
-): string | null {
-  if (!classification) return null
-  return TIME_EFFICIENCY_CLASSIFICATION_LABELS[classification]
 }
 
 export function formatTimeEfficiencyStatus(status: ActivityTimeEfficiency['status']): string {
@@ -113,7 +95,6 @@ export function computeConveyorProgressSummary(
     efficiencyPct: null,
     deviationMinutes: null,
     deviationPct: null,
-    classification: null,
     notStartedCount: 0,
     withoutPlannedTimeCount: 0,
     completedWithoutTimeCount: 0,

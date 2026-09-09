@@ -45,7 +45,6 @@ describe('computeTimeEfficiencyMetrics', () => {
       efficiencyPct: 100,
       deviationMinutes: 0,
       deviationPct: 0,
-      classification: 'DENTRO_DO_PREVISTO',
     })
   })
 
@@ -60,7 +59,6 @@ describe('computeTimeEfficiencyMetrics', () => {
     expect(metrics.status).toBe('CRITICO')
     expect(metrics.deviationMinutes).toBe(15)
     expect(metrics.deviationPct).toBe(50)
-    expect(metrics.classification).toBe('CRITICO')
   })
 
   it('30/20 -> 150% com -10 min e -33,3%', () => {
@@ -74,7 +72,6 @@ describe('computeTimeEfficiencyMetrics', () => {
     expect(metrics.status).toBe('MAIS_RAPIDO')
     expect(metrics.deviationMinutes).toBe(-10)
     expect(metrics.deviationPct).toBe(-33.3)
-    expect(metrics.classification).toBe('MAIS_RAPIDO')
   })
 
   it('não iniciada -> métricas null', () => {
@@ -90,7 +87,6 @@ describe('computeTimeEfficiencyMetrics', () => {
       efficiencyPct: null,
       deviationMinutes: null,
       deviationPct: null,
-      classification: null,
     })
   })
 
@@ -107,7 +103,6 @@ describe('computeTimeEfficiencyMetrics', () => {
       efficiencyPct: null,
       deviationMinutes: null,
       deviationPct: null,
-      classification: null,
     })
   })
 
@@ -124,7 +119,6 @@ describe('computeTimeEfficiencyMetrics', () => {
       efficiencyPct: null,
       deviationMinutes: null,
       deviationPct: null,
-      classification: null,
     })
   })
 
@@ -142,7 +136,6 @@ describe('computeTimeEfficiencyMetrics', () => {
       efficiencyPct: 200,
       deviationMinutes: -15,
       deviationPct: -50,
-      classification: 'MAIS_RAPIDO',
     })
   })
 })
@@ -158,7 +151,6 @@ describe('consolidateWeightedTimeEfficiency', () => {
     expect(summary.status).toBe('LEVE_DESVIO')
     expect(summary.deviationMinutes).toBe(10)
     expect(summary.deviationPct).toBe(10)
-    expect(summary.classification).toBe('LEVE_DESVIO')
     expect(summary.partialCount).toBe(1)
     expect(summary.includedInCalculationCount).toBe(2)
   })

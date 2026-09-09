@@ -43,7 +43,6 @@ const EMPTY_AGGREGATE_TIME_EFFICIENCY: AggregateTimeEfficiency = {
   efficiencyPct: null,
   deviationMinutes: null,
   deviationPct: null,
-  classification: null,
   notStartedCount: 0,
   withoutPlannedTimeCount: 0,
   completedWithoutTimeCount: 0,

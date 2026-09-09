@@ -32,7 +32,6 @@ function context(
         efficiencyPct: 300,
         deviationMinutes: -40,
         deviationPct: -66.7,
-        classification: 'MAIS_RAPIDO',
       },
       timeEntries: [],
     },
