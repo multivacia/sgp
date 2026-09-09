@@ -150,9 +150,7 @@ import {
 } from '../operational-tickets/activityTicketPrintModel'
 import { buildSinglePlanningTicketPrintItems } from '../operational-tickets/buildSinglePlanningTicketPrintItems'
 import { resolvePlanningItemsForTicketBatchPrint } from '../operational-tickets/resolvePlanningItemsForTicketBatch'
-import { ACTIVITY_TICKET_PRINT_SUPPORT_MESSAGE, ACTIVITY_TICKET_SILENT_PRINT_HINT } from '../operational-tickets/activityTicketPrintCopy'
 import { ThermalActivityTicketsPrintArea } from '../operational-tickets/ThermalActivityTicketsPrintArea'
-import { ThermalPrintAgentControls } from '../operational-tickets/ThermalPrintAgentControls'
 import { ThermalTicketPrintProgressOverlay } from '../operational-tickets/ThermalTicketPrintProgressOverlay'
 import { isBatchThermalTicketPrint } from '../operational-tickets/thermalTicketPrintQueue'
 import { useActivityTicketPrint } from '../operational-tickets/useActivityTicketPrint'
@@ -1890,21 +1888,6 @@ export function OperationalPlanningPage() {
                   />
                 ) : null}
               </div>
-              <p className="mt-2 text-[11px] leading-relaxed text-slate-500">
-                {ACTIVITY_TICKET_PRINT_SUPPORT_MESSAGE}
-              </p>
-              <p className="mt-1 text-[11px] leading-relaxed text-slate-500">
-                {ACTIVITY_TICKET_SILENT_PRINT_HINT}
-              </p>
-              <ThermalPrintAgentControls
-                agentStatus={agentStatus}
-                fallbackNotice={agentFallbackNotice}
-                onDismissFallback={clearAgentFallbackNotice}
-                onTestPrint={() => {
-                  void testThermalPrinter()
-                }}
-                testLoading={testPrintLoading}
-              />
             </div>
           ) : null}
 
@@ -1914,8 +1897,6 @@ export function OperationalPlanningPage() {
                 summary={weekOperationalSummary}
                 filtersActive={planningFiltersActive}
                 weekTotalItems={activeDraftItemsCount}
-                executionOutsidePlanCount={executionOutsidePlanSummary.entriesCount}
-                executionOutsidePlanMinutes={executionOutsidePlanSummary.totalMinutes}
               />
               <PlanningWeekDeviationBar
                 summary={planningDeviationSummary}

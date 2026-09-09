@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  SHOW_PLANNING_INLINE_PRINT_AGENT_HELP,
   SHOW_PLANNING_PRINCIPAL_DEVIATIONS,
   SHOW_PLANNING_SECONDARY_TABS,
 } from './planningUiFlags'
@@ -68,8 +69,9 @@ describe('planning operational layout contract', () => {
     expect(PLANNING_DND_WRAPS_BOTH_COLUMNS).toBe(true)
   })
 
-  it('preserva abas secundárias e Principais desvios ocultos', () => {
+  it('preserva abas secundárias, Principais desvios e ajuda inline de impressão ocultos', () => {
     expect(SHOW_PLANNING_SECONDARY_TABS).toBe(false)
     expect(SHOW_PLANNING_PRINCIPAL_DEVIATIONS).toBe(false)
+    expect(SHOW_PLANNING_INLINE_PRINT_AGENT_HELP).toBe(false)
   })
 })

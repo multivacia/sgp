@@ -20,3 +20,11 @@ export const PLANNING_SUMMARY_KPI_GRID_CLASS =
 
 export const PLANNING_SUMMARY_SYNC_CARD_CLASS =
   'rounded-xl border border-amber-400/25 bg-amber-500/[0.06] p-4 sm:col-span-2 lg:col-span-3'
+
+/** Trechos de UI auxiliar de impressão que não devem aparecer no corpo da página. */
+export const PLANNING_INLINE_PRINT_HELP_HIDDEN_SNIPPETS = [
+  'Use os tickets como apoio físico na operação',
+  'impressão silenciosa',
+  'Agente local indisponível',
+  'Testar impressora térmica',
+] as const
