@@ -396,6 +396,74 @@ export async function listActiveWeekPlanActivityKeys(
   }))
 }
 
+/** Campos de decisão de planejamento usados como baseline (sem plannedOrder). */
+export type WeekPlanItemBaseline = {
+  conveyorId: string
+  activityNodeId: string
+  assignedCollaboratorId: string | null
+  assignedTeamId: string | null
+  plannedDate: string
+  plannedMinutes: number | null
+  notes: string | null
+  conveyorOperationalPlanItemId: string | null
+}
+
+/**
+ * Baselines ativos da semana (draft ∪ published).
+ * Se a mesma activity existir em DRAFT e PUBLISHED, prefere DRAFT.
+ */
+export async function listActiveWeekPlanItemBaselines(
+  pool: pg.Pool | pg.PoolClient,
+  workPlanIds: readonly string[],
+): Promise<WeekPlanItemBaseline[]> {
+  if (workPlanIds.length === 0) return []
+  const r = await pool.query<{
+    conveyor_id: string
+    activity_node_id: string
+    assigned_collaborator_id: string | null
+    assigned_team_id: string | null
+    planned_date: string
+    planned_minutes: number | null
+    notes: string | null
+    conveyor_operational_plan_item_id: string | null
+  }>(
+    `
+    SELECT DISTINCT ON (owpi.conveyor_id, owpi.activity_node_id)
+      owpi.conveyor_id::text AS conveyor_id,
+      owpi.activity_node_id::text AS activity_node_id,
+      owpi.assigned_collaborator_id::text AS assigned_collaborator_id,
+      owpi.assigned_team_id::text AS assigned_team_id,
+      owpi.planned_date::text AS planned_date,
+      owpi.planned_minutes,
+      owpi.notes,
+      owpi.conveyor_operational_plan_item_id::text AS conveyor_operational_plan_item_id
+    FROM operational_work_plan_items owpi
+    INNER JOIN operational_work_plans owp ON owp.id = owpi.work_plan_id
+    WHERE owpi.work_plan_id = ANY($1::uuid[])
+      AND owpi.deleted_at IS NULL
+      AND owpi.status <> 'CANCELLED'
+      AND owp.deleted_at IS NULL
+      AND owp.status IN ('DRAFT', 'PUBLISHED')
+    ORDER BY
+      owpi.conveyor_id,
+      owpi.activity_node_id,
+      CASE owp.status WHEN 'DRAFT' THEN 0 ELSE 1 END,
+      owpi.updated_at DESC
+    `,
+    [workPlanIds],
+  )
+  return r.rows.map((row) => ({
+    conveyorId: row.conveyor_id,
+    activityNodeId: row.activity_node_id,
+    assignedCollaboratorId: row.assigned_collaborator_id,
+    assignedTeamId: row.assigned_team_id,
+    plannedDate: row.planned_date.trim(),
+    plannedMinutes: row.planned_minutes,
+    notes: row.notes,
+    conveyorOperationalPlanItemId: row.conveyor_operational_plan_item_id,
+  }))
+}
+
 export async function listActiveWorkPlanItemsForPlan(
   pool: pg.Pool | pg.PoolClient,
   workPlanId: string,
