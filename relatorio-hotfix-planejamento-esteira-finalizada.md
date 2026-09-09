@@ -169,3 +169,36 @@ Commits na branch vs `origin/main`:
 
 Resumo do fix de código backend: **3 arquivos**, alteração mínima em service + repository + suite nova. Sem migration, sem schema.
 Frontend adicional: helper de dia padrão + uso no modal de inclusão + testes.
+
+## Promoção para produção
+
+| Item | Valor |
+|------|--------|
+| Validação local | **APROVADA** pelo Gustavo (09/09/2026) |
+| Versão liberada | **1.9.6** — `Hotfix planejamento semanal` |
+| SHA final da branch (pré-merge) | `88014062df798e80f5c82e6d1da49265e3606324` |
+| Main antes | `07ec5c085bcaa4d6c5e5975e6fc25722f850e3d6` |
+| Main após merge | `3e39030b26ec487a06a2418607306f90214bc19d` |
+| PR | [#28](https://github.com/multivacia/sgp/pull/28) — **MERGED** (merge commit) em 2026-09-09T19:28:34Z |
+| CI (hotfix HEAD 1.9.6) | Verify deploy readiness — **SUCCESS** |
+| Deploy | Workflow `Deploy HostGator VPS` run [34395279692](https://github.com/multivacia/sgp/actions/runs/34395279692) — **SUCCESS** (concluído ~2026-09-09T19:29:30Z) |
+| SHA em produção | `3e39030b` (`GIT_SHA=3e39030`, `APP_VERSION=1.9.6`) |
+| Procedimento | Push em `main` → Actions `.github/workflows/deploy-hostgator-vps.yml` → SSH VPS → `git reset --hard origin/main` → `npm ci` / build FE+BE → rsync frontend → **`pm2 restart sgp-api`** → health check |
+| Serviços reiniciados | `pm2 restart sgp-api --update-env` (+ `pm2 save`) |
+| Migration | **NÃO** (guardrail do workflow: “No migration command will be executed”) |
+| Schema | **INALTERADO** |
+| Develop | **NÃO ALTERADA** (`origin/develop` ainda em `07ec5c08`; atrás da main) |
+| Branch hotfix | **MANTIDA** até validação Bravo |
+
+### Smoke test produção
+
+| Check | Resultado |
+|-------|-----------|
+| `GET https://sgp.multivacia.com/api/v1/health` | **200** `{"data":{"ok":true,"service":"sgp-api"}}` |
+| Frontend `/` | **200**, título SGP Web |
+| Bundle FE contém `1.9.6` | **Sim** |
+| Rota `/planejamento-semanal` (SPA) | **200** |
+
+### Validação funcional Bravo
+
+Login operacional e save com cenário real da Bravo: **AGUARDANDO VALIDAÇÃO DO USUÁRIO** (não forçado em produção pelo agente). Cobertura automatizada + validação local do Gustavo já cobriram FINALIZADA e data padrão.
