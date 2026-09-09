@@ -95,10 +95,6 @@ import {
 } from './factoryIntakeGrouping'
 import { FactoryIntakePanel } from './FactoryIntakePanel'
 import {
-  formatFactoryIntakeKpiLine,
-  useFactoryIntakePanelData,
-} from './factoryIntakePanelData'
-import {
   buildPlanningFilterOptions,
   DEFAULT_PLANNING_BOARD_FILTERS,
   filterPlanningDraftItems,
@@ -167,6 +163,11 @@ import {
   SHOW_PLANNING_PRINCIPAL_DEVIATIONS,
   SHOW_PLANNING_SECONDARY_TABS,
 } from './planningUiFlags'
+import {
+  PLANNING_SUMMARY_KPI_GRID_CLASS,
+  PLANNING_SUMMARY_KPI_LABELS,
+  PLANNING_SUMMARY_SYNC_CARD_CLASS,
+} from './planningSummaryKpis'
 import {
   PLANNING_BACKLOG_COLUMN_CLASS,
   PLANNING_BACKLOG_SCROLL_CLASS,
@@ -1372,14 +1373,6 @@ export function OperationalPlanningPage() {
     [weekPayload?.plan?.items],
   )
 
-  const { unfilteredTotals: factoryIntakeKpiTotals } = useFactoryIntakePanelData({
-    intakeItems: factoryIntakeItems,
-    draftItems,
-    filters: factoryIntakeFilters,
-    week: factoryIntakeWeek,
-    weekPlanItems: weekPlanItemsForSync,
-  })
-
   const backlogExecutionLookup = useMemo(
     () =>
       buildPlanningBacklogExecutionLookup(
@@ -1741,15 +1734,19 @@ export function OperationalPlanningPage() {
           ) : null}
         </header>
 
-        <section className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <section className={PLANNING_SUMMARY_KPI_GRID_CLASS}>
           <div className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-4">
-            <p className="text-[11px] uppercase tracking-wide text-slate-500">Minutos planejados</p>
+            <p className="text-[11px] uppercase tracking-wide text-slate-500">
+              {PLANNING_SUMMARY_KPI_LABELS[0]}
+            </p>
             <p className="mt-1 text-xl font-semibold text-slate-50">
               {formatPlanningMinutes(summary?.plannedMinutes ?? 0)}
             </p>
           </div>
           <div className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-4">
-            <p className="text-[11px] uppercase tracking-wide text-slate-500">Atividades planejadas</p>
+            <p className="text-[11px] uppercase tracking-wide text-slate-500">
+              {PLANNING_SUMMARY_KPI_LABELS[1]}
+            </p>
             <p className="mt-1 text-xl font-semibold text-slate-50">
               {planningFiltersActive ? visibleDraftItems.length : (summary?.plannedItems ?? 0)}
             </p>
@@ -1760,33 +1757,13 @@ export function OperationalPlanningPage() {
             ) : null}
           </div>
           <div className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-4">
-            <p className="text-[11px] uppercase tracking-wide text-slate-500">Colaboradores no plano</p>
+            <p className="text-[11px] uppercase tracking-wide text-slate-500">
+              {PLANNING_SUMMARY_KPI_LABELS[2]}
+            </p>
             <p className="mt-1 text-xl font-semibold text-slate-50">{summary?.collaboratorsCount ?? 0}</p>
           </div>
-          <div className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-4">
-            <p className="text-[11px] uppercase tracking-wide text-slate-500">Aguardando encaixe</p>
-            <p className="mt-1 text-[13px] font-semibold leading-snug text-slate-50">
-              {formatFactoryIntakeKpiLine(factoryIntakeKpiTotals)}
-            </p>
-          </div>
-          {executionOutsidePlanSummary.entriesCount > 0 ? (
-            <div className="rounded-xl border border-amber-400/25 bg-amber-500/[0.06] p-4 sm:col-span-2">
-              <p className="text-[11px] uppercase tracking-wide text-amber-200/80">
-                Fora do planejado
-              </p>
-              <p className="mt-1 text-xl font-semibold text-amber-100">
-                {executionOutsidePlanSummary.entriesCount} apontamento(s) ·{' '}
-                {formatPlanningMinutes(executionOutsidePlanSummary.totalMinutes)}
-              </p>
-              <p className="mt-1 text-[12px] text-slate-500">
-                {executionOutsidePlanSummary.activitiesCount} atividade(s) em{' '}
-                {executionOutsidePlanSummary.conveyorsCount} esteira(s) — revise na aba Fora do
-                planejado.
-              </p>
-            </div>
-          ) : null}
           {syncDivergenceCount > 0 ? (
-            <div className="rounded-xl border border-amber-400/25 bg-amber-500/[0.06] p-4 sm:col-span-2 lg:col-span-4">
+            <div className={PLANNING_SUMMARY_SYNC_CARD_CLASS}>
               <p className="text-[11px] uppercase tracking-wide text-amber-200/80">
                 Pendências de sincronização
               </p>
