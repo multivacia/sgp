@@ -8,6 +8,7 @@ import type {
 } from '../../domain/production/production.types'
 import type { TimeEntryCandidateItem } from '../../domain/my-activities/my-activities.types'
 import { ApiError } from '../../lib/api/apiErrors'
+import { PRODUCTION_WORK_QUEUE_ERROR_MESSAGE } from '../../services/production/productionApiService'
 
 const {
   getProductionWorkQueueMock,
@@ -77,12 +78,12 @@ const workQueueItem: ProductionWorkQueueItem = {
   requiresOutOfSequenceJustification: false,
 }
 
-function renderKiosk() {
+function renderKiosk(onExit: () => void = () => {}) {
   return render(
     <KioskActivityCards
       collaborator={collaborator}
       initialItems={[workQueueItem]}
-      onExit={() => {}}
+      onExit={onExit}
     />,
   )
 }
@@ -90,6 +91,95 @@ function renderKiosk() {
 afterEach(() => {
   cleanup()
   vi.clearAllMocks()
+})
+
+describe('KioskActivityCards — atualizar atividades', () => {
+  it('exibe botão Atualizar com acessibilidade "Atualizar atividades"', () => {
+    renderKiosk()
+    const button = screen.getByRole('button', { name: 'Atualizar atividades' })
+    expect(button).toBeTruthy()
+    expect(button.getAttribute('title')).toBe('Atualizar atividades')
+    expect(button.textContent).toBe('Atualizar')
+  })
+
+  it('clique chama getProductionWorkQueue e atualiza a lista em sucesso', async () => {
+    const onExit = vi.fn()
+    const refreshedItem: ProductionWorkQueueItem = {
+      ...workQueueItem,
+      workPlanItemId: 'wpi-2',
+      activityTitle: 'Montar encosto',
+    }
+    getProductionWorkQueueMock.mockResolvedValue({
+      items: [refreshedItem],
+      date: '2026-09-07',
+      planStatus: 'PUBLISHED',
+      summary: {
+        plannedItemsToday: 1,
+        overdueItems: 0,
+        completedItemsToday: 0,
+      },
+    })
+
+    renderKiosk(onExit)
+    expect(screen.getByText('Costurar banco')).toBeTruthy()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Atualizar atividades' }))
+
+    await waitFor(() => expect(getProductionWorkQueueMock).toHaveBeenCalledTimes(1))
+    expect(getProductionWorkQueueMock).toHaveBeenCalledWith()
+
+    await waitFor(() => expect(screen.getByText('Montar encosto')).toBeTruthy())
+    expect(screen.queryByText('Costurar banco')).toBeNull()
+    expect(screen.getByText('Maria Souza')).toBeTruthy()
+    expect(onExit).not.toHaveBeenCalled()
+  })
+
+  it('durante loading deixa o botão disabled com label "Atualizando…"', async () => {
+    let resolveQueue!: (value: unknown) => void
+    getProductionWorkQueueMock.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveQueue = resolve
+        }),
+    )
+
+    renderKiosk()
+    fireEvent.click(screen.getByRole('button', { name: 'Atualizar atividades' }))
+
+    const loadingButton = await screen.findByRole('button', { name: 'Atualizar atividades' })
+    expect(loadingButton).toHaveProperty('disabled', true)
+    expect(loadingButton.textContent).toBe('Atualizando…')
+
+    resolveQueue({
+      items: [workQueueItem],
+      date: '2026-09-07',
+      collaboratorId: 'collab-1',
+    })
+
+    await waitFor(() => {
+      const button = screen.getByRole('button', { name: 'Atualizar atividades' })
+      expect(button).toHaveProperty('disabled', false)
+      expect(button.textContent).toBe('Atualizar')
+    })
+  })
+
+  it('em erro mantém items anteriores, exibe SgpToast error e não chama onExit', async () => {
+    const onExit = vi.fn()
+    getProductionWorkQueueMock.mockRejectedValue(
+      new ApiError(PRODUCTION_WORK_QUEUE_ERROR_MESSAGE, 503),
+    )
+
+    renderKiosk(onExit)
+    expect(screen.getByText('Costurar banco')).toBeTruthy()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Atualizar atividades' }))
+
+    await waitFor(() => expect(getProductionWorkQueueMock).toHaveBeenCalledTimes(1))
+    expect(await screen.findByText(PRODUCTION_WORK_QUEUE_ERROR_MESSAGE)).toBeTruthy()
+    expect(screen.getByText('Costurar banco')).toBeTruthy()
+    expect(screen.getByText('Maria Souza')).toBeTruthy()
+    expect(onExit).not.toHaveBeenCalled()
+  })
 })
 
 describe('KioskActivityCards — rolagem do modo lista', () => {

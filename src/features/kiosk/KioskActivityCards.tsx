@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { SgpToast } from '../../components/ui/SgpToast'
 import type {
   ProductionCollaboratorSummary,
   ProductionWorkQueueItem,
@@ -8,7 +9,11 @@ import {
   partitionKioskWorkQueue,
 } from '../../domain/production/kioskWorkQueueUi'
 import { resolveSequenceListBadge } from '../../domain/production/production.helpers'
-import { getProductionWorkQueue } from '../../services/production/productionApiService'
+import { ApiError } from '../../lib/api/apiErrors'
+import {
+  getProductionWorkQueue,
+  PRODUCTION_WORK_QUEUE_ERROR_MESSAGE,
+} from '../../services/production/productionApiService'
 import { ProductionCollaboratorAvatar } from '../production/ProductionCollaboratorAvatar'
 import { KioskActivityCard } from './KioskActivityCard'
 import { KioskExtraEsteiraFlow } from './KioskExtraEsteiraFlow'
@@ -31,6 +36,8 @@ export function KioskActivityCards({ collaborator, initialItems, onExit }: Props
   )
   const [search, setSearch] = useState('')
   const [activeFlow, setActiveFlow] = useState<ActiveFlow>(null)
+  const [refreshing, setRefreshing] = useState(false)
+  const [toastError, setToastError] = useState<string | null>(null)
   const touchStartX = useRef(0)
 
   const filtered = useMemo(() => {
@@ -67,6 +74,21 @@ export function KioskActivityCards({ collaborator, initialItems, onExit }: Props
       setCurrentIndex(findInitialKioskCarouselIndex(queue.items))
     } catch {
       // mantém items existentes se a recarga falhar
+    }
+  }, [])
+
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true)
+    setToastError(null)
+    try {
+      const queue = await getProductionWorkQueue()
+      setItems(queue.items)
+    } catch (e) {
+      const message =
+        e instanceof ApiError ? e.message : PRODUCTION_WORK_QUEUE_ERROR_MESSAGE
+      setToastError(message)
+    } finally {
+      setRefreshing(false)
     }
   }, [])
 
@@ -151,6 +173,17 @@ export function KioskActivityCards({ collaborator, initialItems, onExit }: Props
               </svg>
             </button>
           </div>
+
+          <button
+            type="button"
+            onClick={() => void handleRefresh()}
+            disabled={refreshing}
+            title="Atualizar atividades"
+            aria-label="Atualizar atividades"
+            className="sgp-cta-secondary min-h-10 px-3 text-sm whitespace-nowrap disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {refreshing ? 'Atualizando…' : 'Atualizar'}
+          </button>
 
           {/* Apontamentos avulsos */}
           <button
@@ -348,6 +381,15 @@ export function KioskActivityCards({ collaborator, initialItems, onExit }: Props
           onSuccess={() => setActiveFlow(null)}
         />
       )}
+
+      {toastError ? (
+        <SgpToast
+          fixed
+          message={toastError}
+          variant="error"
+          onDismiss={() => setToastError(null)}
+        />
+      ) : null}
     </div>
   )
 }
