@@ -4,6 +4,7 @@ import {
   filterPlanningDailyItemsByDay,
   resolvePlanningDailyBoardEmptyMessage,
   resolvePlanningDailyColumn,
+  resolveDefaultAddToPlanDay,
   resolveDefaultPlanningDailySelectedDay,
   type PlanningDailyBoardItem,
 } from './planningDailyBoard'
@@ -193,6 +194,40 @@ describe('resolveDefaultPlanningDailySelectedDay', () => {
     expect(
       resolveDefaultPlanningDailySelectedDay(['2026-05-18'], '2026-05-25'),
     ).toBe('week')
+  })
+})
+
+describe('resolveDefaultAddToPlanDay', () => {
+  const weekdays = [
+    '2026-09-07',
+    '2026-09-08',
+    '2026-09-09',
+    '2026-09-10',
+    '2026-09-11',
+  ]
+
+  it('retorna todayIso quando está em weekdayDates', () => {
+    expect(resolveDefaultAddToPlanDay(weekdays, '2026-09-09', '2026-09-07')).toBe(
+      '2026-09-09',
+    )
+  })
+
+  it('não cai no weekMonday quando hoje está na semana', () => {
+    expect(resolveDefaultAddToPlanDay(weekdays, '2026-09-09', '2026-09-07')).not.toBe(
+      '2026-09-07',
+    )
+    expect(resolveDefaultAddToPlanDay(weekdays, '2026-09-09', '2026-09-07')).toBe(
+      '2026-09-09',
+    )
+  })
+
+  it('usa weekdayDates[0] ?? weekMonday quando hoje está fora', () => {
+    expect(resolveDefaultAddToPlanDay(weekdays, '2026-09-15', '2026-09-07')).toBe(
+      '2026-09-07',
+    )
+    expect(resolveDefaultAddToPlanDay([], '2026-09-09', '2026-09-07')).toBe(
+      '2026-09-07',
+    )
   })
 })
 

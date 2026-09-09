@@ -113,6 +113,18 @@ export function resolveDefaultPlanningDailySelectedDay(
   return 'week'
 }
 
+/** Dia inicial sugerido no modal "Adicionar ao plano". */
+export function resolveDefaultAddToPlanDay(
+  weekdayDates: readonly string[],
+  todayIso: string,
+  weekMonday: string,
+): string {
+  if (weekdayDates.includes(todayIso)) {
+    return todayIso
+  }
+  return weekdayDates[0] ?? weekMonday
+}
+
 export function resolvePlanningDailyBoardEmptyMessage(
   visibleItemsCount: number,
   dayFilteredItemsCount: number,
