@@ -11,6 +11,7 @@ import {
 import type {
   ApplyConveyorPlanSyncField,
   ApplyConveyorPlanToWeekItemBody,
+  PlanItemInput,
   SaveOperationalWeekPlanBody,
 } from './operational-planning.schemas.js'
 import {
@@ -37,9 +38,11 @@ import {
   insertOperationalWorkPlan,
   insertWorkPlanItems,
   listActiveWeekPlanActivityKeys,
+  listActiveWeekPlanItemBaselines,
   listActiveWorkPlanItemsForPlan,
   listWorkPlanItemInsertsForPlan,
   type OperationalWorkPlanItemInsert,
+  type WeekPlanItemBaseline,
   isActivityPlannedInOtherWeeklyPlan,
   isConveyorPlanItemLinkedElsewhere,
   listEnrichedItemsForWorkPlan,
@@ -472,6 +475,60 @@ function validateWeekShape(weekStartDate: string, weekEndDate: string): void {
   }
 }
 
+function normNullableStr(value: string | null | undefined): string | null {
+  return value ?? null
+}
+
+function normPlanningNotes(value: string | null | undefined): string | null {
+  const trimmed = (value ?? '').trim()
+  return trimmed.length === 0 ? null : trimmed
+}
+
+/** Compara campos de decisão de planejamento (não inclui plannedOrder). */
+export function isUnchangedFinalizedPlanItem(
+  incoming: Pick<
+    PlanItemInput,
+    | 'assignedCollaboratorId'
+    | 'assignedTeamId'
+    | 'plannedDate'
+    | 'plannedMinutes'
+    | 'notes'
+    | 'conveyorOperationalPlanItemId'
+  >,
+  baseline: Pick<
+    WeekPlanItemBaseline,
+    | 'assignedCollaboratorId'
+    | 'assignedTeamId'
+    | 'plannedDate'
+    | 'plannedMinutes'
+    | 'notes'
+    | 'conveyorOperationalPlanItemId'
+  >,
+): boolean {
+  return (
+    incoming.assignedCollaboratorId === baseline.assignedCollaboratorId &&
+    normNullableStr(incoming.assignedTeamId) === normNullableStr(baseline.assignedTeamId) &&
+    incoming.plannedDate === baseline.plannedDate &&
+    (incoming.plannedMinutes ?? null) === (baseline.plannedMinutes ?? null) &&
+    normPlanningNotes(incoming.notes) === normPlanningNotes(baseline.notes) &&
+    normNullableStr(incoming.conveyorOperationalPlanItemId) ===
+      normNullableStr(baseline.conveyorOperationalPlanItemId)
+  )
+}
+
+function throwFinalizedConveyorPlanningError(it: PlanItemInput): never {
+  throw new AppError(
+    'Esteira concluída não aceita planejamento.',
+    400,
+    ErrorCodes.VALIDATION_ERROR,
+    {
+      conveyorId: it.conveyorId,
+      activityNodeId: it.activityNodeId,
+      conveyorOperationalStatus: 'FINALIZADA',
+    },
+  )
+}
+
 async function validatePlanItems(
   pool: pg.Pool,
   body: SaveOperationalWeekPlanBody,
@@ -486,6 +543,15 @@ async function validatePlanItems(
   const preexistingSet = new Set(
     preexistingKeys.map((k) => `${k.conveyorId}:${k.activityNodeId}`),
   )
+  let baselineByKey: Map<string, WeekPlanItemBaseline> | null = null
+  const loadBaselineByKey = async (): Promise<Map<string, WeekPlanItemBaseline>> => {
+    if (baselineByKey) return baselineByKey
+    const baselines = await listActiveWeekPlanItemBaselines(pool, excludeIds)
+    baselineByKey = new Map(
+      baselines.map((b) => [`${b.conveyorId}:${b.activityNodeId}`, b] as const),
+    )
+    return baselineByKey
+  }
 
   const seenActivity = new Set<string>()
   const seenConveyorPlanItem = new Set<string>()
@@ -532,12 +598,22 @@ async function validatePlanItems(
     if (!row.is_active) {
       throw new AppError('Atividade inativa não pode ser planejada.', 400, ErrorCodes.VALIDATION_ERROR)
     }
-    if (row.conveyor_operational_status === 'FINALIZADA') {
-      throw new AppError('Esteira concluída não aceita planejamento.', 400, ErrorCodes.VALIDATION_ERROR)
-    }
 
     const activityKey = `${it.conveyorId}:${it.activityNodeId}`
     const isPreexisting = preexistingSet.has(activityKey)
+
+    if (row.conveyor_operational_status === 'FINALIZADA') {
+      if (!isPreexisting) {
+        throwFinalizedConveyorPlanningError(it)
+      }
+      const baselinesMap = await loadBaselineByKey()
+      const baseline = baselinesMap.get(activityKey)
+      if (!baseline || !isUnchangedFinalizedPlanItem(it, baseline)) {
+        throwFinalizedConveyorPlanningError(it)
+      }
+      // Pré-existente FINALIZADA inalterado: permite no payload; pula COP e 409.
+      continue
+    }
 
     if (row.operational_status === 'COMPLETED') {
       if (!isPreexisting) {
