@@ -14,7 +14,7 @@ IMPLEMENTADO
 | Branch | `hotfix/planejamento-esteira-finalizada-preexistente` |
 | Commit da correção | `6d4204ec26b253cffd2706e5f8c7882090efa651` |
 | Commit do relatório interno AI | `04080ee2c9da63a58a00b704ca2e6d90dd553d2c` |
-| PR | *preenchido após abertura* |
+| PR | https://github.com/multivacia/sgp/pull/28 |
 
 ## 3. Causa raiz
 
