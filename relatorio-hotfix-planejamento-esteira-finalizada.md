@@ -157,7 +157,7 @@ Confirmação do modal continua criando **novo** draft com `plannedDate: modalDa
 
 ### Commit
 
-`985c4197587fe3a771356d253ba6ce4b4d10c471` — `fix(planning): default new item date to current day`.
+`f39643174588dafe97644478bc29a51227812b07` — `fix(planning): default new item date to current day`.
 
 ## 8. Diff final
 
