@@ -116,12 +116,56 @@ Lint global do server: sem script dedicado no `package.json` do server — não 
 5. Alterar colaborador do item da esteira finalizada → deve bloquear.
 6. Tentar incluir novo item de esteira finalizada → deve bloquear.
 
+## Ajuste adicional durante validação — data padrão
+
+### Problema
+
+Ao clicar em **Adicionar ao plano** no backlog (e no fallback do factory intake sem `plannedDate` na semana), o modal sempre pré-selecionava o **primeiro dia da semana** (`weekdayDates[0]`), mesmo quando a semana exibida continha o dia de hoje. Isso gerava drafts novos no dia errado (ex.: segunda quando hoje é quarta).
+
+### Arquivo / funções
+
+- Helper puro: `resolveDefaultNewPlanItemDay` em `src/features/operational-planning/operationalPlanningWeekRange.ts`
+- Uso: `openAddModal` e `openAddFactoryIntakeModal` em `src/features/operational-planning/OperationalPlanningPage.tsx`
+- Testes: `src/features/operational-planning/operationalPlanningWeekRange.test.ts`
+
+### Comportamento anterior
+
+1. Backlog → `setModalDay(weekdayDates[0] ?? weekMonday)` (sempre 1º dia útil)
+2. Factory intake → preservava `item.plannedDate` se na semana; senão mesmo fallback do 1º dia
+
+### Comportamento novo (prioridade)
+
+1. Dia explicitamente preferido **se na semana**: `dailySelectedDay` (≠ `'week'`) no backlog; `item.plannedDate` no factory intake
+2. `todayIso` se estiver em `weekdayDates`
+3. `weekdayDates[0] ?? weekMonday` fallback
+
+Semana futura / passada (hoje fora da semana): cai no 1º dia útil — mesma intenção do fallback antigo, sem forçar “hoje” inválido.
+
+Confirmação do modal continua criando **novo** draft com `plannedDate: modalDay` — não sobrescreve itens existentes. Datas de editar/reabrir **não** foram alteradas. Backend FINALIZADA **não** tocado.
+
+### Testes do helper
+
+| Caso | Resultado esperado |
+|------|--------------------|
+| Semana 2026-09-07..11, today=2026-09-09 | 2026-09-09 |
+| today=2026-09-07 | 2026-09-07 |
+| today=2026-09-11 | 2026-09-11 |
+| Semana futura 2026-09-14..18, today=2026-09-09 | 2026-09-14 |
+| Semana passada 2026-08-31..09-04, today=2026-09-09 | 2026-08-31 |
+| preferredDay=2026-09-10, today=2026-09-09 | 2026-09-10 |
+| preferredDay fora da semana | today-in-week ou fallback |
+
+### Commit
+
+`985c4197587fe3a771356d253ba6ce4b4d10c471` — `fix(planning): default new item date to current day`.
+
 ## 8. Diff final
 
 Commits na branch vs `origin/main`:
 
-- `6d4204ec` — fix (3 arquivos código/teste: +605 / −3)
+- `6d4204ec` — fix backend FINALIZADA (3 arquivos código/teste)
 - `04080ee2` — docs AI report
-- + este relatório
+- commits de relatório + **ajuste FE data padrão** (este seção)
 
-Resumo do fix de código: **3 arquivos**, alteração mínima em service + repository + suite nova. Sem migration, sem schema, sem frontend.
+Resumo do fix de código backend: **3 arquivos**, alteração mínima em service + repository + suite nova. Sem migration, sem schema.
+Frontend adicional: helper de dia padrão + uso no modal de inclusão + testes.

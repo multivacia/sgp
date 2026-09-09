@@ -124,6 +124,7 @@ import {
   isIsoDateInWeekdays,
   localTodayIsoDate,
   mondayOfWeekContainingLocal,
+  resolveDefaultNewPlanItemDay,
   shiftWeek,
   weekdayLabelsPt,
 } from './operationalPlanningWeekRange'
@@ -757,6 +758,7 @@ export function OperationalPlanningPage() {
     () => weekPayload?.week.weekdayDates ?? [],
     [weekPayload?.week.weekdayDates],
   )
+  const todayIso = useMemo(() => localTodayIsoDate(), [])
   const dayLabels = weekdayLabelsPt()
 
   const plannedActivityIds = useMemo(
@@ -1005,7 +1007,15 @@ export function OperationalPlanningPage() {
         ? item.assignedCollaborators[0].id
         : (collaborators[0]?.id ?? '')
     setModalCollaboratorId(suggestedCollabId)
-    setModalDay(weekdayDates[0] ?? weekMonday)
+    const preferredDay = dailySelectedDay !== 'week' ? dailySelectedDay : null
+    setModalDay(
+      resolveDefaultNewPlanItemDay({
+        weekdayDates,
+        todayIso,
+        preferredDay,
+        weekMondayFallback: weekMonday,
+      }),
+    )
     setModalMinutes(Math.max(1, item.pendingMinutes || item.plannedMinutes || 60))
     setModalOpen(true)
   }
@@ -1018,11 +1028,14 @@ export function OperationalPlanningPage() {
         ? item.plannedCollaboratorId
         : (collaborators[0]?.id ?? '')
     setModalCollaboratorId(suggestedCollab)
-    const suggestedDay =
-      item.plannedDate && weekdayDates.includes(item.plannedDate)
-        ? item.plannedDate
-        : (weekdayDates[0] ?? weekMonday)
-    setModalDay(suggestedDay)
+    setModalDay(
+      resolveDefaultNewPlanItemDay({
+        weekdayDates,
+        todayIso,
+        preferredDay: item.plannedDate,
+        weekMondayFallback: weekMonday,
+      }),
+    )
     setModalMinutes(Math.max(1, item.plannedMinutes ?? 60))
     setModalOpen(true)
   }
@@ -1409,7 +1422,6 @@ export function OperationalPlanningPage() {
     [weekPlanItemsForSync],
   )
 
-  const todayIso = useMemo(() => localTodayIsoDate(), [])
   const todayInDisplayedWeek = useMemo(
     () => isIsoDateInWeekdays(todayIso, weekdayDates),
     [todayIso, weekdayDates],

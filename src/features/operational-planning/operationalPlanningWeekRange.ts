@@ -85,3 +85,23 @@ export function isIsoDateInWeekdays(
 ): boolean {
   return weekdayDates.includes(isoDate)
 }
+
+/**
+ * Dia padrão ao criar novo item no plano da semana.
+ * Prioridade: preferredDay (se na semana) → todayIso (se na semana) → 1º dia útil / weekMonday.
+ */
+export function resolveDefaultNewPlanItemDay(input: {
+  weekdayDates: readonly string[]
+  todayIso: string
+  preferredDay?: string | null
+  weekMondayFallback?: string
+}): string {
+  const { weekdayDates, todayIso, preferredDay, weekMondayFallback } = input
+  if (preferredDay && weekdayDates.includes(preferredDay)) {
+    return preferredDay
+  }
+  if (weekdayDates.includes(todayIso)) {
+    return todayIso
+  }
+  return weekdayDates[0] ?? weekMondayFallback ?? ''
+}
