@@ -66,3 +66,9 @@ export const saveOperationalWeekPlanBodySchema = z.object({
 
 export type SaveOperationalWeekPlanBody = z.infer<typeof saveOperationalWeekPlanBodySchema>
 export type PlanItemInput = z.infer<typeof planItemInputSchema>
+
+/** Export do piloto de sugestão via IA: intervalo opcional (default = semana corrente). */
+export const operationalPlanningAiPilotExportQuerySchema = z.object({
+  inicio: isoDate.optional(),
+  fim: isoDate.optional(),
+})

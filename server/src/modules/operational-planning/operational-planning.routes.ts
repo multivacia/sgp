@@ -14,6 +14,7 @@ import {
   postOperationalPlanningWeekPublish,
 } from './operational-planning.controller.js'
 import { getOperationalPlanningWeekExportWeeklyViewXlsx } from './operational-planning.weekly-view.controller.js'
+import { getOperationalPlanningAiPilotExportXlsx } from './operational-planning.ai-pilot-export.controller.js'
 
 /** Planejamento semanal: gestão de esteiras (`conveyors.create` cobre o perfil de gestor operacional). */
 const authPlanning = [requireAuth(), requirePermission('conveyors.create')]
@@ -30,6 +31,11 @@ export function operationalPlanningRouter(): Router {
     '/operational-planning/week/export-weekly-view.xlsx',
     ...authPlanning,
     asyncRoute(getOperationalPlanningWeekExportWeeklyViewXlsx),
+  )
+  r.get(
+    '/operational-planning/export-ai-pilot.xlsx',
+    ...authPlanning,
+    asyncRoute(getOperationalPlanningAiPilotExportXlsx),
   )
   r.get(
     '/operational-planning/week-activity',
