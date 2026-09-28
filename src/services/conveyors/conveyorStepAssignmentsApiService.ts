@@ -2,6 +2,7 @@ import type {
   ConveyorStepAssigneeListItem,
   ConveyorStepTimeEntryCreated,
   ConveyorStepTimeEntryListItem,
+  PatchConveyorStepTimeEntryBody,
   PostConveyorStepTimeEntryBody,
   PostConveyorStepTimeEntryOnBehalfBody,
 } from '../../domain/conveyors/conveyor-step-assignments.types'
@@ -67,8 +68,25 @@ export async function postConveyorStepTimeEntryOnBehalf(
   )
 }
 
+/**
+ * PATCH /api/v1/conveyors/:conveyorId/steps/:stepNodeId/time-entries/:timeEntryId
+ * Requer permissão `time_entries.edit_any`. XOR estrito minutes|executedQuantity.
+ */
+export async function patchConveyorStepTimeEntry(
+  conveyorId: string,
+  stepNodeId: string,
+  timeEntryId: string,
+  body: PatchConveyorStepTimeEntryBody,
+): Promise<ConveyorStepTimeEntryListItem> {
+  return requestJson<ConveyorStepTimeEntryListItem>(
+    'PATCH',
+    `${BASE}/conveyors/${encodeURIComponent(conveyorId)}/steps/${encodeURIComponent(stepNodeId)}/time-entries/${encodeURIComponent(timeEntryId)}`,
+    { body },
+  )
+}
+
 export type DeleteConveyorStepTimeEntryBody = {
-  /** Obrigatório para remoção gerencial (não é o dono do lançamento). */
+  /** Obrigatório para remoção gerencial (delete_any ou alvo ≠ próprio). */
   reason?: string
 }
 

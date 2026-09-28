@@ -22,6 +22,7 @@ export function StepAnaliticoPanel({
   const { canAny } = useAuth()
   const showGestorLink = canAny([
     'time_entries.create_on_behalf',
+    'time_entries.edit_any',
     'time_entries.delete_any',
   ])
 

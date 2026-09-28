@@ -441,7 +441,7 @@ export type ConveyorTimeEntryListRow = {
 }
 
 export async function findConveyorTimeEntryById(
-  pool: pg.Pool,
+  pool: PoolOrClient,
   id: string,
 ): Promise<ConveyorTimeEntryRow | null> {
   const r = await pool.query<ConveyorTimeEntryRow>(
@@ -453,6 +453,76 @@ export async function findConveyorTimeEntryById(
      FROM conveyor_time_entries
      WHERE id = $1::uuid AND deleted_at IS NULL`,
     [id],
+  )
+  return r.rows[0] ?? null
+}
+
+export async function updateConveyorTimeEntryMinutes(
+  pool: PoolOrClient,
+  args: {
+    id: string
+    conveyorId: string
+    conveyorNodeId: string
+    minutes: number
+    expectedUpdatedAt: Date
+  },
+): Promise<ConveyorTimeEntryRow | null> {
+  const r = await pool.query<ConveyorTimeEntryRow>(
+    `UPDATE conveyor_time_entries
+     SET minutes = $1, updated_at = now()
+     WHERE id = $2::uuid
+       AND conveyor_id = $3::uuid
+       AND conveyor_node_id = $4::uuid
+       AND deleted_at IS NULL
+       AND date_trunc('milliseconds', updated_at) =
+           date_trunc('milliseconds', $5::timestamptz)
+     RETURNING id, conveyor_id, conveyor_node_id, collaborator_id,
+               conveyor_node_assignee_id, entry_at, minutes, executed_quantity, notes, entry_mode,
+               metadata_json, entry_origin, exception_justification,
+               is_out_of_sequence, out_of_sequence_justification,
+               created_at, updated_at`,
+    [
+      args.minutes,
+      args.id,
+      args.conveyorId,
+      args.conveyorNodeId,
+      args.expectedUpdatedAt.toISOString(),
+    ],
+  )
+  return r.rows[0] ?? null
+}
+
+export async function updateConveyorTimeEntryExecutedQuantity(
+  pool: PoolOrClient,
+  args: {
+    id: string
+    conveyorId: string
+    conveyorNodeId: string
+    executedQuantity: number | null
+    expectedUpdatedAt: Date
+  },
+): Promise<ConveyorTimeEntryRow | null> {
+  const r = await pool.query<ConveyorTimeEntryRow>(
+    `UPDATE conveyor_time_entries
+     SET executed_quantity = $1, updated_at = now()
+     WHERE id = $2::uuid
+       AND conveyor_id = $3::uuid
+       AND conveyor_node_id = $4::uuid
+       AND deleted_at IS NULL
+       AND date_trunc('milliseconds', updated_at) =
+           date_trunc('milliseconds', $5::timestamptz)
+     RETURNING id, conveyor_id, conveyor_node_id, collaborator_id,
+               conveyor_node_assignee_id, entry_at, minutes, executed_quantity, notes, entry_mode,
+               metadata_json, entry_origin, exception_justification,
+               is_out_of_sequence, out_of_sequence_justification,
+               created_at, updated_at`,
+    [
+      args.executedQuantity,
+      args.id,
+      args.conveyorId,
+      args.conveyorNodeId,
+      args.expectedUpdatedAt.toISOString(),
+    ],
   )
   return r.rows[0] ?? null
 }

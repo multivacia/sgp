@@ -11,6 +11,7 @@ export const ADMIN_AUDIT_EVENT_TYPES = [
   'admin_user_collaborator_unlinked',
   'role_permissions_updated',
   'time_entry_created_on_behalf',
+  'time_entry_edited_by_manager',
   'time_entry_deleted_by_manager',
 ] as const
 

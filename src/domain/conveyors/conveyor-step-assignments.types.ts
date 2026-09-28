@@ -98,3 +98,11 @@ export type PostConveyorStepTimeEntryOnBehalfBody = {
   justificationId?: string
   justificationComplement?: string
 }
+
+/** PATCH .../time-entries/:timeEntryId — correção gerencial (XOR minutes|executedQuantity). */
+export type PatchConveyorStepTimeEntryBody = {
+  expectedUpdatedAt: string
+  reason: string
+  minutes?: number
+  executedQuantity?: number | null
+}

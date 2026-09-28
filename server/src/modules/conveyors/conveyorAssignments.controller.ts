@@ -7,7 +7,9 @@ import { ErrorCodes } from '../../shared/errors/errorCodes.js'
 import {
   assigneeScopedParamsSchema,
   conveyorStepParamsSchema,
+  deleteTimeEntryBodySchema,
   patchConveyorStepCompletionBodySchema,
+  patchTimeEntryBodySchema,
   postAssigneeBodySchema,
   postConveyorStepAbortBodySchema,
   postTimeEntryBodySchema,
@@ -22,6 +24,7 @@ import {
   serviceDeleteConveyorTimeEntryAsAppUser,
   serviceListConveyorNodeAssignees,
   serviceListConveyorTimeEntries,
+  servicePatchConveyorTimeEntryAsManager,
 } from './conveyorAssignments.service.js'
 import { serviceAnalyzeConveyorActivitySequence } from './conveyorActivitySequence.service.js'
 import { findConveyorById } from './conveyors.repository.js'
@@ -296,17 +299,51 @@ export async function postConveyorStepRestoreAborted(
   res.status(200).json(ok(out.detail, { stepRestoreAbortedIdempotent: out.idempotent }))
 }
 
+export async function patchConveyorStepTimeEntry(
+  req: Request,
+  res: Response,
+): Promise<void> {
+  const params = timeEntryScopedParamsSchema.parse(req.params)
+  const body = patchTimeEntryBodySchema.parse(req.body)
+  const pool = req.app.locals.pool as pg.Pool
+  const updated = await servicePatchConveyorTimeEntryAsManager(pool, {
+    actorAppUserId: req.authUser!.id,
+    conveyorId: params.conveyorId,
+    conveyorNodeId: params.stepNodeId,
+    timeEntryId: params.timeEntryId,
+    expectedUpdatedAt: body.expectedUpdatedAt,
+    reason: body.reason,
+    minutes: body.minutes,
+    executedQuantity: body.executedQuantity,
+  })
+  res.status(200).json(ok(updated))
+}
+
 export async function deleteConveyorStepTimeEntry(
   req: Request,
   res: Response,
 ): Promise<void> {
   const params = timeEntryScopedParamsSchema.parse(req.params)
+  let body: ReturnType<typeof deleteTimeEntryBodySchema.parse>
+  try {
+    body = deleteTimeEntryBodySchema.parse(req.body ?? {})
+  } catch (e) {
+    if (e instanceof ZodError) {
+      throw new AppError(
+        e.issues[0]?.message ?? 'Corpo inválido para remoção de apontamento.',
+        400,
+        ErrorCodes.VALIDATION_ERROR,
+      )
+    }
+    throw e
+  }
   const pool = req.app.locals.pool as pg.Pool
   const result = await serviceDeleteConveyorTimeEntryAsAppUser(pool, {
     appUserId: req.authUser!.id,
     conveyorId: params.conveyorId,
     conveyorNodeId: params.stepNodeId,
     timeEntryId: params.timeEntryId,
+    reason: body.reason,
   })
   res.json(ok(result))
 }

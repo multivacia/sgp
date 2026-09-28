@@ -5,6 +5,7 @@ import {
   findCollaboratorIdByAppUserId,
 } from '../auth/auth.repository.js'
 import { insertAdminAuditEvent } from '../admin-audit/admin-audit.repository.js'
+import { appUserHasPermission } from '../permissions/permissions.repository.js'
 import { AppError } from '../../shared/errors/AppError.js'
 import { ErrorCodes } from '../../shared/errors/errorCodes.js'
 import { normalizeExecutedQuantityInput } from '../../shared/activityOperationalQuantity.js'
@@ -31,6 +32,8 @@ import {
   newAssignmentId,
   softDeleteConveyorNodeAssignee,
   softDeleteConveyorTimeEntry,
+  updateConveyorTimeEntryExecutedQuantity,
+  updateConveyorTimeEntryMinutes,
   type InsertConveyorNodeAssigneeRow,
   type InsertConveyorTimeEntryRow,
 } from './conveyorAssignments.repository.js'
@@ -1017,6 +1020,157 @@ export async function serviceDeleteConveyorTimeEntry(
   return { deleted: true, id: timeEntryId }
 }
 
+function parseExpectedUpdatedAt(iso: string): Date {
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) {
+    throw new AppError(
+      'expectedUpdatedAt inválido.',
+      422,
+      ErrorCodes.VALIDATION_ERROR,
+    )
+  }
+  return d
+}
+
+function sameUpdatedAt(rowUpdatedAt: Date, expected: Date): boolean {
+  return rowUpdatedAt.getTime() === expected.getTime()
+}
+
+export async function servicePatchConveyorTimeEntryAsManager(
+  pool: pg.Pool,
+  input: {
+    actorAppUserId: string
+    conveyorId: string
+    conveyorNodeId: string
+    timeEntryId: string
+    expectedUpdatedAt: string
+    reason: string
+    minutes?: number
+    executedQuantity?: number | null
+  },
+): Promise<TimeEntryListItemDto> {
+  await assertNodeIsStepForConveyor(pool, input.conveyorId, input.conveyorNodeId)
+  const entry = await findConveyorTimeEntryById(pool, input.timeEntryId)
+  if (
+    !entry ||
+    entry.conveyor_id !== input.conveyorId ||
+    entry.conveyor_node_id !== input.conveyorNodeId
+  ) {
+    throw new AppError('Apontamento não encontrado.', 404, ErrorCodes.NOT_FOUND)
+  }
+
+  const expected = parseExpectedUpdatedAt(input.expectedUpdatedAt)
+  if (!sameUpdatedAt(entry.updated_at, expected)) {
+    throw new AppError(
+      'O apontamento foi alterado por outro utilizador. Recarregue e tente novamente.',
+      409,
+      ErrorCodes.CONFLICT,
+    )
+  }
+
+  const reason = input.reason.trim()
+  if (!reason) {
+    throw new AppError('Indique o motivo.', 422, ErrorCodes.VALIDATION_ERROR)
+  }
+
+  const hasMinutes = input.minutes !== undefined
+  const hasQty = input.executedQuantity !== undefined
+  if (hasMinutes === hasQty) {
+    throw new AppError(
+      'Informe exatamente um de: minutes ou executedQuantity (XOR estrito).',
+      422,
+      ErrorCodes.VALIDATION_ERROR,
+    )
+  }
+
+  let field: 'minutes' | 'executed_quantity'
+  let previousValue: number | null
+  let newValue: number | null
+
+  if (hasMinutes) {
+    field = 'minutes'
+    previousValue = entry.minutes
+    newValue = input.minutes!
+  } else {
+    field = 'executed_quantity'
+    previousValue = entry.executed_quantity
+    try {
+      newValue = normalizeExecutedQuantityInput(input.executedQuantity)
+    } catch {
+      throw new AppError(
+        'executedQuantity deve ser número inteiro >= 0.',
+        422,
+        ErrorCodes.VALIDATION_ERROR,
+      )
+    }
+  }
+
+  const client = await pool.connect()
+  try {
+    await client.query('BEGIN')
+    const updated =
+      field === 'minutes'
+        ? await updateConveyorTimeEntryMinutes(client, {
+            id: input.timeEntryId,
+            conveyorId: input.conveyorId,
+            conveyorNodeId: input.conveyorNodeId,
+            minutes: newValue as number,
+            expectedUpdatedAt: expected,
+          })
+        : await updateConveyorTimeEntryExecutedQuantity(client, {
+            id: input.timeEntryId,
+            conveyorId: input.conveyorId,
+            conveyorNodeId: input.conveyorNodeId,
+            executedQuantity: newValue,
+            expectedUpdatedAt: expected,
+          })
+    if (!updated) {
+      throw new AppError(
+        'O apontamento foi alterado por outro utilizador. Recarregue e tente novamente.',
+        409,
+        ErrorCodes.CONFLICT,
+      )
+    }
+    await insertAdminAuditEvent(client, {
+      eventType: 'time_entry_edited_by_manager',
+      actorUserId: input.actorAppUserId,
+      targetUserId: null,
+      targetCollaboratorId: entry.collaborator_id,
+      metadata: {
+        conveyor_id: input.conveyorId,
+        step_node_id: input.conveyorNodeId,
+        time_entry_id: input.timeEntryId,
+        target_collaborator_id: entry.collaborator_id,
+        reason,
+        field,
+        previous_value: previousValue,
+        new_value: newValue,
+      },
+    })
+    await client.query('COMMIT')
+  } catch (e) {
+    await client.query('ROLLBACK')
+    throw e
+  } finally {
+    client.release()
+  }
+
+  const rows = await listConveyorTimeEntriesByStep(
+    pool,
+    input.conveyorId,
+    input.conveyorNodeId,
+  )
+  const dto = rows.find((r) => r.id === input.timeEntryId)
+  if (!dto) {
+    throw new AppError(
+      'Apontamento não encontrado após edição.',
+      500,
+      ErrorCodes.INTERNAL,
+    )
+  }
+  return timeEntryListRowToDto(dto)
+}
+
 export async function serviceDeleteConveyorTimeEntryAsAppUser(
   pool: pg.Pool,
   input: {
@@ -1024,8 +1178,10 @@ export async function serviceDeleteConveyorTimeEntryAsAppUser(
     conveyorId: string
     conveyorNodeId: string
     timeEntryId: string
+    reason?: string
   },
 ): Promise<{ deleted: true; id: string }> {
+  await assertNodeIsStepForConveyor(pool, input.conveyorId, input.conveyorNodeId)
   const entry = await findConveyorTimeEntryById(pool, input.timeEntryId)
   if (
     !entry ||
@@ -1035,13 +1191,65 @@ export async function serviceDeleteConveyorTimeEntryAsAppUser(
     throw new AppError('Apontamento não encontrado.', 404, ErrorCodes.NOT_FOUND)
   }
   const collaboratorId = await findCollaboratorIdByAppUserId(pool, input.appUserId)
-  if (!collaboratorId || entry.collaborator_id !== collaboratorId) {
+  const isOwner = Boolean(collaboratorId && entry.collaborator_id === collaboratorId)
+  const hasDeleteAny = await appUserHasPermission(
+    pool,
+    input.appUserId,
+    'time_entries.delete_any',
+  )
+
+  if (!isOwner && !hasDeleteAny) {
     throw new AppError(
       'Não foi possível remover este apontamento.',
       403,
       ErrorCodes.FORBIDDEN,
     )
   }
+
+  const managerial = hasDeleteAny || !isOwner
+  if (managerial) {
+    const reason = (input.reason ?? '').trim()
+    if (!reason) {
+      throw new AppError(
+        'Indique o motivo da remoção.',
+        422,
+        ErrorCodes.VALIDATION_ERROR,
+      )
+    }
+    const client = await pool.connect()
+    try {
+      await client.query('BEGIN')
+      const removed = await softDeleteConveyorTimeEntry(client, {
+        id: input.timeEntryId,
+        conveyorId: input.conveyorId,
+        conveyorNodeId: input.conveyorNodeId,
+      })
+      if (!removed) {
+        throw new AppError('Apontamento não encontrado.', 404, ErrorCodes.NOT_FOUND)
+      }
+      await insertAdminAuditEvent(client, {
+        eventType: 'time_entry_deleted_by_manager',
+        actorUserId: input.appUserId,
+        targetUserId: null,
+        targetCollaboratorId: entry.collaborator_id,
+        metadata: {
+          conveyor_id: input.conveyorId,
+          step_node_id: input.conveyorNodeId,
+          time_entry_id: input.timeEntryId,
+          target_collaborator_id: entry.collaborator_id,
+          reason,
+        },
+      })
+      await client.query('COMMIT')
+    } catch (e) {
+      await client.query('ROLLBACK')
+      throw e
+    } finally {
+      client.release()
+    }
+    return { deleted: true, id: input.timeEntryId }
+  }
+
   return serviceDeleteConveyorTimeEntry(
     pool,
     input.conveyorId,
