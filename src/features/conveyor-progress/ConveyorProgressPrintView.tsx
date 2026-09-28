@@ -8,6 +8,7 @@ import { labelConveyorOperationalStatus } from '../../domain/conveyors/conveyorO
 import type { ConveyorOperationalStatus } from '../../domain/conveyors/conveyor.types'
 import { resolvePlanningItemOperationalStatusLabel } from '../operational-planning/planningExecutionHelpers'
 import type { ConveyorProgressFiltersState } from './ConveyorProgressFilters'
+import { formatWorkDateFromEntryAt } from '../../domain/operational/workDate'
 
 type Props = {
   items: ConveyorProgressItem[]
@@ -213,15 +214,9 @@ function PrintMetricsRow({
   )
 }
 
+/** Data de realização (dd/mm/aaaa, dia civil de SP) — `entryDate` é o instante `entry_at`. */
 function formatPrintDate(iso: string): string {
-  try {
-    return new Intl.DateTimeFormat('pt-BR', {
-      dateStyle: 'short',
-      timeStyle: 'short',
-    }).format(new Date(iso))
-  } catch {
-    return iso
-  }
+  return formatWorkDateFromEntryAt(iso)
 }
 
 function describeAppliedFilters(filters: ConveyorProgressFiltersState): string {

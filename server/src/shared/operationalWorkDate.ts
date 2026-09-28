@@ -45,6 +45,25 @@ export function isFutureOperationalDate(dateIso: string, now: Date = new Date())
   return dateIso > operationalToday(now)
 }
 
+/** 00:00:00.000 de São Paulo na data civil informada (YYYY-MM-DD). */
+export function operationalDayStart(dateIso: string): Date {
+  return new Date(`${dateIso}T00:00:00.000-03:00`)
+}
+
+/** 23:59:59.999 de São Paulo na data civil informada (YYYY-MM-DD). */
+export function operationalDayEnd(dateIso: string): Date {
+  return new Date(`${dateIso}T23:59:59.999-03:00`)
+}
+
+/** Meia-noite (SP) do primeiro dia do mês civil de São Paulo que contém `now`. */
+export function operationalMonthStart(now: Date = new Date()): Date {
+  return operationalDayStart(`${operationalDateOf(now).slice(0, 7)}-01`)
+}
+
+export function isDateOnlyString(s: string): boolean {
+  return DATE_ONLY_RE.test(s.trim())
+}
+
 function isValidDateOnly(s: string): boolean {
   if (!DATE_ONLY_RE.test(s)) return false
   const d = new Date(`${s}${OPERATIONAL_NOON_SUFFIX}`)

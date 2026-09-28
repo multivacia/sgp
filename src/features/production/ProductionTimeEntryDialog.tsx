@@ -17,6 +17,12 @@ import {
   productionTimeEntryPreferredCategory,
   validateProductionTimeEntryJustification,
 } from './productionTimeEntryDialogLogic'
+import { WorkDateField } from '../../components/ui/WorkDateField'
+import {
+  buildEntryAtForWorkDate,
+  operationalTodayIso,
+  validateWorkDate,
+} from '../../domain/operational/workDate'
 
 type DialogState =
   | { status: 'idle' }
@@ -34,6 +40,7 @@ export function ProductionTimeEntryDialog({ item, onClose, onSuccess }: Props) {
   const [minutes, setMinutes] = useState('')
   const [executedQuantity, setExecutedQuantity] = useState('1')
   const [note, setNote] = useState('')
+  const [workDate, setWorkDate] = useState(() => operationalTodayIso())
   const [justification, setJustification] =
     useState<JustificationFieldValue>(emptyJustificationValue())
   const [justificationRequiresComplement, setJustificationRequiresComplement] = useState(false)
@@ -57,11 +64,12 @@ export function ProductionTimeEntryDialog({ item, onClose, onSuccess }: Props) {
   const executedQuantityValue = parseInt(executedQuantity, 10)
   const isExecutedQuantityValid =
     Number.isInteger(executedQuantityValue) && executedQuantityValue >= 0
+  const isWorkDateValid = validateWorkDate(workDate) === null
 
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
       e.preventDefault()
-      if (!isMinutesValid || !isExecutedQuantityValid) return
+      if (!isMinutesValid || !isExecutedQuantityValid || !isWorkDateValid) return
 
       const justificationError = validateProductionTimeEntryJustification({
         item,
@@ -81,6 +89,7 @@ export function ProductionTimeEntryDialog({ item, onClose, onSuccess }: Props) {
           stepNodeId: item.activityNodeId,
           minutes: minutesValue,
           executedQuantity: executedQuantityValue,
+          entryAt: buildEntryAtForWorkDate(workDate),
           note: note.trim() || null,
           ...buildProductionTimeEntryJustificationPayload(item, justification),
         })
@@ -96,6 +105,8 @@ export function ProductionTimeEntryDialog({ item, onClose, onSuccess }: Props) {
     [
       isMinutesValid,
       isExecutedQuantityValid,
+      isWorkDateValid,
+      workDate,
       minutesValue,
       note,
       item,
@@ -171,6 +182,18 @@ export function ProductionTimeEntryDialog({ item, onClose, onSuccess }: Props) {
         </dl>
 
         <form onSubmit={(e) => void handleSubmit(e)} noValidate>
+          <WorkDateField
+            id="production-time-entry-work-date"
+            variant="kiosk"
+            className="mb-4"
+            value={workDate}
+            onChange={(v) => {
+              setState({ status: 'idle' })
+              setWorkDate(v)
+            }}
+            disabled={isSubmitting}
+          />
+
           <div className="mb-4">
             <label htmlFor="production-time-entry-minutes" className="mb-1.5 block text-sm font-medium text-slate-300">
               Tempo apontado (minutos)
@@ -281,7 +304,7 @@ export function ProductionTimeEntryDialog({ item, onClose, onSuccess }: Props) {
           <div className="flex flex-col gap-3 sm:flex-row-reverse">
             <button
               type="submit"
-              disabled={!isMinutesValid || isSubmitting}
+              disabled={!isMinutesValid || !isWorkDateValid || isSubmitting}
               className="sgp-cta-primary min-h-12 flex-1 text-base disabled:cursor-not-allowed disabled:opacity-50"
             >
               {isSubmitting ? 'Registrando…' : 'Registrar apontamento'}

@@ -5,6 +5,7 @@ import {
   labelStatusLeituraApontamento,
   type StepAnaliticoDetalhe,
 } from '../../domain/esteiras/step-analitico.types'
+import { formatWorkDateFromEntryAt } from '../../domain/operational/workDate'
 
 export type StepAnaliticoPanelProps = {
   stepAnalitico: StepAnaliticoDetalhe | undefined
@@ -166,15 +167,7 @@ export function StepAnaliticoPanel({
             {sa.apontamentos.ultimoApontamentoAt ? (
               <span className="ml-1 block text-[9px] font-normal text-slate-500">
                 Último:{' '}
-                {new Date(sa.apontamentos.ultimoApontamentoAt).toLocaleString(
-                  'pt-BR',
-                  {
-                    day: '2-digit',
-                    month: '2-digit',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  },
-                )}
+                {formatWorkDateFromEntryAt(sa.apontamentos.ultimoApontamentoAt)}
               </span>
             ) : null}
           </p>
@@ -230,12 +223,7 @@ export function StepAnaliticoPanel({
                 </span>
                 <span className="tabular-nums text-slate-500">
                   {formatMinutosHumanos(h.minutos)} ·{' '}
-                  {new Date(h.createdAt).toLocaleString('pt-BR', {
-                    day: '2-digit',
-                    month: '2-digit',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  })}
+                  {formatWorkDateFromEntryAt(h.createdAt)}
                 </span>
               </li>
             ))}

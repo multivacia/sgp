@@ -34,6 +34,11 @@ const WD_ADMIN_USER_ID = 'da7eda7e-0000-4000-8000-000000000001'
 const WD_ADMIN_EMAIL = 'work-date-admin@sgp-argos.local'
 const ADMIN_ROLE_ID = '11111111-1111-1111-1111-111111111111'
 const DESCRIPTION_ID = 'dddddddd-0000-0000-0000-00000000da7e'
+/**
+ * ATENÇÃO: nenhuma migration/seed do repositório provisiona esta permissão (usada por
+ * `requirePermission` na rota on-behalf). Ela é criada aqui apenas no banco de teste —
+ * isto NÃO prova que exista em HML/PRD.
+ */
 const ON_BEHALF_PERMISSION = 'time_entries.create_on_behalf'
 
 function shiftIsoDate(iso: string, days: number): string {

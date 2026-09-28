@@ -27,6 +27,11 @@ import {
   resolveJourneyLoadUserMessage,
   transversalUxCopy,
 } from '../../lib/transversalUxCopy'
+import {
+  formatWorkDateFromEntryAt,
+  OPERATIONAL_TIMEZONE,
+  operationalDayRangeIso,
+} from '../../domain/operational/workDate'
 
 function JornadaGestorSkeleton() {
   return (
@@ -70,8 +75,17 @@ function formatPeriodLabel(fromIso: string, toIso: string): string {
     const a = new Date(fromIso)
     const b = new Date(toIso)
     if (Number.isNaN(a.getTime()) || Number.isNaN(b.getTime())) return '—'
-    const df = a.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })
-    const dt = b.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })
+    const df = a.toLocaleDateString('pt-BR', {
+      day: '2-digit',
+      month: 'short',
+      timeZone: OPERATIONAL_TIMEZONE,
+    })
+    const dt = b.toLocaleDateString('pt-BR', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      timeZone: OPERATIONAL_TIMEZONE,
+    })
     return `${df} → ${dt}`
   } catch {
     return '—'
@@ -230,7 +244,7 @@ export function JornadaColaboradorGestorPage() {
         periodPreset,
         ...(conveyorFilter ? { conveyorId: conveyorFilter } : {}),
         ...(periodPreset === 'custom' && periodFrom && periodTo
-          ? { from: `${periodFrom}T00:00:00.000Z`, to: `${periodTo}T23:59:59.999Z` }
+          ? operationalDayRangeIso(periodFrom, periodTo)
           : {}),
       })
       setJourney(data)
@@ -647,10 +661,7 @@ export function JornadaColaboradorGestorPage() {
                     </div>
                     <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500">
                       <span>
-                        {new Date(e.entryAt).toLocaleString('pt-BR', {
-                          dateStyle: 'short',
-                          timeStyle: 'short',
-                        })}
+                        {formatWorkDateFromEntryAt(e.entryAt)}
                       </span>
                       <Link
                         to={`/app/esteiras/${encodeURIComponent(e.conveyorId)}`}

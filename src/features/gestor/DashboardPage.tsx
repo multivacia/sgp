@@ -54,6 +54,7 @@ import type {
   OperationalDashboardData,
 } from '../../domain/dashboard/dashboard.types'
 import { DashboardChartsSkeleton } from '../../components/dashboard/charts/DashboardChartsSkeleton'
+import { formatWorkDateFromEntryAt } from '../../domain/operational/workDate'
 
 const OperationalDashboardCharts = lazy(() =>
   import('../../components/dashboard/charts/OperationalDashboardCharts').then((m) => ({
@@ -887,7 +888,7 @@ export function DashboardPage() {
                           {e.conveyorName}
                         </span>
                         <span className="text-xs text-slate-500">
-                          {new Date(e.entryAt).toLocaleString('pt-BR')}
+                          {formatWorkDateFromEntryAt(e.entryAt)}
                         </span>
                       </div>
                       <p className="mt-1 text-xs text-slate-400">

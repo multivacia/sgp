@@ -126,7 +126,7 @@ export async function serviceOperationalDashboard(
 
   const periodNote =
     realizedInPeriod !== undefined && realizedPeriod
-      ? ` Minutos apontados (período, preset ${realizedPeriod.preset}): soma dos lançamentos com entry_at entre o início da janela e agora (UTC).`
+      ? ` Minutos apontados (período, preset ${realizedPeriod.preset}): soma dos lançamentos com entry_at entre o início da janela e agora (month: desde 00:00 do dia 1 em America/Sao_Paulo).`
       : ''
 
   return {
