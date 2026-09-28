@@ -28,6 +28,15 @@ import {
 } from '../shell/quickTimeEntryDrawerLogic'
 import type { ConveyorStepTimeEntryListItem } from '../../domain/conveyors/conveyor-step-assignments.types'
 import { useAuth } from '../../lib/use-auth'
+import { WorkDateField } from '../../components/ui/WorkDateField'
+import {
+  buildEntryAtForWorkDate,
+  formatIsoDateBr,
+  formatWorkDateLabel,
+  operationalDateOf,
+  operationalTodayIso,
+  validateWorkDate,
+} from '../../domain/operational/workDate'
 
 type ToastState = { message: string; variant: SgpToastVariant } | null
 
@@ -62,6 +71,7 @@ export function ApontamentoGestorPage() {
   const [minutosStr, setMinutosStr] = useState('30')
   const [observacao, setObservacao] = useState('')
   const [motivo, setMotivo] = useState('')
+  const [workDate, setWorkDate] = useState(() => operationalTodayIso())
   const [toast, setToast] = useState<ToastState>(null)
   const [submitting, setSubmitting] = useState(false)
 
@@ -140,6 +150,7 @@ export function ApontamentoGestorPage() {
   const minutos = Number.parseInt(minutosStr, 10)
   const minutosValidos = Number.isInteger(minutos) && minutos >= 1
   const motivoOk = motivo.trim().length > 0
+  const workDateOk = validateWorkDate(workDate) === null
 
   function pushToast(message: string, variant: SgpToastVariant = 'neutral') {
     setToast({ message, variant })
@@ -158,6 +169,7 @@ export function ApontamentoGestorPage() {
       !minutosValidos ||
       !motivoOk ||
       !oosJustificationOk ||
+      !workDateOk ||
       submitting
     ) {
       return
@@ -168,6 +180,7 @@ export function ApontamentoGestorPage() {
       await postConveyorStepTimeEntryOnBehalf(conveyorId.trim(), stepNodeId.trim(), {
         targetCollaboratorId,
         minutes: minutos,
+        entryAt: buildEntryAtForWorkDate(workDate),
         notes: observacao.trim() || null,
         reason: motivo.trim(),
         ...(needsOosJustification
@@ -186,6 +199,7 @@ export function ApontamentoGestorPage() {
       setConfirmCreateOpen(false)
       setMotivo('')
       setObservacao('')
+      setWorkDate(operationalTodayIso())
       setOutOfSequenceJustification(emptyJustificationValue())
       pushToast('Apontamento registado em nome do colaborador selecionado.', 'success')
       await loadData()
@@ -384,6 +398,12 @@ export function ApontamentoGestorPage() {
                   ))}
                 </select>
               </label>
+              <WorkDateField
+                id="gestor-work-date"
+                value={workDate}
+                onChange={setWorkDate}
+                disabled={submitting}
+              />
               <label className="block text-sm text-slate-400">
                 Minutos
                 <input
@@ -437,7 +457,9 @@ export function ApontamentoGestorPage() {
               ) : null}
               <button
                 type="button"
-                disabled={!minutosValidos || !motivoOk || !oosJustificationOk || submitting}
+                disabled={
+                  !minutosValidos || !motivoOk || !oosJustificationOk || !workDateOk || submitting
+                }
                 className="sgp-cta-primary disabled:opacity-50"
                 onClick={() => setConfirmCreateOpen(true)}
               >
@@ -466,7 +488,10 @@ export function ApontamentoGestorPage() {
                   <div>
                     <p className="text-sm text-slate-200">
                       {e.collaboratorName ?? e.collaboratorId} ·{' '}
-                      {formatHumanMinutes(e.minutes)}
+                      {formatHumanMinutes(e.minutes)} ·{' '}
+                      <span className="text-slate-400">
+                        realizado em {formatIsoDateBr(operationalDateOf(new Date(e.entryAt)))}
+                      </span>
                       {e.isDelegated ? (
                         <span className="ml-2 rounded bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-200/95">
                           Registado por gestor
@@ -510,6 +535,10 @@ export function ApontamentoGestorPage() {
             <p className="mt-2 text-sm text-slate-400">
               Serão creditados <strong className="text-slate-200">{minutos}</strong> minutos ao
               colaborador selecionado, com o motivo indicado. Deseja continuar?
+            </p>
+            <p className="mt-3 text-sm text-slate-400">
+              Data de realização:{' '}
+              <strong className="text-slate-200">{formatWorkDateLabel(workDate)}</strong>
             </p>
             <div className="mt-6 flex flex-wrap gap-3">
               <button

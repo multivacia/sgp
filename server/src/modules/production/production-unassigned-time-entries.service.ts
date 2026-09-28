@@ -2,6 +2,7 @@ import type pg from 'pg'
 import { findAppUserIdByCollaboratorId } from '../auth/auth.repository.js'
 import { AppError } from '../../shared/errors/AppError.js'
 import { ErrorCodes } from '../../shared/errors/errorCodes.js'
+import { parseEntryAtInput } from '../../shared/operationalWorkDate.js'
 import { serviceAnalyzeConveyorActivitySequence } from '../conveyors/conveyorActivitySequence.service.js'
 import {
   assertNodeIsStepForConveyor,
@@ -66,6 +67,7 @@ export async function serviceCreateProductionUnassignedTimeEntry(
     conveyorNodeId: body.stepNodeId,
     collaboratorId,
     conveyorNodeAssigneeId: assigneeId ?? null,
+    entryAt: body.entryAt !== undefined ? parseEntryAtInput(body.entryAt) : undefined,
     minutes: body.minutes,
     notes: body.note ?? null,
     entryMode: 'manual',

@@ -1,6 +1,7 @@
 import type { Request, Response } from 'express'
 import type pg from 'pg'
 import { ok } from '../../shared/http/ok.js'
+import { parseEntryAtInput } from '../../shared/operationalWorkDate.js'
 import { productionTimeEntryBodySchema } from './production-time-entries.schemas.js'
 import { serviceCreateProductionTimeEntry } from './production-time-entries.service.js'
 
@@ -24,6 +25,7 @@ export async function postProductionTimeEntry(
     outOfSequenceJustification: body.outOfSequenceJustification ?? null,
     justificationId: body.justificationId ?? null,
     justificationComplement: body.justificationComplement ?? null,
+    entryAt: body.entryAt !== undefined ? parseEntryAtInput(body.entryAt) : undefined,
   })
 
   res.status(201).json(ok(created))

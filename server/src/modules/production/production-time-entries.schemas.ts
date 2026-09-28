@@ -1,6 +1,12 @@
 import { z } from 'zod'
 import { PRODUCTION_OUT_OF_SEQUENCE_JUSTIFICATION_MAX } from './production-out-of-sequence.js'
 
+/** Data/hora de realização do trabalho (ISO 8601 com fuso, ou `YYYY-MM-DD` = meio-dia de SP). */
+const entryAtInput = z
+  .string()
+  .min(1)
+  .refine((s) => !Number.isNaN(Date.parse(s)), 'Data/hora inválida.')
+
 const productionTimeEntryBodyBaseSchema = z.object({
   conveyorId: z.string().uuid(),
   stepNodeId: z.string().uuid(),
@@ -14,6 +20,7 @@ const productionTimeEntryBodyBaseSchema = z.object({
     .optional(),
   justificationId: z.string().uuid().optional(),
   justificationComplement: z.union([z.string().max(2000), z.null()]).optional(),
+  entryAt: entryAtInput.optional(),
 })
 
 export const productionTimeEntryBodySchema = productionTimeEntryBodyBaseSchema.superRefine(
@@ -54,6 +61,7 @@ export const productionUnassignedTimeEntryBodySchema = z.object({
     .optional(),
   outOfSequenceJustificationId: z.string().uuid().optional(),
   outOfSequenceJustificationComplement: z.union([z.string().max(2000), z.null()]).optional(),
+  entryAt: entryAtInput.optional(),
 })
 
 export type ProductionUnassignedTimeEntryBody = z.infer<

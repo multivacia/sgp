@@ -9,6 +9,12 @@ import type {
 import type { TimeEntryCandidateItem } from '../../domain/my-activities/my-activities.types'
 import { ApiError } from '../../lib/api/apiErrors'
 import { PRODUCTION_WORK_QUEUE_ERROR_MESSAGE } from '../../services/production/productionApiService'
+import {
+  formatIsoDateBr,
+  operationalDateOf,
+  operationalTodayIso,
+  shiftIsoDate,
+} from '../../domain/operational/workDate'
 
 const {
   getProductionWorkQueueMock,
@@ -258,14 +264,20 @@ describe('KioskActivityCards — apontamentos avulsos', () => {
       expect(within(dialog).getByRole('option', { name: 'Ajuste de bancada' })).toBeTruthy(),
     )
     fireEvent.change(select, { target: { value: 'desc-1' } })
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Ontem' }))
     fireEvent.click(within(dialog).getByRole('button', { name: '15 min' }))
     fireEvent.click(within(dialog).getByRole('button', { name: 'Continuar' }))
 
+    const yesterday = shiftIsoDate(operationalTodayIso(), -1)
+    expect(
+      await within(dialog).findByText(`Ontem · ${formatIsoDateBr(yesterday)}`),
+    ).toBeTruthy()
     fireEvent.click(await within(dialog).findByRole('button', { name: 'Confirmar apontamento' }))
 
     await waitFor(() => expect(createProductionExtraTimeEntryMock).toHaveBeenCalledTimes(1))
     expect(createProductionExtraTimeEntryMock).toHaveBeenCalledWith({
       descriptionId: 'desc-1',
+      entryDate: yesterday,
       minutes: 15,
     })
 
@@ -333,6 +345,8 @@ describe('KioskActivityCards — apontamentos avulsos', () => {
     fireEvent.click(within(dialog).getByRole('button', { name: '30 min' }))
     fireEvent.click(within(dialog).getByRole('button', { name: 'Continuar' }))
 
+    const today = operationalTodayIso()
+    expect(await within(dialog).findByText(`Hoje · ${formatIsoDateBr(today)}`)).toBeTruthy()
     fireEvent.click(await within(dialog).findByRole('button', { name: 'Confirmar apontamento' }))
 
     await waitFor(() => expect(createProductionUnassignedTimeEntryMock).toHaveBeenCalledTimes(1))
@@ -340,7 +354,10 @@ describe('KioskActivityCards — apontamentos avulsos', () => {
       conveyorId: 'conv-2',
       stepNodeId: 'step-99',
       minutes: 30,
+      entryAt: expect.any(String),
     })
+    const sent = createProductionUnassignedTimeEntryMock.mock.calls[0]![0] as { entryAt: string }
+    expect(operationalDateOf(new Date(sent.entryAt))).toBe(today)
 
     await within(dialog).findByText('Apontamento registrado!')
 

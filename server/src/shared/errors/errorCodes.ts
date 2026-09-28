@@ -43,6 +43,8 @@ export const ErrorCodes = {
   /** Apontamento que ultrapassa o tempo previsto da atividade. */
   TIME_ENTRY_EXCEEDED_PLANNED_REQUIRES_JUSTIFICATION:
     'TIME_ENTRY_EXCEEDED_PLANNED_REQUIRES_JUSTIFICATION',
+  /** Data de realização do apontamento no futuro (fuso de São Paulo). */
+  TIME_ENTRY_FUTURE_DATE: 'TIME_ENTRY_FUTURE_DATE',
   /** Conclusão explícita com atividades anteriores ainda pendentes. */
   STEP_COMPLETION_OUT_OF_SEQUENCE_REQUIRES_JUSTIFICATION:
     'STEP_COMPLETION_OUT_OF_SEQUENCE_REQUIRES_JUSTIFICATION',

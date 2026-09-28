@@ -1,10 +1,11 @@
 import { z } from 'zod'
+import { isFutureOperationalDate } from '../../shared/operationalWorkDate.js'
 
 export const listExtraTimeEntriesQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(50).optional().default(10),
 })
 
-export const createExtraTimeEntryBodySchema = z.object({
+const createExtraTimeEntryBodyBaseSchema = z.object({
   descriptionId: z.string().uuid(),
   entryDate: z
     .string()
@@ -16,6 +17,19 @@ export const createExtraTimeEntryBodySchema = z.object({
     z.string().max(500, { message: 'notes demasiado longo.' }).optional(),
   ),
 })
+
+/** Mesma regra do Kiosk (`production-extra-time-entries.schemas.ts`): data futura (SP) rejeitada. */
+export const createExtraTimeEntryBodySchema = createExtraTimeEntryBodyBaseSchema.superRefine(
+  (data, ctx) => {
+    if (data.entryDate && isFutureOperationalDate(data.entryDate)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'entryDate não pode ser uma data futura.',
+        path: ['entryDate'],
+      })
+    }
+  },
+)
 
 export type ListExtraTimeEntriesQuery = z.infer<typeof listExtraTimeEntriesQuerySchema>
 export type CreateExtraTimeEntryBody = z.infer<typeof createExtraTimeEntryBodySchema>

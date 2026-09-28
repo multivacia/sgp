@@ -1,13 +1,5 @@
 import { z } from 'zod'
-
-/** Data local do servidor no formato YYYY-MM-DD (mesma referência usada no restante do módulo). */
-function todayIsoLocal(): string {
-  const now = new Date()
-  const y = now.getFullYear()
-  const m = String(now.getMonth() + 1).padStart(2, '0')
-  const d = String(now.getDate()).padStart(2, '0')
-  return `${y}-${m}-${d}`
-}
+import { isFutureOperationalDate } from '../../shared/operationalWorkDate.js'
 
 export const listProductionExtraTimeEntriesQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(50).optional().default(10),
@@ -28,7 +20,7 @@ const createProductionExtraTimeEntryBodyBaseSchema = z.object({
 
 export const createProductionExtraTimeEntryBodySchema =
   createProductionExtraTimeEntryBodyBaseSchema.superRefine((data, ctx) => {
-    if (data.entryDate && data.entryDate > todayIsoLocal()) {
+    if (data.entryDate && isFutureOperationalDate(data.entryDate)) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         message: 'entryDate não pode ser uma data futura.',

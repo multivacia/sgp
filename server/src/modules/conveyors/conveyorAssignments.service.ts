@@ -56,6 +56,7 @@ import {
   TIME_ENTRY_JUSTIFICATION_REQUIRED_MESSAGE,
 } from '../../shared/timeEntryJustificationResolver.js'
 import { resolveProductionStepAssigneeId } from '../production/production-plan-assignee.js'
+import { resolveTimeEntryEntryAt } from '../../shared/operationalWorkDate.js'
 
 function isPgUniqueViolation(err: unknown): boolean {
   return err instanceof DatabaseError && err.code === '23505'
@@ -655,7 +656,7 @@ export async function serviceCreateConveyorTimeEntry(
     conveyor_node_id: input.conveyorNodeId,
     collaborator_id: input.collaboratorId,
     conveyor_node_assignee_id: input.conveyorNodeAssigneeId ?? null,
-    entry_at: input.entryAt ?? new Date(),
+    entry_at: resolveTimeEntryEntryAt(input.entryAt),
     minutes: input.minutes,
     executed_quantity: executedQuantityDb,
     notes: input.notes ?? null,
@@ -888,7 +889,7 @@ export async function serviceCreateConveyorTimeEntryOnBehalf(
     conveyor_node_id: input.conveyorNodeId,
     collaborator_id: input.targetCollaboratorId,
     conveyor_node_assignee_id: assigneeId,
-    entry_at: input.entryAt ?? new Date(),
+    entry_at: resolveTimeEntryEntryAt(input.entryAt),
     minutes: input.minutes,
     executed_quantity: executedQuantityDb,
     notes: input.notes ?? null,

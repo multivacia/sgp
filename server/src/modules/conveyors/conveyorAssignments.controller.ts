@@ -32,6 +32,7 @@ import {
   serviceAbortConveyorStep,
   serviceRestoreAbortedConveyorStep,
 } from './conveyor-step-abort.service.js'
+import { parseEntryAtInput } from '../../shared/operationalWorkDate.js'
 import { findCollaboratorIdByAppUserId } from '../auth/auth.repository.js'
 
 export async function postConveyorStepAssignee(
@@ -93,7 +94,7 @@ export async function postConveyorStepTimeEntry(
 
   let entryAt: Date | undefined
   if (body.entryAt !== undefined) {
-    entryAt = new Date(body.entryAt)
+    entryAt = parseEntryAtInput(body.entryAt)
   }
 
   const created = await serviceCreateConveyorTimeEntryForAppUser(pool, {
@@ -128,7 +129,7 @@ export async function postConveyorStepTimeEntryOnBehalf(
 
   let entryAt: Date | undefined
   if (body.entryAt !== undefined) {
-    entryAt = new Date(body.entryAt)
+    entryAt = parseEntryAtInput(body.entryAt)
   }
 
   const created = await serviceCreateConveyorTimeEntryOnBehalf(pool, {

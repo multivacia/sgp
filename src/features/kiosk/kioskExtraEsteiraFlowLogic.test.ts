@@ -25,12 +25,29 @@ describe('kioskExtraEsteiraFlowLogic', () => {
     expect(canSubmitKioskExtraEsteiraForm({ descriptionId: 'd1', minutes: 15 })).toBe(true)
   })
 
+  it('canSubmitKioskExtraEsteiraForm bloqueia data futura ou vazia e aceita passada', () => {
+    const base = { descriptionId: 'd1', minutes: 15 }
+    expect(canSubmitKioskExtraEsteiraForm({ ...base, entryDate: '2999-12-31' })).toBe(false)
+    expect(canSubmitKioskExtraEsteiraForm({ ...base, entryDate: '' })).toBe(false)
+    expect(canSubmitKioskExtraEsteiraForm({ ...base, entryDate: '2021-03-10' })).toBe(true)
+  })
+
   it('buildKioskExtraEsteiraPayload omite notes vazio e inclui notes preenchido', () => {
     expect(
-      buildKioskExtraEsteiraPayload({ descriptionId: 'd1', minutes: 15, notes: '  ' }),
-    ).toEqual({ descriptionId: 'd1', minutes: 15 })
+      buildKioskExtraEsteiraPayload({
+        descriptionId: 'd1',
+        minutes: 15,
+        notes: '  ',
+        entryDate: '2026-09-28',
+      }),
+    ).toEqual({ descriptionId: 'd1', minutes: 15, entryDate: '2026-09-28' })
     expect(
-      buildKioskExtraEsteiraPayload({ descriptionId: 'd1', minutes: 15, notes: ' obs ' }),
-    ).toEqual({ descriptionId: 'd1', minutes: 15, notes: 'obs' })
+      buildKioskExtraEsteiraPayload({
+        descriptionId: 'd1',
+        minutes: 15,
+        notes: ' obs ',
+        entryDate: '2026-09-27',
+      }),
+    ).toEqual({ descriptionId: 'd1', minutes: 15, notes: 'obs', entryDate: '2026-09-27' })
   })
 })
