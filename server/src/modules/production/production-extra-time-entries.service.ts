@@ -10,6 +10,7 @@ import {
   type ExtraTimeEntryDescriptionOptionRow,
   type ExtraTimeEntryWithDescriptionRow,
 } from './production-extra-time-entries.repository.js'
+import { resolveExtraEntryDate } from '../../shared/operationalWorkDate.js'
 
 export async function serviceListProductionExtraTimeEntryDescriptionOptions(
   pool: pg.Pool,
@@ -45,7 +46,7 @@ export async function serviceCreateProductionExtraTimeEntry(
   return insertProductionExtraTimeEntry(pool, {
     collaboratorId: input.collaboratorId,
     descriptionId: input.body.descriptionId,
-    entryDate: input.body.entryDate,
+    entryDate: resolveExtraEntryDate(input.body.entryDate),
     minutes: input.body.minutes,
     notes: input.body.notes?.trim() || null,
   })

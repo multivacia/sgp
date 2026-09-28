@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import type { TimeEntryAnalyticalItem } from '../../domain/conveyor-progress/conveyorProgress.types'
 import { RealizedCell } from './ConveyorProgressMetricsCells'
+import { formatWorkDateFromEntryAt } from '../../domain/operational/workDate'
 
 type Props = {
   entries: readonly TimeEntryAnalyticalItem[]
@@ -85,13 +86,7 @@ function AnalyticalEntryRow({
   )
 }
 
+/** Data de realização (dd/mm/aaaa, dia civil de SP) — `entryDate` é o instante `entry_at`. */
 function formatEntryDate(iso: string): string {
-  try {
-    return new Intl.DateTimeFormat('pt-BR', {
-      dateStyle: 'short',
-      timeStyle: 'short',
-    }).format(new Date(iso))
-  } catch {
-    return iso
-  }
+  return formatWorkDateFromEntryAt(iso)
 }

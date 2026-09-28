@@ -6,6 +6,7 @@ import {
 } from './planningDeviationIndicators'
 import { resolvePlanningItemOperationalStatusLabel } from './planningExecutionHelpers'
 import { weekdayLabelsPt } from './operationalPlanningWeekRange'
+import { formatWorkDateFromEntryAt } from '../../domain/operational/workDate'
 
 function formatPlannedDayLabel(
   plannedDate: string | undefined,
@@ -22,16 +23,10 @@ function formatPlannedDayLabel(
   return `${day}/${month}`
 }
 
-function formatEntryDateTime(iso: string | undefined): string | null {
+/** Data de realização do apontamento (dd/mm/aaaa, dia civil de SP) — sem horário. */
+function formatEntryWorkDate(iso: string | undefined): string | null {
   if (!iso?.trim()) return null
-  const d = new Date(iso)
-  if (Number.isNaN(d.getTime())) return iso
-  return d.toLocaleString('pt-BR', {
-    day: '2-digit',
-    month: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
+  return formatWorkDateFromEntryAt(iso)
 }
 
 type PlanningPrincipalDeviationsPanelProps = {
@@ -123,8 +118,8 @@ export function PlanningPrincipalDeviationsPanel({
             {deviation.kind === 'OUTSIDE_PLAN' ? (
               <p className="mt-2 text-slate-400">
                 {deviation.collaboratorName ?? '—'}
-                {formatEntryDateTime(deviation.entryAt)
-                  ? ` · ${formatEntryDateTime(deviation.entryAt)}`
+                {formatEntryWorkDate(deviation.entryAt)
+                  ? ` · ${formatEntryWorkDate(deviation.entryAt)}`
                   : null}
               </p>
             ) : null}

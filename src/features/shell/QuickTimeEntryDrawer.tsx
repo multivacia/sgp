@@ -49,6 +49,12 @@ import {
 import { JustificationSelect } from '../../components/operational/JustificationSelect'
 import { resolvePreferredJustificationCategory } from '../../domain/operational/timeEntryJustificationField'
 import { QuickTimeEntryCandidateActions } from './QuickTimeEntryCandidateActions'
+import { WorkDateField } from '../../components/ui/WorkDateField'
+import {
+  formatIsoDateBr,
+  operationalTodayIso,
+  validateWorkDate,
+} from '../../domain/operational/workDate'
 
 const SEARCH_DEBOUNCE_MS = 200
 
@@ -94,6 +100,7 @@ export function QuickTimeEntryDrawer({
   const [loadError, setLoadError] = useState<string | null>(null)
   const [selected, setSelected] = useState<TimeEntryCandidateItem | null>(null)
   const [minutesStr, setMinutesStr] = useState('0')
+  const [workDate, setWorkDate] = useState(() => operationalTodayIso())
   const [executedQuantityStr, setExecutedQuantityStr] = useState('1')
   const [description, setDescription] = useState('')
   const [operationalJustification, setOperationalJustification] =
@@ -113,7 +120,7 @@ export function QuickTimeEntryDrawer({
   const [extraEntriesError, setExtraEntriesError] = useState<string | null>(null)
   const [extraUnavailableReason, setExtraUnavailableReason] = useState<string | null>(null)
   const [extraDescriptionId, setExtraDescriptionId] = useState('')
-  const [extraEntryDate, setExtraEntryDate] = useState(new Date().toISOString().slice(0, 10))
+  const [extraEntryDate, setExtraEntryDate] = useState(operationalTodayIso())
   const [extraMinutesStr, setExtraMinutesStr] = useState('30')
   const [extraNotes, setExtraNotes] = useState('')
   const [extraSubmitting, setExtraSubmitting] = useState(false)
@@ -145,6 +152,7 @@ export function QuickTimeEntryDrawer({
       setSubmitError(null)
       setToast(null)
       setMinutesStr('0')
+      setWorkDate(operationalTodayIso())
       setDescription('')
       setOperationalJustification(emptyJustificationValue())
       setJustificationUseFallback(false)
@@ -157,7 +165,7 @@ export function QuickTimeEntryDrawer({
       setExtraEntriesError(null)
       setExtraUnavailableReason(null)
       setExtraDescriptionId('')
-      setExtraEntryDate(new Date().toISOString().slice(0, 10))
+      setExtraEntryDate(operationalTodayIso())
       setExtraMinutesStr('30')
       setExtraNotes('')
       setExtraSubmitting(false)
@@ -311,7 +319,10 @@ export function QuickTimeEntryDrawer({
       })
     : null
   const canSubmitForm =
-    minutesValid && executedQuantityValid && !justificationValidationError
+    minutesValid &&
+    executedQuantityValid &&
+    !justificationValidationError &&
+    validateWorkDate(workDate) === null
   const showSaveAndComplete =
     selected != null && canShowSaveAndCompleteButton(selected)
   const extraMinutes = Number.parseInt(extraMinutesStr, 10)
@@ -321,6 +332,7 @@ export function QuickTimeEntryDrawer({
     setSelected(c)
     setPhase('form')
     setSubmitError(null)
+    setWorkDate(operationalTodayIso())
     setMinutesStr('0')
     setDescription('')
     setOperationalJustification(emptyJustificationValue())
@@ -350,12 +362,14 @@ export function QuickTimeEntryDrawer({
       pushToast(transversalUxCopy.collaboratorLinkMissingToast, 'error')
       return
     }
-    const validationError = validateTimeEntryForm({
-      candidate: selected,
-      operationalJustification,
-      useFallback: justificationUseFallback,
-      requiresComplement: justificationRequiresComplement,
-    })
+    const validationError =
+      validateWorkDate(workDate) ??
+      validateTimeEntryForm({
+        candidate: selected,
+        operationalJustification,
+        useFallback: justificationUseFallback,
+        requiresComplement: justificationRequiresComplement,
+      })
     if (validationError) {
       setSubmitError(validationError)
       return
@@ -374,9 +388,15 @@ export function QuickTimeEntryDrawer({
           description,
           operationalJustification,
           markAsDone,
+          workDate,
         }),
       )
-      pushToast(resolveTimeEntrySuccessToast(markAsDone), 'success')
+      pushToast(
+        workDate === operationalTodayIso()
+          ? resolveTimeEntrySuccessToast(markAsDone)
+          : `${resolveTimeEntrySuccessToast(markAsDone)} Data de realização: ${formatIsoDateBr(workDate)}.`,
+        'success',
+      )
       setPhase('list')
       setSelected(null)
       setDescription('')
@@ -490,12 +510,17 @@ export function QuickTimeEntryDrawer({
       setExtraSubmitError('Informe minutos válidos (maior que zero).')
       return
     }
+    const extraDateError = validateWorkDate(extraEntryDate)
+    if (extraDateError) {
+      setExtraSubmitError(extraDateError)
+      return
+    }
     setExtraSubmitError(null)
     setExtraSubmitting(true)
     try {
       await createMyExtraTimeEntry({
         descriptionId: extraDescriptionId,
-        entryDate: extraEntryDate || undefined,
+        entryDate: extraEntryDate,
         minutes: extraMinutes,
         notes: extraNotes.trim() || undefined,
       })
@@ -858,7 +883,18 @@ export function QuickTimeEntryDrawer({
                       </p>
                     </div>
 
-                    <label className="mt-6 block text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">
+                    <WorkDateField
+                      id="qte-work-date"
+                      className="mt-6"
+                      value={workDate}
+                      onChange={(v) => {
+                        setWorkDate(v)
+                        setSubmitError(null)
+                      }}
+                      disabled={submitting}
+                    />
+
+                    <label className="mt-4 block text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">
                       Tempo (minutos)
                       <input
                         type="number"
@@ -1073,15 +1109,16 @@ export function QuickTimeEntryDrawer({
                     </p>
                   ) : null}
 
-                  <label className="mt-4 block text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">
-                    Data
-                    <input
-                      type="date"
-                      value={extraEntryDate}
-                      onChange={(e) => setExtraEntryDate(e.target.value)}
-                      className="mt-1.5 w-full rounded-xl border border-[color:var(--semantic-border-glass-strong)] bg-sgp-app-panel-deep/90 px-3 py-2 text-sm text-slate-200 outline-none focus:ring-2 focus:ring-sgp-blue-bright/25"
-                    />
-                  </label>
+                  <WorkDateField
+                    id="qte-extra-work-date"
+                    className="mt-4"
+                    value={extraEntryDate}
+                    onChange={(v) => {
+                      setExtraEntryDate(v)
+                      setExtraSubmitError(null)
+                    }}
+                    disabled={extraSubmitting}
+                  />
 
                   <label className="mt-4 block text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">
                     Tempo (minutos)
@@ -1121,6 +1158,7 @@ export function QuickTimeEntryDrawer({
                           minutesValid: extraMinutesValid,
                           submitting: extraSubmitting,
                           unavailable: Boolean(extraUnavailableReason),
+                          entryDate: extraEntryDate,
                         })
                       }
                     >
@@ -1149,7 +1187,7 @@ export function QuickTimeEntryDrawer({
                               {e.description}
                             </p>
                             <p className="mt-1 text-xs text-slate-400">
-                              {e.entryDate} · {formatHumanMinutes(e.minutes)}
+                              {formatIsoDateBr(e.entryDate)} · {formatHumanMinutes(e.minutes)}
                             </p>
                             {e.notes ? (
                               <p className="mt-1 text-xs text-slate-500">{e.notes}</p>

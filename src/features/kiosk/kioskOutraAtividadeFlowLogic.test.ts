@@ -39,6 +39,9 @@ function candidate(overrides: Partial<TimeEntryCandidateItem> = {}): TimeEntryCa
   }
 }
 
+/** 28/09/2026 10:00 em São Paulo. */
+const NOW = new Date('2026-09-28T13:00:00.000Z')
+
 describe('kioskOutraAtividadeFlowLogic', () => {
   it('formatCandidateContextLine junta esteira, tarefa e setor sem duplicar atividade', () => {
     expect(formatCandidateContextLine(candidate())).toBe('OS-1000 · Estofamento · Costura')
@@ -112,6 +115,32 @@ describe('kioskOutraAtividadeFlowLogic', () => {
     expect(withJustification).toBe(true)
   })
 
+  it('canSubmitKioskOutraAtividadeForm bloqueia data futura', () => {
+    const base = {
+      candidate: candidate({ isAssignedToMe: true }),
+      minutes: 15,
+      operationalJustification: {
+        value: { justificationId: null, justificationComplement: '', legacyText: '' },
+        useFallback: false,
+        requiresComplement: false,
+      },
+    }
+    expect(canSubmitKioskOutraAtividadeForm({ ...base, workDate: '2999-01-01' })).toBe(false)
+    expect(canSubmitKioskOutraAtividadeForm({ ...base, workDate: '2020-01-01' })).toBe(true)
+  })
+
+  it('buildKioskUnassignedTimeEntryPayload com data de hoje envia o instante atual', () => {
+    const payload = buildKioskUnassignedTimeEntryPayload({
+      candidate: candidate({ isAssignedToMe: true }),
+      minutes: 20,
+      note: '',
+      operationalJustification: { justificationId: null, justificationComplement: '', legacyText: '' },
+      workDate: '2026-09-28',
+      now: NOW,
+    })
+    expect(payload.entryAt).toBe(NOW.toISOString())
+  })
+
   it('buildKioskUnassignedTimeEntryPayload inclui exceptionJustificationId só quando exigido', () => {
     const notAssigned = candidate({ isAssignedToMe: false })
     const payload = buildKioskUnassignedTimeEntryPayload({
@@ -123,11 +152,14 @@ describe('kioskOutraAtividadeFlowLogic', () => {
         justificationComplement: '',
         legacyText: 'Motivo',
       },
+      workDate: '2026-09-27',
+      now: NOW,
     })
     expect(payload).toEqual({
       conveyorId: 'conv-1',
       stepNodeId: 'step-1',
       minutes: 20,
+      entryAt: '2026-09-27T12:00:00-03:00',
       exceptionJustificationId: 'j1',
       exceptionJustification: 'Motivo',
     })
@@ -144,11 +176,14 @@ describe('kioskOutraAtividadeFlowLogic', () => {
         justificationComplement: '',
         legacyText: 'Motivo',
       },
+      workDate: '2026-09-27',
+      now: NOW,
     })
     expect(payload).toEqual({
       conveyorId: 'conv-1',
       stepNodeId: 'step-1',
       minutes: 20,
+      entryAt: '2026-09-27T12:00:00-03:00',
       note: 'obs',
     })
   })
@@ -164,11 +199,14 @@ describe('kioskOutraAtividadeFlowLogic', () => {
         justificationComplement: '',
         legacyText: 'Motivo único',
       },
+      workDate: '2026-09-27',
+      now: NOW,
     })
     expect(payload).toEqual({
       conveyorId: 'conv-1',
       stepNodeId: 'step-1',
       minutes: 20,
+      entryAt: '2026-09-27T12:00:00-03:00',
       exceptionJustificationId: 'j1',
       exceptionJustification: 'Motivo único',
       outOfSequenceJustificationId: 'j1',

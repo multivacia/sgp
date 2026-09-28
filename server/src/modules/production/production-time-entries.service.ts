@@ -34,6 +34,7 @@ import {
   type ResolvedStandardJustification,
 } from '../../shared/timeEntryJustificationResolver.js'
 import { sumRealizedMinutesByStepForConveyor } from '../conveyors/conveyorNodeWorkload.repository.js'
+import { resolveTimeEntryEntryAt } from '../../shared/operationalWorkDate.js'
 
 export const TIME_ENTRY_EXCEEDED_PLANNED_JUSTIFICATION_MESSAGE =
   'Informe uma justificativa para apontar acima do tempo previsto da atividade.'
@@ -92,6 +93,8 @@ export type CreateProductionTimeEntryInput = {
   outOfSequenceJustification?: string | null
   justificationId?: string | null
   justificationComplement?: string | null
+  /** Data/hora de realização do trabalho (ausente = agora). Validada por `resolveTimeEntryEntryAt`. */
+  entryAt?: Date
 }
 
 /**
@@ -116,6 +119,7 @@ export async function serviceCreateProductionTimeEntry(
   input: CreateProductionTimeEntryInput,
 ): Promise<TimeEntryCreatedDto> {
   const markAsDoneEarly = input.markAsDone === true
+  const entryAt = resolveTimeEntryEntryAt(input.entryAt)
   if (!Number.isInteger(input.minutes)) {
     throw new AppError(
       'minutes deve ser um número inteiro.',
@@ -311,7 +315,7 @@ export async function serviceCreateProductionTimeEntry(
         conveyor_node_id: input.stepNodeId,
         collaborator_id: input.collaboratorId,
         conveyor_node_assignee_id: assigneeId,
-        entry_at: new Date(),
+        entry_at: entryAt,
         minutes: input.minutes,
         executed_quantity: executedQuantityDb,
         notes: input.note ?? null,

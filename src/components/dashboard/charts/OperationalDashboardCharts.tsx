@@ -27,6 +27,7 @@ import {
   operationalLabels,
 } from '../../../lib/operationalSemantics'
 import { BarMetricTooltip } from './BarMetricTooltip'
+import { formatWorkDateFromEntryAt } from '../../../domain/operational/workDate'
 
 const BUCKET_CHART_ORDER: OperationalBucketKey[] = [
   'em_elaboracao',
@@ -388,7 +389,7 @@ export function OperationalDashboardCharts({ data }: Props) {
                       {e.conveyorName}
                     </span>
                     <span className="text-xs text-slate-500">
-                      {new Date(e.entryAt).toLocaleString('pt-BR')}
+                      {formatWorkDateFromEntryAt(e.entryAt)}
                     </span>
                   </div>
                   <p className="mt-1 text-xs text-slate-400">

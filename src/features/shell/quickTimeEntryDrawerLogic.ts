@@ -6,6 +6,10 @@ import {
 } from '../../domain/operational/timeEntryJustificationField'
 import type { JustificationFieldValue } from '../../domain/operational/timeEntryJustificationField'
 import { emptyJustificationFieldValue } from '../../domain/operational/timeEntryJustificationField'
+import {
+  buildEntryAtForWorkDate,
+  validateWorkDate,
+} from '../../domain/operational/workDate'
 
 export const QUICK_TIME_ENTRY_TOAST = {
   entrySaved: 'Apontamento registado com sucesso.',
@@ -59,6 +63,9 @@ export type BuildTimeEntryPayloadInput = {
   description: string
   operationalJustification: JustificationFieldValue
   markAsDone: boolean
+  /** Data de realização (YYYY-MM-DD, São Paulo). */
+  workDate: string
+  now?: Date
 }
 
 function appendJustificationFields(
@@ -104,6 +111,7 @@ export function buildTimeEntryPayload(
     executedQuantity: input.executedQuantity,
     description: input.description.trim() || null,
     entryMode: 'manual',
+    entryAt: buildEntryAtForWorkDate(input.workDate, input.now),
     ...(input.markAsDone ? { markAsDone: true } : {}),
   }
 
@@ -187,10 +195,13 @@ export function canSubmitExtraTimeEntry(input: {
   minutesValid: boolean
   submitting?: boolean
   unavailable?: boolean
+  /** Data de realização (YYYY-MM-DD); futura ou inválida bloqueia o envio. */
+  entryDate?: string
 }): boolean {
   if (input.submitting) return false
   if (input.unavailable) return false
   if (!input.descriptionId.trim()) return false
   if (!input.minutesValid) return false
+  if (input.entryDate !== undefined && validateWorkDate(input.entryDate) !== null) return false
   return true
 }

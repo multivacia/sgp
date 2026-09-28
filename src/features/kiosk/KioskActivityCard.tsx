@@ -29,6 +29,13 @@ import {
   emptyJustificationValue,
   type JustificationFieldValue,
 } from '../shell/quickTimeEntryDrawerLogic'
+import { WorkDateField } from '../../components/ui/WorkDateField'
+import {
+  buildEntryAtForWorkDate,
+  formatWorkDateLabel,
+  operationalTodayIso,
+  validateWorkDate,
+} from '../../domain/operational/workDate'
 
 const PRESETS = [15, 30, 45, 60] as const
 
@@ -109,6 +116,8 @@ export function KioskActivityCard({ item, onSuccess }: Props) {
     resolveKioskInitialSessionCompletionPct(item),
   )
   const [markAsDone, setMarkAsDone] = useState(false)
+  const [workDate, setWorkDate] = useState(() => operationalTodayIso())
+  const [submittedWorkDate, setSubmittedWorkDate] = useState<string | null>(null)
   const [outOfSequenceJustification, setOutOfSequenceJustification] =
     useState<JustificationFieldValue>(emptyJustificationValue())
   const [justificationUseFallback, setJustificationUseFallback] = useState(false)
@@ -147,20 +156,24 @@ export function KioskActivityCard({ item, onSuccess }: Props) {
       ? resolvePreferredJustificationCategory({ requiresExcessTime: true })
       : null
 
-  const canSubmit = canSubmitKioskProductionTimeEntry({
-    markAsDone,
-    minutes,
-    sessionPct,
-    requiresOperationalJustification: needsOperationalJustification,
-    justification: outOfSequenceJustification,
-    useFallback: justificationUseFallback,
-    requiresComplement: justificationRequiresComplement,
-  })
+  const canSubmit =
+    validateWorkDate(workDate) === null &&
+    canSubmitKioskProductionTimeEntry({
+      markAsDone,
+      minutes,
+      sessionPct,
+      requiresOperationalJustification: needsOperationalJustification,
+      justification: outOfSequenceJustification,
+      useFallback: justificationUseFallback,
+      requiresComplement: justificationRequiresComplement,
+    })
 
   function resetTimeEntryFields() {
     setPreset(INITIAL_KIOSK_TIME_ENTRY_FORM.preset)
     setMinutesCustom(INITIAL_KIOSK_TIME_ENTRY_FORM.minutesCustom)
     setMarkAsDone(INITIAL_KIOSK_TIME_ENTRY_FORM.markAsDone)
+    setWorkDate(operationalTodayIso())
+    setSubmittedWorkDate(null)
     setOutOfSequenceJustification(emptyJustificationValue())
     setError(null)
     setConfirmLowPct(false)
@@ -188,6 +201,7 @@ export function KioskActivityCard({ item, onSuccess }: Props) {
         conveyorId: item.conveyorId,
         stepNodeId: item.activityNodeId,
         minutes,
+        entryAt: buildEntryAtForWorkDate(workDate),
         sessionCompletionPct: sessionPct,
         markAsDone,
         ...(needsOperationalJustification && oos
@@ -204,6 +218,7 @@ export function KioskActivityCard({ item, onSuccess }: Props) {
             }
           : {}),
       })
+      setSubmittedWorkDate(workDate)
       setSuccess(true)
       setTimeout(() => {
         resetTimeEntryFields()
@@ -222,6 +237,7 @@ export function KioskActivityCard({ item, onSuccess }: Props) {
     minutes,
     sessionPct,
     markAsDone,
+    workDate,
     item,
     onSuccess,
     needsOperationalJustification,
@@ -273,6 +289,11 @@ export function KioskActivityCard({ item, onSuccess }: Props) {
               ? 'Atividade concluída. Avançando…'
               : 'Avançando para a próxima atividade…'}
           </p>
+          {submittedWorkDate ? (
+            <p className="mt-2 text-sm text-slate-300">
+              Data de realização: {formatWorkDateLabel(submittedWorkDate)}
+            </p>
+          ) : null}
         </div>
       </div>
     )
@@ -416,6 +437,17 @@ export function KioskActivityCard({ item, onSuccess }: Props) {
 
       {item.canTrackTime ? (
         <div className="flex flex-col gap-6 p-5">
+          <WorkDateField
+            id={`kiosk-work-date-${item.activityNodeId}`}
+            variant="kiosk"
+            value={workDate}
+            onChange={(v) => {
+              setWorkDate(v)
+              setError(null)
+            }}
+            disabled={submitting}
+          />
+
           <div>
             <p className="mb-2.5 text-[10px] font-bold uppercase tracking-widest text-slate-500">
               Tempo trabalhado

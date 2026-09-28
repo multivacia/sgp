@@ -6,6 +6,11 @@ import {
   type OperationalPeriodPreset,
 } from '../../shared/operationalPeriod.js'
 import { AppError } from '../../shared/errors/AppError.js'
+import {
+  isDateOnlyString,
+  operationalDayEnd,
+  operationalDayStart,
+} from '../../shared/operationalWorkDate.js'
 import { ErrorCodes } from '../../shared/errors/errorCodes.js'
 import { serviceListActivitiesForCollaborator } from '../my-activities/my-activities.service.js'
 import type { OperationalJourneyApi } from './operational-journey.dto.js'
@@ -37,8 +42,16 @@ function emptyBucketCounts(): Record<OperationalBucket, number> {
   }
 }
 
-function parseIsoDate(value: string, field: string): Date {
-  const d = new Date(value)
+/**
+ * `from`/`to` do intervalo personalizado. Data pura (`YYYY-MM-DD`) é o dia civil de São Paulo:
+ * `from` → 00:00 e `to` → 23:59:59.999 (nunca meia-noite UTC).
+ */
+function parseIsoDate(value: string, field: 'from' | 'to'): Date {
+  const d = isDateOnlyString(value)
+    ? field === 'from'
+      ? operationalDayStart(value.trim())
+      : operationalDayEnd(value.trim())
+    : new Date(value)
   if (Number.isNaN(d.getTime())) {
     throw new AppError(
       `Parâmetro ${field} inválido: use data/hora ISO 8601.`,

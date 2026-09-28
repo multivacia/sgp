@@ -1,8 +1,14 @@
+import { operationalMonthStart } from './operationalWorkDate.js'
+
 /**
  * Recortes temporais padronizados (V1.5). Intervalo [from, to] com `to` inclusivo
  * para consultas SQL (`entry_at <= to`).
  *
- * `month` = desde o início do mês civil em UTC até `now`.
+ * - `7d` / `15d` / `30d` = janela móvel de N×24h terminando em `now`.
+ * - `month` = desde a meia-noite do dia 1 do mês civil de São Paulo até `now`
+ *   (mesma referência de `operationalWorkDate.ts`; antes era o início do mês em UTC,
+ *   que em SP cai às 21:00 do último dia do mês anterior).
+ * - `custom` = limites recebidos, sem alteração.
  */
 
 export type OperationalPeriodPreset = '7d' | '15d' | '30d' | 'month' | 'custom'
@@ -11,10 +17,6 @@ export type ResolvedOperationalPeriod = {
   from: Date
   to: Date
   preset: OperationalPeriodPreset
-}
-
-function startOfUtcMonth(d: Date): Date {
-  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1, 0, 0, 0, 0))
 }
 
 function addDays(d: Date, days: number): Date {
@@ -53,7 +55,7 @@ export function resolveOperationalPeriod(args: {
       from = addDays(to, -30)
       break
     case 'month':
-      from = startOfUtcMonth(to)
+      from = operationalMonthStart(to)
       break
     case '7d':
       from = addDays(to, -7)

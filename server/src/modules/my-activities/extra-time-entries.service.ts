@@ -11,6 +11,7 @@ import {
   type ExtraTimeEntryDescriptionOptionRow,
   type ExtraTimeEntryWithDescriptionRow,
 } from './extra-time-entries.repository.js'
+import { resolveExtraEntryDate } from '../../shared/operationalWorkDate.js'
 
 const UNAVAILABLE_REASON =
   'Operação indisponível: o seu utilizador não tem colaborador operacional vinculado (app_users.collaborator_id). Peça ao administrador de governança para associar o seu acesso a um colaborador.'
@@ -71,7 +72,7 @@ export async function serviceCreateMyExtraTimeEntry(
     collaboratorId,
     createdByUserId: input.userId,
     descriptionId: input.body.descriptionId,
-    entryDate: input.body.entryDate,
+    entryDate: resolveExtraEntryDate(input.body.entryDate),
     minutes: input.body.minutes,
     notes: input.body.notes?.trim() || null,
   })

@@ -1,4 +1,5 @@
 import type pg from 'pg'
+import { OPERATIONAL_TIMEZONE } from '../../shared/operationalWorkDate.js'
 
 export type CollaboratorBriefRow = {
   id: string
@@ -150,8 +151,8 @@ export async function summarizeExtraTimeEntriesInPeriodForCollaborator(
      AND d.deleted_at IS NULL
     WHERE e.collaborator_id = $1::uuid
       AND e.deleted_at IS NULL
-      AND e.entry_date >= $2::date
-      AND e.entry_date <= $3::date
+      AND e.entry_date >= ($2::timestamptz AT TIME ZONE '${OPERATIONAL_TIMEZONE}')::date
+      AND e.entry_date <= ($3::timestamptz AT TIME ZONE '${OPERATIONAL_TIMEZONE}')::date
     `,
     [args.collaboratorId, args.from, args.to],
   )
@@ -191,8 +192,8 @@ export async function listTopExtraTimeEntryDescriptionsInPeriodForCollaborator(
      AND d.deleted_at IS NULL
     WHERE e.collaborator_id = $1::uuid
       AND e.deleted_at IS NULL
-      AND e.entry_date >= $2::date
-      AND e.entry_date <= $3::date
+      AND e.entry_date >= ($2::timestamptz AT TIME ZONE '${OPERATIONAL_TIMEZONE}')::date
+      AND e.entry_date <= ($3::timestamptz AT TIME ZONE '${OPERATIONAL_TIMEZONE}')::date
     GROUP BY e.description_id, d.description
     ORDER BY SUM(e.minutes) DESC, COUNT(*) DESC, d.description ASC
     LIMIT $4::int

@@ -24,6 +24,9 @@ import {
 const PRESETS = [15, 30, 45, 60] as const
 const SEARCH_DEBOUNCE_MS = 300
 
+import { WorkDateField } from '../../components/ui/WorkDateField'
+import { formatWorkDateLabel, operationalTodayIso } from '../../domain/operational/workDate'
+
 type Step = 'search' | 'form' | 'review' | 'success'
 
 type Props = {
@@ -43,6 +46,7 @@ export function KioskOutraAtividadeFlow({ collaborator, onClose, onSuccess }: Pr
   const [preset, setPreset] = useState<number | null>(null)
   const [minutesCustom, setMinutesCustom] = useState('')
   const [note, setNote] = useState('')
+  const [workDate, setWorkDate] = useState(() => operationalTodayIso())
   const [operationalJustification, setOperationalJustification] =
     useState<JustificationFieldValue>(emptyJustificationValue())
   const [justificationUseFallback, setJustificationUseFallback] = useState(false)
@@ -87,6 +91,7 @@ export function KioskOutraAtividadeFlow({ collaborator, onClose, onSuccess }: Pr
     setPreset(null)
     setMinutesCustom('')
     setNote('')
+    setWorkDate(operationalTodayIso())
     setOperationalJustification(emptyJustificationValue())
     setError(null)
     setStep('form')
@@ -100,6 +105,7 @@ export function KioskOutraAtividadeFlow({ collaborator, onClose, onSuccess }: Pr
   const canGoToReview = canSubmitKioskOutraAtividadeForm({
     candidate,
     minutes,
+    workDate,
     operationalJustification: {
       value: operationalJustification,
       useFallback: justificationUseFallback,
@@ -128,6 +134,7 @@ export function KioskOutraAtividadeFlow({ collaborator, onClose, onSuccess }: Pr
           minutes,
           note,
           operationalJustification,
+          workDate,
         }),
       )
       setStep('success')
@@ -141,7 +148,7 @@ export function KioskOutraAtividadeFlow({ collaborator, onClose, onSuccess }: Pr
     } finally {
       setSubmitting(false)
     }
-  }, [candidate, canGoToReview, minutes, note, operationalJustification, onSuccess])
+  }, [candidate, canGoToReview, minutes, note, operationalJustification, workDate, onSuccess])
 
   return (
     <div
@@ -216,6 +223,10 @@ export function KioskOutraAtividadeFlow({ collaborator, onClose, onSuccess }: Pr
                   </dd>
                 </div>
                 <div>
+                  <dt className="text-xs text-slate-500">Data de realização</dt>
+                  <dd className="font-medium text-slate-200">{formatWorkDateLabel(workDate)}</dd>
+                </div>
+                <div>
                   <dt className="text-xs text-slate-500">Minutos</dt>
                   <dd className="font-medium text-slate-200">{minutes} min</dd>
                 </div>
@@ -271,6 +282,13 @@ export function KioskOutraAtividadeFlow({ collaborator, onClose, onSuccess }: Pr
                   {formatCandidateContextLine(candidate)}
                 </p>
               </div>
+
+              <WorkDateField
+                id="kiosk-outra-work-date"
+                variant="kiosk"
+                value={workDate}
+                onChange={setWorkDate}
+              />
 
               <div>
                 <p className="mb-2.5 text-[10px] font-bold uppercase tracking-widest text-slate-500">

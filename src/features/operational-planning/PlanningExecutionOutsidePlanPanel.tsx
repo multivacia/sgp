@@ -1,17 +1,7 @@
 import { Link } from 'react-router-dom'
 import type { OperationalPlanningExecutionOutsidePlanEntry } from '../../domain/operational-planning/operational-planning.types'
 import { formatPlanningMinutes } from './planningBoardHelpers'
-
-function formatEntryDateTime(iso: string): string {
-  const d = new Date(iso)
-  if (Number.isNaN(d.getTime())) return iso
-  return d.toLocaleString('pt-BR', {
-    day: '2-digit',
-    month: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
-}
+import { formatWorkDateFromEntryAt } from '../../domain/operational/workDate'
 
 type PlanningExecutionOutsidePlanPanelProps = {
   entries: readonly OperationalPlanningExecutionOutsidePlanEntry[]
@@ -58,7 +48,7 @@ export function PlanningExecutionOutsidePlanPanel(props: PlanningExecutionOutsid
                 </p>
               </div>
               <p className="mt-2 text-slate-400">
-                {entry.collaboratorName} · {formatEntryDateTime(entry.entryAt)}
+                {entry.collaboratorName} · {formatWorkDateFromEntryAt(entry.entryAt)}
               </p>
               {entry.entryOrigin === 'UNASSIGNED_EXCEPTION' ? (
                 <p className="mt-2 rounded-lg border border-violet-400/20 bg-violet-500/10 px-2 py-1 text-[11px] text-violet-100">

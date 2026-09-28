@@ -18,6 +18,9 @@ import {
   parseKioskMinutes,
 } from './kioskExtraEsteiraFlowLogic'
 
+import { WorkDateField } from '../../components/ui/WorkDateField'
+import { formatWorkDateLabel, operationalTodayIso } from '../../domain/operational/workDate'
+
 const PRESETS = [15, 30, 45, 60] as const
 
 type Step = 'form' | 'review' | 'success'
@@ -38,6 +41,7 @@ export function KioskExtraEsteiraFlow({ collaborator, onClose, onSuccess }: Prop
   const [preset, setPreset] = useState<number | null>(null)
   const [minutesCustom, setMinutesCustom] = useState('')
   const [notes, setNotes] = useState('')
+  const [entryDate, setEntryDate] = useState(() => operationalTodayIso())
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -61,7 +65,7 @@ export function KioskExtraEsteiraFlow({ collaborator, onClose, onSuccess }: Prop
 
   const minutes = preset !== null ? preset : parseKioskMinutes(minutesCustom)
   const minutesValid = isValidKioskExtraEsteiraMinutes(minutes)
-  const canGoToReview = canSubmitKioskExtraEsteiraForm({ descriptionId, minutes })
+  const canGoToReview = canSubmitKioskExtraEsteiraForm({ descriptionId, minutes, entryDate })
   const selectedDescription = descriptions.find((d) => d.id === descriptionId) ?? null
 
   function selectPreset(p: number) {
@@ -80,7 +84,7 @@ export function KioskExtraEsteiraFlow({ collaborator, onClose, onSuccess }: Prop
     setError(null)
     try {
       await createProductionExtraTimeEntry(
-        buildKioskExtraEsteiraPayload({ descriptionId, minutes, notes }),
+        buildKioskExtraEsteiraPayload({ descriptionId, minutes, notes, entryDate }),
       )
       setStep('success')
       setTimeout(() => {
@@ -94,7 +98,7 @@ export function KioskExtraEsteiraFlow({ collaborator, onClose, onSuccess }: Prop
     } finally {
       setSubmitting(false)
     }
-  }, [canGoToReview, descriptionId, minutes, notes, onSuccess])
+  }, [canGoToReview, descriptionId, minutes, notes, entryDate, onSuccess])
 
   return (
     <div
@@ -169,6 +173,10 @@ export function KioskExtraEsteiraFlow({ collaborator, onClose, onSuccess }: Prop
                   </dd>
                 </div>
                 <div>
+                  <dt className="text-xs text-slate-500">Data de realização</dt>
+                  <dd className="font-medium text-slate-200">{formatWorkDateLabel(entryDate)}</dd>
+                </div>
+                <div>
                   <dt className="text-xs text-slate-500">Minutos</dt>
                   <dd className="font-medium text-slate-200">{minutes} min</dd>
                 </div>
@@ -235,6 +243,13 @@ export function KioskExtraEsteiraFlow({ collaborator, onClose, onSuccess }: Prop
                   ))}
                 </select>
               </div>
+
+              <WorkDateField
+                id="kiosk-extra-esteira-work-date"
+                variant="kiosk"
+                value={entryDate}
+                onChange={setEntryDate}
+              />
 
               <div>
                 <p className="mb-2.5 text-[10px] font-bold uppercase tracking-widest text-slate-500">

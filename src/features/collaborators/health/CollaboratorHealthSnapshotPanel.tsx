@@ -6,6 +6,7 @@ import {
   getCapacitySourceLabel,
   getDataQualityWarningDisplayMessage,
 } from '../../../domain/collaborator-health/collaboratorOperationalHealthDisplay'
+import { formatWorkDateFromEntryAt } from '../../../domain/operational/workDate'
 
 type Props = {
   open: boolean
@@ -122,10 +123,7 @@ export function CollaboratorHealthSnapshotPanel({ open, loading, error, snapshot
                     label="Último apontamento"
                     value={
                       snapshot.recentTimeEntries.lastEntryAt
-                        ? new Date(snapshot.recentTimeEntries.lastEntryAt).toLocaleString('pt-BR', {
-                            dateStyle: 'short',
-                            timeStyle: 'short',
-                          })
+                        ? formatWorkDateFromEntryAt(snapshot.recentTimeEntries.lastEntryAt)
                         : '—'
                     }
                   />

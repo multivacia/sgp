@@ -15,6 +15,10 @@ import {
   validateTimeEntryForm,
 } from './quickTimeEntryDrawerLogic'
 
+/** 28/09/2026 10:00 em São Paulo (13:00 UTC). */
+const NOW = new Date('2026-09-28T13:00:00.000Z')
+const TODAY_SP = '2026-09-28'
+
 function jv(legacyText: string, id: string | null = null) {
   return {
     justificationId: id,
@@ -92,6 +96,8 @@ describe('quickTimeEntryDrawerLogic', () => {
       description: 'ok',
       operationalJustification: emptyJustificationValue(),
       markAsDone: true,
+      workDate: TODAY_SP,
+      now: NOW,
     })
     expect(payload.markAsDone).toBe(true)
     expect(payload.minutes).toBe(15)
@@ -105,6 +111,8 @@ describe('quickTimeEntryDrawerLogic', () => {
       description: 'observação livre',
       operationalJustification: jv('Repriorização autorizada', '33333333-3333-3333-3333-333333333333'),
       markAsDone: false,
+      workDate: TODAY_SP,
+      now: NOW,
     })
     expect(payload.justificationId).toBe('33333333-3333-3333-3333-333333333333')
     expect(payload.description).toBe('observação livre')
@@ -127,6 +135,8 @@ describe('quickTimeEntryDrawerLogic', () => {
       description: '',
       operationalJustification: jv('Atividade emergencial', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'),
       markAsDone: false,
+      workDate: TODAY_SP,
+      now: NOW,
     })
     expect(payload.justificationId).toBe('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa')
     expect(payload.exceptionJustificationId).toBeUndefined()
@@ -141,6 +151,8 @@ describe('quickTimeEntryDrawerLogic', () => {
       description: '',
       operationalJustification: emptyJustificationValue(),
       markAsDone: false,
+      workDate: TODAY_SP,
+      now: NOW,
     })
     expect(payload.justificationId).toBeUndefined()
     expect(payload.exceptionJustification).toBeUndefined()
@@ -154,8 +166,39 @@ describe('quickTimeEntryDrawerLogic', () => {
       description: '',
       operationalJustification: jv('urgente'),
       markAsDone: true,
+      workDate: TODAY_SP,
+      now: NOW,
     })
     expect(payload.outOfSequenceJustification).toBe('urgente')
+    expect(payload.markAsDone).toBe(true)
+  })
+
+  it('buildTimeEntryPayload com data de hoje envia o instante atual (comportamento anterior)', () => {
+    const payload = buildTimeEntryPayload({
+      candidate: baseCandidate(),
+      minutes: 15,
+      executedQuantity: 1,
+      description: '',
+      operationalJustification: emptyJustificationValue(),
+      markAsDone: false,
+      workDate: TODAY_SP,
+      now: NOW,
+    })
+    expect(payload.entryAt).toBe(NOW.toISOString())
+  })
+
+  it('buildTimeEntryPayload com data de ontem envia meio-dia de São Paulo com offset explícito', () => {
+    const payload = buildTimeEntryPayload({
+      candidate: baseCandidate(),
+      minutes: 15,
+      executedQuantity: 1,
+      description: '',
+      operationalJustification: emptyJustificationValue(),
+      markAsDone: true,
+      workDate: '2026-09-27',
+      now: NOW,
+    })
+    expect(payload.entryAt).toBe('2026-09-27T12:00:00-03:00')
     expect(payload.markAsDone).toBe(true)
   })
 
@@ -172,6 +215,8 @@ describe('quickTimeEntryDrawerLogic', () => {
       description: '',
       operationalJustification: jv('Sequência liberada', '22222222-2222-2222-2222-222222222222'),
       markAsDone: false,
+      workDate: TODAY_SP,
+      now: NOW,
     })
     expect(payload.outOfSequenceJustificationId).toBe('22222222-2222-2222-2222-222222222222')
     expect(payload.outOfSequenceJustification).toBe('Sequência liberada')
@@ -269,6 +314,30 @@ describe('quickTimeEntryDrawerLogic', () => {
         canSubmitExtraTimeEntry({
           descriptionId: 'desc-1',
           minutesValid: true,
+        }),
+      ).toBe(true)
+    })
+
+    it('data futura ou vazia bloqueia envio do extra esteira', () => {
+      expect(
+        canSubmitExtraTimeEntry({
+          descriptionId: 'desc-1',
+          minutesValid: true,
+          entryDate: '2999-01-01',
+        }),
+      ).toBe(false)
+      expect(
+        canSubmitExtraTimeEntry({
+          descriptionId: 'desc-1',
+          minutesValid: true,
+          entryDate: '',
+        }),
+      ).toBe(false)
+      expect(
+        canSubmitExtraTimeEntry({
+          descriptionId: 'desc-1',
+          minutesValid: true,
+          entryDate: '2020-01-15',
         }),
       ).toBe(true)
     })

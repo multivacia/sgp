@@ -30,6 +30,12 @@ import {
 } from '../../lib/backlog/operationalBuckets'
 import { labelRoleInStep } from './minhasAtividadesLabels'
 import { transversalUxCopy } from '../../lib/transversalUxCopy'
+import { WorkDateField } from '../../components/ui/WorkDateField'
+import {
+  buildEntryAtForWorkDate,
+  operationalTodayIso,
+  validateWorkDate,
+} from '../../domain/operational/workDate'
 
 type ToastState = { message: string; variant: SgpToastVariant } | null
 
@@ -64,6 +70,7 @@ export function ApontamentoPage() {
   const [minutosStr, setMinutosStr] = useState('30')
   const [quantidadeStr, setQuantidadeStr] = useState('1')
   const [observacao, setObservacao] = useState('')
+  const [workDate, setWorkDate] = useState(() => operationalTodayIso())
   const [toast, setToast] = useState<ToastState>(null)
   const [submitBanner, setSubmitBanner] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
@@ -117,6 +124,7 @@ export function ApontamentoPage() {
   const minutosValidos = Number.isInteger(minutos) && minutos >= 1
   const quantidade = Number.parseInt(quantidadeStr, 10)
   const quantidadeValida = Number.isInteger(quantidade) && quantidade >= 0
+  const workDateError = validateWorkDate(workDate)
 
   const deadlineLine = useMemo(() => {
     if (!activity?.estimatedDeadline?.trim()) return null
@@ -143,7 +151,8 @@ export function ApontamentoPage() {
       !user ||
       submitting ||
       !minutosValidos ||
-      !quantidadeValida
+      !quantidadeValida ||
+      workDateError
     ) {
       return
     }
@@ -160,6 +169,7 @@ export function ApontamentoPage() {
         executedQuantity: quantidade,
         notes: observacao.trim() || null,
         entryMode: 'manual',
+        entryAt: buildEntryAtForWorkDate(workDate),
       })
       setObservacao('')
       const returnTo = fromJornada ? '/app/jornada' : '/app/minha-fila'
@@ -393,6 +403,14 @@ export function ApontamentoPage() {
       </header>
 
       <div className="mt-6 space-y-6 rounded-2xl border border-white/[0.08] bg-white/[0.03] p-6 shadow-[var(--sgp-shadow-card-dark)] ring-1 ring-white/[0.05]">
+        <WorkDateField
+          id="apont-data"
+          className="max-w-md"
+          value={workDate}
+          onChange={setWorkDate}
+          disabled={submitting}
+        />
+
         <div>
           <label
             htmlFor="apont-min"
@@ -459,7 +477,7 @@ export function ApontamentoPage() {
         <div className="flex flex-wrap gap-3">
           <button
             type="button"
-            disabled={submitting || !minutosValidos || !quantidadeValida}
+            disabled={submitting || !minutosValidos || !quantidadeValida || workDateError !== null}
             onClick={() => void handleRegistrar()}
             className="sgp-cta-primary !px-8 !py-3 text-sm disabled:opacity-45"
           >

@@ -26,6 +26,11 @@ import {
   resolveJourneyLoadUserMessage,
   transversalUxCopy,
 } from '../../lib/transversalUxCopy'
+import {
+  formatWorkDateFromEntryAt,
+  OPERATIONAL_TIMEZONE,
+  operationalDayRangeIso,
+} from '../../domain/operational/workDate'
 
 function formatDeadlineLine(value: string | null): string | null {
   if (value == null || value.trim() === '') return null
@@ -45,11 +50,16 @@ function formatPeriodLabel(fromIso: string, toIso: string): string {
     const a = new Date(fromIso)
     const b = new Date(toIso)
     if (Number.isNaN(a.getTime()) || Number.isNaN(b.getTime())) return '—'
-    const df = a.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })
+    const df = a.toLocaleDateString('pt-BR', {
+      day: '2-digit',
+      month: 'short',
+      timeZone: OPERATIONAL_TIMEZONE,
+    })
     const dt = b.toLocaleDateString('pt-BR', {
       day: '2-digit',
       month: 'short',
       year: 'numeric',
+      timeZone: OPERATIONAL_TIMEZONE,
     })
     return `${df} → ${dt}`
   } catch {
@@ -265,7 +275,7 @@ export function JornadaPage() {
         periodPreset,
         ...(conveyorFilter ? { conveyorId: conveyorFilter } : {}),
         ...(periodPreset === 'custom' && periodFrom && periodTo
-          ? { from: `${periodFrom}T00:00:00.000Z`, to: `${periodTo}T23:59:59.999Z` }
+          ? operationalDayRangeIso(periodFrom, periodTo)
           : {}),
       }
       const data = await fetchMyOperationalJourney(query)
@@ -626,7 +636,7 @@ export function JornadaPage() {
                             {e.stepName} · {formatHumanMinutes(e.minutes)}
                           </p>
                           <p className="mt-1 text-[11px] text-slate-600">
-                            {new Date(e.entryAt).toLocaleString('pt-BR')}
+                            {formatWorkDateFromEntryAt(e.entryAt)}
                           </p>
                         </div>
                         <Link

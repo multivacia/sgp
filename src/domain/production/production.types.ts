@@ -100,6 +100,8 @@ export type ProductionTimeEntryPayload = {
   outOfSequenceJustification?: string | null
   justificationId?: string
   justificationComplement?: string
+  /** Data/hora de realização (ISO com fuso). Ausente = agora. Ver `buildEntryAtForWorkDate`. */
+  entryAt?: string
 }
 
 export type ProductionTimeEntryResult = {
@@ -158,4 +160,6 @@ export type ProductionUnassignedTimeEntryPayload = {
   outOfSequenceJustification?: string | null
   outOfSequenceJustificationId?: string | null
   outOfSequenceJustificationComplement?: string | null
+  /** Data/hora de realização (ISO com fuso). Ausente = agora. Ver `buildEntryAtForWorkDate`. */
+  entryAt?: string
 }

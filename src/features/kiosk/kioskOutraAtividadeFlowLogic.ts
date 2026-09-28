@@ -6,6 +6,7 @@ import {
   candidateNeedsOutOfSequenceJustification,
   type JustificationFieldValue,
 } from '../shell/quickTimeEntryDrawerLogic'
+import { buildEntryAtForWorkDate, validateWorkDate } from '../../domain/operational/workDate'
 
 export { candidateNeedsExceptionJustification, candidateNeedsOutOfSequenceJustification }
 
@@ -54,9 +55,12 @@ export function canSubmitKioskOutraAtividadeForm(input: {
   candidate: TimeEntryCandidateItem | null
   minutes: number
   operationalJustification: JustificationState
+  /** Data de realização (YYYY-MM-DD, São Paulo). Ausente = não validada (retrocompat). */
+  workDate?: string
 }): boolean {
   if (!input.candidate) return false
   if (!isValidKioskOutraAtividadeMinutes(input.minutes)) return false
+  if (input.workDate !== undefined && validateWorkDate(input.workDate) !== null) return false
   if (
     candidateNeedsOperationalJustification(input.candidate) &&
     justificationValidationError(input.operationalJustification)
@@ -108,6 +112,9 @@ export function buildKioskUnassignedTimeEntryPayload(input: {
   minutes: number
   note: string
   operationalJustification: JustificationFieldValue
+  /** Data de realização (YYYY-MM-DD, São Paulo). */
+  workDate: string
+  now?: Date
 }): ProductionUnassignedTimeEntryPayload {
   const needsException = candidateNeedsExceptionJustification(input.candidate)
   const needsOos = candidateNeedsOutOfSequenceJustification(input.candidate)
@@ -117,6 +124,7 @@ export function buildKioskUnassignedTimeEntryPayload(input: {
     conveyorId: input.candidate.conveyorId,
     stepNodeId: input.candidate.stepNodeId,
     minutes: input.minutes,
+    entryAt: buildEntryAtForWorkDate(input.workDate, input.now),
     ...(note ? { note } : {}),
   }
 
