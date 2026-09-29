@@ -113,7 +113,7 @@ export function detailStructureToManualAloc(
 }
 
 /**
- * Snapshot persistível no modo edit: estrutura (títulos/minutos) + alocações por etapa,
+ * Snapshot persistível no modo edit: estrutura (títulos, minutos e quantidade) + alocações por etapa,
  * com ordem de linhas de alocação normalizada (evita falso negativo só por permuta no array).
  */
 export function buildPersistableStructureSnapshot(
@@ -128,6 +128,7 @@ export function buildPersistableStructureSnapshot(
         s: ar.steps.map((st) => ({
           t: st.titulo.trim(),
           m: Math.max(0, Math.floor(st.plannedMinutes)),
+          q: Math.max(1, Math.floor(Number(st.plannedQuantity ?? 1))),
           alloc: normalizeAllocRowsForSnapshot(manualAloc[st.key] ?? []),
         })),
       })),

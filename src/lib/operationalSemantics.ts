@@ -38,8 +38,9 @@ export const dashboardHints = {
   acumuladoGlobal:
     'Soma global de minutos apontados na base (sem filtro de período neste número).',
   previstoEstruturalSteps:
-    'Soma dos planned_minutes nos nós STEP ativos (estrutura operacional).',
-  totalOsApoio: 'Soma de total_planned_minutes nas esteiras — pode divergir do previsto estrutural.',
+    'Soma do tempo unitário × quantidade prevista dos nós STEP ativos (estrutura operacional).',
+  totalOsApoio:
+    'Soma de total_planned_minutes nas esteiras — pode divergir do previsto estrutural se o total da OS não foi recalculado.',
   periodoUtc: (preset: string) =>
     `Soma dos apontamentos com entry_at na janela do preset ${preset} (UTC).`,
   drillBacklogTodas: 'Abre o backlog de esteiras (todas). Nova aba.',

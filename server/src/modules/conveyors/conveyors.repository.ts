@@ -1103,6 +1103,8 @@ export type UpdateConveyorNodeStructureFields = {
   parent_id: string | null
   root_id: string
   planned_minutes: number | null
+  /** Quando informado, persiste `planned_quantity`. OPTION/AREA omitem o campo. */
+  planned_quantity?: number
   required: boolean
   source_key: string | null
   metadata_json?: unknown | null
@@ -1127,6 +1129,10 @@ export async function updateConveyorNodeStructureFields(
       parent_id = $6,
       root_id = $7,
       planned_minutes = $8,
+      planned_quantity = CASE
+        WHEN $13::boolean THEN $14::int
+        ELSE planned_quantity
+      END,
       required = $9,
       source_key = $10,
       metadata_json = CASE
@@ -1154,6 +1160,8 @@ export async function updateConveyorNodeStructureFields(
       f.metadata_json === null || f.metadata_json === undefined
         ? null
         : JSON.stringify(f.metadata_json),
+      f.planned_quantity !== undefined,
+      f.planned_quantity ?? null,
     ],
   )
   return Boolean(r.rows[0])

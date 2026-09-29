@@ -33,12 +33,11 @@ export type OperationalDashboardDto = {
   plannedVsRealized: {
     /**
      * Apoio: soma de `conveyors.total_planned_minutes` (agregado na OS).
-     * Pode divergir da soma dos STEPs se o total da esteira não foi recalculado.
+     * Pode divergir do previsto estrutural se o total da esteira não foi recalculado.
      */
     plannedMinutesConveyorTotal: number
     /**
-     * Previsto canônico: soma de `planned_minutes` nos nós STEP ativos
-     * (estrutura operacional — alinha com alocações e apontamentos por etapa).
+     * Previsto estrutural: soma do tempo unitário × quantidade dos nós STEP ativos.
      */
     plannedMinutesStepNodes: number
     /** Soma de `conveyor_time_entries.minutes` (não apagados). — Minutos apontados (acumulado) global. */
@@ -96,9 +95,9 @@ export type ExecutiveDashboardDto = {
     delayRateVsActive: number | null
   }
   plannedVsRealized: {
-    /** Apoio: soma de `total_planned_minutes` nas esteiras. */
+    /** Apoio: soma de `total_planned_minutes` nas esteiras. Pode diferir do previsto estrutural se a coluna não foi recalculada. */
     plannedMinutesConveyorTotal: number
-    /** Previsto canônico: soma de `planned_minutes` nos STEPs. */
+    /** Previsto estrutural: soma do tempo unitário × quantidade dos STEPs ativos. */
     plannedMinutesStepNodes: number
     realizedMinutesTotal: number
     notes: string

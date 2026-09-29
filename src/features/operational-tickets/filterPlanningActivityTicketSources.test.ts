@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  buildActivityTicketInputFromPlanningSource,
   filterPlanningActivityTicketSources,
   type ActivityTicketPlanningSource,
 } from './activityTicketPlanningSource'
@@ -90,5 +91,14 @@ describe('filterPlanningActivityTicketSources', () => {
     expect(comConcluidos.map((s) => s.activityNodeId)).toContain('concluido')
     expect(comConcluidos.map((s) => s.activityNodeId)).not.toContain('cancelado')
     expect(comConcluidos.map((s) => s.activityNodeId)).not.toContain('dispensado')
+  })
+})
+
+describe('buildActivityTicketInputFromPlanningSource', () => {
+  it('mantém o plannedMinutes do item do plano, sem multiplicar quantidade da estrutura', () => {
+    const input = buildActivityTicketInputFromPlanningSource(
+      source({ plannedMinutes: 30 }),
+    )
+    expect(input.plannedMinutes).toBe(30)
   })
 })

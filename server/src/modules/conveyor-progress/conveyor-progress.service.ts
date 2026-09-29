@@ -5,6 +5,7 @@ import {
   consolidateWeightedTimeEfficiency,
   sumMinutes,
 } from '../../shared/conveyorProgressMetrics.js'
+import { resolveActivityPlannedTotalMinutes } from '../../shared/activityOperationalQuantity.js'
 import type {
   ActivityProgressItemDto,
   ConveyorProgressItemDto,
@@ -127,7 +128,10 @@ function buildProgressTree(
     >()
 
     for (const step of conveyorSteps) {
-      const plannedOriginal = step.planned_minutes ?? 0
+      const plannedOriginal = resolveActivityPlannedTotalMinutes(
+        step.planned_minutes,
+        step.planned_quantity,
+      )
       const plannedEffective = effectivePlannedMinutesForAggregate(
         step.operational_status,
         plannedOriginal,

@@ -235,6 +235,40 @@ describe('resolveStepAssigneeFields', () => {
   })
 })
 
+describe('collectConveyorActivityTicketSources — quantidade prevista', () => {
+  it('30 min × quantidade 4 vira plannedMinutes 120 no ticket da estrutura', () => {
+    const detail = buildDetail({
+      structure: {
+        options: [
+          {
+            id: 'opt-1',
+            name: 'Bancos dianteiros',
+            orderIndex: 0,
+            areas: [
+              {
+                id: 'area-1',
+                name: 'Costura',
+                orderIndex: 0,
+                steps: [
+                  {
+                    ...step('step-qty', 'Forro', 0),
+                    plannedMinutes: 30,
+                    plannedQuantity: 4,
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+      totalSteps: 1,
+    })
+    const sources = collectConveyorActivityTicketSources(detail, null)
+    expect(sources).toHaveLength(1)
+    expect(sources[0]?.plannedMinutes).toBe(120)
+  })
+})
+
 describe('filterConveyorActivityTicketSources', () => {
   it('filtra concluídas quando includeCompleted é false', () => {
     const sources = collectConveyorActivityTicketSources(buildDetail(), null)

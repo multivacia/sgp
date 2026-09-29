@@ -113,42 +113,35 @@ describe.skipIf(!hasDb)('conveyor create — planned_quantity inicial', () => {
     await closePool()
   })
 
-  it.skipIf(!hasPlannedQuantityColumn)(
-    'manual com plannedQuantity 10 no payload persiste 1',
-    async () => {
+  it('manual com plannedQuantity 10 no payload persiste 1', async (ctx) => {
+    if (!hasPlannedQuantityColumn) ctx.skip()
     const created = await serviceCreateConveyor(
       pool,
       conveyorBody('manual', 10),
     )
     const row = await readStepPlannedQuantity(pool, created.id)
     expect(row.planned_quantity).toBe(1)
-    },
-  )
+  })
 
-  it.skipIf(!hasPlannedQuantityColumn)(
-    'base com plannedQuantity 10 no payload persiste 1',
-    async () => {
+  it('base com plannedQuantity 10 no payload persiste 1', async (ctx) => {
+    if (!hasPlannedQuantityColumn) ctx.skip()
     const created = await serviceCreateConveyor(pool, conveyorBody('base', 10))
     const row = await readStepPlannedQuantity(pool, created.id)
     expect(row.planned_quantity).toBe(1)
-    },
-  )
+  })
 
-  it.skipIf(!hasPlannedQuantityColumn)(
-    'reaproveitada com plannedQuantity 10 no payload persiste 1',
-    async () => {
+  it('reaproveitada com plannedQuantity 10 no payload persiste 1', async (ctx) => {
+    if (!hasPlannedQuantityColumn) ctx.skip()
     const created = await serviceCreateConveyor(
       pool,
       conveyorBody('reaproveitada', 10),
     )
     const row = await readStepPlannedQuantity(pool, created.id)
     expect(row.planned_quantity).toBe(1)
-    },
-  )
+  })
 
-  it.skipIf(!hasPlannedQuantityColumn)(
-    'após UPDATE pós-criação, carga planejada usa min/un. × qtd',
-    async () => {
+  it('após UPDATE pós-criação, carga planejada usa min/un. × qtd', async (ctx) => {
+    if (!hasPlannedQuantityColumn) ctx.skip()
     const created = await serviceCreateConveyor(
       pool,
       conveyorBody('manual', 10),
@@ -164,6 +157,5 @@ describe.skipIf(!hasDb)('conveyor create — planned_quantity inicial', () => {
     expect(
       resolveActivityPlannedTotalMinutes(row.planned_minutes, row.planned_quantity),
     ).toBe(150)
-    },
-  )
+  })
 })

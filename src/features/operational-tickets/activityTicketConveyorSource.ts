@@ -2,6 +2,7 @@ import type {
   ConveyorDetail,
   ConveyorStructureStepAssignee,
 } from '../../domain/conveyors/conveyor.types'
+import { resolveActivityPlannedTotalMinutes } from '../../domain/operational/activityOperationalQuantity'
 import type { ConveyorNodeWorkload } from '../../domain/conveyors/conveyorNodeWorkload.types'
 import { isStepOperationallyCompleted } from '../../domain/conveyors/stepOperationalStatus'
 import type { ActivityTicketPrintModelInput } from './activityTicketPrintModel'
@@ -90,7 +91,10 @@ export function collectConveyorActivityTicketSources(
           activityTitle: normalizeTicketText(step.name) ?? 'Atividade',
           taskTitle: normalizeTicketText(opt.name),
           sectorTitle: normalizeTicketText(area.name),
-          plannedMinutes: step.plannedMinutes,
+          plannedMinutes: resolveActivityPlannedTotalMinutes(
+            step.plannedMinutes,
+            step.plannedQuantity,
+          ),
           realizedMinutes: realizedMinutes ?? null,
           activityOperationalStatus: step.operationalStatus,
           sortTaskOrder: opt.orderIndex,

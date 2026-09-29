@@ -1,3 +1,4 @@
+import { resolveActivityPlannedTotalMinutes } from '../../../shared/activityOperationalQuantity.js'
 import type { ConveyorDetailApi, ConveyorStructureApi, ConveyorStructureStepApi } from '../conveyors.dto.js'
 import type { ConveyorNodeWorkloadApi, ConveyorNodeWorkloadStepApi } from '../conveyorNodeWorkload.dto.js'
 import {
@@ -155,7 +156,10 @@ function buildComputed(
     const areas = option.areas.map((area): ConveyorOperationalSnapshotStructureAreaV1 => {
       const steps = area.steps.map((step): ConveyorOperationalSnapshotStructureStepV1 => {
         const workload = byStep.get(step.id)
-        const stepPlannedMinutes = Math.max(0, step.plannedMinutes ?? 0)
+        const stepPlannedMinutes = resolveActivityPlannedTotalMinutes(
+          step.plannedMinutes,
+          step.plannedQuantity,
+        )
         const stepRealizedMinutes = Math.max(0, workload?.realizedMinutes ?? 0)
         const stepPendingMinutes = Math.max(
           0,

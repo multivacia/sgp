@@ -1,4 +1,5 @@
 import type pg from 'pg'
+import { resolveActivityPlannedTotalMinutes } from '../../../shared/activityOperationalQuantity.js'
 import {
   DEFAULT_RECENT_ACTIVITY_LIMIT,
   RECENT_ACTIVITY_NOTE_PREVIEW_MAX_CHARS,
@@ -248,6 +249,7 @@ export async function listTeamExecutionSummaryForConveyor(
     team_name: string | null
     step_id: string
     planned_minutes: string | null
+    planned_quantity: string | null
     step_realized: string | null
   }>(
     `
@@ -263,6 +265,7 @@ export async function listTeamExecutionSummaryForConveyor(
       t.name AS team_name,
       cna.conveyor_node_id::text AS step_id,
       cn.planned_minutes::text AS planned_minutes,
+      cn.planned_quantity::text AS planned_quantity,
       COALESCE(sr.realized, '0') AS step_realized
     FROM conveyor_node_assignees cna
     INNER JOIN teams t ON t.id = cna.team_id AND t.deleted_at IS NULL
@@ -284,10 +287,14 @@ export async function listTeamExecutionSummaryForConveyor(
     team_id: row.team_id,
     team_name: row.team_name,
     step_id: row.step_id,
-    planned_minutes:
+    planned_minutes: resolveActivityPlannedTotalMinutes(
       row.planned_minutes == null || row.planned_minutes === ''
         ? 0
         : Number(row.planned_minutes),
+      row.planned_quantity == null || row.planned_quantity === ''
+        ? null
+        : Number(row.planned_quantity),
+    ),
     step_realized:
       row.step_realized == null || row.step_realized === ''
         ? 0

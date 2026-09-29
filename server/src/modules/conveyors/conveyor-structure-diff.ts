@@ -19,6 +19,8 @@ export type StructureDiffStepPayload = {
   titulo: string
   orderIndex: number
   plannedMinutes: number
+  /** Presente no payload; insert de STEP persiste sempre 1 no service. */
+  plannedQuantity?: number
   sourceOrigin: StructureSourceOrigin
   required?: boolean
   sourceKey?: string | null
@@ -63,6 +65,8 @@ export type StructureDiffUpdate = {
   orderIndex: number
   sourceOrigin: StructureSourceOrigin
   plannedMinutes: number | null
+  /** STEP: quantidade validada; OPTION/AREA: null (coluna não é regravada). */
+  plannedQuantity: number | null
   required: boolean
   sourceKey: string | null
   /** Só STEP matched: assignees a sincronizar */
@@ -80,6 +84,8 @@ export type StructureDiffInsert = {
   orderIndex: number
   sourceOrigin: StructureSourceOrigin
   plannedMinutes: number | null
+  /** Carregado no insert de STEP; o service grava sempre 1. */
+  plannedQuantity: number | null
   required: boolean
   sourceKey: string | null
   assignees: StructureDiffAssignee[]
@@ -175,6 +181,7 @@ export function computeConveyorStructureDiff(input: {
         orderIndex: op.orderIndex,
         sourceOrigin: op.sourceOrigin,
         plannedMinutes: null,
+        plannedQuantity: null,
         required: true,
         sourceKey: null,
         assignees: [],
@@ -190,6 +197,7 @@ export function computeConveyorStructureDiff(input: {
         orderIndex: op.orderIndex,
         sourceOrigin: op.sourceOrigin,
         plannedMinutes: null,
+        plannedQuantity: null,
         required: true,
         sourceKey: null,
         assignees: null,
@@ -212,6 +220,7 @@ export function computeConveyorStructureDiff(input: {
           orderIndex: ar.orderIndex,
           sourceOrigin: ar.sourceOrigin,
           plannedMinutes: null,
+          plannedQuantity: null,
           required: true,
           sourceKey: null,
           assignees: [],
@@ -227,6 +236,7 @@ export function computeConveyorStructureDiff(input: {
           orderIndex: ar.orderIndex,
           sourceOrigin: ar.sourceOrigin,
           plannedMinutes: null,
+          plannedQuantity: null,
           required: true,
           sourceKey: null,
           assignees: null,
@@ -250,6 +260,7 @@ export function computeConveyorStructureDiff(input: {
             orderIndex: st.orderIndex,
             sourceOrigin: st.sourceOrigin,
             plannedMinutes: st.plannedMinutes,
+            plannedQuantity: st.plannedQuantity ?? null,
             required: st.required ?? true,
             sourceKey: st.sourceKey?.trim() || null,
             assignees,
@@ -266,6 +277,7 @@ export function computeConveyorStructureDiff(input: {
             orderIndex: st.orderIndex,
             sourceOrigin: st.sourceOrigin,
             plannedMinutes: st.plannedMinutes,
+            plannedQuantity: st.plannedQuantity ?? null,
             required: st.required ?? true,
             sourceKey: st.sourceKey?.trim() || null,
             assignees,

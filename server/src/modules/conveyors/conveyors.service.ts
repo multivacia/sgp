@@ -215,6 +215,42 @@ function computeTotalsForOptions(options: PostConveyorBody['options']): {
   }
 }
 
+/**
+ * Total do PATCH de estrutura: step com id usa a quantidade já validada (Zod);
+ * step sem id entra com quantidade inicial 1, ignorando o payload.
+ */
+function computeStructurePatchTotals(options: PostConveyorBody['options']): {
+  totalOptions: number
+  totalAreas: number
+  totalSteps: number
+  totalPlannedMinutes: number
+} {
+  let totalAreas = 0
+  let totalSteps = 0
+  let totalPlannedMinutes = 0
+  const sortedOptions = [...options].sort((a, b) => a.orderIndex - b.orderIndex)
+  for (const op of sortedOptions) {
+    const areas = [...op.areas].sort((a, b) => a.orderIndex - b.orderIndex)
+    for (const ar of areas) {
+      totalAreas++
+      const steps = [...ar.steps].sort((a, b) => a.orderIndex - b.orderIndex)
+      for (const st of steps) {
+        totalSteps++
+        const quantity = st.id
+          ? st.plannedQuantity
+          : resolveInitialConveyorStepPlannedQuantity()
+        totalPlannedMinutes += resolveActivityPlannedTotalMinutes(st.plannedMinutes, quantity)
+      }
+    }
+  }
+  return {
+    totalOptions: sortedOptions.length,
+    totalAreas,
+    totalSteps,
+    totalPlannedMinutes,
+  }
+}
+
 function computeTotals(body: PostConveyorBody): {
   totalOptions: number
   totalAreas: number
@@ -1088,7 +1124,7 @@ export async function serviceApplyConveyorStructureDiff(
     )
   }
 
-  const totals = computeTotalsForOptions(structureBody.options)
+  const totals = computeStructurePatchTotals(structureBody.options)
 
   const client = await pool.connect()
   try {
@@ -1221,6 +1257,9 @@ export async function serviceApplyConveyorStructureDiff(
           parent_id: parentId,
           root_id: rootId,
           planned_minutes: upd.plannedMinutes,
+          ...(upd.nodeType === 'STEP' && upd.plannedQuantity != null
+            ? { planned_quantity: upd.plannedQuantity }
+            : {}),
           required: upd.required,
           source_key: upd.sourceKey,
         },

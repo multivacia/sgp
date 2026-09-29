@@ -36,6 +36,8 @@ function stepRow(
     step_name: overrides.step_name ?? overrides.step_id,
     step_order: overrides.step_order ?? 1,
     planned_minutes: overrides.planned_minutes === undefined ? 0 : overrides.planned_minutes,
+    planned_quantity:
+      overrides.planned_quantity === undefined ? null : overrides.planned_quantity,
     operational_status: overrides.operational_status ?? 'PENDING',
     area_id: overrides.area_id ?? 'sector-1',
     area_name: overrides.area_name ?? 'Setor 1',
@@ -374,5 +376,81 @@ describe('serviceConveyorProgress', () => {
     const active = activities.find((a) => a.activityId === 'active')
     expect(active!.plannedMinutes).toBe(60)
     expect(active!.remainingMinutes).toBe(60)
+  })
+
+  it('previsto da evolução é unitário × quantidade; quantidade ausente permanece × 1', async () => {
+    repoMocks.listConveyorsForProgress.mockResolvedValue([
+      {
+        id: 'conv-qty',
+        code: 'EST-Q',
+        name: 'Esteira Qtd',
+        operational_status: 'EM_ANDAMENTO',
+      },
+    ])
+    repoMocks.listStepHierarchyForConveyors.mockResolvedValue([
+      stepRow({
+        conveyor_id: 'conv-qty',
+        step_id: 'qty-4',
+        step_name: 'Com quantidade',
+        planned_minutes: 30,
+        planned_quantity: 4,
+        operational_status: 'PENDING',
+      }),
+      stepRow({
+        conveyor_id: 'conv-qty',
+        step_id: 'qty-absent',
+        step_name: 'Sem quantidade',
+        step_order: 2,
+        planned_minutes: 30,
+        planned_quantity: null,
+        operational_status: 'PENDING',
+      }),
+    ])
+    repoMocks.listTimeEntriesForConveyors.mockResolvedValue([])
+
+    const result = await serviceConveyorProgress(pool, {})
+    const conveyor = result.items[0]!
+    const activities = conveyor.tasks[0]!.sectors[0]!.activities
+    const withQty = activities.find((a) => a.activityId === 'qty-4')
+    const absent = activities.find((a) => a.activityId === 'qty-absent')
+
+    expect(withQty!.plannedMinutes).toBe(120)
+    expect(withQty!.realizedMinutes).toBe(0)
+    expect(withQty!.remainingMinutes).toBe(120)
+    expect(withQty!.progressPercent).toBe(0)
+    expect(absent!.plannedMinutes).toBe(30)
+    expect(absent!.remainingMinutes).toBe(30)
+    expect(conveyor.plannedMinutes).toBe(150)
+    expect(conveyor.remainingMinutes).toBe(150)
+  })
+
+  it('STEP abortado com quantidade continua fora do agregado e preserva o total no item', async () => {
+    repoMocks.listConveyorsForProgress.mockResolvedValue([
+      {
+        id: 'conv-abort-qty',
+        code: 'EST-AQ',
+        name: 'Esteira Abort Qtd',
+        operational_status: 'EM_ANDAMENTO',
+      },
+    ])
+    repoMocks.listStepHierarchyForConveyors.mockResolvedValue([
+      stepRow({
+        conveyor_id: 'conv-abort-qty',
+        step_id: 'aborted-qty',
+        planned_minutes: 30,
+        planned_quantity: 4,
+        operational_status: 'ABORTED',
+      }),
+    ])
+    repoMocks.listTimeEntriesForConveyors.mockResolvedValue([])
+
+    const result = await serviceConveyorProgress(pool, {})
+    const conveyor = result.items[0]!
+    const aborted = conveyor.tasks[0]!.sectors[0]!.activities[0]!
+    expect(aborted.plannedMinutes).toBe(120)
+    expect(aborted.remainingMinutes).toBe(0)
+    expect(aborted.progressPercent).toBe(0)
+    expect(conveyor.plannedMinutes).toBe(0)
+    expect(conveyor.remainingMinutes).toBe(0)
   })
 })

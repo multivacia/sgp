@@ -154,7 +154,7 @@ export async function serviceOperationalDashboard(
           }
         : {}),
       notes:
-        'Previsto estrutural: soma dos minutos planejados nos STEPs ativos. Total por esteira (coluna OS): soma de total_planned_minutes (apoio; pode diferir do previsto estrutural). Minutos apontados (acumulado): soma global de conveyor_time_entries não apagados.' +
+        'Previsto estrutural: soma do tempo unitário × quantidade dos STEPs ativos. Total por esteira (coluna OS): soma de total_planned_minutes (apoio; pode diferir do previsto estrutural se a coluna não foi recalculada). Minutos apontados (acumulado): soma global de conveyor_time_entries não apagados.' +
         periodNote,
     },
     collaboratorLoad,
@@ -220,7 +220,7 @@ export async function serviceExecutiveDashboard(
       plannedMinutesStepNodes: plannedSteps,
       realizedMinutesTotal: realized,
       notes:
-        'Previsto estrutural: soma dos STEPs. Total por esteira (OS): apoio. Minutos apontados (acumulado): todos os lançamentos válidos. Mesma base de agregação do painel operacional.',
+        'Previsto estrutural: soma do tempo unitário × quantidade dos STEPs ativos. Total por esteira (OS): apoio; pode diferir se total_planned_minutes não foi recalculado. Minutos apontados (acumulado): todos os lançamentos válidos. Mesma base de agregação do painel operacional.',
     },
     topOverdueConveyors: topOverdue,
   }

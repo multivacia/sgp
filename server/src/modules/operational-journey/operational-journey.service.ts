@@ -1,5 +1,6 @@
 import type pg from 'pg'
 import type { OperationalBucket } from '../../shared/operationalBucket.js'
+import { resolveActivityPlannedTotalMinutes } from '../../shared/activityOperationalQuantity.js'
 import { computeCoberturaTempo } from '../../shared/coberturaTempo.js'
 import {
   resolveOperationalPeriod,
@@ -25,7 +26,29 @@ import {
 import type { OperationalJourneyQuery } from './operational-journey.schemas.js'
 
 const COBERTURA_FORMULA =
-  'realizado_minutos_acumulados_nos_steps_alocados / soma_planned_minutes_nos_steps_alocados (escopo fechado; null se previsto ≤ 0)'
+  'realizado_minutos_acumulados_nos_steps_alocados / previsto_estrutural_unitario_x_quantidade (escopo fechado; null se previsto ≤ 0)'
+
+/** Previsto estrutural da atividade: total já calculado, senão unitário × quantidade. */
+export function structuralPlannedMinutesForJourney(activity: {
+  plannedMinutes: number | null
+  plannedQuantity?: number | null
+  plannedTotalMinutes?: number | null
+}): number {
+  if (activity.plannedTotalMinutes != null && Number.isFinite(activity.plannedTotalMinutes)) {
+    return Math.max(0, Math.floor(activity.plannedTotalMinutes))
+  }
+  return resolveActivityPlannedTotalMinutes(activity.plannedMinutes, activity.plannedQuantity)
+}
+
+export function sumJourneyStructuralPlannedMinutes(
+  activities: Array<{
+    plannedMinutes: number | null
+    plannedQuantity?: number | null
+    plannedTotalMinutes?: number | null
+  }>,
+): number {
+  return activities.reduce((sum, activity) => sum + structuralPlannedMinutesForJourney(activity), 0)
+}
 
 const MAX_PENDENCIAS = 48
 const MAX_TOP_EXTRA_DESCRIPTIONS = 3
@@ -116,12 +139,11 @@ export async function serviceGetOperationalJourney(
     byBucket[a.operationalBucket]++
   }
 
-  let plannedSum = 0
   let realizadoAcumuladoEscopo = 0
   for (const a of assignments) {
-    plannedSum += a.plannedMinutes ?? 0
     realizadoAcumuladoEscopo += a.realizedMinutes ?? 0
   }
+  const plannedSum = sumJourneyStructuralPlannedMinutes(assignments)
 
   const cobertura = computeCoberturaTempo(realizadoAcumuladoEscopo, plannedSum)
 
@@ -161,7 +183,7 @@ export async function serviceGetOperationalJourney(
 
   const pendenciaItems: OperationalJourneyApi['signals']['pendenciaTempo']['items'] = []
   for (const a of assignmentsOpen) {
-    const p = a.plannedMinutes ?? 0
+    const p = structuralPlannedMinutesForJourney(a)
     const r = a.realizedMinutes ?? 0
     if (p > r) {
       pendenciaItems.push({
@@ -172,7 +194,7 @@ export async function serviceGetOperationalJourney(
         stepName: a.stepName,
         areaName: a.areaName,
         optionName: a.optionName,
-        plannedMinutes: a.plannedMinutes,
+        plannedMinutes: p,
         realizedMinutes: a.realizedMinutes,
         gapMinutes: p - r,
       })

@@ -67,6 +67,7 @@ import {
 } from '../shell/quickTimeEntryDrawerLogic'
 import { resolvePreferredJustificationCategory } from '../../domain/operational/timeEntryJustificationField'
 import { formatMinutosHumanos } from '../../lib/formatters'
+import { formatUnitAndTotalMinutes } from '../../domain/operational/activityOperationalQuantity'
 import {
   computeTarefaResumo,
   type AtividadePrioridade,
@@ -1512,7 +1513,11 @@ function EsteiraDetalheBasicoReal({ id }: { id: string | undefined }) {
                                 ) : null}
                                 <span className="text-xs tabular-nums text-slate-400">
                                   {st.plannedMinutes != null
-                                    ? formatMinutosHumanos(st.plannedMinutes)
+                                    ? formatUnitAndTotalMinutes(
+                                        st.plannedMinutes,
+                                        st.plannedQuantity,
+                                        formatMinutosHumanos,
+                                      )
                                     : '—'}
                                 </span>
                               </span>

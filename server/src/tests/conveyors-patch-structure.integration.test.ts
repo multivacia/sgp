@@ -11,6 +11,12 @@ import {
 } from '../config/env.js'
 import { hashPassword } from '../shared/password/password.js'
 import { sessionCookieForUser } from './sessionTestCookie.js'
+import {
+  ensureMariaCollaboratorSeedForIntegration,
+  MARIA_APP_USER_EMAIL,
+  MARIA_APP_USER_ID,
+  MARIA_COLLABORATOR_ID,
+} from './integrationSeedFixtures.js'
 
 loadDotenvFiles()
 
@@ -752,5 +758,286 @@ describe.skipIf(!hasDb)('conveyors PATCH structure/dados (integração)', () => 
     expect(row.rows[0]?.is_active).toBe(false)
     expect(row.rows[0]?.operational_status).toBe('COMPLETED')
     expect(row.rows[0]?.operational_completed_at).toBeTruthy()
+  })
+
+  async function detailOf(cid: string) {
+    const det = await request(app)
+      .get(`/api/v1/conveyors/${cid}`)
+      .set('Cookie', await sessionCookieForUser(pool, GOV_ADMIN_USER_ID, GOV_ADMIN_EMAIL))
+    expect(det.status).toBe(200)
+    return det.body.data as {
+      totalPlannedMinutes: number
+      structure: {
+        options: Array<{
+          id: string
+          name: string
+          orderIndex: number
+          areas: Array<{
+            id: string
+            name: string
+            orderIndex: number
+            steps: Array<{
+              id: string
+              name: string
+              orderIndex: number
+              plannedMinutes: number | null
+              plannedQuantity?: number
+              operationalStatus?: string
+            }>
+          }>
+        }>
+      }
+    }
+  }
+
+  function patchQuantityBody(
+    detail: Awaited<ReturnType<typeof detailOf>>,
+    stepPatch: { plannedMinutes: number; plannedQuantity: number },
+    extraStep?: { titulo: string; plannedMinutes: number; plannedQuantity: number },
+  ) {
+    const opt = detail.structure.options[0]!
+    const area = opt.areas[0]!
+    const step = area.steps[0]!
+    return {
+      originType: 'MANUAL' as const,
+      options: [
+        {
+          id: opt.id,
+          titulo: opt.name,
+          orderIndex: opt.orderIndex,
+          sourceOrigin: 'manual' as const,
+          areas: [
+            {
+              id: area.id,
+              titulo: area.name,
+              orderIndex: area.orderIndex,
+              sourceOrigin: 'manual' as const,
+              steps: [
+                {
+                  id: step.id,
+                  titulo: step.name,
+                  orderIndex: step.orderIndex,
+                  plannedMinutes: stepPatch.plannedMinutes,
+                  plannedQuantity: stepPatch.plannedQuantity,
+                  sourceOrigin: 'manual' as const,
+                  required: true,
+                  assignees: [] as [],
+                },
+                ...(extraStep
+                  ? [
+                      {
+                        titulo: extraStep.titulo,
+                        orderIndex: step.orderIndex + 1,
+                        plannedMinutes: extraStep.plannedMinutes,
+                        plannedQuantity: extraStep.plannedQuantity,
+                        sourceOrigin: 'manual' as const,
+                        required: true,
+                        assignees: [] as [],
+                      },
+                    ]
+                  : []),
+              ],
+            },
+          ],
+        },
+      ],
+    }
+  }
+
+  it('PATCH de step persistido grava quantidade 4 sem alterar minutos unitários nem apontamento', async () => {
+    const { cid } = await createConveyor()
+    const before = await detailOf(cid)
+    const stepId = before.structure.options[0]!.areas[0]!.steps[0]!.id
+    const statusBefore = before.structure.options[0]!.areas[0]!.steps[0]!.operationalStatus
+
+    await ensureMariaCollaboratorSeedForIntegration(pool)
+    const entryId = randomUUID()
+    await pool.query(
+      `INSERT INTO conveyor_time_entries (
+         id, conveyor_id, conveyor_node_id, collaborator_id, entry_at, minutes,
+         executed_quantity, entry_mode
+       ) VALUES (
+         $1::uuid, $2::uuid, $3::uuid, $4::uuid, now(), 12, 2, 'manual'
+       )`,
+      [entryId, cid, stepId, MARIA_COLLABORATOR_ID],
+    )
+
+    const res = await request(app)
+      .patch(`/api/v1/conveyors/${cid}/structure`)
+      .set('Cookie', await sessionCookieForUser(pool, GOV_ADMIN_USER_ID, GOV_ADMIN_EMAIL))
+      .send(patchQuantityBody(before, { plannedMinutes: 30, plannedQuantity: 4 }))
+    expect(res.status).toBe(200)
+    const step = res.body.data.structure.options[0].areas[0].steps[0]
+    expect(step.id).toBe(stepId)
+    expect(step.plannedMinutes).toBe(30)
+    expect(step.plannedQuantity).toBe(4)
+    expect(res.body.data.totalPlannedMinutes).toBe(120)
+
+    const after = await detailOf(cid)
+    const got = after.structure.options[0]!.areas[0]!.steps[0]!
+    expect(got.id).toBe(stepId)
+    expect(got.plannedMinutes).toBe(30)
+    expect(got.plannedQuantity).toBe(4)
+    expect(after.totalPlannedMinutes).toBe(120)
+
+    const node = await pool.query<{
+      planned_minutes: number
+      planned_quantity: number
+      operational_status: string
+    }>(
+      `SELECT planned_minutes, planned_quantity, operational_status
+         FROM conveyor_nodes WHERE id = $1::uuid`,
+      [stepId],
+    )
+    expect(node.rows[0]?.planned_minutes).toBe(30)
+    expect(node.rows[0]?.planned_quantity).toBe(4)
+    expect(node.rows[0]?.operational_status).toBe(statusBefore)
+
+    const entry = await pool.query<{ minutes: number; executed_quantity: number }>(
+      `SELECT minutes, executed_quantity FROM conveyor_time_entries WHERE id = $1::uuid`,
+      [entryId],
+    )
+    expect(entry.rows[0]?.minutes).toBe(12)
+    expect(entry.rows[0]?.executed_quantity).toBe(2)
+  })
+
+  it('PATCH plannedQuantity 0 e 1.5 retorna 422', async () => {
+    const { cid } = await createConveyor()
+    const before = await detailOf(cid)
+    for (const plannedQuantity of [0, 1.5]) {
+      const res = await request(app)
+        .patch(`/api/v1/conveyors/${cid}/structure`)
+        .set('Cookie', await sessionCookieForUser(pool, GOV_ADMIN_USER_ID, GOV_ADMIN_EMAIL))
+        .send(patchQuantityBody(before, { plannedMinutes: 30, plannedQuantity }))
+      expect(res.status).toBe(422)
+      expect(res.body.error?.code).toBe('VALIDATION_ERROR')
+    }
+  })
+
+  it('step novo no PATCH grava quantidade 1 mesmo com plannedQuantity 4 no payload', async () => {
+    const { cid } = await createConveyor()
+    const before = await detailOf(cid)
+    const oldId = before.structure.options[0]!.areas[0]!.steps[0]!.id
+    const res = await request(app)
+      .patch(`/api/v1/conveyors/${cid}/structure`)
+      .set('Cookie', await sessionCookieForUser(pool, GOV_ADMIN_USER_ID, GOV_ADMIN_EMAIL))
+      .send(
+        patchQuantityBody(
+          before,
+          { plannedMinutes: 30, plannedQuantity: 1 },
+          { titulo: 'Etapa nova', plannedMinutes: 15, plannedQuantity: 4 },
+        ),
+      )
+    expect(res.status).toBe(200)
+    const steps = res.body.data.structure.options[0].areas[0].steps as Array<{
+      id: string
+      name: string
+      plannedMinutes: number
+      plannedQuantity: number
+    }>
+    const created = steps.find((s) => s.id !== oldId)
+    expect(created?.name).toBe('Etapa nova')
+    expect(created?.plannedMinutes).toBe(15)
+    expect(created?.plannedQuantity).toBe(1)
+    expect(res.body.data.totalPlannedMinutes).toBe(45)
+
+    const row = await pool.query<{ planned_quantity: number }>(
+      `SELECT planned_quantity FROM conveyor_nodes WHERE id = $1::uuid`,
+      [created!.id],
+    )
+    expect(row.rows[0]?.planned_quantity).toBe(1)
+  })
+
+  it('fora de EM_ELABORACAO exige reason e, com reason, grava a quantidade', async () => {
+    const { cid } = await createConveyor()
+    const before = await detailOf(cid)
+    await pool.query(
+      `UPDATE conveyors SET operational_status = 'EM_ANDAMENTO' WHERE id = $1::uuid`,
+      [cid],
+    )
+    const denied = await request(app)
+      .patch(`/api/v1/conveyors/${cid}/structure`)
+      .set('Cookie', await sessionCookieForUser(pool, GOV_ADMIN_USER_ID, GOV_ADMIN_EMAIL))
+      .send(patchQuantityBody(before, { plannedMinutes: 30, plannedQuantity: 4 }))
+    expect(denied.status).toBe(422)
+
+    const ok = await request(app)
+      .patch(`/api/v1/conveyors/${cid}/structure`)
+      .set('Cookie', await sessionCookieForUser(pool, GOV_ADMIN_USER_ID, GOV_ADMIN_EMAIL))
+      .send({
+        ...patchQuantityBody(before, { plannedMinutes: 30, plannedQuantity: 4 }),
+        reason: 'Ajuste da quantidade prevista da atividade',
+      })
+    expect(ok.status).toBe(200)
+    expect(ok.body.data.structure.options[0].areas[0].steps[0].plannedQuantity).toBe(4)
+    expect(ok.body.data.totalPlannedMinutes).toBe(120)
+  })
+
+  it('usuário sem conveyors.create recebe 403 no PATCH de quantidade', async () => {
+    await ensureMariaCollaboratorSeedForIntegration(pool)
+    const perms = await pool.query<{ has_create: boolean }>(
+      `SELECT COALESCE(bool_or(p.code = 'conveyors.create'), false) AS has_create
+         FROM app_users au
+         LEFT JOIN app_role_permissions rp ON rp.role_id = au.role_id
+         LEFT JOIN app_permissions p ON p.id = rp.permission_id
+        WHERE au.id = $1::uuid
+        GROUP BY au.id`,
+      [MARIA_APP_USER_ID],
+    )
+    if (perms.rows[0]?.has_create !== false) {
+      throw new Error(
+        'Fail-fast: Maria possui conveyors.create; o teste de negação seria falso-positivo.',
+      )
+    }
+
+    const { cid } = await createConveyor()
+    const before = await detailOf(cid)
+    const res = await request(app)
+      .patch(`/api/v1/conveyors/${cid}/structure`)
+      .set('Cookie', await sessionCookieForUser(pool, MARIA_APP_USER_ID, MARIA_APP_USER_EMAIL))
+      .send(patchQuantityBody(before, { plannedMinutes: 30, plannedQuantity: 4 }))
+    expect(res.status).toBe(403)
+  })
+
+  it('item publicado do plano semanal não é reescrito ao alterar a quantidade da estrutura', async () => {
+    const { cid } = await createConveyor()
+    const before = await detailOf(cid)
+    const stepId = before.structure.options[0]!.areas[0]!.steps[0]!.id
+    const offset = Math.floor(Math.random() * 5000)
+    const plan = await pool.query<{ id: string }>(
+      `INSERT INTO operational_work_plans (
+         week_start_date, week_end_date, status, created_by, published_at
+       )
+       SELECT (DATE '2090-01-02' + $2::int), (DATE '2090-01-02' + $2::int + 4),
+              'PUBLISHED', $1::uuid, now()
+       RETURNING id::text`,
+      [GOV_ADMIN_USER_ID, offset],
+    )
+    const planId = plan.rows[0]?.id
+    if (!planId) throw new Error('plano semanal não criado')
+    const itemId = randomUUID()
+    await pool.query(
+      `INSERT INTO operational_work_plan_items (
+         id, work_plan_id, conveyor_id, activity_node_id, planned_date, planned_order,
+         planned_minutes, status
+       ) VALUES (
+         $1::uuid, $2::uuid, $3::uuid, $4::uuid,
+         (SELECT week_start_date FROM operational_work_plans WHERE id = $2::uuid),
+         1, 30, 'PLANNED'
+       )`,
+      [itemId, planId, cid, stepId],
+    )
+
+    const res = await request(app)
+      .patch(`/api/v1/conveyors/${cid}/structure`)
+      .set('Cookie', await sessionCookieForUser(pool, GOV_ADMIN_USER_ID, GOV_ADMIN_EMAIL))
+      .send(patchQuantityBody(before, { plannedMinutes: 30, plannedQuantity: 4 }))
+    expect(res.status).toBe(200)
+
+    const item = await pool.query<{ planned_minutes: number }>(
+      `SELECT planned_minutes FROM operational_work_plan_items WHERE id = $1::uuid`,
+      [itemId],
+    )
+    expect(item.rows[0]?.planned_minutes).toBe(30)
   })
 })

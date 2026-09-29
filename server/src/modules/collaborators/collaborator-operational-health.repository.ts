@@ -1,4 +1,5 @@
 import type pg from 'pg'
+import { sqlConveyorStepPlannedTotalMinutes } from '../../shared/activityOperationalQuantity.js'
 
 export type OpenAssignmentAggRow = {
   open_distinct_steps: string
@@ -24,7 +25,7 @@ export async function aggregateOpenAssignmentsForCollaborator(
     WITH matched AS (
       SELECT
         step.id AS step_id,
-        step.planned_minutes,
+        ${sqlConveyorStepPlannedTotalMinutes('step')} AS planned_minutes,
         cna.is_primary,
         cna.assignment_type::text AS assignment_type
       FROM conveyor_node_assignees cna

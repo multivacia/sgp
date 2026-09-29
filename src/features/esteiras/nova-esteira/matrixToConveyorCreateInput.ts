@@ -202,6 +202,11 @@ export type ManualStepDraft = {
   titulo: string
   plannedMinutes: number
   plannedQuantity?: number
+  /**
+   * Texto ainda inválido no campo Qtd (edição de step persistido).
+   * Enquanto presente, a quantidade numérica anterior não é tratada como valor novo.
+   */
+  plannedQuantityDraft?: string
   /** Lineage de atividade — propagado até conveyor_nodes.source_key (STEP). */
   sourceKey?: string | null
   /**
@@ -233,7 +238,9 @@ export function buildManualConveyorInput(
         titulo: st.titulo.trim(),
         orderIndex: si + 1,
         plannedMinutes: Math.max(0, Math.floor(st.plannedMinutes)),
-        plannedQuantity: 1,
+        plannedQuantity: persisted?.has(st.key)
+          ? Math.max(1, Math.floor(st.plannedQuantity ?? 1))
+          : 1,
         sourceKey: st.sourceKey ?? null,
         sourceOrigin: 'manual',
         required: true,
@@ -330,6 +337,9 @@ export function manualAssigneeRowsToApi(
   })
 }
 
+export const PLANNED_QUANTITY_INVALID_MESSAGE =
+  'A quantidade prevista deve ser um número inteiro maior ou igual a 1.'
+
 export function validateManualStructure(roots: ManualOptionDraft[]): string | null {
   if (roots.length === 0) {
     return 'Inclua pelo menos uma tarefa com setor e atividade.'
@@ -342,6 +352,13 @@ export function validateManualStructure(roots: ManualOptionDraft[]): string | nu
       if (ar.steps.length === 0) return 'Cada setor precisa de pelo menos uma atividade.'
       for (const st of ar.steps) {
         if (!st.titulo.trim()) return 'Cada atividade precisa de um título.'
+        if (st.plannedQuantityDraft !== undefined) return PLANNED_QUANTITY_INVALID_MESSAGE
+        if (
+          st.plannedQuantity != null &&
+          (!Number.isInteger(st.plannedQuantity) || st.plannedQuantity < 1)
+        ) {
+          return PLANNED_QUANTITY_INVALID_MESSAGE
+        }
       }
     }
   }

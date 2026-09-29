@@ -89,6 +89,21 @@ describe('conveyorEditStructureSnapshot', () => {
     ).toBe(false)
   })
 
+  it('só mudar a quantidade prevista marca a estrutura como alterada', () => {
+    const structure = sampleStructure()
+    structure.options[0].areas[0].steps[0].plannedQuantity = 1
+    const baseline = buildStructureBaselineFromApiDetail(structure)
+    const roots = structureToManualRootsFromApiDetail(structure)
+    expect(
+      hasPersistableStructureChanges(roots, baseline.manualAloc, baseline.baselineStructureSig),
+    ).toBe(false)
+
+    roots[0].areas[0].steps[0].plannedQuantity = 4
+    expect(
+      hasPersistableStructureChanges(roots, baseline.manualAloc, baseline.baselineStructureSig),
+    ).toBe(true)
+  })
+
   it('detecta alteração real de título de atividade', () => {
     const structure = sampleStructure()
     const baseline = buildStructureBaselineFromApiDetail(structure)

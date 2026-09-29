@@ -1,4 +1,5 @@
 import type pg from 'pg'
+import { sqlConveyorStepPlannedTotalMinutes } from '../../shared/activityOperationalQuantity.js'
 import type { ConveyorRowForBucket } from './dashboard.dto.js'
 
 export async function listConveyorsForDashboard(
@@ -55,11 +56,11 @@ export async function sumConveyorPlannedMinutes(pool: pg.Pool): Promise<number> 
 export async function sumStepPlannedMinutes(pool: pg.Pool): Promise<number> {
   const r = await pool.query<{ s: string | null }>(
     `
-    SELECT COALESCE(SUM(planned_minutes), 0)::text AS s
-    FROM conveyor_nodes
-    WHERE deleted_at IS NULL
-      AND is_active = TRUE
-      AND node_type = 'STEP'
+    SELECT COALESCE(SUM(${sqlConveyorStepPlannedTotalMinutes('step')}), 0)::text AS s
+    FROM conveyor_nodes step
+    WHERE step.deleted_at IS NULL
+      AND step.is_active = TRUE
+      AND step.node_type = 'STEP'
     `,
   )
   return Number.parseInt(r.rows[0]?.s ?? '0', 10) || 0
@@ -112,7 +113,7 @@ export async function listCollaboratorLoadAggregates(
       COUNT(*)::text AS assignment_count,
       SUM(CASE WHEN cna.is_primary THEN 1 ELSE 0 END)::text AS primary_count,
       SUM(CASE WHEN NOT cna.is_primary THEN 1 ELSE 0 END)::text AS support_count,
-      COALESCE(SUM(COALESCE(step.planned_minutes, 0)), 0)::text AS planned_minutes_steps
+      COALESCE(SUM(${sqlConveyorStepPlannedTotalMinutes('step')}), 0)::text AS planned_minutes_steps
     FROM conveyor_node_assignees cna
     INNER JOIN collaborators c
       ON c.id = cna.collaborator_id AND c.deleted_at IS NULL

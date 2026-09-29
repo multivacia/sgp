@@ -13,6 +13,7 @@ export type ConveyorProgressStepRow = {
   step_name: string
   step_order: number
   planned_minutes: number | null
+  planned_quantity: number | null
   operational_status: string | null
   area_id: string
   area_name: string
@@ -91,6 +92,7 @@ export async function listStepHierarchyForConveyors(
     step_name: string
     step_order: number
     planned_minutes: string | number | null
+    planned_quantity: string | number | null
     operational_status: string | null
     area_id: string
     area_name: string
@@ -106,6 +108,7 @@ export async function listStepHierarchyForConveyors(
       step.name AS step_name,
       step.order_index AS step_order,
       step.planned_minutes,
+      step.planned_quantity,
       step.operational_status::text AS operational_status,
       area.id::text AS area_id,
       area.name AS area_name,
@@ -140,6 +143,10 @@ export async function listStepHierarchyForConveyors(
       row.planned_minutes == null || row.planned_minutes === ''
         ? null
         : Number(row.planned_minutes),
+    planned_quantity:
+      row.planned_quantity == null || row.planned_quantity === ''
+        ? null
+        : Number(row.planned_quantity),
     area_id: row.area_id,
     area_name: row.area_name,
     area_order: row.area_order,

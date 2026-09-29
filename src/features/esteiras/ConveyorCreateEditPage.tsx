@@ -1315,6 +1315,9 @@ export function ConveyorCreateEditPage({ mode }: { mode: Mode }) {
                       mode === 'edit' ? handleRequestAbortStep : undefined
                     }
                     abortingStepId={stepAbortingId}
+                    plannedQuantityEditableKeys={
+                      mode === 'edit' ? baselinePersistedNodeIds : undefined
+                    }
                   />
                 </div>
               </main>

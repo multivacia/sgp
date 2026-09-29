@@ -49,7 +49,7 @@ export type OperationalJourneyApi = {
   }
   load: {
     assignmentCount: number
-    /** Previsto estrutural: soma de planned_minutes nos STEPs alocados (escopo). */
+    /** Previsto estrutural: soma do tempo unitário × quantidade dos STEPs alocados. */
     plannedMinutesOnStepsSum: number
   }
   /** Cobertura de tempo: realizado acumulado nos mesmos STEPs / previsto estrutural do escopo. */
