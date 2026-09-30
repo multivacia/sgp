@@ -1024,7 +1024,7 @@ function parseExpectedUpdatedAt(iso: string): Date {
   const d = new Date(iso)
   if (Number.isNaN(d.getTime())) {
     throw new AppError(
-      'expectedUpdatedAt inválido.',
+      'A versão do apontamento informada é inválida. Atualize a tela e tente novamente.',
       422,
       ErrorCodes.VALIDATION_ERROR,
     )
@@ -1062,7 +1062,7 @@ export async function servicePatchConveyorTimeEntryAsManager(
   const expected = parseExpectedUpdatedAt(input.expectedUpdatedAt)
   if (!sameUpdatedAt(entry.updated_at, expected)) {
     throw new AppError(
-      'O apontamento foi alterado por outro utilizador. Recarregue e tente novamente.',
+      'O apontamento foi alterado por outro usuário. Atualize a tela e tente novamente.',
       409,
       ErrorCodes.CONFLICT,
     )
@@ -1070,14 +1070,18 @@ export async function servicePatchConveyorTimeEntryAsManager(
 
   const reason = input.reason.trim()
   if (!reason) {
-    throw new AppError('Indique o motivo.', 422, ErrorCodes.VALIDATION_ERROR)
+    throw new AppError(
+      'Informe o motivo da correção.',
+      422,
+      ErrorCodes.VALIDATION_ERROR,
+    )
   }
 
   const hasMinutes = input.minutes !== undefined
   const hasQty = input.executedQuantity !== undefined
   if (hasMinutes === hasQty) {
     throw new AppError(
-      'Informe exatamente um de: minutes ou executedQuantity (XOR estrito).',
+      'Altere apenas o tempo ou apenas a quantidade executada em cada correção.',
       422,
       ErrorCodes.VALIDATION_ERROR,
     )
@@ -1098,7 +1102,7 @@ export async function servicePatchConveyorTimeEntryAsManager(
       newValue = normalizeExecutedQuantityInput(input.executedQuantity)
     } catch {
       throw new AppError(
-        'executedQuantity deve ser número inteiro >= 0.',
+        'A quantidade executada deve ser um número inteiro igual ou maior que zero.',
         422,
         ErrorCodes.VALIDATION_ERROR,
       )
@@ -1126,7 +1130,7 @@ export async function servicePatchConveyorTimeEntryAsManager(
           })
     if (!updated) {
       throw new AppError(
-        'O apontamento foi alterado por outro utilizador. Recarregue e tente novamente.',
+        'O apontamento foi alterado por outro usuário. Atualize a tela e tente novamente.',
         409,
         ErrorCodes.CONFLICT,
       )
@@ -1211,7 +1215,7 @@ export async function serviceDeleteConveyorTimeEntryAsAppUser(
     const reason = (input.reason ?? '').trim()
     if (!reason) {
       throw new AppError(
-        'Indique o motivo da remoção.',
+        'Informe o motivo da remoção.',
         422,
         ErrorCodes.VALIDATION_ERROR,
       )

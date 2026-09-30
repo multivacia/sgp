@@ -251,7 +251,7 @@ export function ApontamentoGestorPage() {
   async function executarEdicao() {
     if (!editTarget || !conveyorId?.trim() || !stepNodeId?.trim() || editing) return
     if (!motivoEdicao.trim()) {
-      pushToast('Indique o motivo da correção.', 'error')
+      pushToast('Informe o motivo da correção.', 'error')
       return
     }
     let body:
@@ -268,7 +268,7 @@ export function ApontamentoGestorPage() {
     if (editField === 'minutes') {
       const m = Number.parseInt(editMinutesStr, 10)
       if (!Number.isInteger(m) || m < 1) {
-        pushToast('Minutos deve ser um inteiro ≥ 1.', 'error')
+        pushToast('Informe o tempo em minutos, com um número inteiro de pelo menos 1.', 'error')
         return
       }
       body = {
@@ -285,7 +285,10 @@ export function ApontamentoGestorPage() {
     } else {
       const q = Number.parseInt(editQtyStr, 10)
       if (!Number.isInteger(q) || q < 0) {
-        pushToast('Quantidade deve ser um inteiro ≥ 0 (ou limpar).', 'error')
+        pushToast(
+          'Informe a quantidade executada como um número inteiro igual ou maior que zero, ou limpe a quantidade.',
+          'error',
+        )
         return
       }
       body = {
@@ -334,7 +337,7 @@ export function ApontamentoGestorPage() {
       deleteTarget.collaboratorId === user.collaboratorId
     const needsReason = canDeleteAny || !own
     if (needsReason && !motivoRemocao.trim()) {
-      pushToast('Indique o motivo da remoção.', 'error')
+      pushToast('Informe o motivo da remoção.', 'error')
       return
     }
     setDeleting(true)
@@ -592,10 +595,10 @@ export function ApontamentoGestorPage() {
               const own =
                 user?.collaboratorId && e.collaboratorId === user.collaboratorId
               const canRemove = own || canDeleteAny
-              const qtyLabel =
+              const quantityLabel =
                 e.executedQuantity === null || e.executedQuantity === undefined
-                  ? 'qty —'
-                  : `qty ${e.executedQuantity}`
+                  ? 'Quantidade —'
+                  : `Quantidade ${e.executedQuantity}`
               return (
                 <li
                   key={e.id}
@@ -605,13 +608,13 @@ export function ApontamentoGestorPage() {
                     <p className="text-sm text-slate-200">
                       {e.collaboratorName ?? e.collaboratorId} ·{' '}
                       {formatHumanMinutes(e.minutes)} ·{' '}
-                      <span className="text-slate-400">{qtyLabel}</span> ·{' '}
+                      <span className="text-slate-400">{quantityLabel}</span> ·{' '}
                       <span className="text-slate-400">
                         realizado em {formatIsoDateBr(operationalDateOf(new Date(e.entryAt)))}
                       </span>
                       {e.isDelegated ? (
                         <span className="ml-2 rounded bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-200/95">
-                          Registado por gestor
+                          Registrado pelo gestor
                         </span>
                       ) : null}
                     </p>
@@ -699,7 +702,7 @@ export function ApontamentoGestorPage() {
           <div className="sgp-panel max-w-md rounded-2xl border border-white/[0.1] p-6 shadow-xl">
             <p className="font-heading text-lg text-slate-100">Corrigir apontamento</p>
             <p className="mt-2 text-sm text-slate-400">
-              Altere minutos ou quantidade (apenas um campo por vez) e indique o motivo.
+              Altere o tempo ou a quantidade executada, um de cada vez, e informe o motivo.
             </p>
             <div className="mt-4 flex flex-wrap gap-3 text-sm text-slate-300">
               <label className="inline-flex items-center gap-2">
@@ -751,7 +754,7 @@ export function ApontamentoGestorPage() {
                     checked={editQtyNull}
                     onChange={(e) => setEditQtyNull(e.target.checked)}
                   />
-                  Limpar quantidade (null)
+                  Limpar a quantidade executada
                 </label>
               </div>
             )}
@@ -770,7 +773,7 @@ export function ApontamentoGestorPage() {
                 disabled={editing}
                 onClick={() => void executarEdicao()}
               >
-                {editing ? 'A guardar…' : 'Guardar'}
+                {editing ? 'Salvando…' : 'Salvar'}
               </button>
               <button
                 type="button"
@@ -795,7 +798,7 @@ export function ApontamentoGestorPage() {
             <p className="font-heading text-lg text-slate-100">Remover apontamento</p>
             <p className="mt-2 text-sm text-slate-400">
               {deleteNeedsReason
-                ? 'Indique o motivo da remoção gerencial.'
+                ? 'Informe o motivo da remoção.'
                 : 'Confirma a remoção do seu próprio lançamento?'}
             </p>
             {deleteNeedsReason ? (
@@ -813,7 +816,7 @@ export function ApontamentoGestorPage() {
                 disabled={deleting}
                 onClick={() => void executarRemocao()}
               >
-                {deleting ? 'A remover…' : 'Remover'}
+                {deleting ? 'Removendo…' : 'Remover'}
               </button>
               <button
                 type="button"

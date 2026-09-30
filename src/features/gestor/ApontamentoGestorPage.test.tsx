@@ -13,6 +13,7 @@ const mocks = vi.hoisted(() => ({
   getConveyorStepAssignees: vi.fn(),
   getConveyorStepTimeEntries: vi.fn(),
   postConveyorStepTimeEntryOnBehalf: vi.fn(),
+  patchConveyorStepTimeEntry: vi.fn(),
   deleteConveyorStepTimeEntry: vi.fn(),
   getConveyorStepSequenceCheck: vi.fn(),
 }))
@@ -21,6 +22,7 @@ vi.mock('../../services/conveyors/conveyorStepAssignmentsApiService', () => ({
   getConveyorStepAssignees: mocks.getConveyorStepAssignees,
   getConveyorStepTimeEntries: mocks.getConveyorStepTimeEntries,
   postConveyorStepTimeEntryOnBehalf: mocks.postConveyorStepTimeEntryOnBehalf,
+  patchConveyorStepTimeEntry: mocks.patchConveyorStepTimeEntry,
   deleteConveyorStepTimeEntry: mocks.deleteConveyorStepTimeEntry,
 }))
 vi.mock('../../services/conveyors/conveyorsApiService', () => ({

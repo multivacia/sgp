@@ -70,7 +70,7 @@ export async function postConveyorStepTimeEntryOnBehalf(
 
 /**
  * PATCH /api/v1/conveyors/:conveyorId/steps/:stepNodeId/time-entries/:timeEntryId
- * Requer permissão `time_entries.edit_any`. XOR estrito minutes|executedQuantity.
+ * Requer permissão `time_entries.edit_any`. Cada correção altera só o tempo ou só a quantidade executada.
  */
 export async function patchConveyorStepTimeEntry(
   conveyorId: string,

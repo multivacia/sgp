@@ -166,7 +166,7 @@ export const patchTimeEntryBodySchema = z
     expectedUpdatedAt: isoDateTime,
     reason: z
       .string()
-      .min(1, 'Indique o motivo.')
+      .min(1, 'Informe o motivo da correção.')
       .max(4000),
     minutes: z.number().int().positive().optional(),
     executedQuantity: z.number().int().min(0).nullable().optional(),
@@ -178,7 +178,7 @@ export const patchTimeEntryBodySchema = z
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         message:
-          'Informe exatamente um de: minutes ou executedQuantity (XOR estrito).',
+          'Altere apenas o tempo ou apenas a quantidade executada em cada correção.',
         path: hasMinutes ? ['minutes'] : ['executedQuantity'],
       })
     }
@@ -189,7 +189,7 @@ export type PatchTimeEntryBody = z.infer<typeof patchTimeEntryBodySchema>
 export const deleteTimeEntryBodySchema = z.object({
   reason: z
     .string()
-    .min(1, 'Indique o motivo.')
+    .min(1, 'Informe o motivo da remoção.')
     .max(4000)
     .optional(),
 })
