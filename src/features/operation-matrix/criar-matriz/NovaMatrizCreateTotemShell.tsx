@@ -199,7 +199,7 @@ export function NovaMatrizCreateTotemShell(props: NovaMatrizCreateTotemShellProp
         disabled={saving || !podeSalvar}
         onClick={() => void onSave()}
       >
-        {saving ? 'A guardar…' : 'Salvar matriz'}
+        {saving ? 'Salvando…' : 'Salvar matriz'}
       </button>
     </div>
   )

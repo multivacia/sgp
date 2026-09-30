@@ -154,7 +154,7 @@ function JourneyActivityCard({ item }: { item: MyActivityItem }) {
           <p className="text-[11px] tabular-nums text-slate-500">
             Previsto: <span className="text-slate-300">{prev}</span>
             <span className="text-slate-600"> · </span>
-            Realizado (step): <span className="text-slate-300">{real}</span>
+            Realizado na etapa: <span className="text-slate-300">{real}</span>
           </p>
           <button
             type="button"

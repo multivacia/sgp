@@ -66,7 +66,7 @@ export function getReviewItemDecision(
 }
 
 /**
- * Decisão ao montar o draft para POST: `REUSE_EXISTING` sem registo local
+ * Decisão ao montar o draft para POST: `REUSE_EXISTING` sem registro local
  * equivale a aceitar o candidato principal.
  */
 export function getPayloadApplyDecision(

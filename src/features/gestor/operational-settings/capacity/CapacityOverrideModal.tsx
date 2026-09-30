@@ -165,7 +165,7 @@ export function CapacityOverrideModal({
               })
             }}
           >
-            {saving ? 'A guardar…' : 'Guardar ajuste'}
+            {saving ? 'Salvando…' : 'Salvar ajuste'}
           </button>
         </div>
       </div>

@@ -690,7 +690,7 @@ export function ColaboradoresPage() {
                             rel="noreferrer"
                             className="w-fit text-[11px] font-semibold text-sgp-gold/90 underline-offset-2 hover:underline"
                           >
-                            Abrir utilizador
+                            Abrir usuário
                           </a>
                         </div>
                       ) : linked && c.linkedUserId ? (
@@ -702,7 +702,7 @@ export function ColaboradoresPage() {
                             rel="noreferrer"
                             className="w-fit text-[11px] font-semibold text-sgp-gold/90 underline-offset-2 hover:underline"
                           >
-                            Abrir utilizador
+                            Abrir usuário
                           </a>
                         </div>
                       ) : (
@@ -729,7 +729,7 @@ export function ColaboradoresPage() {
                         )}
                         {linked ? (
                           <span className="inline-block rounded-md border border-sgp-blue-bright/25 bg-sgp-blue-bright/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-slate-200/90">
-                            Com utilizador
+                            Com usuário
                           </span>
                         ) : null}
                       </div>
@@ -1018,7 +1018,7 @@ function CollaboratorOperationalCapacityCard({
         Capacidade operacional
       </p>
       {loading ? (
-        <p className="mt-2 text-sm text-slate-500">A carregar…</p>
+        <p className="mt-2 text-sm text-slate-500">Carregando…</p>
       ) : data ? (
         <dl className="mt-2 space-y-1.5 text-sm text-slate-300">
           <div className="flex flex-wrap justify-between gap-2">
@@ -1293,7 +1293,7 @@ function FormColaboradorModal(props: FormProps) {
             }}
             className="sgp-cta-primary !px-4 !py-2 text-sm"
           >
-            Guardar
+            Salvar
           </button>
         </div>
       </div>

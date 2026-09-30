@@ -165,7 +165,7 @@ export function AdminAuditTrailPage() {
         )}
 
         {!loading && !error && rows.length === 0 && (
-          <p className="text-sm text-slate-500">Sem eventos para os filtros actuais.</p>
+          <p className="text-sm text-slate-500">Sem eventos para os filtros atuais.</p>
         )}
 
         {!loading && !error && rows.length > 0 && (

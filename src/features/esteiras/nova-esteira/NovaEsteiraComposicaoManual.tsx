@@ -872,7 +872,7 @@ export function NovaEsteiraComposicaoManual({
               const asOk = validateManualStepAssignees([op], alocacoes) === null
               const org = labelOrigemTarefa(op)
               const orgBadge = org === 'base' ? 'Da base' : org === 'extra' ? 'Extra' : 'Manual'
-              const status = !stOk ? 'Incompleto' : !asOk ? 'Equipe a rever' : 'Completo'
+              const status = !stOk ? 'Incompleto' : !asOk ? 'Equipe a revisar' : 'Completo'
               return (
                 <li key={op.key} className="list-none">
                   <details

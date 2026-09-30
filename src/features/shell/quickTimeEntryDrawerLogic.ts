@@ -12,7 +12,7 @@ import {
 } from '../../domain/operational/workDate'
 
 export const QUICK_TIME_ENTRY_TOAST = {
-  entrySaved: 'Apontamento registado com sucesso.',
+  entrySaved: 'Apontamento registrado com sucesso.',
   entrySavedAndCompleted: 'Apontamento salvo e atividade concluída.',
   activityCompleted: 'Atividade concluída.',
 } as const

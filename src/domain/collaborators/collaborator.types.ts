@@ -28,7 +28,7 @@ export type AdminCollaboratorProductionPin = {
   locked: boolean
 }
 
-/** Colaborador na governança (GET /admin/collaborators) — inclui soft delete e vínculo com utilizador. */
+/** Colaborador na governança (GET /admin/collaborators) — inclui soft delete e vínculo com usuário. */
 export type AdminCollaborator = Collaborator & {
   deletedAt: string | null
   linkedUserId: string | null

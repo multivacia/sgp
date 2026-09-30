@@ -5,7 +5,7 @@ export const conveyorOperationalEventTypeValues = [
   'CONVEYOR_STEP_REOPENED',
   'CONVEYOR_STEP_ABORTED',
   'CONVEYOR_STEP_RESTORED',
-  /** Apontamento de tempo registado fora da sequência recomendada (R1-05 S3). */
+  /** Apontamento de tempo registrado fora da sequência recomendada (R1-05 S3). */
   'CONVEYOR_STEP_OUT_OF_SEQUENCE_TIME_ENTRY',
   'CONVEYOR_RETURNED_TO_BACKLOG',
   'CONVEYOR_RETURNED_TO_PLANNING',

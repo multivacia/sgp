@@ -164,7 +164,7 @@ export function LoginFormCard({
             disabled={loading}
             className="sgp-cta-primary w-full py-3.5 font-heading focus:outline-none focus-visible:ring-2 focus-visible:ring-sgp-gold/50 focus-visible:ring-offset-2 focus-visible:ring-offset-sgp-ink disabled:opacity-50"
           >
-            {loading ? 'A entrar…' : 'Entrar'}
+            {loading ? 'Entrando…' : 'Entrar'}
           </button>
 
           <div className="pt-1 text-center">

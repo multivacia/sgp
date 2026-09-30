@@ -80,7 +80,7 @@ export function CollaboratorOperationalHealthPage() {
         return
       }
       setLoadError(
-        'Não foi possível carregar a saúde operacional dos colaboradores. Tente atualizar a página ou verificar a sua ligação.',
+        'Não foi possível carregar a saúde operacional dos colaboradores. Tente atualizar a página ou verificar sua conexão.',
       )
     } finally {
       setLoading(false)
@@ -252,7 +252,7 @@ export function CollaboratorOperationalHealthPage() {
         >
           <p className="font-semibold">{loadError}</p>
           <p className="mt-2 text-xs text-rose-100/75">
-            Tente atualizar a página ou verificar a sua ligação.
+            Tente atualizar a página ou verificar sua conexão.
           </p>
         </div>
       ) : summary ? (

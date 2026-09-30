@@ -6,7 +6,7 @@ import { ErrorCodes } from './errors/errorCodes.js'
  *
  * Regra única de contabilização: o dia operacional de um apontamento é a data civil de
  * `entry_at` em São Paulo (mesma referência de `operational-planning`). `created_at`
- * continua a registar o instante real da gravação (auditoria).
+ * continua registrando o instante real da gravação (auditoria).
  *
  * - Sem data informada → agora.
  * - Data de hoje (SP) → agora (instantes futuros no mesmo dia são limitados a agora).

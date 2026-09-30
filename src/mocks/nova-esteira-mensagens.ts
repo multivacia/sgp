@@ -32,11 +32,11 @@ export const MSG_JORNADA_UI = {
   retomadaNaoEncontrada:
     'Link de rascunho inválido ou rascunho não está neste navegador. Comece de novo ou salve outro rascunho.',
   persistenciaIndisponivel:
-    'Não foi possível guardar no armazenamento local. Verifique espaço ou permissões do navegador.',
+    'Não foi possível salvar no armazenamento local. Verifique o espaço ou as permissões do navegador.',
   cenarioNaoDisponivel: 'Cenário não disponível nesta versão.',
   rascunhoAtualizado: (quando: string) =>
-    `Rascunho guardado neste navegador (${quando}).`,
-  rascunhoNovo: (nome: string) => `Rascunho “${nome}” guardado neste navegador.`,
+    `Rascunho salvo neste navegador (${quando}).`,
+  rascunhoNovo: (nome: string) => `Rascunho “${nome}” salvo neste navegador.`,
   montagemPorCenario: (nome: string) => `Montagem iniciada a partir de “${nome}”.`,
   copiaCriada: (nome: string) => `Cópia criada — “${nome}”.`,
   rascunhoArquivado: 'Rascunho arquivado neste navegador.',
@@ -47,22 +47,22 @@ export const MSG_JORNADA_UI = {
   revisaoBannerMock:
     'Última conferência: o registro é simulado — confira base e blocos antes de criar.',
   revisaoBannerServidor:
-    'Última conferência: ao criar, os dados serão enviados ao servidor (registo oficial).',
+    'Última conferência: ao criar, os dados serão enviados ao servidor (registro oficial).',
   revisaoBannerAuto:
-    'Última conferência: tentaremos o servidor primeiro. Se estiver indisponível, será simulado só neste navegador — não conta como registo oficial.',
+    'Última conferência: tentaremos o servidor primeiro. Se estiver indisponível, será simulado só neste navegador — não conta como registro oficial.',
   registrandoEsteira: 'Registrando esteira…',
   sucessoBacklogServidor: (id: string) =>
-    `Esteira registada no servidor (referência ${id}). Prioridade de fila assinalada no fluxo atual.`,
+    `Esteira registrada no servidor (referência ${id}). Prioridade de fila assinalada no fluxo atual.`,
   sucessoExecServidor: (id: string) =>
-    `Esteira registada no servidor (referência ${id}). Liberação para execução assinalada no fluxo atual.`,
+    `Esteira registrada no servidor (referência ${id}). Liberação para execução assinalada no fluxo atual.`,
   posSucessoBacklogServidor:
     'A referência oficial está no servidor. O backlog local pode não refletir ainda a nova esteira.',
   posSucessoExecServidor:
     'A referência oficial está no servidor. Acompanhe a fila e a execução no fluxo habitual.',
   registroApenasLocalIndisponivel:
-    'Não foi possível contactar o servidor. Foi criada uma simulação apenas neste navegador — não é registo oficial no sistema central. Tente de novo quando a ligação estiver restabelecida.',
+    'Não foi possível contatar o servidor. Foi criada uma simulação apenas neste navegador — não é registro oficial no sistema central. Tente novamente quando a conexão estiver restabelecida.',
   posSucessoLocalOnly:
-    'Os dados não foram guardados no servidor. O que vê no backlog deste navegador é só simulação local.',
+    'Os dados não foram salvos no servidor. O que aparece no backlog deste navegador é só simulação local.',
 } as const
 
 export const MSG_RODAPE = {

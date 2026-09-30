@@ -44,8 +44,8 @@ function delayDescription(event: ConveyorOperationalEvent, entered: boolean): st
   const friendly = formatOperationalEventReasonLine(event)
   if (friendly) return friendly
   return entered
-    ? 'A esteira passou a ser considerada em atraso face ao prazo e à pendência registada.'
-    : 'A esteira deixou de ser considerada em atraso face ao prazo e à pendência registada.'
+    ? 'A esteira passou a ser considerada em atraso face ao prazo e à pendência registrada.'
+    : 'A esteira deixou de ser considerada em atraso face ao prazo e à pendência registrada.'
 }
 
 function baseDisplay(

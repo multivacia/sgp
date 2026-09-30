@@ -85,7 +85,7 @@ export function ConveyorEditReasonDialog({
             onClick={onConfirm}
             className="rounded-xl border border-sgp-gold/35 bg-sgp-gold/10 px-4 py-2.5 text-sm font-bold text-sgp-gold-warm shadow-inner transition hover:border-sgp-gold/50 hover:bg-sgp-gold/[0.14] disabled:opacity-50"
           >
-            {busy ? 'A salvar…' : copy.confirmLabel}
+            {busy ? 'Salvando…' : copy.confirmLabel}
           </button>
         </div>
       </div>

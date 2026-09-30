@@ -92,7 +92,7 @@ export function DefaultCapacityCard({
               void onSave(minutes)
             }}
           >
-            {saving ? 'A guardar…' : 'Salvar padrão'}
+            {saving ? 'Salvando…' : 'Salvar padrão'}
           </button>
         </div>
       )}

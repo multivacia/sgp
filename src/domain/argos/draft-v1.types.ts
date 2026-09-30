@@ -64,7 +64,7 @@ export type ConveyorDraftV1 = {
   schemaVersion: ConveyorDraftSchemaVersionV1
   suggestedDados: ConveyorDraftV1SuggestedDados
   /**
-   * Estrutura proposta. Lista vazio = ARGOS não propôs árvore (apenas factos/dados).
+   * Estrutura proposta. Lista vazia = ARGOS não propôs árvore (apenas fatos/dados).
    */
   options: ConveyorDraftV1Option[]
   /**

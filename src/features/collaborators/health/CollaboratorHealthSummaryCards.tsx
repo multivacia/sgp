@@ -38,7 +38,7 @@ export function CollaboratorHealthSummaryCards({ totals }: Props) {
       <SummaryCard
         title="Sem apontamento recente"
         value={totals.withoutRecentTimeEntries}
-        subtitle="sem registos na janela de dias selecionada"
+        subtitle="sem registros na janela de dias selecionada"
       />
       <SummaryCard
         title="Sem etapas abertas"
@@ -48,7 +48,7 @@ export function CollaboratorHealthSummaryCards({ totals }: Props) {
       <SummaryCard
         title="Carga via time"
         value={totals.withTeamAssignments}
-        subtitle="com etapas alcançadas por membership de equipa"
+        subtitle="com etapas alcançadas por membership de equipe"
       />
     </div>
   )

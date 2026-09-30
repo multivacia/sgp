@@ -425,7 +425,7 @@ function StepAbortReasonFormModal({
             }}
             className="sgp-cta-primary !px-4 !py-2 text-sm"
           >
-            Guardar
+            Salvar
           </button>
         </div>
       </div>

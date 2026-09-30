@@ -129,7 +129,7 @@ export function DashboardChartsSkeleton() {
       </SkeletonPanel>
 
       <p className="text-center text-[11px] text-slate-500">
-        A preparar visualizações…
+        Preparando visualizações…
       </p>
     </div>
   )

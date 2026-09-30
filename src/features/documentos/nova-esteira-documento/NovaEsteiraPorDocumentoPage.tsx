@@ -391,7 +391,7 @@ export function NovaEsteiraPorDocumentoPage() {
         <p className="sgp-page-lead max-w-3xl">
           Envie um PDF da ordem de serviço. O sistema gera um{' '}
           <strong className="font-semibold text-slate-200">rascunho automático</strong>{' '}
-          para rever e corrigir antes de criar a esteira oficialmente no SGP+.
+          para revisar e corrigir antes de criar a esteira oficialmente no SGP+.
         </p>
       </header>
 
@@ -420,7 +420,7 @@ export function NovaEsteiraPorDocumentoPage() {
       {processing ? (
         <SgpInlineBanner
           variant="neutral"
-          message="A processar o documento e a gerar o rascunho…"
+          message="Processando o documento e gerando o rascunho…"
           className="mt-6 max-w-4xl"
         />
       ) : null}
@@ -453,7 +453,7 @@ export function NovaEsteiraPorDocumentoPage() {
                 : 'Arraste o PDF ou escolha um arquivo.'}
             </p>
             <label className="sgp-cta-primary mt-4 inline-flex cursor-pointer px-6 py-2.5">
-              {processing ? 'A processar…' : 'Escolher PDF'}
+              {processing ? 'Processando…' : 'Escolher PDF'}
               <input
                 type="file"
                 accept=".pdf,application/pdf"
@@ -696,7 +696,7 @@ export function NovaEsteiraPorDocumentoPage() {
               onClick={handleCriarEsteira}
               className="sgp-cta-primary disabled:opacity-45"
             >
-              {submitting ? 'A criar…' : 'Criar esteira no SGP+'}
+              {submitting ? 'Criando…' : 'Criar esteira no SGP+'}
             </button>
             <button
               type="button"

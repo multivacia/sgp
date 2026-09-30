@@ -271,12 +271,12 @@ export function OperationalSettingsPage() {
                         onClick: () => setSectorModal({ mode: 'edit', row: s }),
                       },
                       {
-                        label: 'Eliminar',
+                        label: 'Excluir',
                         destructive: true,
                         onClick: () => {
                           if (
                             !window.confirm(
-                              'Eliminar este setor? Referências em colaboradores ficam sem setor.',
+                              'Excluir este setor? Referências em colaboradores ficarão sem setor.',
                             )
                           ) {
                             return
@@ -284,7 +284,7 @@ export function OperationalSettingsPage() {
                           void (async () => {
                             try {
                               await deleteOperationalSector(s.id)
-                              pushToast('Setor eliminado.')
+                              pushToast('Setor excluído.')
                               await loadSectors()
                             } catch (err) {
                               govErr(err, 'operational_settings_sector_delete')
@@ -391,12 +391,12 @@ export function OperationalSettingsPage() {
                         onClick: () => setRoleModal({ mode: 'edit', row: r }),
                       },
                       {
-                        label: 'Eliminar',
+                        label: 'Excluir',
                         destructive: true,
                         onClick: () => {
                           if (
                             !window.confirm(
-                              'Eliminar esta função? Só é permitido se não houver utilizadores nem colaboradores associados.',
+                              'Excluir esta função? Só é permitido se não houver usuários nem colaboradores associados.',
                             )
                           ) {
                             return
@@ -404,7 +404,7 @@ export function OperationalSettingsPage() {
                           void (async () => {
                             try {
                               await deleteOperationalCollaboratorRole(r.id)
-                              pushToast('Função eliminada.')
+                              pushToast('Função excluída.')
                               await loadRoles()
                             } catch (err) {
                               govErr(err, 'operational_settings_role_delete')
@@ -582,7 +582,7 @@ function SectorNameModal({
             }}
             className="sgp-cta-primary !px-4 !py-2 text-sm"
           >
-            Guardar
+            Salvar
           </button>
         </div>
       </div>
@@ -675,7 +675,7 @@ function RoleEditModal({
             }}
             className="sgp-cta-primary !px-4 !py-2 text-sm"
           >
-            Guardar
+            Salvar
           </button>
         </div>
       </div>

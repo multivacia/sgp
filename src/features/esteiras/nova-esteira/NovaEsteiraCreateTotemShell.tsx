@@ -232,7 +232,7 @@ export function NovaEsteiraCreateTotemShell(props: NovaEsteiraCreateTotemShellPr
         disabled={submitting || !podeCriar}
         onClick={() => void handleSubmit()}
       >
-        {submitting ? 'A criar…' : 'Criar esteira'}
+        {submitting ? 'Criando…' : 'Criar esteira'}
       </button>
       <p className="text-center text-[10px] text-slate-500">Validação igual à do assistente anterior.</p>
     </div>
@@ -262,7 +262,7 @@ export function NovaEsteiraCreateTotemShell(props: NovaEsteiraCreateTotemShellPr
               disabled={submitting || !podeCriar}
               onClick={() => void handleSubmit()}
             >
-              {submitting ? 'A criar…' : 'Criar esteira'}
+              {submitting ? 'Criando…' : 'Criar esteira'}
             </button>
           </div>
         </div>

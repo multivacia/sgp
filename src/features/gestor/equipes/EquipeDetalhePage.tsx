@@ -374,7 +374,7 @@ export function EquipeDetalhePage() {
                   disabled={savingTeam}
                   onClick={() => void saveTeam()}
                 >
-                  {savingTeam ? 'A guardar…' : 'Guardar alterações'}
+                  {savingTeam ? 'Salvando…' : 'Salvar alterações'}
                 </button>
               </div>
             )}
@@ -575,7 +575,7 @@ export function EquipeDetalhePage() {
                 disabled={savingMember || !pickCollabId}
                 onClick={() => void submitAddMember()}
               >
-                {savingMember ? 'A guardar…' : 'Adicionar'}
+                {savingMember ? 'Salvando…' : 'Adicionar'}
               </button>
             </div>
           </div>
@@ -640,7 +640,7 @@ export function EquipeDetalhePage() {
                 disabled={savingEditRole}
                 onClick={() => void onEditMemberRoleSubmit()}
               >
-                {savingEditRole ? 'A guardar…' : 'Guardar'}
+                {savingEditRole ? 'Salvando…' : 'Salvar'}
               </button>
             </div>
           </div>

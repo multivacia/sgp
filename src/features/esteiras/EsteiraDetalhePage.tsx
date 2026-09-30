@@ -408,7 +408,7 @@ function EsteiraDetalheBasicoReal({ id }: { id: string | undefined }) {
       }
       if (prefetch && !prefetch.targetFound) {
         setLoadError(
-          'Esta atividade não foi encontrada na estrutura actual desta esteira.',
+          'Esta atividade não foi encontrada na estrutura atual desta esteira.',
         )
         return
       }
@@ -859,7 +859,7 @@ function EsteiraDetalheBasicoReal({ id }: { id: string | undefined }) {
           Esteira não encontrada
         </p>
         <p className="mt-2 text-sm leading-relaxed text-slate-500">
-          Não existe esteira ativa com este identificador na base de dados.
+          Não existe esteira ativa com este identificador.
           Verifique o link ou volte ao backlog.
         </p>
         <div className="mt-6 flex flex-col gap-3 sm:flex-row">
@@ -958,7 +958,7 @@ function EsteiraDetalheBasicoReal({ id }: { id: string | undefined }) {
                 rows={3}
                 disabled={Boolean(stepReopeningId)}
                 className="mt-2 w-full resize-y rounded-xl border border-white/12 bg-white/[0.04] px-3 py-2 text-sm text-slate-100 placeholder:text-slate-600 focus:border-sgp-gold/35 focus:outline-none focus:ring-1 focus:ring-sgp-gold/25 disabled:opacity-50"
-                placeholder="Contexto para a equipa…"
+                placeholder="Contexto para a equipe…"
               />
             </label>
             <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end sm:gap-3">
@@ -1107,7 +1107,7 @@ function EsteiraDetalheBasicoReal({ id }: { id: string | undefined }) {
                 className="rounded-xl border border-sgp-gold/35 bg-sgp-gold/10 px-4 py-2.5 text-sm font-bold text-sgp-gold-warm shadow-inner transition hover:border-sgp-gold/50 hover:bg-sgp-gold/[0.14] disabled:opacity-50"
               >
                 {stepCompletingId === completeOosDialog.stepId
-                  ? 'A concluir…'
+                  ? 'Concluindo…'
                   : 'Confirmar conclusão'}
               </button>
             </div>
@@ -1444,7 +1444,7 @@ function EsteiraDetalheBasicoReal({ id }: { id: string | undefined }) {
         </p>
         <div className="mt-6 space-y-6">
           {detail.structure.options.length === 0 ? (
-            <p className="text-sm text-slate-500">Nenhum nó de estrutura registado.</p>
+            <p className="text-sm text-slate-500">Nenhum nó de estrutura registrado.</p>
           ) : (
             detail.structure.options.map((opt) => (
               <div
@@ -1557,7 +1557,7 @@ function EsteiraDetalheBasicoReal({ id }: { id: string | undefined }) {
                                     className="rounded-lg border border-white/15 bg-white/[0.06] px-3 py-1.5 text-xs font-semibold text-slate-100 hover:bg-white/[0.09] disabled:opacity-50"
                                     onClick={() => void handleCompleteStepClick(st.id)}
                                   >
-                                    {stepCompletingId === st.id ? 'A concluir…' : 'Concluir atividade'}
+                                    {stepCompletingId === st.id ? 'Concluindo…' : 'Concluir atividade'}
                                   </button>
                                 ) : null}
                                 {canAbortStep(st, canAlterConveyor) ? (

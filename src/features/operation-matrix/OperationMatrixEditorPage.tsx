@@ -1207,7 +1207,7 @@ export function OperationMatrixEditorPage() {
     if (!result.ok) {
       pushToast(
         result.reason === 'quota'
-          ? 'Não foi possível guardar o rascunho (armazenamento cheio).'
+          ? 'Não foi possível salvar o rascunho (armazenamento cheio).'
           : 'Não foi possível abrir a pré-visualização.',
         'error',
       )
@@ -1554,7 +1554,7 @@ export function OperationMatrixEditorPage() {
           }
           onClick={() => void handleSave()}
         >
-          {busy ? 'A gravar…' : 'Salvar alterações'}
+          {busy ? 'Salvando…' : 'Salvar alterações'}
         </button>
       </div>
     ) : null

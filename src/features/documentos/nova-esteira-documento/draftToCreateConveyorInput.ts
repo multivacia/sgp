@@ -908,7 +908,7 @@ function mapOptionsOrPlaceholder(
   }))
 }
 
-/** Validação leve antes do POST — mensagens para o utilizador. */
+/** Validação leve antes do POST — mensagens para o usuário. */
 export function validateDraftForCreate(
   draft: ConveyorDraft,
   operationalNotesFromIngest?: string[],

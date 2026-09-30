@@ -97,7 +97,7 @@ export function NovaEsteiraCatalogoPanel({
           <p className="text-sm text-rose-300">{matricesError}</p>
         )}
         {treesLoading && !matricesLoading && (
-          <p className="text-xs text-slate-500">A preparar árvores…</p>
+          <p className="text-xs text-slate-500">Preparando árvores…</p>
         )}
         {treesError && (
           <p className="text-xs text-rose-300">{treesError}</p>

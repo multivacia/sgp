@@ -58,7 +58,7 @@ export type ConveyorStepSequenceCheckDto = {
 export type TimeEntryDelegationPublic = {
   isDelegated: boolean
   recordedByAppUserId: string | null
-  /** Email do utilizador que registou (equivalente legível a “nome” na conta). */
+  /** Email do usuário que registrou (equivalente legível a “nome” na conta). */
   recordedByUserEmail: string | null
   delegationReason: string | null
 }

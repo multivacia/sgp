@@ -47,7 +47,7 @@ export function CollaboratorHealthSnapshotPanel({ open, loading, error, snapshot
               Saúde operacional
             </p>
             <h2 className="mt-1 text-lg font-semibold text-slate-50">
-              {loading ? 'A carregar…' : snapshot?.collaborator.fullName ?? 'Detalhe'}
+              {loading ? 'Carregando…' : snapshot?.collaborator.fullName ?? 'Detalhe'}
             </h2>
             {!loading && snapshot ? (
               <p className="mt-1 text-xs text-slate-500">

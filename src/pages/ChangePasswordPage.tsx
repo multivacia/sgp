@@ -168,7 +168,7 @@ export function ChangePasswordPage() {
             disabled={loading}
             className="rounded-xl bg-gradient-to-r from-sgp-navy to-sgp-blue-bright px-5 py-2.5 text-sm font-bold text-white shadow-lg transition hover:opacity-95 disabled:opacity-50"
           >
-            {loading ? 'A guardar…' : 'Guardar nova senha'}
+            {loading ? 'Salvando…' : 'Salvar nova senha'}
           </button>
         </div>
       </form>

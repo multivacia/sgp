@@ -94,7 +94,7 @@ export type ConveyorStructureApi = {
   options: ConveyorStructureOptionApi[]
 }
 
-/** GET /api/v1/conveyors/:id — registo ativo (deleted_at IS NULL). */
+/** GET /api/v1/conveyors/:id — registro ativo (deleted_at IS NULL). */
 export type ConveyorDetailApi = {
   id: string
   code: string | null

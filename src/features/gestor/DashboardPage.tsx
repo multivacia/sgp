@@ -869,7 +869,7 @@ export function DashboardPage() {
             </h2>
             <ul className="mt-4 space-y-2 text-sm">
               {operational.recentTimeEntries.length === 0 ? (
-                <li className="text-slate-500">Nenhum apontamento registado.</li>
+                <li className="text-slate-500">Nenhum apontamento registrado.</li>
               ) : (
                 operational.recentTimeEntries.map((e) => (
                   <li

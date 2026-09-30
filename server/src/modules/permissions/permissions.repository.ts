@@ -1,7 +1,7 @@
 import type pg from 'pg'
 
 /**
- * Códigos de permissão efetivos do utilizador (via papel), ordenados por code.
+ * Códigos de permissão efetivos do usuário (via papel), ordenados por code.
  * Utilizadores sem papel ou sem permissões → lista vazia.
  */
 export async function findPermissionCodesForAppUser(
@@ -23,7 +23,7 @@ export async function findPermissionCodesForAppUser(
   return r.rows.map((row) => row.code)
 }
 
-/** Verifica se o utilizador tem uma permissão efetiva (via papel). */
+/** Verifica se o usuário tem uma permissão efetiva (via papel). */
 export async function appUserHasPermission(
   pool: pg.Pool,
   userId: string,

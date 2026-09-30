@@ -1,5 +1,5 @@
 /**
- * Análise de saúde devolvida no `data` do envelope (alinhado ao backend; registo aberto).
+ * Análise de saúde devolvida no `data` do envelope (alinhado ao backend; registro aberto).
  */
 export type ConveyorHealthAnalysisV1 = {
   routeUsed?: string

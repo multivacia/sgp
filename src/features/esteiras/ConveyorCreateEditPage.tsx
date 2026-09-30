@@ -1062,7 +1062,7 @@ export function ConveyorCreateEditPage({ mode }: { mode: Mode }) {
               disabled={submitting || !canSaveChanges}
               onClick={() => void handleSubmit()}
             >
-              {submitting ? 'A salvar…' : finalCta}
+              {submitting ? 'Salvando…' : finalCta}
             </button>
           </div>
         </div>
@@ -1387,7 +1387,7 @@ export function ConveyorCreateEditPage({ mode }: { mode: Mode }) {
                   disabled={submitting || !canSaveChanges}
                   onClick={() => void handleSubmit()}
                 >
-                  {submitting ? 'A salvar…' : finalCta}
+                  {submitting ? 'Salvando…' : finalCta}
                 </button>
               </div>
               <p className="text-center text-[10px] text-slate-500">Validação igual à do assistente anterior.</p>

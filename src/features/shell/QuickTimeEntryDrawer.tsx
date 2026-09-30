@@ -524,7 +524,7 @@ export function QuickTimeEntryDrawer({
         minutes: extraMinutes,
         notes: extraNotes.trim() || undefined,
       })
-      pushToast('Apontamento extra esteira registado com sucesso.', 'success')
+      pushToast('Apontamento extra esteira registrado com sucesso.', 'success')
       setExtraDescriptionId('')
       setExtraMinutesStr('30')
       setExtraNotes('')
@@ -1049,7 +1049,7 @@ export function QuickTimeEntryDrawer({
                           onClick={() => void save(false)}
                           disabled={submitting || !canSubmitForm}
                         >
-                          {submitting ? 'A guardar…' : 'Salvar apontamento'}
+                          {submitting ? 'Salvando…' : 'Salvar apontamento'}
                         </button>
                       </div>
                       {showSaveAndComplete ? (
@@ -1059,7 +1059,7 @@ export function QuickTimeEntryDrawer({
                           onClick={() => void save(true)}
                           disabled={submitting || !canSubmitForm}
                         >
-                          {submitting ? 'A guardar…' : 'Salvar apontamento e concluir atividade'}
+                          {submitting ? 'Salvando…' : 'Salvar apontamento e concluir atividade'}
                         </button>
                       ) : null}
                     </div>
@@ -1162,7 +1162,7 @@ export function QuickTimeEntryDrawer({
                         })
                       }
                     >
-                      {extraSubmitting ? 'A guardar…' : 'Salvar apontamento'}
+                      {extraSubmitting ? 'Salvando…' : 'Salvar apontamento'}
                     </button>
                   </div>
 
@@ -1289,7 +1289,7 @@ export function QuickTimeEntryDrawer({
                       !completeJustification.legacyText.trim().length)
                   }
                 >
-                  {completing ? 'A concluir…' : 'Concluir atividade'}
+                  {completing ? 'Concluindo…' : 'Concluir atividade'}
                 </button>
               </div>
             </div>

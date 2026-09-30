@@ -229,7 +229,7 @@ export function ApontamentoGestorPage() {
       setObservacao('')
       setWorkDate(operationalTodayIso())
       setOutOfSequenceJustification(emptyJustificationValue())
-      pushToast('Apontamento registado em nome do colaborador selecionado.', 'success')
+      pushToast('Apontamento registrado em nome do colaborador selecionado.', 'success')
       await loadData()
     } catch (e) {
       const n = reportClientError(e, {
@@ -422,7 +422,7 @@ export function ApontamentoGestorPage() {
         <div className="sgp-panel max-w-lg rounded-2xl border border-white/[0.08] p-8">
           <p className="font-heading text-lg text-slate-200">URL incompleta</p>
           <p className="mt-2 text-sm text-slate-500">
-            Abra a partir do detalhe da esteira (ligação &quot;Apontamento gerencial&quot; no
+            Abra a partir do detalhe da esteira (link &quot;Apontamento gerencial&quot; no
             passo) ou inclua conveyorId na query.
           </p>
           <Link to="/app/backlog" className="sgp-cta-primary mt-6 inline-flex text-center">
@@ -578,7 +578,7 @@ export function ApontamentoGestorPage() {
                 className="sgp-cta-primary disabled:opacity-50"
                 onClick={() => setConfirmCreateOpen(true)}
               >
-                Rever e registar
+                Revisar e registrar
               </button>
             </>
           )}
@@ -662,7 +662,7 @@ export function ApontamentoGestorPage() {
           aria-modal
         >
           <div className="sgp-panel max-w-md rounded-2xl border border-white/[0.1] p-6 shadow-xl">
-            <p className="font-heading text-lg text-slate-100">Confirmar registo</p>
+            <p className="font-heading text-lg text-slate-100">Confirmar registro</p>
             <p className="mt-2 text-sm text-slate-400">
               Serão creditados <strong className="text-slate-200">{minutos}</strong> minutos ao
               colaborador selecionado, com o motivo indicado. Deseja continuar?
@@ -678,7 +678,7 @@ export function ApontamentoGestorPage() {
                 disabled={submitting}
                 onClick={() => void executarCriacao()}
               >
-                {submitting ? 'A registar…' : 'Confirmar'}
+                {submitting ? 'Registrando…' : 'Confirmar'}
               </button>
               <button
                 type="button"

@@ -72,7 +72,7 @@ export function CollaboratorCapacityOverridesTable({
             {loading ? (
               <tr>
                 <td colSpan={7} className="px-4 py-10 text-center text-slate-500">
-                  A carregar capacidades…
+                  Carregando capacidades…
                 </td>
               </tr>
             ) : rows.length === 0 ? (

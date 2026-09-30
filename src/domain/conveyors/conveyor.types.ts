@@ -221,7 +221,7 @@ export type ConveyorDetail = {
   responsible: string | null
   priority: ConveyorPriority
   originRegister: ConveyorOriginRegister
-  /** Snapshot da base no registo (quando aplicável). */
+  /** Snapshot da base no registro (quando aplicável). */
   baseRefSnapshot?: string | null
   baseCodeSnapshot?: string | null
   baseNameSnapshot?: string | null

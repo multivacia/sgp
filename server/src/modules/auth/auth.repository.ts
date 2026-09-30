@@ -162,7 +162,7 @@ export async function incrementFailedLoginForUser(
   )
   const row = r.rows[0]
   if (!row) {
-    throw new Error('incrementFailedLoginForUser: utilizador não encontrado')
+    throw new Error('incrementFailedLoginForUser: usuário não encontrado')
   }
   return {
     failedLoginCount: Number(row.failed_login_count),
@@ -170,7 +170,7 @@ export async function incrementFailedLoginForUser(
   }
 }
 
-/** Colaborador operacional ligado ao utilizador (se existir). */
+/** Colaborador operacional vinculado ao usuário (se existir). */
 /** Para validação de sessão após JWT: marca de senha ou conta inexistente/apagada. */
 export async function findPasswordStampForSessionAuth(
   pool: pg.Pool,

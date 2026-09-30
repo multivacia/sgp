@@ -294,7 +294,7 @@ export function CriarMatrizEtapaRevisao({
           onClick={onCriar}
           disabled={saving}
         >
-          {saving ? 'A criar…' : 'Criar matriz'}
+          {saving ? 'Criando…' : 'Criar matriz'}
         </button>
       </div>
     </section>

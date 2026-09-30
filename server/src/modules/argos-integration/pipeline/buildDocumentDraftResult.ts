@@ -304,7 +304,7 @@ export function buildDocumentDraftResult(params: {
       value: osFact,
       confidence: h.fieldConfidence.osNumber,
     })
-  /** TD10: placa não entra em factos operacionais do ingest (permanece só no draft sugerido). */
+  /** TD10: placa não entra em fatos operacionais do ingest (permanece só no draft sugerido). */
   if (!isBravoDeterministic) {
     const plateFact = defensiveCleanOptional(h.licensePlate)
     if (plateFact)

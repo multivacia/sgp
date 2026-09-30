@@ -7,7 +7,7 @@ const WARNINGS = {
   TEAM_ASSIGNMENTS_INCLUDED: {
     code: 'TEAM_ASSIGNMENTS_INCLUDED',
     message:
-      'O snapshot inclui pelo menos um STEP alcançado por alocação em equipa (membership de time).',
+      'O resumo inclui pelo menos uma etapa alcançada por alocação em equipe (membership de time).',
   },
   CAPACITY_FALLBACK_USED: {
     code: 'CAPACITY_FALLBACK_USED',
@@ -21,7 +21,7 @@ const WARNINGS = {
   },
   COLLABORATOR_INACTIVE: {
     code: 'COLLABORATOR_INACTIVE',
-    message: 'O colaborador está inativo; os valores refletem o estado atualmente registado.',
+    message: 'O colaborador está inativo; os valores refletem o estado atualmente registrado.',
   },
 } as const
 

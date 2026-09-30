@@ -23,7 +23,7 @@ export type ArgosSpecialistRef = string
 
 /**
  * Estratégia ou modo de extração (ex.: ocr_only, ocr_plus_rules, llm_assisted).
- * Valores concretos são acordados entre equipas; mantido como string estável.
+ * Valores concretos são acordados entre equipes; mantido como string estável.
  */
 export type ArgosStrategyRef = string
 

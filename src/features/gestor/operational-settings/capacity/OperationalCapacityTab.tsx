@@ -258,7 +258,7 @@ export function OperationalCapacityTab() {
         </h2>
         <p className="mt-2 text-sm text-slate-400">
           Lista os colaboradores ativos e mostra a capacidade efetiva para hoje. Para alterar um
-          registo, utilize editar ou remover o ajuste para voltar ao padrão global.
+          registro, utilize editar ou remover o ajuste para voltar ao padrão global.
         </p>
 
         <div className="mt-4 flex flex-col gap-3 md:flex-row md:flex-wrap md:items-end">
@@ -313,8 +313,8 @@ export function OperationalCapacityTab() {
 
         <p className="mt-3 text-xs text-slate-500">
           {collabsLoading
-            ? 'A carregar colaboradores…'
-            : `${total} registo(s) · página ${page} de ${maxPage}`}
+            ? 'Carregando colaboradores…'
+            : `${total} registro(s) · página ${page} de ${maxPage}`}
         </p>
 
         <CollaboratorCapacityOverridesTable
@@ -438,7 +438,7 @@ export function OperationalCapacityTab() {
           role="alert"
         >
           <p className="rounded-xl border border-white/10 bg-sgp-navy px-6 py-4 text-sm text-slate-200">
-            A carregar dados de capacidade…
+            Carregando dados de capacidade…
           </p>
         </div>
       ) : null}

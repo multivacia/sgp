@@ -119,7 +119,7 @@ export function EquipeNovaPage() {
         </label>
         <div className="flex flex-wrap gap-3 pt-2">
           <button type="submit" className="sgp-cta-primary px-6 py-2.5" disabled={saving}>
-            {saving ? 'A guardar…' : 'Criar equipe'}
+            {saving ? 'Salvando…' : 'Criar equipe'}
           </button>
           <Link to="/app/equipes" className="rounded-xl border border-white/15 px-5 py-2.5 text-sm text-slate-300">
             Cancelar

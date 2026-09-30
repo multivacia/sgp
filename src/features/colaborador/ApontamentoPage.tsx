@@ -481,7 +481,7 @@ export function ApontamentoPage() {
             onClick={() => void handleRegistrar()}
             className="sgp-cta-primary !px-8 !py-3 text-sm disabled:opacity-45"
           >
-            {submitting ? 'A registar…' : 'Registar apontamento'}
+            {submitting ? 'Registrando…' : 'Registrar apontamento'}
           </button>
           <Link
             to={`/app/esteiras/${conveyorId}`}

@@ -465,7 +465,7 @@ export function UsersPage() {
             </p>
           </div>
           <button type="button" className="sgp-cta-primary px-6" onClick={openCreate}>
-            Novo utilizador
+            Novo usuário
           </button>
         </div>
       </header>
@@ -485,7 +485,7 @@ export function UsersPage() {
             </span>{' '}
             conta(s) ativa(s) sem{' '}
             <span className="font-mono text-amber-200/90">collaborator_id</span>.
-            Associe explicitamente na edição do utilizador (sem inferência por e-mail).
+            Associe explicitamente na edição do usuário (sem inferência por e-mail).
           </p>
         </div>
       ) : null}
@@ -644,7 +644,7 @@ export function UsersPage() {
                       onClick: () => {
                         if (
                           !window.confirm(
-                            'Inativar este utilizador? Não poderá autenticar.',
+                            'Inativar este usuário? Não poderá autenticar-se.',
                           )
                         )
                           return
@@ -685,7 +685,7 @@ export function UsersPage() {
                       onClick: () => {
                         if (
                           !window.confirm(
-                            'Desvincular o colaborador deste utilizador?',
+                            'Desvincular o colaborador deste usuário?',
                           )
                         )
                           return
@@ -719,7 +719,7 @@ export function UsersPage() {
                       onClick: () => {
                         if (
                           !window.confirm(
-                            'Restaurar este utilizador? Será necessário ativar o acesso se estiver inativo.',
+                            'Restaurar este usuário? Será necessário ativar o acesso se estiver inativo.',
                           )
                         )
                           return
@@ -819,7 +819,7 @@ export function UsersPage() {
                   colSpan={6}
                   className="px-4 py-10 text-center text-sm text-slate-500"
                 >
-                  Nenhum utilizador encontrado com os filtros actuais.
+                  Nenhum usuário encontrado com os filtros atuais.
                 </td>
               </tr>
             ) : null}
@@ -877,8 +877,8 @@ export function UsersPage() {
             </h2>
             <p className="mt-3 text-sm leading-relaxed text-slate-400">
               {confirmPwd.type === 'force'
-                ? 'O utilizador terá de definir uma nova senha no próximo acesso. A senha atual mantém-se até lá.'
-                : 'Será gerada uma senha temporária forte. O utilizador terá de alterá-la no próximo acesso. A senha temporária só será mostrada uma vez — copie e transmita por um canal seguro.'}
+                ? 'O usuário precisará definir uma nova senha no próximo acesso. A senha atual se mantém até lá.'
+                : 'Será gerada uma senha temporária forte. O usuário precisará alterá-la no próximo acesso. A senha temporária só será mostrada uma vez — copie e transmita por um canal seguro.'}
             </p>
             <p className="mt-2 text-xs text-slate-500">
               Usuário:{' '}
@@ -901,7 +901,7 @@ export function UsersPage() {
                 disabled={pwdActionLoading}
                 onClick={() => void handleConfirmPwdAction()}
               >
-                {pwdActionLoading ? 'A aplicar…' : 'Confirmar'}
+                {pwdActionLoading ? 'Aplicando…' : 'Confirmar'}
               </button>
             </div>
           </div>
@@ -970,7 +970,7 @@ export function UsersPage() {
         >
           <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-white/[0.1] bg-gradient-to-b from-sgp-app-panel-deep to-sgp-void p-6 shadow-2xl">
             <h2 className="font-heading text-2xl font-bold tracking-tight text-slate-50">
-              {modal === 'create' ? 'Novo utilizador' : 'Editar utilizador'}
+              {modal === 'create' ? 'Novo usuário' : 'Editar usuário'}
             </h2>
             <form className="mt-6 space-y-5" onSubmit={handleSubmitForm}>
               <label className="flex flex-col gap-1.5 text-xs">
@@ -1086,7 +1086,7 @@ export function UsersPage() {
                   className="sgp-cta-primary px-6"
                   disabled={saving}
                 >
-                  {saving ? 'A guardar…' : 'Guardar'}
+                  {saving ? 'Salvando…' : 'Salvar'}
                 </button>
               </div>
             </form>

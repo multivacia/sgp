@@ -13,7 +13,7 @@ export type AuthContextValue = {
   clearSessionEndedMessage: () => void
   login: (email: string, password: string) => Promise<AuthUser>
   logout: () => Promise<void>
-  /** Revalida GET /auth/me (ex.: após troca de senha). Devolve o utilizador atualizado ou `null` se sessão inválida. */
+  /** Revalida GET /auth/me (ex.: após troca de senha). Devolve o usuário atualizado ou `null` se sessão inválida. */
   refreshUser: () => Promise<AuthUser | null>
   /** RBAC fino: verifica permissão explícita (espelha o servidor). */
   can: (permissionCode: string) => boolean

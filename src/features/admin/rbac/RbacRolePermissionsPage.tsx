@@ -297,7 +297,7 @@ export function RbacRolePermissionsPage() {
               }
               onClick={() => void onSave()}
             >
-              {saving ? 'A guardar…' : 'Guardar alterações'}
+              {saving ? 'Salvando…' : 'Salvar alterações'}
             </button>
           </div>
         </div>
@@ -357,7 +357,7 @@ export function RbacRolePermissionsPage() {
 
       {user?.roleId && selectedRoleId === user.roleId ? (
         <p className="text-xs text-slate-500">
-          Está a editar o papel da sua sessão atual. Após guardar, as suas permissões serão
+          Você está editando o papel da sua sessão atual. Após salvar, suas permissões serão
           atualizadas automaticamente.
         </p>
       ) : null}
