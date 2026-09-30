@@ -9,12 +9,14 @@ import {
 import { PageCanvas } from '../../components/ui/PageCanvas'
 import { SgpToast, type SgpToastVariant } from '../../components/ui/SgpToast'
 import { formatHumanMinutes } from '../../lib/formatters'
+import { ApiError } from '../../lib/api/apiErrors'
 import { isBlockingSeverity, reportClientError } from '../../lib/errors'
 import { useSgpErrorSurface } from '../../lib/errors/SgpErrorPresentation'
 import {
   deleteConveyorStepTimeEntry,
   getConveyorStepAssignees,
   getConveyorStepTimeEntries,
+  patchConveyorStepTimeEntry,
   postConveyorStepTimeEntryOnBehalf,
 } from '../../services/conveyors/conveyorStepAssignmentsApiService'
 import {
@@ -40,6 +42,8 @@ import {
 
 type ToastState = { message: string; variant: SgpToastVariant } | null
 
+type EditFieldMode = 'minutes' | 'executedQuantity'
+
 export function ApontamentoGestorPage() {
   const { stepNodeId } = useParams<{ stepNodeId: string }>()
   const { pathname } = useLocation()
@@ -55,9 +59,11 @@ export function ApontamentoGestorPage() {
 
   const canManage = canAny([
     'time_entries.create_on_behalf',
+    'time_entries.edit_any',
     'time_entries.delete_any',
   ])
   const canCreateOnBehalf = can('time_entries.create_on_behalf')
+  const canEditAny = can('time_entries.edit_any')
   const canDeleteAny = can('time_entries.delete_any')
 
   const [loading, setLoading] = useState(true)
@@ -81,6 +87,15 @@ export function ApontamentoGestorPage() {
   )
   const [motivoRemocao, setMotivoRemocao] = useState('')
   const [deleting, setDeleting] = useState(false)
+
+  const [editTarget, setEditTarget] = useState<ConveyorStepTimeEntryListItem | null>(null)
+  const [editField, setEditField] = useState<EditFieldMode>('minutes')
+  const [editMinutesStr, setEditMinutesStr] = useState('')
+  const [editQtyStr, setEditQtyStr] = useState('')
+  const [editQtyNull, setEditQtyNull] = useState(false)
+  const [motivoEdicao, setMotivoEdicao] = useState('')
+  const [editing, setEditing] = useState(false)
+
   const [sequenceCheck, setSequenceCheck] = useState<ConveyorStepSequenceCheckResult | null>(
     null,
   )
@@ -161,6 +176,19 @@ export function ApontamentoGestorPage() {
   const oosJustificationOk =
     !needsOosJustification || outOfSequenceJustification.legacyText.trim().length > 0
 
+  function openEdit(entry: ConveyorStepTimeEntryListItem) {
+    setEditTarget(entry)
+    setEditField('minutes')
+    setEditMinutesStr(String(entry.minutes))
+    setEditQtyStr(
+      entry.executedQuantity === null || entry.executedQuantity === undefined
+        ? ''
+        : String(entry.executedQuantity),
+    )
+    setEditQtyNull(false)
+    setMotivoEdicao('')
+  }
+
   async function executarCriacao() {
     if (
       !conveyorId?.trim() ||
@@ -220,12 +248,91 @@ export function ApontamentoGestorPage() {
     }
   }
 
+  async function executarEdicao() {
+    if (!editTarget || !conveyorId?.trim() || !stepNodeId?.trim() || editing) return
+    if (!motivoEdicao.trim()) {
+      pushToast('Indique o motivo da correção.', 'error')
+      return
+    }
+    let body:
+      | {
+          expectedUpdatedAt: string
+          reason: string
+          minutes: number
+        }
+      | {
+          expectedUpdatedAt: string
+          reason: string
+          executedQuantity: number | null
+        }
+    if (editField === 'minutes') {
+      const m = Number.parseInt(editMinutesStr, 10)
+      if (!Number.isInteger(m) || m < 1) {
+        pushToast('Minutos deve ser um inteiro ≥ 1.', 'error')
+        return
+      }
+      body = {
+        expectedUpdatedAt: editTarget.updatedAt,
+        reason: motivoEdicao.trim(),
+        minutes: m,
+      }
+    } else if (editQtyNull) {
+      body = {
+        expectedUpdatedAt: editTarget.updatedAt,
+        reason: motivoEdicao.trim(),
+        executedQuantity: null,
+      }
+    } else {
+      const q = Number.parseInt(editQtyStr, 10)
+      if (!Number.isInteger(q) || q < 0) {
+        pushToast('Quantidade deve ser um inteiro ≥ 0 (ou limpar).', 'error')
+        return
+      }
+      body = {
+        expectedUpdatedAt: editTarget.updatedAt,
+        reason: motivoEdicao.trim(),
+        executedQuantity: q,
+      }
+    }
+    setEditing(true)
+    setToast(null)
+    try {
+      await patchConveyorStepTimeEntry(
+        conveyorId.trim(),
+        stepNodeId.trim(),
+        editTarget.id,
+        body,
+      )
+      setEditTarget(null)
+      setMotivoEdicao('')
+      pushToast('Apontamento corrigido.', 'success')
+      await loadData()
+    } catch (e) {
+      const n = reportClientError(e, {
+        module: 'gestor',
+        action: 'apontamento_gestor_edit',
+        route: pathname,
+        entityId: conveyorId?.trim(),
+      })
+      if (e instanceof ApiError && e.status === 409) {
+        pushToast(n.userMessage, 'error')
+        await loadData()
+      } else if (isBlockingSeverity(n.severity)) {
+        presentBlocking(n)
+      } else {
+        pushToast(n.userMessage, 'error')
+      }
+    } finally {
+      setEditing(false)
+    }
+  }
+
   async function executarRemocao() {
     if (!deleteTarget || !conveyorId?.trim() || !stepNodeId?.trim() || deleting) return
     const own =
       user?.collaboratorId &&
       deleteTarget.collaboratorId === user.collaboratorId
-    const needsReason = !own && canDeleteAny
+    const needsReason = canDeleteAny || !own
     if (needsReason && !motivoRemocao.trim()) {
       pushToast('Indique o motivo da remoção.', 'error')
       return
@@ -266,6 +373,11 @@ export function ApontamentoGestorPage() {
     }
     return { to: '/app/dashboard', label: 'Dashboard' }
   }, [fromEsteira, conveyorId])
+
+  const deleteNeedsReason =
+    deleteTarget != null &&
+    (canDeleteAny ||
+      !(user?.collaboratorId && deleteTarget.collaboratorId === user.collaboratorId))
 
   if (!authReady) {
     return (
@@ -480,6 +592,10 @@ export function ApontamentoGestorPage() {
               const own =
                 user?.collaboratorId && e.collaboratorId === user.collaboratorId
               const canRemove = own || canDeleteAny
+              const qtyLabel =
+                e.executedQuantity === null || e.executedQuantity === undefined
+                  ? 'qty —'
+                  : `qty ${e.executedQuantity}`
               return (
                 <li
                   key={e.id}
@@ -489,6 +605,7 @@ export function ApontamentoGestorPage() {
                     <p className="text-sm text-slate-200">
                       {e.collaboratorName ?? e.collaboratorId} ·{' '}
                       {formatHumanMinutes(e.minutes)} ·{' '}
+                      <span className="text-slate-400">{qtyLabel}</span> ·{' '}
                       <span className="text-slate-400">
                         realizado em {formatIsoDateBr(operationalDateOf(new Date(e.entryAt)))}
                       </span>
@@ -505,18 +622,29 @@ export function ApontamentoGestorPage() {
                       </p>
                     ) : null}
                   </div>
-                  {canRemove ? (
-                    <button
-                      type="button"
-                      className="shrink-0 text-[11px] font-semibold text-rose-300/95 hover:text-rose-200"
-                      onClick={() => {
-                        setDeleteTarget(e)
-                        setMotivoRemocao('')
-                      }}
-                    >
-                      Remover…
-                    </button>
-                  ) : null}
+                  <div className="flex shrink-0 flex-wrap gap-2">
+                    {canEditAny ? (
+                      <button
+                        type="button"
+                        className="text-[11px] font-semibold text-sky-300/95 hover:text-sky-200"
+                        onClick={() => openEdit(e)}
+                      >
+                        Editar…
+                      </button>
+                    ) : null}
+                    {canRemove ? (
+                      <button
+                        type="button"
+                        className="text-[11px] font-semibold text-rose-300/95 hover:text-rose-200"
+                        onClick={() => {
+                          setDeleteTarget(e)
+                          setMotivoRemocao('')
+                        }}
+                      >
+                        Remover…
+                      </button>
+                    ) : null}
+                  </div>
                 </li>
               )
             })}
@@ -562,6 +690,101 @@ export function ApontamentoGestorPage() {
         </div>
       ) : null}
 
+      {editTarget ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4 backdrop-blur-[2px]"
+          role="dialog"
+          aria-modal
+        >
+          <div className="sgp-panel max-w-md rounded-2xl border border-white/[0.1] p-6 shadow-xl">
+            <p className="font-heading text-lg text-slate-100">Corrigir apontamento</p>
+            <p className="mt-2 text-sm text-slate-400">
+              Altere minutos ou quantidade (apenas um campo por vez) e indique o motivo.
+            </p>
+            <div className="mt-4 flex flex-wrap gap-3 text-sm text-slate-300">
+              <label className="inline-flex items-center gap-2">
+                <input
+                  type="radio"
+                  name="edit-field"
+                  checked={editField === 'minutes'}
+                  onChange={() => setEditField('minutes')}
+                />
+                Minutos
+              </label>
+              <label className="inline-flex items-center gap-2">
+                <input
+                  type="radio"
+                  name="edit-field"
+                  checked={editField === 'executedQuantity'}
+                  onChange={() => setEditField('executedQuantity')}
+                />
+                Quantidade
+              </label>
+            </div>
+            {editField === 'minutes' ? (
+              <label className="mt-3 block text-sm text-slate-400">
+                Minutos
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  className="mt-1 w-full rounded-lg border border-white/[0.1] bg-sgp-app-panel-deep px-3 py-2 text-slate-100"
+                  value={editMinutesStr}
+                  onChange={(e) => setEditMinutesStr(e.target.value)}
+                />
+              </label>
+            ) : (
+              <div className="mt-3 space-y-2">
+                <label className="block text-sm text-slate-400">
+                  Quantidade executada
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    disabled={editQtyNull}
+                    className="mt-1 w-full rounded-lg border border-white/[0.1] bg-sgp-app-panel-deep px-3 py-2 text-slate-100 disabled:opacity-50"
+                    value={editQtyStr}
+                    onChange={(e) => setEditQtyStr(e.target.value)}
+                  />
+                </label>
+                <label className="inline-flex items-center gap-2 text-sm text-slate-400">
+                  <input
+                    type="checkbox"
+                    checked={editQtyNull}
+                    onChange={(e) => setEditQtyNull(e.target.checked)}
+                  />
+                  Limpar quantidade (null)
+                </label>
+              </div>
+            )}
+            <label className="mt-3 block text-sm text-slate-400">
+              Motivo da correção (obrigatório)
+              <textarea
+                className="mt-1 min-h-[80px] w-full rounded-lg border border-white/[0.1] bg-sgp-app-panel-deep px-3 py-2 text-sm text-slate-100"
+                value={motivoEdicao}
+                onChange={(e) => setMotivoEdicao(e.target.value)}
+              />
+            </label>
+            <div className="mt-6 flex flex-wrap gap-3">
+              <button
+                type="button"
+                className="sgp-cta-primary disabled:opacity-50"
+                disabled={editing}
+                onClick={() => void executarEdicao()}
+              >
+                {editing ? 'A guardar…' : 'Guardar'}
+              </button>
+              <button
+                type="button"
+                className="sgp-cta-secondary"
+                disabled={editing}
+                onClick={() => setEditTarget(null)}
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       {deleteTarget ? (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4 backdrop-blur-[2px]"
@@ -571,20 +794,18 @@ export function ApontamentoGestorPage() {
           <div className="sgp-panel max-w-md rounded-2xl border border-white/[0.1] p-6 shadow-xl">
             <p className="font-heading text-lg text-slate-100">Remover apontamento</p>
             <p className="mt-2 text-sm text-slate-400">
-              {user?.collaboratorId &&
-              deleteTarget.collaboratorId === user.collaboratorId
-                ? 'Confirma a remoção do seu próprio lançamento?'
-                : 'Indique o motivo da remoção gerencial.'}
+              {deleteNeedsReason
+                ? 'Indique o motivo da remoção gerencial.'
+                : 'Confirma a remoção do seu próprio lançamento?'}
             </p>
-            {user?.collaboratorId &&
-            deleteTarget.collaboratorId === user.collaboratorId ? null : (
+            {deleteNeedsReason ? (
               <textarea
                 className="mt-3 min-h-[80px] w-full rounded-lg border border-white/[0.1] bg-sgp-app-panel-deep px-3 py-2 text-sm text-slate-100"
                 placeholder="Motivo obrigatório"
                 value={motivoRemocao}
                 onChange={(e) => setMotivoRemocao(e.target.value)}
               />
-            )}
+            ) : null}
             <div className="mt-6 flex flex-wrap gap-3">
               <button
                 type="button"

@@ -60,6 +60,16 @@ const METADATA_ALLOWLIST: Record<
     'target_collaborator_id',
     'reason',
   ],
+  time_entry_edited_by_manager: [
+    'conveyor_id',
+    'step_node_id',
+    'time_entry_id',
+    'target_collaborator_id',
+    'reason',
+    'field',
+    'previous_value',
+    'new_value',
+  ],
   time_entry_deleted_by_manager: [
     'conveyor_id',
     'step_node_id',
@@ -176,6 +186,26 @@ export function buildSanitizedMetadata(
       if (!t.length) throw new Error('reason não pode ser vazio')
       if (t.length > 4000) throw new Error('reason excede tamanho máximo')
       out[key] = t
+      continue
+    }
+
+    if (key === 'field') {
+      if (v !== 'minutes' && v !== 'executed_quantity') {
+        throw new Error('field inválido')
+      }
+      out[key] = v
+      continue
+    }
+
+    if (key === 'previous_value' || key === 'new_value') {
+      if (v === null) {
+        out[key] = null
+        continue
+      }
+      if (typeof v !== 'number' || !Number.isFinite(v)) {
+        throw new Error(`${key} deve ser número ou null`)
+      }
+      out[key] = v
       continue
     }
   }

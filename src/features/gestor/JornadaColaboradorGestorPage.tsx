@@ -179,6 +179,7 @@ export function JornadaColaboradorGestorPage() {
   const { canAny } = useAuth()
   const canApontamentoGestor = canAny([
     'time_entries.create_on_behalf',
+    'time_entries.edit_any',
     'time_entries.delete_any',
   ])
 

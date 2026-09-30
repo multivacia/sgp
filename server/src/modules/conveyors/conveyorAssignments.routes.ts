@@ -9,6 +9,7 @@ import {
   getConveyorStepSequenceCheck,
   getConveyorStepTimeEntries,
   patchConveyorStepCompletion,
+  patchConveyorStepTimeEntry,
   postConveyorStepAbort,
   postConveyorStepAssignee,
   postConveyorStepRestoreAborted,
@@ -74,6 +75,12 @@ export function conveyorAssignmentsRouter(): Router {
     '/conveyors/:conveyorId/steps/:stepNodeId/time-entries',
     requireAuth(),
     asyncRoute(getConveyorStepTimeEntries),
+  )
+  r.patch(
+    '/conveyors/:conveyorId/steps/:stepNodeId/time-entries/:timeEntryId',
+    requireAuth(),
+    requirePermission('time_entries.edit_any'),
+    asyncRoute(patchConveyorStepTimeEntry),
   )
   r.delete(
     '/conveyors/:conveyorId/steps/:stepNodeId/time-entries/:timeEntryId',

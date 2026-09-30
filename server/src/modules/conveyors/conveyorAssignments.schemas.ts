@@ -161,8 +161,37 @@ export const postTimeEntryOnBehalfBodySchema = z.object({
 
 export type PostTimeEntryOnBehalfBody = z.infer<typeof postTimeEntryOnBehalfBodySchema>
 
+export const patchTimeEntryBodySchema = z
+  .object({
+    expectedUpdatedAt: isoDateTime,
+    reason: z
+      .string()
+      .min(1, 'Indique o motivo.')
+      .max(4000),
+    minutes: z.number().int().positive().optional(),
+    executedQuantity: z.number().int().min(0).nullable().optional(),
+  })
+  .superRefine((b, ctx) => {
+    const hasMinutes = b.minutes !== undefined
+    const hasQty = b.executedQuantity !== undefined
+    if (hasMinutes === hasQty) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message:
+          'Informe exatamente um de: minutes ou executedQuantity (XOR estrito).',
+        path: hasMinutes ? ['minutes'] : ['executedQuantity'],
+      })
+    }
+  })
+
+export type PatchTimeEntryBody = z.infer<typeof patchTimeEntryBodySchema>
+
 export const deleteTimeEntryBodySchema = z.object({
-  reason: z.string().optional(),
+  reason: z
+    .string()
+    .min(1, 'Indique o motivo.')
+    .max(4000)
+    .optional(),
 })
 
 export type DeleteTimeEntryBody = z.infer<typeof deleteTimeEntryBodySchema>
