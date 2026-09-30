@@ -74,14 +74,14 @@ function handlePg(e: unknown): never {
       const c = e.constraint
       if (c === PG_UNIQUE_EMAIL) {
         throw new AppError(
-          'Já existe um utilizador com este e-mail.',
+          'Já existe um usuário com este e-mail.',
           409,
           ErrorCodes.CONFLICT,
         )
       }
       if (c === PG_UNIQUE_COLLABORATOR) {
         throw new AppError(
-          'Este colaborador já está vinculado a outro utilizador.',
+          'Este colaborador já está vinculado a outro usuário.',
           409,
           ErrorCodes.CONFLICT,
         )
@@ -249,7 +249,7 @@ export async function serviceGetUserById(
   const row = await findAdminUserById(pool, id)
   if (!row) {
     throw new AppError(
-      'Utilizador não encontrado.',
+      'Usuário não encontrado.',
       404,
       ErrorCodes.NOT_FOUND,
     )
@@ -276,7 +276,7 @@ export async function serviceCreateUser(
     const ok = await assertCollaboratorEligibleForLink(pool, collId, null)
     if (!ok) {
       throw new AppError(
-        'Colaborador inválido, inativo ou já vinculado a outro utilizador.',
+        'Colaborador inválido, inativo ou já vinculado a outro usuário.',
         422,
         ErrorCodes.VALIDATION_ERROR,
       )
@@ -332,7 +332,7 @@ export async function servicePatchUser(
 ): Promise<AdminUserListItem> {
   const existing = await findAdminUserById(pool, id)
   if (!existing) {
-    throw new AppError('Utilizador não encontrado.', 404, ErrorCodes.NOT_FOUND)
+    throw new AppError('Usuário não encontrado.', 404, ErrorCodes.NOT_FOUND)
   }
 
   if (body.roleId !== undefined && body.roleId !== null) {
@@ -354,7 +354,7 @@ export async function servicePatchUser(
     )
     if (!ok) {
       throw new AppError(
-        'Colaborador inválido, inativo ou já vinculado a outro utilizador.',
+        'Colaborador inválido, inativo ou já vinculado a outro usuário.',
         422,
         ErrorCodes.VALIDATION_ERROR,
       )
@@ -378,7 +378,7 @@ export async function servicePatchUser(
     await withTransaction(pool, async (client) => {
       const ok = await patchAppUser(client, id, patch)
       if (!ok) {
-        throw new AppError('Utilizador não encontrado.', 404, ErrorCodes.NOT_FOUND)
+        throw new AppError('Usuário não encontrado.', 404, ErrorCodes.NOT_FOUND)
       }
       if (body.password !== undefined) {
         const passwordHash = await hashPassword(body.password)
@@ -389,7 +389,7 @@ export async function servicePatchUser(
           actorUserId,
         )
         if (!pwOk) {
-          throw new AppError('Utilizador não encontrado.', 404, ErrorCodes.NOT_FOUND)
+          throw new AppError('Usuário não encontrado.', 404, ErrorCodes.NOT_FOUND)
         }
       }
       for (const ev of auditPlan) {
@@ -403,7 +403,7 @@ export async function servicePatchUser(
 
   const row = await findAdminUserById(pool, id)
   if (!row) {
-    throw new AppError('Utilizador não encontrado.', 404, ErrorCodes.NOT_FOUND)
+    throw new AppError('Usuário não encontrado.', 404, ErrorCodes.NOT_FOUND)
   }
   return row
 }
@@ -415,11 +415,11 @@ export async function serviceActivate(
 ): Promise<AdminUserListItem> {
   const existing = await findAdminUserById(pool, id)
   if (!existing) {
-    throw new AppError('Utilizador não encontrado.', 404, ErrorCodes.NOT_FOUND)
+    throw new AppError('Usuário não encontrado.', 404, ErrorCodes.NOT_FOUND)
   }
   if (existing.deletedAt) {
     throw new AppError(
-      'Não foi possível ativar (utilizador inexistente ou apagado).',
+      'Não foi possível ativar (usuário inexistente ou excluído).',
       404,
       ErrorCodes.NOT_FOUND,
     )
@@ -432,7 +432,7 @@ export async function serviceActivate(
     const ok = await setUserActive(client, id, true, actorUserId)
     if (!ok) {
       throw new AppError(
-        'Não foi possível ativar (utilizador inexistente ou apagado).',
+        'Não foi possível ativar (usuário inexistente ou excluído).',
         404,
         ErrorCodes.NOT_FOUND,
       )
@@ -448,7 +448,7 @@ export async function serviceActivate(
 
   const row = await findAdminUserById(pool, id)
   if (!row) {
-    throw new AppError('Utilizador não encontrado.', 404, ErrorCodes.NOT_FOUND)
+    throw new AppError('Usuário não encontrado.', 404, ErrorCodes.NOT_FOUND)
   }
   return row
 }
@@ -467,7 +467,7 @@ export async function serviceInactivate(
   }
   const existing = await findAdminUserById(pool, id)
   if (!existing) {
-    throw new AppError('Utilizador não encontrado.', 404, ErrorCodes.NOT_FOUND)
+    throw new AppError('Usuário não encontrado.', 404, ErrorCodes.NOT_FOUND)
   }
   if (!existing.isActive) {
     return existing
@@ -477,7 +477,7 @@ export async function serviceInactivate(
     const ok = await setUserActive(client, id, false, actorUserId)
     if (!ok) {
       throw new AppError(
-        'Não foi possível inativar (utilizador inexistente ou apagado).',
+        'Não foi possível inativar (usuário inexistente ou excluído).',
         404,
         ErrorCodes.NOT_FOUND,
       )
@@ -493,7 +493,7 @@ export async function serviceInactivate(
 
   const row = await findAdminUserById(pool, id)
   if (!row) {
-    throw new AppError('Utilizador não encontrado.', 404, ErrorCodes.NOT_FOUND)
+    throw new AppError('Usuário não encontrado.', 404, ErrorCodes.NOT_FOUND)
   }
   return row
 }
@@ -530,7 +530,7 @@ export async function serviceSoftDelete(
 
   const row = await findAdminUserById(pool, id)
   if (!row) {
-    throw new AppError('Utilizador não encontrado.', 404, ErrorCodes.NOT_FOUND)
+    throw new AppError('Usuário não encontrado.', 404, ErrorCodes.NOT_FOUND)
   }
   return row
 }
@@ -560,7 +560,7 @@ export async function serviceRestore(
 
   const row = await findAdminUserById(pool, id)
   if (!row) {
-    throw new AppError('Utilizador não encontrado.', 404, ErrorCodes.NOT_FOUND)
+    throw new AppError('Usuário não encontrado.', 404, ErrorCodes.NOT_FOUND)
   }
   return row
 }
@@ -572,7 +572,7 @@ export async function serviceForcePasswordChange(
 ): Promise<AdminUserListItem> {
   const existing = await findAdminUserById(pool, id)
   if (!existing) {
-    throw new AppError('Utilizador não encontrado.', 404, ErrorCodes.NOT_FOUND)
+    throw new AppError('Usuário não encontrado.', 404, ErrorCodes.NOT_FOUND)
   }
   if (existing.mustChangePassword) {
     return existing
@@ -582,7 +582,7 @@ export async function serviceForcePasswordChange(
     const ok = await setForcePasswordChange(client, id, actorUserId)
     if (!ok) {
       throw new AppError(
-        'Não foi possível aplicar a política (utilizador inexistente ou apagado).',
+        'Não foi possível aplicar a política (usuário inexistente ou excluído).',
         404,
         ErrorCodes.NOT_FOUND,
       )
@@ -598,7 +598,7 @@ export async function serviceForcePasswordChange(
 
   const row = await findAdminUserById(pool, id)
   if (!row) {
-    throw new AppError('Utilizador não encontrado.', 404, ErrorCodes.NOT_FOUND)
+    throw new AppError('Usuário não encontrado.', 404, ErrorCodes.NOT_FOUND)
   }
   return row
 }
@@ -617,11 +617,11 @@ export async function serviceResetPassword(
   }
   const existing = await findAdminUserById(pool, id)
   if (!existing) {
-    throw new AppError('Utilizador não encontrado.', 404, ErrorCodes.NOT_FOUND)
+    throw new AppError('Usuário não encontrado.', 404, ErrorCodes.NOT_FOUND)
   }
   if (existing.deletedAt) {
     throw new AppError(
-      'Não é possível redefinir senha de um utilizador removido.',
+      'Não é possível redefinir a senha de um usuário excluído.',
       422,
       ErrorCodes.VALIDATION_ERROR,
     )
@@ -639,7 +639,7 @@ export async function serviceResetPassword(
     )
     if (!ok) {
       throw new AppError(
-        'Não foi possível redefinir a senha (utilizador inexistente ou apagado).',
+        'Não foi possível redefinir a senha (usuário inexistente ou excluído).',
         404,
         ErrorCodes.NOT_FOUND,
       )
@@ -655,7 +655,7 @@ export async function serviceResetPassword(
 
   const row = await findAdminUserById(pool, id)
   if (!row) {
-    throw new AppError('Utilizador não encontrado.', 404, ErrorCodes.NOT_FOUND)
+    throw new AppError('Usuário não encontrado.', 404, ErrorCodes.NOT_FOUND)
   }
   return {
     temporaryPassword,

@@ -8,14 +8,14 @@ import type { SgpNormalizedError } from './errors/sgpErrorContract'
 
 export const transversalUxCopy = {
   /** Conta sem vínculo operacional (apontamentos, jornada self, etc.). */
-  collaboratorLinkMissingTitle: 'Contexto operacional em falta',
+  collaboratorLinkMissingTitle: 'Contexto operacional ausente',
   collaboratorLinkMissingBody:
     'Sua conta não está associada a um colaborador operacional. Peça ao administrador para vincular seu usuário a um colaborador antes de registrar horas ou ver sua jornada.',
   collaboratorLinkMissingToast:
     'Conta sem colaborador operacional associado. Contate o administrador.',
 
   journeyLoadFallback: 'Não foi possível carregar a jornada operacional.',
-  journeyRetryHint: 'Verifique a ligação e tente novamente.',
+  journeyRetryHint: 'Verifique sua conexão e tente novamente.',
   journeyErrorNoCollaborator:
     'Não foi possível carregar a jornada: sua conta não tem colaborador operacional associado. Contate o administrador.',
 

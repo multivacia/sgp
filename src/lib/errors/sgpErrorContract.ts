@@ -26,7 +26,7 @@ export type SgpErrorSurface = 'toast' | 'banner' | 'modal'
 export type SgpNormalizedError = {
   severity: SgpErrorSeverity
   cause: SgpErrorCause
-  /** Mensagem segura para o utilizador */
+  /** Mensagem segura para o usuário */
   userMessage: string
   /** Título curto para modal bloqueante */
   modalTitle: string
@@ -37,7 +37,7 @@ export type SgpNormalizedError = {
   correlationId?: string
   category?: string
   backendSeverity?: string
-  /** Detalhe técnico bruto (não mostrar ao utilizador; útil em logs) */
+  /** Detalhe técnico bruto (não mostrar ao usuário; útil em logs) */
   details?: unknown
   /** Erro original quando existir */
   original?: unknown
@@ -53,13 +53,13 @@ export const SGP_ERROR_MESSAGES = {
     'Sessão expirada ou não autenticado. Faça login novamente para continuar.',
   /** Mantém alinhamento com `SESSION_REVOKED_USER_MESSAGE` / backend. */
   sessaoRevogadaCredenciais: SESSION_REVOKED_USER_MESSAGE,
-  semPermissao: 'Não tem permissão para esta operação. Peça acesso ao administrador se necessário.',
-  recursoNaoEncontrado: 'O recurso pedido não foi encontrado ou já não existe.',
+  semPermissao: 'Você não tem permissão para esta operação. Peça acesso ao administrador se necessário.',
+  recursoNaoEncontrado: 'O recurso solicitado não foi encontrado ou não existe mais.',
   validacao: 'Os dados enviados não são válidos. Corrija os campos indicados e tente novamente.',
   conflito:
     'Esta ação entra em conflito com o estado atual (outra alteração pode ter ocorrido). Atualize a página ou ajuste os dados.',
   operacaoServidor:
-    'O servidor não conseguiu concluir a operação. Tente novamente; se persistir, contacte o suporte.',
+    'O servidor não conseguiu concluir a operação. Tente novamente; se persistir, entre em contato com o suporte.',
   inesperado:
     'Ocorreu um erro inesperado. Tente novamente ou recarregue a página.',
 } as const
@@ -69,7 +69,7 @@ export const SGP_ERROR_MESSAGES = {
  * A UI usa sempre `SGP_ERROR_MESSAGES.redeSemLigacao` via `normalizeClientError`.
  */
 export const SGP_NETWORK_ERROR_API_DIAGNOSTIC_MESSAGE =
-  'NETWORK_ERROR: falha ao contactar a API. Em dev: confirmar proxy Vite, VITE_DEV_API_PORT e PORT em server/.env; verificar se o servidor está a correr.'
+  'NETWORK_ERROR: falha ao contatar a API. Em dev: confirmar proxy Vite, VITE_DEV_API_PORT e PORT em server/.env; verificar se o servidor está rodando.'
 
 export function inferCause(
   status: number | undefined,
@@ -113,8 +113,8 @@ export function modalTitleFor(
     return 'Não foi possível continuar'
   }
   if (cause === 'sessao') return 'Sessão inválida'
-  if (cause === 'permissao') return 'Permissão em falta'
-  if (cause === 'rede') return 'Ligação em falta'
+  if (cause === 'permissao') return 'Sem permissão'
+  if (cause === 'rede') return 'Sem conexão'
   if (cause === 'operacional') return 'Operação não concluída'
   return 'Operação bloqueada'
 }

@@ -5,9 +5,9 @@ export type SgpClientLogContext = {
   module: string
   /** Ação semântica, ex.: create_conveyor, load_matrizes */
   action: string
-  /** Rota ou identificador de ecrã */
+  /** Rota ou identificador de tela */
   route?: string
-  /** Identificador de entidade (esteira, utilizador, …) quando fizer sentido */
+  /** Identificador de entidade (esteira, usuário, …) quando fizer sentido */
   entityId?: string
   /** Contexto extra seguro (sem PII sensível) */
   extra?: Record<string, string | number | boolean | undefined>

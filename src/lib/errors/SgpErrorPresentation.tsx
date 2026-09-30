@@ -23,7 +23,7 @@ type ToastState = { message: string; variant: SgpToastVariant } | null
 type BannerState = { message: string; variant: 'error' | 'neutral' } | null
 
 type Ctx = {
-  /** Modal bloqueante (já registado em log pelo chamador). */
+  /** Modal bloqueante (já registrado em log pelo chamador). */
   presentBlocking: (n: SgpNormalizedError) => void
   dismissBlocking: () => void
   /** Toast (leve ou quando explicitamente preferido). */

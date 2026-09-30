@@ -78,13 +78,13 @@ export class HttpArgosDocumentDraftAdapter implements ArgosDocumentDraftPort {
       if (e instanceof AppError) throw e
       if (e instanceof Error && e.name === 'AbortError') {
         throw new AppError(
-          'Timeout ao contactar ARGOS.',
+          'Timeout ao contatar ARGOS.',
           504,
           ErrorCodes.INTERNAL,
         )
       }
       throw new AppError(
-        e instanceof Error ? e.message : 'Falha ao contactar ARGOS.',
+        e instanceof Error ? e.message : 'Falha ao contatar ARGOS.',
         502,
         ErrorCodes.INTERNAL,
       )

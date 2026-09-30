@@ -81,7 +81,7 @@ export async function getMyOperationalJourney(
   const collaboratorId = await findCollaboratorIdByAppUserId(pool, auth.id)
   if (!collaboratorId) {
     throw new AppError(
-      'Operação indisponível: o seu utilizador não tem colaborador operacional vinculado (app_users.collaborator_id). Peça ao administrador de governança para associar o seu acesso a um colaborador.',
+      'Sua conta não está vinculada a um colaborador operacional. Peça ao administrador para associar seu acesso.',
       422,
       ErrorCodes.VALIDATION_ERROR,
     )

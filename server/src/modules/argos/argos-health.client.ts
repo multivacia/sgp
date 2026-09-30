@@ -97,7 +97,7 @@ export async function postConveyorHealthAnalyze(
     if (e instanceof AppError) throw e
     if (e instanceof Error && e.name === 'AbortError') {
       throw new AppError(
-        'Timeout ao contactar ARGOS (health).',
+        'Timeout ao contatar ARGOS (health).',
         504,
         ErrorCodes.INTERNAL,
         undefined,
@@ -105,7 +105,7 @@ export async function postConveyorHealthAnalyze(
       )
     }
     throw new AppError(
-      e instanceof Error ? e.message : 'Falha ao contactar ARGOS (health).',
+      e instanceof Error ? e.message : 'Falha ao contatar ARGOS (health).',
       502,
       ErrorCodes.INTERNAL,
       undefined,

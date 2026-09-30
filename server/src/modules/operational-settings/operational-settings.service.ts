@@ -202,7 +202,7 @@ export async function serviceDeleteCollaboratorFunction(
   const cols = await countCollaboratorsWithRole(pool, id)
   if (users > 0 || cols > 0) {
     throw new AppError(
-      'Não é possível eliminar: existem utilizadores ou colaboradores a usar este papel. Inative-o em vez disso.',
+      'Não é possível excluir: existem usuários ou colaboradores usando esta função. Inative-a em vez disso.',
       409,
       ErrorCodes.CONFLICT,
     )

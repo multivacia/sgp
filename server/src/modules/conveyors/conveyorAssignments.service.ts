@@ -338,7 +338,7 @@ export async function serviceCreateConveyorTimeEntryForAppUser(
   const collaboratorId = await findCollaboratorIdByAppUserId(pool, input.appUserId)
   if (!collaboratorId) {
     throw new AppError(
-      'Conta sem colaborador operacional vinculado. Contacte o administrador para associar o seu utilizador a um colaborador.',
+      'Sua conta não está vinculada a um colaborador operacional. Peça ao administrador para associar seu usuário a um colaborador.',
       422,
       ErrorCodes.VALIDATION_ERROR,
     )

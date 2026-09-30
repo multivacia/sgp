@@ -43,7 +43,7 @@ export async function productionRequestJson<T>(
           e.name === 'NetworkError'))
     const msg = isNetwork
       ? SGP_NETWORK_ERROR_API_DIAGNOSTIC_MESSAGE
-      : 'Falha de ligação inesperada. Tente novamente ou recarregue a página.'
+      : 'Falha de conexão inesperada. Tente novamente ou recarregue a página.'
     throw new ApiError(msg, 503, {
       code: 'NETWORK_ERROR',
       errorRef: ErrorRefs.API_CLIENT_REQUEST_FAILED,
@@ -125,7 +125,7 @@ export async function productionRequestJsonEnvelope<T>(
           e.name === 'NetworkError'))
     const msg = isNetwork
       ? SGP_NETWORK_ERROR_API_DIAGNOSTIC_MESSAGE
-      : 'Falha de ligação inesperada. Tente novamente ou recarregue a página.'
+      : 'Falha de conexão inesperada. Tente novamente ou recarregue a página.'
     throw new ApiError(msg, 503, {
       code: 'NETWORK_ERROR',
       errorRef: ErrorRefs.API_CLIENT_REQUEST_FAILED,

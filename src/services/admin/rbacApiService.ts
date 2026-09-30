@@ -55,7 +55,7 @@ export async function putRbacRolePermissions(
     { body: { permissionCodes } },
   )
   if (!data || !Array.isArray(data.permissionCodes)) {
-    throw new Error('Resposta inválida após guardar.')
+    throw new Error('Resposta inválida ao salvar.')
   }
   return data.permissionCodes
 }

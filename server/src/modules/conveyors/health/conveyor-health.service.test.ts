@@ -221,7 +221,7 @@ describe('serviceAnalyzeConveyorHealth', () => {
 
   it('timeout ARGOS → 504', async () => {
     postArgos.mockRejectedValueOnce(
-      new AppError('Timeout ao contactar ARGOS (health).', 504, ErrorCodes.INTERNAL),
+      new AppError('Timeout ao contatar ARGOS (health).', 504, ErrorCodes.INTERNAL),
     )
     await expect(
       serviceAnalyzeConveyorHealth({} as never, baseEnv(), 'dddddddd-dddd-dddd-dddd-dddddddddddd', {
@@ -301,7 +301,7 @@ describe('serviceAnalyzeConveyorHealth', () => {
 
   it('não persiste quando ARGOS falha', async () => {
     postArgos.mockRejectedValueOnce(
-      new AppError('Timeout ao contactar ARGOS (health).', 504, ErrorCodes.INTERNAL),
+      new AppError('Timeout ao contatar ARGOS (health).', 504, ErrorCodes.INTERNAL),
     )
     await expect(
       serviceAnalyzeConveyorHealthAndPersist(
