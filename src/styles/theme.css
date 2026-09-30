@@ -30,4 +30,8 @@
   --color-sgp-app-panel-deep: var(--semantic-sgp-app-panel-deep);
   --color-sgp-ink: var(--semantic-sgp-ink);
   --color-sgp-ink-elevated: var(--semantic-sgp-ink-elevated);
+
+  --color-sgp-base: var(--semantic-sgp-base);
+  --color-sgp-app-bg: var(--semantic-sgp-app-bg);
+  --color-sgp-navy-void: var(--semantic-sgp-navy-void);
 }

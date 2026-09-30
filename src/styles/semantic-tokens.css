@@ -35,6 +35,11 @@
   --semantic-sgp-ink: #151d2a;
   --semantic-sgp-ink-elevated: #1a2433;
 
+  /* ——— Aliases de superfície (consumidos por bg-sgp-base, bg-sgp-app-bg, bg-sgp-navy-void) ——— */
+  --semantic-sgp-base: var(--semantic-sgp-app-panel);
+  --semantic-sgp-app-bg: var(--semantic-sgp-void);
+  --semantic-sgp-navy-void: var(--semantic-sgp-void);
+
   /* ——— Texto base (html) ——— */
   --semantic-base-fg: rgb(226 232 240);
 
@@ -150,11 +155,36 @@
   --semantic-chart-exec-concl: #34d399;
   --semantic-chart-exec-atraso: #fb7185;
   --semantic-chart-bar-period: #7dd3fc;
+  --semantic-chart-bucket-em-planejamento: #a78bfa;
+  --semantic-chart-bucket-canceladas: #f87171;
 
   /* ——— Grid técnico (overlay) ——— */
   --semantic-grid-opacity: 0.38;
   --semantic-grid-stroke: %23ffffff;
   --semantic-grid-stroke-opacity: 0.045;
+
+  /* ——— Status do Backlog ——— */
+  --semantic-backlog-status-draft-bg: rgba(255, 255, 255, 0.06);
+  --semantic-backlog-status-draft-border: rgba(255, 255, 255, 0.15);
+  --semantic-backlog-status-draft-text: #cbd5e1;
+  --semantic-backlog-status-awaiting-bg: rgba(139, 92, 246, 0.12);
+  --semantic-backlog-status-awaiting-border: rgba(139, 92, 246, 0.4);
+  --semantic-backlog-status-awaiting-text: #c4b5fd;
+  --semantic-backlog-status-planning-bg: rgba(245, 158, 11, 0.12);
+  --semantic-backlog-status-planning-border: rgba(245, 158, 11, 0.4);
+  --semantic-backlog-status-planning-text: #fde68a;
+  --semantic-backlog-status-starting-bg: rgba(56, 189, 248, 0.1);
+  --semantic-backlog-status-starting-border: rgba(56, 189, 248, 0.35);
+  --semantic-backlog-status-starting-text: #7dd3fc;
+  --semantic-backlog-status-running-bg: rgba(52, 211, 153, 0.1);
+  --semantic-backlog-status-running-border: rgba(52, 211, 153, 0.35);
+  --semantic-backlog-status-running-text: #6ee7b7;
+  --semantic-backlog-status-done-bg: rgba(52, 211, 153, 0.08);
+  --semantic-backlog-status-done-border: rgba(52, 211, 153, 0.3);
+  --semantic-backlog-status-done-text: #a7f3d0;
+  --semantic-backlog-status-cancelled-bg: rgba(248, 113, 113, 0.08);
+  --semantic-backlog-status-cancelled-border: rgba(248, 113, 113, 0.3);
+  --semantic-backlog-status-cancelled-text: #fca5a5;
 
   /* Aliases legados (consumo em TSX / utilities) */
   --sgp-gradient-cta: var(--semantic-gradient-cta);
@@ -194,6 +224,10 @@ html[data-theme="slate-dark"] {
   --semantic-sgp-ink: #131c2a;
   --semantic-sgp-ink-elevated: #182132;
 
+  --semantic-sgp-base: var(--semantic-sgp-app-panel);
+  --semantic-sgp-app-bg: var(--semantic-sgp-void);
+  --semantic-sgp-navy-void: var(--semantic-sgp-void);
+
   --semantic-base-fg: rgb(226 232 240);
 
   --semantic-border-glass: rgba(255, 255, 255, 0.08);
@@ -230,8 +264,33 @@ html[data-theme="slate-dark"] {
   --semantic-chart-axis-stroke: #64748b;
   --semantic-chart-tick-fill: #94a3b8;
   --semantic-chart-axis-line: rgba(255, 255, 255, 0.08);
+  --semantic-chart-bucket-em-planejamento: #a78bfa;
+  --semantic-chart-bucket-canceladas: #f87171;
 
   --semantic-grid-opacity: 0.36;
+
+  /* ——— Status do Backlog ——— */
+  --semantic-backlog-status-draft-bg: rgba(255, 255, 255, 0.06);
+  --semantic-backlog-status-draft-border: rgba(255, 255, 255, 0.15);
+  --semantic-backlog-status-draft-text: #cbd5e1;
+  --semantic-backlog-status-awaiting-bg: rgba(139, 92, 246, 0.12);
+  --semantic-backlog-status-awaiting-border: rgba(139, 92, 246, 0.4);
+  --semantic-backlog-status-awaiting-text: #c4b5fd;
+  --semantic-backlog-status-planning-bg: rgba(245, 158, 11, 0.12);
+  --semantic-backlog-status-planning-border: rgba(245, 158, 11, 0.4);
+  --semantic-backlog-status-planning-text: #fde68a;
+  --semantic-backlog-status-starting-bg: rgba(56, 189, 248, 0.1);
+  --semantic-backlog-status-starting-border: rgba(56, 189, 248, 0.35);
+  --semantic-backlog-status-starting-text: #7dd3fc;
+  --semantic-backlog-status-running-bg: rgba(52, 211, 153, 0.1);
+  --semantic-backlog-status-running-border: rgba(52, 211, 153, 0.35);
+  --semantic-backlog-status-running-text: #6ee7b7;
+  --semantic-backlog-status-done-bg: rgba(52, 211, 153, 0.08);
+  --semantic-backlog-status-done-border: rgba(52, 211, 153, 0.3);
+  --semantic-backlog-status-done-text: #a7f3d0;
+  --semantic-backlog-status-cancelled-bg: rgba(248, 113, 113, 0.08);
+  --semantic-backlog-status-cancelled-border: rgba(248, 113, 113, 0.3);
+  --semantic-backlog-status-cancelled-text: #fca5a5;
 }
 
 /* Light Executive — paleta executiva premium (apenas este bloco no tema light) */
@@ -297,6 +356,10 @@ html[data-theme="light-executive"] {
   --semantic-sgp-app-panel-deep: var(--color-sidebar-panel);
   --semantic-sgp-ink: var(--color-surface);
   --semantic-sgp-ink-elevated: var(--color-surface-secondary);
+
+  --semantic-sgp-base: var(--color-surface);
+  --semantic-sgp-app-bg: var(--color-bg-app);
+  --semantic-sgp-navy-void: var(--color-bg-app);
 
   --semantic-base-fg: var(--color-text-primary);
 
