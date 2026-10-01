@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Manual do Gestor de Esteira — SGP</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700&family=Open+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --gold:        #c9a227;
+      --gold-dim:    #a07e18;
+      --navy:        #101824;
+      --void:        #050a12;
+      --blue-bright: #3e7baa;
+      --emerald:     #34d399;
+      --surface:     #141e2b;
+      --surface-2:   #1a2637;
+      --border:      rgba(255,255,255,0.08);
+      --text:        #e2e8f0;
+      --text-muted:  #94a3b8;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--void);
+      color: var(--text);
+      font-family: 'Open Sans', sans-serif;
+      font-size: 15px;
+      line-height: 1.7;
+    }
+
+    .page-wrap {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 48px 24px 80px;
+    }
+
+    /* ── Header ── */
+    .doc-header {
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 28px;
+      margin-bottom: 48px;
+    }
+    .doc-header .badge {
+      display: inline-block;
+      font-family: 'Montserrat', sans-serif;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: var(--gold);
+      border: 1px solid rgba(201,162,39,.35);
+      background: rgba(201,162,39,.08);
+      border-radius: 4px;
+      padding: 3px 10px;
+      margin-bottom: 14px;
+    }
+    .doc-header h1 {
+      font-family: 'Montserrat', sans-serif;
+      font-size: 2rem;
+      font-weight: 700;
+      color: #fff;
+      line-height: 1.2;
+    }
+    .doc-header .subtitle {
+      margin-top: 10px;
+      color: var(--text-muted);
+      font-size: 14px;
+      max-width: 640px;
+    }
+
+    /* ── ToC ── */
+    .toc {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 20px 24px;
+      margin-bottom: 48px;
+    }
+    .toc-title {
+      font-family: 'Montserrat', sans-serif;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+    }
+    .toc ol {
+      padding-left: 20px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 4px 24px;
+    }
+    @media (max-width: 560px) { .toc ol { grid-template-columns: 1fr; } }
+    .toc a { color: var(--blue-bright); text-decoration: none; font-size: 14px; }
+    .toc a:hover { color: var(--gold); text-decoration: underline; }
+
+    /* ── Sections ── */
+    .section { margin-bottom: 52px; }
+
+    h2 {
+      font-family: 'Montserrat', sans-serif;
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--gold);
+      border-bottom: 1px solid rgba(201,162,39,.2);
+      padding-bottom: 8px;
+      margin-bottom: 20px;
+      scroll-margin-top: 24px;
+    }
+    h2 .num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 26px;
+      height: 26px;
+      background: rgba(201,162,39,.15);
+      border-radius: 6px;
+      font-size: 12px;
+      margin-right: 8px;
+      vertical-align: middle;
+    }
+
+    h3 {
+      font-family: 'Montserrat', sans-serif;
+      font-size: .9rem;
+      font-weight: 600;
+      color: #cbd5e1;
+      margin: 24px 0 10px;
+    }
+
+    p { margin-bottom: 14px; }
+
+    code {
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+      background: rgba(62,123,170,.18);
+      color: #93c5fd;
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+
+    .table-wrap { overflow-x: auto; margin-bottom: 18px; }
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    thead th {
+      background: var(--surface-2);
+      color: var(--text-muted);
+      font-weight: 600;
+      font-size: 12px;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+      padding: 10px 14px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+    tbody td {
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+    tbody tr:last-child td { border-bottom: none; }
+    tbody tr:hover { background: rgba(255,255,255,.025); }
+
+    .flow {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 20px 24px;
+      margin-bottom: 18px;
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+      color: #94a3b8;
+      line-height: 1.8;
+      white-space: pre-wrap;
+    }
+
+    .callout {
+      border-radius: 8px;
+      padding: 14px 18px;
+      margin-bottom: 18px;
+      font-size: 14px;
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+    }
+    .callout.info  { background: rgba(62,123,170,.12);  border-left: 3px solid var(--blue-bright); color: #93c5fd; }
+    .callout.warning { background: rgba(245,158,11,.08); border-left: 3px solid #f59e0b; color: #fde68a; }
+    .callout.success { background: rgba(52,211,153,.08); border-left: 3px solid var(--emerald); color: #6ee7b7; }
+    .callout-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+
+    .steps { counter-reset: step; list-style: none; padding: 0; }
+    .steps li {
+      counter-increment: step;
+      display: flex;
+      gap: 14px;
+      margin-bottom: 12px;
+      align-items: flex-start;
+    }
+    .steps li::before {
+      content: counter(step);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 26px;
+      height: 26px;
+      background: rgba(201,162,39,.15);
+      border: 1px solid rgba(201,162,39,.3);
+      border-radius: 50%;
+      font-family: 'Montserrat', sans-serif;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--gold);
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    /* ── Hierarchy tree ── */
+    .hierarchy {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 18px 22px;
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+      color: #94a3b8;
+      line-height: 2;
+      margin-bottom: 18px;
+    }
+    .hierarchy .hl { color: var(--gold); font-weight: 700; }
+
+    /* ── Status badge ── */
+    .status-badge {
+      display: inline-block;
+      font-size: 12px;
+      font-weight: 600;
+      border-radius: 20px;
+      padding: 2px 10px;
+      white-space: nowrap;
+    }
+    .s-elaboracao  { background: rgba(148,163,184,.12); color: #94a3b8; border: 1px solid rgba(148,163,184,.2); }
+    .s-planejamento { background: rgba(62,123,170,.15);  color: #93c5fd; border: 1px solid rgba(62,123,170,.25); }
+    .s-andamento   { background: rgba(201,162,39,.12);  color: #fbbf24; border: 1px solid rgba(201,162,39,.25); }
+    .s-finalizada  { background: rgba(52,211,153,.1);   color: #6ee7b7; border: 1px solid rgba(52,211,153,.2); }
+    .s-cancelada   { background: rgba(239,68,68,.1);    color: #fca5a5; border: 1px solid rgba(239,68,68,.2); }
+
+    .doc-footer {
+      margin-top: 64px;
+      padding-top: 24px;
+      border-top: 1px solid var(--border);
+      font-size: 12px;
+      color: var(--text-muted);
+      display: flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+  </style>
+</head>
+<body>
+<div class="page-wrap">
+
+  <!-- Header -->
+  <header class="doc-header">
+    <div class="badge">SGP · Manual do Usuário</div>
+    <h1>Manual do Gestor de Esteira</h1>
+    <p class="subtitle">
+      Para gestores responsáveis por criar, configurar e acompanhar esteiras individuais
+      (OS / veículos).
+    </p>
+  </header>
+
+  <!-- ToC -->
+  <nav class="toc" aria-label="Índice">
+    <div class="toc-title">Neste manual</div>
+    <ol>
+      <li><a href="#s1">Suas responsabilidades</a></li>
+      <li><a href="#s2">Login e navegação</a></li>
+      <li><a href="#s3">Backlog</a></li>
+      <li><a href="#s4">Criar nova esteira</a></li>
+      <li><a href="#s5">Estrutura da esteira</a></li>
+      <li><a href="#s6">Designar colaboradores e equipes</a></li>
+      <li><a href="#s7">Acompanhar o progresso</a></li>
+      <li><a href="#s8">Ciclo de vida</a></li>
+      <li><a href="#s9">Plano operacional</a></li>
+      <li><a href="#s10">Evolução de esteiras</a></li>
+      <li><a href="#s11">Planejamento semanal</a></li>
+      <li><a href="#s12">Dashboard gerencial</a></li>
+      <li><a href="#s13">SGP+ Produção — visão do gestor</a></li>
+      <li><a href="#s14">Equipes</a></li>
+      <li><a href="#s15">Dúvidas frequentes</a></li>
+    </ol>
+  </nav>
+
+  <!-- 1 -->
+  <section class="section" id="s1">
+    <h2><span class="num">1</span> Suas responsabilidades no SGP</h2>
+    <ul style="padding-left:20px; line-height:2.1;">
+      <li>Criar a esteira para cada veículo / OS.</li>
+      <li>Definir a estrutura de tarefas, setores e atividades.</li>
+      <li>Designar colaboradores e equipes para cada atividade.</li>
+      <li>Acompanhar o progresso e gerenciar o ciclo de vida da esteira.</li>
+      <li>Visualizar relatórios de evolução e eficiência.</li>
+    </ul>
+  </section>
+
+  <!-- 2 -->
+  <section class="section" id="s2">
+    <h2><span class="num">2</span> Login e navegação</h2>
+    <ol class="steps">
+      <li>Acesse o SGP no navegador e entre com e-mail e senha.</li>
+      <li>Na primeira vez, o sistema pedirá troca de senha.</li>
+      <li>O menu lateral dá acesso a todas as funcionalidades.</li>
+    </ol>
+
+    <h3>Principais seções do menu</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Seção</th><th>O que encontra</th></tr></thead>
+        <tbody>
+          <tr><td>Backlog</td><td>Todas as esteiras ativas com KPIs e filtros</td></tr>
+          <tr><td>Nova Esteira</td><td>Assistente de criação</td></tr>
+          <tr><td>Evolução de Esteiras</td><td>Relatório previsto vs. realizado</td></tr>
+          <tr><td>Planejamento Semanal</td><td>Distribuição de atividades na semana</td></tr>
+          <tr><td>Dashboard</td><td>Indicadores gerenciais</td></tr>
+          <tr><td>Equipes</td><td>Cadastro e gestão de equipes</td></tr>
+          <tr><td>Colaboradores</td><td>Lista e saúde operacional</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- 3 -->
+  <section class="section" id="s3">
+    <h2><span class="num">3</span> Backlog</h2>
+    <p>Caminho: menu lateral → <strong>Backlog</strong> <code>/app/backlog</code></p>
+    <p>
+      Visão consolidada de todas as esteiras. Cada card mostra: nome / OS / veículo, status
+      operacional, progresso geral (%) e indicadores de atraso.
+    </p>
+    <p>Use os filtros para encontrar esteiras por status, prazo ou palavra-chave.</p>
+  </section>
+
+  <!-- 4 -->
+  <section class="section" id="s4">
+    <h2><span class="num">4</span> Criar Nova Esteira</h2>
+    <p>Caminho: menu lateral → <strong>Nova Esteira</strong> <code>/app/nova-esteira</code></p>
+    <p>Há três pontos de partida:</p>
+
+    <h3>4.1 Composição Manual</h3>
+    <p>Você monta a estrutura do zero usando o assistente passo a passo.</p>
+    <p><strong>Etapa 1 — Dados iniciais:</strong> nome da esteira / veículo, número da OS, prazo (opcional) e observações.</p>
+    <p><strong>Etapa 2 — Montagem da estrutura:</strong> adicione Tarefas (ex.: Desmontagem, Pintura) e, dentro de cada uma, atividades com nome, setor técnico, tempo previsto, quantidade prevista e ordem de execução.</p>
+    <p><strong>Etapa 3 — Revisão e criação:</strong> revise toda a estrutura, corrija pendências sinalizadas e clique em <strong>Criar Esteira</strong>.</p>
+
+    <h3>4.2 A partir de um Documento (Pipeline R6)</h3>
+    <p>Caminho: menu lateral → <strong>Importar OS</strong> <code>/app/importar-os</code></p>
+    <ol class="steps">
+      <li>Faça upload do PDF da OS (formato Bravo).</li>
+      <li>O sistema lê o documento e propõe automaticamente a estrutura hierárquica.</li>
+      <li>Revise o draft — aceite, ajuste ou remova atividades conforme necessário.</li>
+      <li>Confirme para criar a esteira.</li>
+    </ol>
+
+    <h3>4.3 A partir da Matriz de Operações</h3>
+    <p>Caminho: menu lateral → <strong>Matrizes de Operação</strong> <code>/app/matrizes-operacao</code></p>
+    <p>
+      A Matriz de Operações é um catálogo reutilizável de tarefas e atividades. No assistente
+      de Nova Esteira, escolha <strong>"A partir de uma matriz"</strong>, selecione a matriz e
+      ajuste o que for necessário para este veículo específico.
+    </p>
+  </section>
+
+  <!-- 5 -->
+  <section class="section" id="s5">
+    <h2><span class="num">5</span> Estrutura da Esteira</h2>
+    <p>Caminho: Backlog → clique na esteira → aba <strong>Estrutura</strong></p>
+
+    <h3>Hierarquia</h3>
+    <div class="hierarchy">
+<span class="hl">Esteira</span> (veículo / OS)
+└── <span class="hl">Tarefa</span> (macro-bloco, ex.: Desmontagem)
+    └── <span class="hl">Atividade / Passo</span> (unidade que o colaborador executa e aponta)
+        ├── Setor técnico
+        ├── Tempo previsto
+        └── Quantidade prevista</div>
+
+    <h3>Ações disponíveis na estrutura</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Ação</th><th>Quando usar</th></tr></thead>
+        <tbody>
+          <tr><td>Adicionar atividade</td><td>Pode ser feito mesmo com a esteira em andamento</td></tr>
+          <tr><td>Editar quantidade prevista</td><td>Ajustar o multiplicador de unidades após criação</td></tr>
+          <tr><td>Abortar passo</td><td>Cancelar atividade sem excluir histórico — exige motivo</td></tr>
+          <tr><td>Restaurar passo abortado</td><td>Reverter um cancelamento</td></tr>
+          <tr><td>Concluir passo manualmente</td><td>Marcar como concluído quando o colaborador não apontou pelo sistema</td></tr>
+          <tr><td>Reabrir passo concluído</td><td>Quando há necessidade de retrabalho</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- 6 -->
+  <section class="section" id="s6">
+    <h2><span class="num">6</span> Designar Colaboradores e Equipes</h2>
+
+    <h3>Por atividade individual — Avatar Strip</h3>
+    <ol class="steps">
+      <li>Na aba de estrutura da esteira, localize a atividade desejada.</li>
+      <li>Clique no ícone <strong>"+"</strong> ao lado dos avatares.</li>
+      <li>No popover de busca, selecione o colaborador ou equipe.</li>
+      <li>A designação é salva imediatamente.</li>
+    </ol>
+
+    <h3>Papéis de designação</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Papel</th><th>Significado</th></tr></thead>
+        <tbody>
+          <tr><td>Responsável</td><td>Principal executor da atividade</td></tr>
+          <tr><td>Apoio</td><td>Colaborador auxiliar</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout info">
+      <span class="callout-icon">ℹ</span>
+      <span>
+        Clique em <strong>"Ver carga de trabalho"</strong> para ver a distribuição de horas
+        por colaborador em toda a esteira.
+      </span>
+    </div>
+  </section>
+
+  <!-- 7 -->
+  <section class="section" id="s7">
+    <h2><span class="num">7</span> Acompanhar o Progresso</h2>
+
+    <h3>Tela de detalhe da esteira</h3>
+    <p>Caminho: Backlog → clique na esteira</p>
+    <ul style="padding-left:20px; line-height:2;">
+      <li>Status geral e % de conclusão</li>
+      <li>Lista de tarefas com progresso individual</li>
+      <li>Lista de atividades: status, colaboradores, tempo previsto × executado</li>
+      <li>Histórico de eventos operacionais (timeline)</li>
+    </ul>
+
+    <h3>Painel analítico de passo</h3>
+    <p>
+      Clique em qualquer atividade para abrir o painel lateral com todos os apontamentos
+      (data, minutos, colaborador, observação) e histórico de designações.
+    </p>
+
+    <h3>Apontamento pelo Gestor</h3>
+    <p>
+      Gestores com permissão <code>time_entries.create_on_behalf</code> podem criar
+      apontamentos em nome de colaboradores via
+      <code>/app/gestao/apontamento/:stepNodeId</code>.
+    </p>
+  </section>
+
+  <!-- 8 -->
+  <section class="section" id="s8">
+    <h2><span class="num">8</span> Ciclo de Vida da Esteira</h2>
+
+    <h3>Status disponíveis</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Status</th><th>Significado</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><span class="status-badge s-elaboracao">Em Elaboração</span></td>
+            <td>Rascunho — estrutura ainda sendo montada</td>
+          </tr>
+          <tr>
+            <td><span class="status-badge s-planejamento">Aguardando Planejamento</span></td>
+            <td>Estrutura pronta, aguarda plano</td>
+          </tr>
+          <tr>
+            <td><span class="status-badge s-planejamento">Em Planejamento</span></td>
+            <td>Plano operacional sendo elaborado</td>
+          </tr>
+          <tr>
+            <td><span class="status-badge s-elaboracao">A Iniciar</span></td>
+            <td>Pronta para início, aguarda liberação</td>
+          </tr>
+          <tr>
+            <td><span class="status-badge s-andamento">Em Andamento</span></td>
+            <td>Trabalho em execução</td>
+          </tr>
+          <tr>
+            <td><span class="status-badge s-finalizada">Finalizada</span></td>
+            <td>Concluída</td>
+          </tr>
+          <tr>
+            <td><span class="status-badge s-cancelada">Cancelada</span></td>
+            <td>Encerrada sem conclusão</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Transições de retorno (auditadas)</h3>
+    <div class="callout warning">
+      <span class="callout-icon">⚠</span>
+      <span>
+        Toda transição de retorno exige <strong>registro de motivo</strong> e fica no
+        histórico de eventos da esteira.
+      </span>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>De</th><th>Para</th><th>Motivo</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><span class="status-badge s-andamento">Em Andamento</span></td>
+            <td><span class="status-badge s-planejamento">Em Planejamento</span></td>
+            <td>Para revisar o plano operacional</td>
+          </tr>
+          <tr>
+            <td><span class="status-badge s-planejamento">Em Planejamento</span></td>
+            <td><span class="status-badge s-elaboracao">Em Elaboração</span></td>
+            <td>Para revisar a estrutura de atividades</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p>
+      Use os botões de ação no topo da tela de detalhe da esteira para avançar ou retornar
+      o status (disponíveis conforme o status atual e suas permissões).
+    </p>
+  </section>
+
+  <!-- 9 -->
+  <section class="section" id="s9">
+    <h2><span class="num">9</span> Plano Operacional</h2>
+    <p>Caminho: tela de detalhe da esteira → aba <strong>Plano Operacional</strong></p>
+
+    <h3>Gerar o plano</h3>
+    <ol class="steps">
+      <li>Clique em <strong>"Gerar plano"</strong>.</li>
+      <li>O sistema propõe uma distribuição baseada na carga e disponibilidade.</li>
+      <li>Revise — ajuste datas e responsáveis se necessário.</li>
+      <li>Aprove o plano — o checklist de aprovação confirma a ação.</li>
+    </ol>
+
+    <h3>Gerenciar o plano existente</h3>
+    <ul style="padding-left:20px; line-height:2;">
+      <li>Veja itens agrupados por data de execução.</li>
+      <li>Edite datas ou responsáveis de itens individuais.</li>
+      <li>Rejeite itens que não devem ser planejados.</li>
+    </ul>
+  </section>
+
+  <!-- 10 -->
+  <section class="section" id="s10">
+    <h2><span class="num">10</span> Evolução de Esteiras</h2>
+    <p>
+      Caminho: menu lateral → <strong>Evolução de Esteiras</strong>
+      <code>/app/gestao/evolucao-esteiras</code>
+    </p>
+    <p>
+      Relatório hierárquico com <strong>previsto × realizado × excedido</strong> para todas
+      as esteiras.
+    </p>
+
+    <h3>Filtros</h3>
+    <ul style="padding-left:20px; line-height:2;">
+      <li>Status da esteira</li>
+      <li>Colaborador designado</li>
+      <li>Período de referência</li>
+    </ul>
+
+    <h3>Colunas do relatório</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Coluna</th><th>Significado</th></tr></thead>
+        <tbody>
+          <tr><td>Previsto</td><td>Soma de tempo previsto × quantidade prevista</td></tr>
+          <tr><td>Realizado</td><td>Soma de todos os apontamentos (minutos)</td></tr>
+          <tr><td>Excedido</td><td>Realizado − Previsto (quando positivo)</td></tr>
+          <tr><td>Eficiência</td><td>Realizado ÷ Previsto × 100%</td></tr>
+          <tr><td>% Conclusão</td><td>Progresso médio das atividades</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout info">
+      <span class="callout-icon">ℹ</span>
+      <span>
+        Clique em <strong>"Imprimir"</strong> para a visualização otimizada para papel. Use
+        <strong>"Imprimir Fichas"</strong> para gerar etiquetas térmicas das atividades
+        selecionadas — útil para uso físico na fábrica.
+      </span>
+    </div>
+  </section>
+
+  <!-- 11 -->
+  <section class="section" id="s11">
+    <h2><span class="num">11</span> Planejamento Semanal</h2>
+    <p>
+      Caminho: menu lateral → <strong>Planejamento Semanal</strong>
+      <code>/app/planejamento-semanal</code>
+    </p>
+    <p>
+      Visão de todas as atividades planejadas para a semana, agrupadas por dia. Permite
+      visualizar a carga, redistribuir atividades entre dias e identificar lacunas ou
+      sobrecargas.
+    </p>
+  </section>
+
+  <!-- 12 -->
+  <section class="section" id="s12">
+    <h2><span class="num">12</span> Dashboard Gerencial</h2>
+    <p>Caminho: menu lateral → <strong>Dashboard</strong> <code>/app/dashboard</code></p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Visão</th><th>O que mostra</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>Operacional</td>
+            <td>Progresso das esteiras ativas, atividades em atraso, carga por colaborador</td>
+          </tr>
+          <tr>
+            <td>Executiva</td>
+            <td>Indicadores de eficiência, throughput e tendências</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p>O acesso a cada visão depende das permissões do seu perfil.</p>
+  </section>
+
+  <!-- 13 -->
+  <section class="section" id="s13">
+    <h2><span class="num">13</span> SGP+ Produção — Visão do Gestor</h2>
+    <p>
+      O Modo Fábrica <code>/app/producao</code> e o Kiosk <code>/app/kiosk</code> são
+      acessados pelos colaboradores. O gestor gerencia o acesso via painel administrativo.
+    </p>
+
+    <h3>Gerenciar PINs de colaboradores</h3>
+    <p>Caminho: menu lateral → <strong>Colaboradores</strong> → selecione um colaborador</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Ação</th><th>Quando usar</th></tr></thead>
+        <tbody>
+          <tr><td>Resetar PIN</td><td>Colaborador esqueceu o PIN ou está bloqueado</td></tr>
+          <tr><td>Desbloquear</td><td>Após tentativas incorretas consecutivas</td></tr>
+          <tr><td>Ativar / Inativar acesso de produção</td><td>Controlar quem aparece no Kiosk / Modo Fábrica</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout info">
+      <span class="callout-icon">ℹ</span>
+      <span>
+        Após o reset, o colaborador receberá um PIN temporário e será obrigado a criar um
+        novo PIN no próximo login de produção.
+      </span>
+    </div>
+
+    <h3>Saúde Operacional dos Colaboradores</h3>
+    <p>
+      Caminho: <strong>Colaboradores → Saúde Operacional</strong>
+      <code>/app/colaboradores/saude-operacional</code>
+    </p>
+    <p>
+      Visão consolidada de todas as atividades por colaborador — útil para identificar
+      gargalos ou colaboradores sobrecarregados.
+    </p>
+  </section>
+
+  <!-- 14 -->
+  <section class="section" id="s14">
+    <h2><span class="num">14</span> Equipes</h2>
+    <p>Caminho: menu lateral → <strong>Equipes</strong> <code>/app/equipes</code></p>
+    <p>
+      Crie equipes nomeadas e vincule colaboradores. Ao designar uma equipe para uma
+      atividade, todos os membros ficam automaticamente designados.
+    </p>
+    <h3>Criar uma equipe</h3>
+    <ol class="steps">
+      <li>Clique em <strong>"Nova Equipe"</strong>.</li>
+      <li>Defina nome e descrição.</li>
+      <li>Adicione colaboradores como membros.</li>
+      <li>Salve.</li>
+    </ol>
+  </section>
+
+  <!-- 15 -->
+  <section class="section" id="s15">
+    <h2><span class="num">15</span> Dúvidas frequentes</h2>
+
+    <h3>Posso criar uma esteira sem definir toda a estrutura de uma vez?</h3>
+    <p>
+      Sim. Salve como rascunho (status <em>Em Elaboração</em>) e complete a estrutura depois.
+      Atividades também podem ser adicionadas com a esteira já em andamento.
+    </p>
+
+    <h3>Como corrigir um apontamento feito por um colaborador?</h3>
+    <p>
+      Com a permissão <code>time_entries.edit_any</code>, acesse o painel analítico da
+      atividade e edite ou remova o apontamento. A operação fica registrada na auditoria.
+    </p>
+
+    <h3>A esteira foi concluída mas precisa ser reaberta para retrabalho</h3>
+    <p>
+      Use a transição de retorno com registro de motivo. O sistema mantém todo o histórico.
+    </p>
+
+    <h3>Como evitar recriar a mesma estrutura em cada esteira?</h3>
+    <p>
+      Configure uma <strong>Matriz de Operações</strong>
+      <code>/app/matrizes-operacao</code> com as tarefas e atividades padrão e reutilize-a
+      na criação de cada nova esteira.
+    </p>
+
+    <h3>O Kiosk não mostra um colaborador</h3>
+    <p>
+      O colaborador pode estar inativo ou sem credencial de produção configurada. Verifique
+      em <strong>Colaboradores</strong> e ative o acesso de produção se necessário.
+    </p>
+
+    <h3>Como saber se um colaborador apontou fora de sequência?</h3>
+    <p>
+      O painel analítico da atividade registra a justificativa usada. A informação também
+      aparece no histórico de eventos da esteira.
+    </p>
+  </section>
+
+  <footer class="doc-footer">
+    <span>SGP — Sistema de Gestão de Produção · Multivacia / ARGOS</span>
+    <span>Versão do manual: outubro / 2026</span>
+  </footer>
+
+</div>
+</body>
+</html>
