@@ -20,9 +20,9 @@ const EXPORT_PATH = '/api/v1/collaborators/operational-journey/export.xlsx'
 const COLAB_ROLE_ID = '22222222-2222-2222-2222-222222222222'
 const GESTOR_ROLE_ID = '33333333-3333-3333-3333-333333333333'
 const COLAB_ONLY_USER_ID = 'e7e7e7e7-e7e7-4e7e-8e7e-e7e7e7e7e701'
-const COLAB_ONLY_EMAIL = 'journey-export-colab-only@sgp-argos.local'
+const COLAB_ONLY_EMAIL = 'journey-export-colab-only-e7@sgp-argos.local'
 const GESTOR_USER_ID = 'e7e7e7e7-e7e7-4e7e-8e7e-e7e7e7e7e702'
-const GESTOR_EMAIL = 'journey-export-gestor@sgp-argos.local'
+const GESTOR_EMAIL = 'journey-export-gestor-e7@sgp-argos.local'
 
 function conveyorBody(nome: string): PostConveyorBody {
   return {
