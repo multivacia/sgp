@@ -1,7 +1,7 @@
 {
   "product": "SGP+",
-  "version": "1.9.6",
-  "releaseName": "Hotfix planejamento semanal",
-  "releaseDate": "2026-09-09",
+  "version": "1.9.7",
+  "releaseName": "Apontamentos, quantidade prevista e correções gerenciais",
+  "releaseDate": "2026-09-30",
   "channel": "production"
 }
