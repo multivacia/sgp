@@ -84,11 +84,6 @@ type Props = {
    * demais → "Remover tarefa".
    */
   optionRemoveLabel?: string
-  /**
-   * Steps (por `st.key`) cuja quantidade prevista pode ser editada.
-   * Omitida: todos os campos Qtd ficam bloqueados em 1 (criação e inclusão tardia).
-   */
-  plannedQuantityEditableKeys?: ReadonlySet<string>
 }
 
 function buildInitialOpenAreas(roots: ManualOptionDraft[]): Record<string, string[]> {
@@ -118,7 +113,6 @@ export function NovaEsteiraComposicaoManual({
   abortingStepId = null,
   initiallyExpanded = false,
   optionRemoveLabel,
-  plannedQuantityEditableKeys,
 }: Props) {
   const totem = variant === 'totem'
   const rascunho = variant === 'rascunho' || totem
@@ -663,60 +657,41 @@ export function NovaEsteiraComposicaoManual({
                                   placeholder="Nome da atividade"
                                 />
                               </label>
-                              {plannedQuantityEditableKeys?.has(st.key) ? (
-                                <label className="block w-28 text-sm">
-                                  <span className="text-slate-500">Qtd</span>
-                                  <input
-                                    type="number"
-                                    min={1}
-                                    step={1}
-                                    inputMode="numeric"
-                                    disabled={readOnly}
-                                    aria-invalid={st.plannedQuantityDraft !== undefined}
-                                    className={`mt-1 w-full rounded border border-white/10 bg-black/40 px-2 py-1.5 tabular-nums text-slate-100 ${lockedFieldClass}`}
-                                    value={
-                                      st.plannedQuantityDraft ??
-                                      String(st.plannedQuantity ?? 1)
-                                    }
-                                    onChange={(ev) => {
-                                      const raw = ev.target.value
-                                      const parsed = parsePlannedQuantityInput(raw)
-                                      if (parsed == null) {
-                                        updateStep(op.key, ar.key, st.key, {
-                                          plannedQuantityDraft: raw,
-                                        })
-                                        return
-                                      }
+                              <label className="block w-28 text-sm">
+                                <span className="text-slate-500">Qtd</span>
+                                <input
+                                  type="number"
+                                  min={1}
+                                  step={1}
+                                  inputMode="numeric"
+                                  disabled={readOnly}
+                                  aria-invalid={st.plannedQuantityDraft !== undefined}
+                                  className={`mt-1 w-full rounded border border-white/10 bg-black/40 px-2 py-1.5 tabular-nums text-slate-100 ${lockedFieldClass}`}
+                                  value={
+                                    st.plannedQuantityDraft ??
+                                    String(st.plannedQuantity ?? 1)
+                                  }
+                                  onChange={(ev) => {
+                                    const raw = ev.target.value
+                                    const parsed = parsePlannedQuantityInput(raw)
+                                    if (parsed == null) {
                                       updateStep(op.key, ar.key, st.key, {
-                                        plannedQuantity: parsed,
-                                        plannedQuantityDraft: undefined,
+                                        plannedQuantityDraft: raw,
                                       })
-                                    }}
-                                  />
-                                  {st.plannedQuantityDraft !== undefined ? (
-                                    <span className="mt-0.5 block text-[10px] leading-tight text-rose-300/90">
-                                      {PLANNED_QUANTITY_INVALID_MESSAGE}
-                                    </span>
-                                  ) : null}
-                                </label>
-                              ) : (
-                                <label className="block w-28 text-sm">
-                                  <span className="text-slate-500">Qtd</span>
-                                  <input
-                                    type="number"
-                                    readOnly
-                                    disabled
-                                    aria-readonly="true"
-                                    title="Quantidade inicial da esteira: 1. Ajuste após criar, conforme a demanda operacional."
-                                    className="mt-1 w-full cursor-not-allowed rounded border border-white/10 bg-black/30 px-2 py-1.5 tabular-nums text-slate-400"
-                                    value={1}
-                                  />
-                                  <span className="mt-0.5 block text-[10px] leading-tight text-slate-500">
-                                    Quantidade inicial da esteira: 1. Ajuste após criar,
-                                    conforme a demanda operacional.
+                                      return
+                                    }
+                                    updateStep(op.key, ar.key, st.key, {
+                                      plannedQuantity: parsed,
+                                      plannedQuantityDraft: undefined,
+                                    })
+                                  }}
+                                />
+                                {st.plannedQuantityDraft !== undefined ? (
+                                  <span className="mt-0.5 block text-[10px] leading-tight text-rose-300/90">
+                                    {PLANNED_QUANTITY_INVALID_MESSAGE}
                                   </span>
-                                </label>
-                              )}
+                                ) : null}
+                              </label>
                               <label className="block w-28 text-sm">
                                 <span className="text-slate-500">Min/un.</span>
                                 <input

@@ -176,7 +176,7 @@ describe('mapMatrixTreeToConveyorOptions', () => {
 })
 
 describe('buildManualConveyorInput', () => {
-  it('envia plannedQuantity 1 mesmo se o draft tiver outro valor', () => {
+  it('envia a quantidade prevista informada no draft de criação', () => {
     const roots = [
       {
         key: 'op-1',
@@ -213,7 +213,7 @@ describe('buildManualConveyorInput', () => {
       roots,
       {},
     )
-    expect(input.options[0].areas[0].steps[0].plannedQuantity).toBe(1)
+    expect(input.options[0].areas[0].steps[0].plannedQuantity).toBe(10)
   })
 
   it('propaga sourceKey do draft para o POST', () => {

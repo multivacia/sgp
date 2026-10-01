@@ -100,7 +100,7 @@ async function hasConveyorNodesPlannedQuantityColumn(
   return r.rows.length > 0
 }
 
-describe.skipIf(!hasDb)('conveyor create — planned_quantity inicial', () => {
+describe.skipIf(!hasDb)('conveyor create — planned_quantity informado na criação', () => {
   let pool: ReturnType<typeof getPool>
   let hasPlannedQuantityColumn = false
 
@@ -113,49 +113,48 @@ describe.skipIf(!hasDb)('conveyor create — planned_quantity inicial', () => {
     await closePool()
   })
 
-  it('manual com plannedQuantity 10 no payload persiste 1', async (ctx) => {
+  it('manual com plannedQuantity 10 no payload persiste 10', async (ctx) => {
     if (!hasPlannedQuantityColumn) ctx.skip()
     const created = await serviceCreateConveyor(
       pool,
       conveyorBody('manual', 10),
-    )
-    const row = await readStepPlannedQuantity(pool, created.id)
-    expect(row.planned_quantity).toBe(1)
-  })
-
-  it('base com plannedQuantity 10 no payload persiste 1', async (ctx) => {
-    if (!hasPlannedQuantityColumn) ctx.skip()
-    const created = await serviceCreateConveyor(pool, conveyorBody('base', 10))
-    const row = await readStepPlannedQuantity(pool, created.id)
-    expect(row.planned_quantity).toBe(1)
-  })
-
-  it('reaproveitada com plannedQuantity 10 no payload persiste 1', async (ctx) => {
-    if (!hasPlannedQuantityColumn) ctx.skip()
-    const created = await serviceCreateConveyor(
-      pool,
-      conveyorBody('reaproveitada', 10),
-    )
-    const row = await readStepPlannedQuantity(pool, created.id)
-    expect(row.planned_quantity).toBe(1)
-  })
-
-  it('após UPDATE pós-criação, carga planejada usa min/un. × qtd', async (ctx) => {
-    if (!hasPlannedQuantityColumn) ctx.skip()
-    const created = await serviceCreateConveyor(
-      pool,
-      conveyorBody('manual', 10),
-    )
-    await pool.query(
-      `UPDATE conveyor_nodes
-       SET planned_quantity = 10
-       WHERE conveyor_id = $1::uuid AND node_type = 'STEP' AND deleted_at IS NULL`,
-      [created.id],
     )
     const row = await readStepPlannedQuantity(pool, created.id)
     expect(row.planned_quantity).toBe(10)
     expect(
       resolveActivityPlannedTotalMinutes(row.planned_minutes, row.planned_quantity),
     ).toBe(150)
+  })
+
+  it('base com plannedQuantity 10 no payload persiste 10', async (ctx) => {
+    if (!hasPlannedQuantityColumn) ctx.skip()
+    const created = await serviceCreateConveyor(pool, conveyorBody('base', 10))
+    const row = await readStepPlannedQuantity(pool, created.id)
+    expect(row.planned_quantity).toBe(10)
+    expect(
+      resolveActivityPlannedTotalMinutes(row.planned_minutes, row.planned_quantity),
+    ).toBe(150)
+  })
+
+  it('reaproveitada com plannedQuantity 10 no payload persiste 10', async (ctx) => {
+    if (!hasPlannedQuantityColumn) ctx.skip()
+    const created = await serviceCreateConveyor(
+      pool,
+      conveyorBody('reaproveitada', 10),
+    )
+    const row = await readStepPlannedQuantity(pool, created.id)
+    expect(row.planned_quantity).toBe(10)
+    expect(
+      resolveActivityPlannedTotalMinutes(row.planned_minutes, row.planned_quantity),
+    ).toBe(150)
+  })
+
+  it('sem plannedQuantity no payload persiste 1 (compatibilidade)', async (ctx) => {
+    if (!hasPlannedQuantityColumn) ctx.skip()
+    const body = conveyorBody('manual', 1)
+    delete (body.options[0]!.areas[0]!.steps[0] as { plannedQuantity?: number }).plannedQuantity
+    const created = await serviceCreateConveyor(pool, body)
+    const row = await readStepPlannedQuantity(pool, created.id)
+    expect(row.planned_quantity).toBe(1)
   })
 })

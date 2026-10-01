@@ -314,7 +314,7 @@ describe('buildManualConveyorInput (PATCH incremental)', () => {
     expect(input.options[0].areas[0].steps[1].id).toBeUndefined()
   })
 
-  it('step persistido envia a quantidade prevista; step novo envia 1', () => {
+  it('step persistido e step novo enviam a quantidade prevista informada', () => {
     const persistedOp = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
     const persistedAr = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'
     const persistedSt = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc'
@@ -353,7 +353,7 @@ describe('buildManualConveyorInput (PATCH incremental)', () => {
     )
     expect(input.options[0].areas[0].steps[0].plannedQuantity).toBe(4)
     expect(input.options[0].areas[0].steps[0].plannedMinutes).toBe(30)
-    expect(input.options[0].areas[0].steps[1].plannedQuantity).toBe(1)
+    expect(input.options[0].areas[0].steps[1].plannedQuantity).toBe(9)
     expect(input.options[0].areas[0].steps[1].id).toBeUndefined()
   })
 })

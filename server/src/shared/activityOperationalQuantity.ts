@@ -2,11 +2,14 @@
 export const DEFAULT_PLANNED_QUANTITY = 1
 
 /**
- * Quantidade ao criar/materializar esteira (POST /conveyors e estrutura inicial).
- * Ignora `plannedQuantity` do payload — ajuste operacional é pós-criação.
+ * Quantidade ao criar/materializar STEP (POST /conveyors, inserts de estrutura e
+ * inclusão tardia). Respeita `plannedQuantity` informado na criação; ausente ou
+ * inválido → 1 (mesma regra de `resolveActivityPlannedQuantity`).
  */
-export function resolveInitialConveyorStepPlannedQuantity(): number {
-  return DEFAULT_PLANNED_QUANTITY
+export function resolveInitialConveyorStepPlannedQuantity(
+  raw?: number | string | null,
+): number {
+  return resolveActivityPlannedQuantity(raw)
 }
 
 const QUANTITY_UNIT_LABEL = 'un.'

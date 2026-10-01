@@ -2,8 +2,14 @@ import type { Request, Response } from 'express'
 import type pg from 'pg'
 import { ok } from '../../shared/http/ok.js'
 import { uuidParamSchema } from '../collaborators/collaborators.schemas.js'
-import { serviceGetOperationalJourney } from './operational-journey.service.js'
-import { operationalJourneyQuerySchema } from './operational-journey.schemas.js'
+import {
+  serviceExportOperationalJourneyXlsx,
+  serviceGetOperationalJourney,
+} from './operational-journey.service.js'
+import {
+  operationalJourneyExportCollaboratorIdsSchema,
+  operationalJourneyQuerySchema,
+} from './operational-journey.schemas.js'
 
 function queryString(v: unknown): string | undefined {
   if (typeof v === 'string') return v
@@ -23,4 +29,31 @@ export async function getOperationalJourney(req: Request, res: Response): Promis
   })
   const data = await serviceGetOperationalJourney(pool, { collaboratorId, query: q })
   res.json(ok(data))
+}
+
+/** GET /collaborators/operational-journey/export.xlsx?collaboratorIds=a,b&periodPreset=… */
+export async function getOperationalJourneyExportXlsx(req: Request, res: Response): Promise<void> {
+  const pool = req.app.locals.pool as pg.Pool
+  const collaboratorIds = operationalJourneyExportCollaboratorIdsSchema.parse(
+    req.query.collaboratorIds ?? '',
+  )
+  const q = operationalJourneyQuerySchema.parse({
+    periodPreset: queryString(req.query.periodPreset),
+    from: queryString(req.query.from),
+    to: queryString(req.query.to),
+    conveyorId: queryString(req.query.conveyorId),
+  })
+  const { buffer, filename } = await serviceExportOperationalJourneyXlsx(pool, {
+    collaboratorIds,
+    query: q,
+  })
+  res.setHeader(
+    'Content-Type',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  )
+  res.setHeader(
+    'Content-Disposition',
+    `attachment; filename="${filename}"; filename*=UTF-8''${encodeURIComponent(filename)}`,
+  )
+  res.send(buffer)
 }

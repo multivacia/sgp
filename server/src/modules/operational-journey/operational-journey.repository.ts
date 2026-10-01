@@ -4,6 +4,8 @@ import { OPERATIONAL_TIMEZONE } from '../../shared/operationalWorkDate.js'
 export type CollaboratorBriefRow = {
   id: string
   full_name: string | null
+  code: string | null
+  registration_code: string | null
 }
 
 export async function findCollaboratorBrief(
@@ -12,13 +14,30 @@ export async function findCollaboratorBrief(
 ): Promise<CollaboratorBriefRow | null> {
   const r = await pool.query<CollaboratorBriefRow>(
     `
-    SELECT c.id::text, c.full_name
+    SELECT c.id::text, c.full_name, c.code, c.registration_code
     FROM collaborators c
     WHERE c.id = $1::uuid AND c.deleted_at IS NULL
     `,
     [collaboratorId],
   )
   return r.rows[0] ?? null
+}
+
+/**
+ * Universo de apontamentos de esteira da jornada — mesmo critério para totais
+ * (período / acumulado), histórico e exportação. Esteira e STEP precisam existir
+ * (não removidos), senão o total contaria lançamentos que nunca aparecem no detalhe.
+ * Alias: `cte` (conveyor_time_entries), `cv` (conveyors), `step` (conveyor_nodes).
+ */
+function journeyTimeEntriesFromSql(extraJoins = ''): string {
+  return `
+    FROM conveyor_time_entries cte
+    INNER JOIN conveyors cv ON cv.id = cte.conveyor_id AND cv.deleted_at IS NULL
+    INNER JOIN conveyor_nodes step
+      ON step.id = cte.conveyor_node_id AND step.deleted_at IS NULL
+    ${extraJoins}
+    WHERE cte.deleted_at IS NULL
+`
 }
 
 export async function sumRealizedMinutesTotalForCollaborator(
@@ -28,11 +47,10 @@ export async function sumRealizedMinutesTotalForCollaborator(
 ): Promise<number> {
   const r = await pool.query<{ s: string | null }>(
     `
-    SELECT COALESCE(SUM(minutes), 0)::text AS s
-    FROM conveyor_time_entries
-    WHERE deleted_at IS NULL
-      AND collaborator_id = $1::uuid
-      AND ($2::uuid IS NULL OR conveyor_id = $2::uuid)
+    SELECT COALESCE(SUM(cte.minutes), 0)::text AS s
+    ${journeyTimeEntriesFromSql()}
+      AND cte.collaborator_id = $1::uuid
+      AND ($2::uuid IS NULL OR cte.conveyor_id = $2::uuid)
     `,
     [collaboratorId, conveyorId],
   )
@@ -50,13 +68,12 @@ export async function sumRealizedMinutesInPeriodForCollaborator(
 ): Promise<number> {
   const r = await pool.query<{ s: string | null }>(
     `
-    SELECT COALESCE(SUM(minutes), 0)::text AS s
-    FROM conveyor_time_entries
-    WHERE deleted_at IS NULL
-      AND collaborator_id = $1::uuid
-      AND entry_at >= $2::timestamptz
-      AND entry_at <= $3::timestamptz
-      AND ($4::uuid IS NULL OR conveyor_id = $4::uuid)
+    SELECT COALESCE(SUM(cte.minutes), 0)::text AS s
+    ${journeyTimeEntriesFromSql()}
+      AND cte.collaborator_id = $1::uuid
+      AND cte.entry_at >= $2::timestamptz
+      AND cte.entry_at <= $3::timestamptz
+      AND ($4::uuid IS NULL OR cte.conveyor_id = $4::uuid)
     `,
     [args.collaboratorId, args.from, args.to, args.conveyorId],
   )
@@ -115,11 +132,7 @@ export async function listTimeEntriesForCollaboratorInPeriod(
       cte.exception_justification,
       cte.is_out_of_sequence,
       cte.out_of_sequence_justification
-    FROM conveyor_time_entries cte
-    INNER JOIN conveyors cv ON cv.id = cte.conveyor_id AND cv.deleted_at IS NULL
-    INNER JOIN conveyor_nodes step
-      ON step.id = cte.conveyor_node_id AND step.deleted_at IS NULL
-    WHERE cte.deleted_at IS NULL
+    ${journeyTimeEntriesFromSql()}
       AND cte.collaborator_id = $1::uuid
       AND cte.entry_at >= $2::timestamptz
       AND cte.entry_at <= $3::timestamptz
@@ -128,6 +141,99 @@ export async function listTimeEntriesForCollaboratorInPeriod(
     LIMIT $5
     `,
     [args.collaboratorId, args.from, args.to, args.conveyorId, args.limit],
+  )
+  return r.rows
+}
+
+export type TimeEntryExportRow = TimeEntryHistoryRow & {
+  conveyor_code: string | null
+  option_name: string | null
+  area_name: string | null
+  executed_quantity: number | null
+}
+
+/**
+ * Todos os apontamentos de esteira do colaborador no período (sem limite) —
+ * mesmo universo de `sumRealizedMinutesInPeriodForCollaborator`. Uso: exportação.
+ */
+export async function listAllTimeEntriesForCollaboratorInPeriod(
+  pool: pg.Pool,
+  args: {
+    collaboratorId: string
+    from: Date
+    to: Date
+    conveyorId: string | null
+  },
+): Promise<TimeEntryExportRow[]> {
+  const r = await pool.query<TimeEntryExportRow>(
+    `
+    SELECT
+      cte.id::text,
+      cte.conveyor_id::text,
+      cv.name AS conveyor_name,
+      cv.code AS conveyor_code,
+      cte.conveyor_node_id::text,
+      step.name AS step_name,
+      area.name AS area_name,
+      opt.name AS option_name,
+      cte.minutes,
+      cte.executed_quantity,
+      cte.entry_at,
+      cte.notes,
+      cte.entry_origin,
+      cte.exception_justification,
+      cte.is_out_of_sequence,
+      cte.out_of_sequence_justification
+    ${journeyTimeEntriesFromSql(`
+    LEFT JOIN conveyor_nodes area ON area.id = step.parent_id
+    LEFT JOIN conveyor_nodes opt ON opt.id = step.root_id`)}
+      AND cte.collaborator_id = $1::uuid
+      AND cte.entry_at >= $2::timestamptz
+      AND cte.entry_at <= $3::timestamptz
+      AND ($4::uuid IS NULL OR cte.conveyor_id = $4::uuid)
+    ORDER BY cte.entry_at ASC, cte.created_at ASC
+    `,
+    [args.collaboratorId, args.from, args.to, args.conveyorId],
+  )
+  return r.rows
+}
+
+export type ExtraTimeEntryExportRow = {
+  id: string
+  entry_date: string
+  minutes: number
+  description: string
+  notes: string | null
+}
+
+/** Lançamentos fora de esteira no período — mesmo universo de `summarizeExtraTimeEntries…`. */
+export async function listExtraTimeEntriesInPeriodForCollaborator(
+  pool: pg.Pool,
+  args: {
+    collaboratorId: string
+    from: Date
+    to: Date
+  },
+): Promise<ExtraTimeEntryExportRow[]> {
+  const r = await pool.query<ExtraTimeEntryExportRow>(
+    `
+    SELECT
+      e.id::text,
+      to_char(e.entry_date, 'YYYY-MM-DD') AS entry_date,
+      e.minutes,
+      d.description,
+      e.notes
+    FROM operational_extra_time_entries e
+    INNER JOIN operational_extra_time_entry_descriptions d
+      ON d.id = e.description_id
+     AND d.deleted_at IS NULL
+    WHERE e.collaborator_id = $1::uuid
+      AND e.deleted_at IS NULL
+      AND e.entry_date >= ($2::timestamptz AT TIME ZONE '${OPERATIONAL_TIMEZONE}')::date
+      AND e.entry_date <= ($3::timestamptz AT TIME ZONE '${OPERATIONAL_TIMEZONE}')::date
+    ORDER BY e.entry_date ASC, e.created_at ASC
+    `,
+    [args.collaboratorId, args.from, args.to],
   )
   return r.rows
 }
@@ -206,4 +312,15 @@ export async function listTopExtraTimeEntryDescriptionsInPeriodForCollaborator(
     totalMinutes: Number.parseInt(row.total_minutes, 10) || 0,
     entriesCount: Number.parseInt(row.entries_count, 10) || 0,
   }))
+}
+
+export async function findConveyorBrief(
+  pool: pg.Pool,
+  conveyorId: string,
+): Promise<{ id: string; name: string; code: string | null } | null> {
+  const r = await pool.query<{ id: string; name: string; code: string | null }>(
+    `SELECT cv.id::text, cv.name, cv.code FROM conveyors cv WHERE cv.id = $1::uuid`,
+    [conveyorId],
+  )
+  return r.rows[0] ?? null
 }

@@ -238,9 +238,7 @@ export function buildManualConveyorInput(
         titulo: st.titulo.trim(),
         orderIndex: si + 1,
         plannedMinutes: Math.max(0, Math.floor(st.plannedMinutes)),
-        plannedQuantity: persisted?.has(st.key)
-          ? Math.max(1, Math.floor(st.plannedQuantity ?? 1))
-          : 1,
+        plannedQuantity: Math.max(1, Math.floor(st.plannedQuantity ?? 1)),
         sourceKey: st.sourceKey ?? null,
         sourceOrigin: 'manual',
         required: true,
