@@ -202,7 +202,7 @@ function computeTotalsForOptions(options: PostConveyorBody['options']): {
         totalSteps++
         totalPlannedMinutes += resolveActivityPlannedTotalMinutes(
           st.plannedMinutes,
-          resolveInitialConveyorStepPlannedQuantity(),
+          resolveInitialConveyorStepPlannedQuantity(st.plannedQuantity),
         )
       }
     }
@@ -238,7 +238,7 @@ function computeStructurePatchTotals(options: PostConveyorBody['options']): {
         totalSteps++
         const quantity = st.id
           ? st.plannedQuantity
-          : resolveInitialConveyorStepPlannedQuantity()
+          : resolveInitialConveyorStepPlannedQuantity(st.plannedQuantity)
         totalPlannedMinutes += resolveActivityPlannedTotalMinutes(st.plannedMinutes, quantity)
       }
     }
@@ -658,7 +658,7 @@ async function materializeConveyorOptions(
           level_depth: 2,
           is_active: true,
           planned_minutes: st.plannedMinutes,
-          planned_quantity: resolveInitialConveyorStepPlannedQuantity(),
+          planned_quantity: resolveInitialConveyorStepPlannedQuantity(st.plannedQuantity),
           default_responsible_id: null,
           required: st.required ?? true,
           source_key: st.sourceKey?.trim() || null,
@@ -1221,7 +1221,7 @@ export async function serviceApplyConveyorStructureDiff(
         level_depth: levelDepth,
         is_active: true,
         planned_minutes: ins.plannedMinutes,
-        planned_quantity: resolveInitialConveyorStepPlannedQuantity(),
+        planned_quantity: resolveInitialConveyorStepPlannedQuantity(ins.plannedQuantity),
         default_responsible_id: null,
         required: ins.required,
         source_key: ins.sourceKey,

@@ -62,7 +62,7 @@ export const postConveyorStepSchema = z
     titulo: z.string().min(1),
     orderIndex: z.number().int().min(1),
     plannedMinutes: z.number().int().min(0),
-    /** Aceito no POST por compatibilidade; o service persiste sempre 1 na criação. */
+    /** Quantidade prevista do STEP (inteiro ≥ 1). Respeitada na criação, inclusão e edição. */
     plannedQuantity: z.number().int().min(1).optional().default(1),
     sourceOrigin: sourceOriginNodeSchema,
     required: z.boolean().optional().default(true),

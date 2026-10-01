@@ -19,7 +19,7 @@ export type StructureDiffStepPayload = {
   titulo: string
   orderIndex: number
   plannedMinutes: number
-  /** Presente no payload; insert de STEP persiste sempre 1 no service. */
+  /** Quantidade prevista do STEP (inteiro ≥ 1); usada tanto em insert quanto em update. */
   plannedQuantity?: number
   sourceOrigin: StructureSourceOrigin
   required?: boolean
@@ -84,7 +84,7 @@ export type StructureDiffInsert = {
   orderIndex: number
   sourceOrigin: StructureSourceOrigin
   plannedMinutes: number | null
-  /** Carregado no insert de STEP; o service grava sempre 1. */
+  /** Quantidade informada na criação do STEP (OPTION/AREA: null → 1). */
   plannedQuantity: number | null
   required: boolean
   sourceKey: string | null

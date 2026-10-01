@@ -87,7 +87,7 @@ function computeAreaTotals(area: PostConveyorAreaBody): {
     totalSteps++
     totalPlannedMinutes += resolveActivityPlannedTotalMinutes(
       st.plannedMinutes,
-      resolveInitialConveyorStepPlannedQuantity(),
+      resolveInitialConveyorStepPlannedQuantity(st.plannedQuantity),
     )
   }
   return { totalAreas: 1, totalSteps, totalPlannedMinutes }
@@ -121,7 +121,7 @@ function computeStepTotals(step: PostConveyorStepBody): {
     totalSteps: 1,
     totalPlannedMinutes: resolveActivityPlannedTotalMinutes(
       step.plannedMinutes,
-      resolveInitialConveyorStepPlannedQuantity(),
+      resolveInitialConveyorStepPlannedQuantity(step.plannedQuantity),
     ),
   }
 }
@@ -523,7 +523,7 @@ async function materializeAppendStepsUnderArea(
       level_depth: 2,
       is_active: true,
       planned_minutes: st.plannedMinutes,
-      planned_quantity: resolveInitialConveyorStepPlannedQuantity(),
+      planned_quantity: resolveInitialConveyorStepPlannedQuantity(st.plannedQuantity),
       default_responsible_id: null,
       required: st.required ?? true,
       source_key: st.sourceKey?.trim() || null,

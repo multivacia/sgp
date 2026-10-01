@@ -9,6 +9,7 @@ import {
 import { AppError } from '../../shared/errors/AppError.js'
 import {
   isDateOnlyString,
+  operationalDateOf,
   operationalDayEnd,
   operationalDayStart,
 } from '../../shared/operationalWorkDate.js'
@@ -16,7 +17,15 @@ import { ErrorCodes } from '../../shared/errors/errorCodes.js'
 import { serviceListActivitiesForCollaborator } from '../my-activities/my-activities.service.js'
 import type { OperationalJourneyApi } from './operational-journey.dto.js'
 import {
+  buildOperationalJourneyExportFilename,
+  buildOperationalJourneyExportWorkbookBuffer,
+  type OperationalJourneyExportCollaborator,
+} from './operational-journey.export.js'
+import {
   findCollaboratorBrief,
+  findConveyorBrief,
+  listAllTimeEntriesForCollaboratorInPeriod,
+  listExtraTimeEntriesInPeriodForCollaborator,
   listTopExtraTimeEntryDescriptionsInPeriodForCollaborator,
   listTimeEntriesForCollaboratorInPeriod,
   summarizeExtraTimeEntriesInPeriodForCollaborator,
@@ -270,5 +279,97 @@ export async function serviceGetOperationalJourney(
     assignmentsOpen,
     assignmentsAtRisk,
     recentTimeEntries,
+  }
+}
+
+/**
+ * Exportação XLSX da jornada para um ou vários colaboradores.
+ * Totais por colaborador vêm de `serviceGetOperationalJourney` (mesma regra da tela);
+ * o detalhe lista todos os apontamentos do período (sem o limite do histórico da tela).
+ */
+export async function serviceExportOperationalJourneyXlsx(
+  pool: pg.Pool,
+  args: {
+    collaboratorIds: string[]
+    query: OperationalJourneyQuery
+  },
+): Promise<{ buffer: Buffer; filename: string }> {
+  const conveyorId = args.query.conveyorId ?? null
+  const collaborators: OperationalJourneyExportCollaborator[] = []
+  let periodFrom: Date | null = null
+  let periodTo: Date | null = null
+
+  // Sequencial: cada jornada já dispara consultas em paralelo — evita saturar o pool.
+  for (const collaboratorId of args.collaboratorIds) {
+    const journey = await serviceGetOperationalJourney(pool, { collaboratorId, query: args.query })
+    const from = new Date(journey.period.from)
+    const to = new Date(journey.period.to)
+    periodFrom ??= from
+    periodTo ??= to
+    const [brief, entries, extraEntries] = await Promise.all([
+      findCollaboratorBrief(pool, collaboratorId),
+      listAllTimeEntriesForCollaboratorInPeriod(pool, { collaboratorId, from, to, conveyorId }),
+      listExtraTimeEntriesInPeriodForCollaborator(pool, { collaboratorId, from, to }),
+    ])
+    collaborators.push({
+      collaboratorId,
+      fullName: journey.collaborator.fullName?.trim() || collaboratorId,
+      code: brief?.code ?? null,
+      registrationCode: brief?.registration_code ?? null,
+      totals: {
+        assignmentCount: journey.load.assignmentCount,
+        plannedMinutesOnStepsSum: journey.load.plannedMinutesOnStepsSum,
+        realizedMinutesInPeriod: journey.execution.realizedMinutesInPeriod,
+        realizedMinutesTotal: journey.execution.realizedMinutesTotal,
+        coberturaRealizadoMinutos: journey.coberturaTempo.realizadoMinutosAcumuladoEscopo,
+        coberturaPrevistoMinutos: journey.coberturaTempo.previstoMinutosEscopo,
+        extraMinutesInPeriod: journey.extraTimeEntriesSummary.totalMinutes,
+        extraEntriesCount: journey.extraTimeEntriesSummary.entriesCount,
+        overdueCount: journey.risk.overdueCount,
+        pendenciaTempoCount: journey.signals.pendenciaTempo.count,
+      },
+      timeEntries: entries.map((e) => ({
+        workDate: operationalDateOf(e.entry_at),
+        conveyorCode: e.conveyor_code,
+        conveyorName: e.conveyor_name,
+        optionName: e.option_name,
+        areaName: e.area_name,
+        stepName: e.step_name,
+        minutes: e.minutes,
+        executedQuantity: e.executed_quantity,
+        entryOrigin: e.entry_origin,
+        isOutOfSequence: Boolean(e.is_out_of_sequence),
+        justification:
+          [e.exception_justification, e.out_of_sequence_justification]
+            .map((j) => j?.trim())
+            .filter(Boolean)
+            .join(' · ') || null,
+        notes: e.notes,
+      })),
+      extraEntries: extraEntries.map((e) => ({
+        entryDate: e.entry_date,
+        description: e.description,
+        minutes: e.minutes,
+        notes: e.notes,
+      })),
+    })
+  }
+
+  collaborators.sort((a, b) => a.fullName.localeCompare(b.fullName, 'pt-BR'))
+
+  const conveyor = conveyorId ? await findConveyorBrief(pool, conveyorId) : null
+  const meta = {
+    periodFromDate: operationalDateOf(periodFrom ?? new Date()),
+    periodToDate: operationalDateOf(periodTo ?? new Date()),
+    periodPreset: args.query.periodPreset,
+    conveyorFilterLabel: conveyor
+      ? [conveyor.code, conveyor.name].filter(Boolean).join(' · ')
+      : null,
+    generatedAt: new Date(),
+  }
+  const buffer = await buildOperationalJourneyExportWorkbookBuffer({ meta, collaborators })
+  return {
+    buffer,
+    filename: buildOperationalJourneyExportFilename(meta, collaborators.length),
   }
 }

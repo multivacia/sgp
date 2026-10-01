@@ -17,6 +17,7 @@ import { SgpInlineBanner } from '../../components/ui/SgpToast'
 import {
   buildManualConveyorInput,
   manualAssigneeRowsToApi,
+  PLANNED_QUANTITY_INVALID_MESSAGE,
   validateManualStepAssignees,
   validateManualStructure,
   type ManualAreaDraft,
@@ -206,6 +207,7 @@ export function LateStructureAppendDrawer({
       if (area.steps.length < 1) return 'O setor precisa de pelo menos uma atividade.'
       for (const st of area.steps) {
         if (!st.titulo.trim()) return 'Informe o título de cada atividade.'
+        if (st.plannedQuantityDraft !== undefined) return PLANNED_QUANTITY_INVALID_MESSAGE
       }
       return validateManualStepAssignees(roots, aloc)
     }
@@ -216,6 +218,7 @@ export function LateStructureAppendDrawer({
         return 'Inclua exatamente uma atividade neste rascunho.'
       }
       if (!step.titulo.trim()) return 'Informe o título da atividade.'
+      if (step.plannedQuantityDraft !== undefined) return PLANNED_QUANTITY_INVALID_MESSAGE
       return validateManualStepAssignees(roots, aloc)
     }
     if (roots.length !== 1) return 'Inclua exatamente uma nova tarefa (OPTION).'

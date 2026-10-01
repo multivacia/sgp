@@ -21,8 +21,11 @@ describe('activityOperationalQuantity', () => {
     expect(resolveActivityPlannedTotalMinutes(30, 1)).toBe(30)
   })
 
-  it('resolveInitialConveyorStepPlannedQuantity ignora payload na criação', () => {
+  it('resolveInitialConveyorStepPlannedQuantity respeita quantidade informada na criação', () => {
     expect(resolveInitialConveyorStepPlannedQuantity()).toBe(1)
+    expect(resolveInitialConveyorStepPlannedQuantity(10)).toBe(10)
+    expect(resolveInitialConveyorStepPlannedQuantity(0)).toBe(1)
+    expect(resolveInitialConveyorStepPlannedQuantity(null)).toBe(1)
   })
 
   it('quantidade 1 mantém equivalência de tempo total', () => {

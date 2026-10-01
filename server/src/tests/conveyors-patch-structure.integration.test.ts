@@ -914,7 +914,7 @@ describe.skipIf(!hasDb)('conveyors PATCH structure/dados (integração)', () => 
     }
   })
 
-  it('step novo no PATCH grava quantidade 1 mesmo com plannedQuantity 4 no payload', async () => {
+  it('step novo no PATCH grava a quantidade prevista informada (4)', async () => {
     const { cid } = await createConveyor()
     const before = await detailOf(cid)
     const oldId = before.structure.options[0]!.areas[0]!.steps[0]!.id
@@ -938,14 +938,15 @@ describe.skipIf(!hasDb)('conveyors PATCH structure/dados (integração)', () => 
     const created = steps.find((s) => s.id !== oldId)
     expect(created?.name).toBe('Etapa nova')
     expect(created?.plannedMinutes).toBe(15)
-    expect(created?.plannedQuantity).toBe(1)
-    expect(res.body.data.totalPlannedMinutes).toBe(45)
+    expect(created?.plannedQuantity).toBe(4)
+    // total previsto = 30×1 + 15×4
+    expect(res.body.data.totalPlannedMinutes).toBe(90)
 
     const row = await pool.query<{ planned_quantity: number }>(
       `SELECT planned_quantity FROM conveyor_nodes WHERE id = $1::uuid`,
       [created!.id],
     )
-    expect(row.rows[0]?.planned_quantity).toBe(1)
+    expect(row.rows[0]?.planned_quantity).toBe(4)
   })
 
   it('fora de EM_ELABORACAO exige reason e, com reason, grava a quantidade', async () => {

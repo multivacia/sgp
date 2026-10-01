@@ -47,3 +47,28 @@ export const operationalJourneyQuerySchema = z
   })
 
 export type OperationalJourneyQuery = z.infer<typeof operationalJourneyQuerySchema>
+
+/** Máximo de colaboradores por exportação (protege o banco e o tamanho do arquivo). */
+export const OPERATIONAL_JOURNEY_EXPORT_MAX_COLLABORATORS = 50
+
+/**
+ * `collaboratorIds` aceita lista separada por vírgula e/ou parâmetro repetido.
+ * Duplicados são removidos preservando a ordem.
+ */
+export const operationalJourneyExportCollaboratorIdsSchema = z
+  .union([z.string(), z.array(z.string())])
+  .transform((raw) =>
+    (Array.isArray(raw) ? raw : [raw])
+      .flatMap((v) => v.split(','))
+      .map((v) => v.trim())
+      .filter((v) => v.length > 0),
+  )
+  .pipe(
+    z
+      .array(z.string().uuid('Identificador de colaborador inválido.'))
+      .min(1, 'Selecione ao menos um colaborador.')
+      .transform((ids) => [...new Set(ids)])
+      .refine((ids) => ids.length <= OPERATIONAL_JOURNEY_EXPORT_MAX_COLLABORATORS, {
+        message: `Selecione no máximo ${OPERATIONAL_JOURNEY_EXPORT_MAX_COLLABORATORS} colaboradores por exportação.`,
+      }),
+  )
