@@ -9,7 +9,18 @@ import { formatHumanMinutes } from '../../lib/formatters'
 import { useAuth } from '../../lib/use-auth'
 import type { MyActivityItem } from '../../domain/my-activities/my-activities.types'
 import type { OperationalJourneyData } from '../../domain/operational-journey/operational-journey.types'
-import { fetchOperationalJourney } from '../../services/operational-journey/operationalJourneyApiService'
+import {
+  fetchOperationalJourney,
+  fetchOperationalJourneyForCollaborators,
+} from '../../services/operational-journey/operationalJourneyApiService'
+import {
+  CollaboratorMultiSelectStrip,
+  type CollaboratorMultiSelectOption,
+} from '../../components/collaborators/CollaboratorMultiSelectStrip'
+import {
+  MAX_JORNADA_COLABORADORES,
+  parseColaboradorIdsParam,
+} from './jornadaColaboradorScope'
 import { listAdminCollaborators } from '../../services/admin/adminCollaboratorsApiService'
 import type { AdminCollaborator } from '../../domain/collaborators/collaborator.types'
 import {
@@ -96,10 +107,13 @@ function AssignmentCard({
   item,
   apontamentoGestorHref,
   showApontamento,
+  collaboratorLabel,
 }: {
   item: MyActivityItem
   apontamentoGestorHref: string | null
   showApontamento: boolean
+  /** Identificação do colaborador da alocação (escopo com vários colaboradores). */
+  collaboratorLabel?: string | null
 }) {
   const deadlineLine = formatDeadlineLine(item.estimatedDeadline)
   return (
@@ -107,6 +121,11 @@ function AssignmentCard({
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div className="min-w-0 space-y-2">
           <div className="flex flex-wrap items-center gap-2">
+            {collaboratorLabel ? (
+              <span className="rounded-md border border-sgp-gold/30 bg-sgp-gold/[0.12] px-2 py-0.5 text-[11px] font-bold text-amber-100">
+                {collaboratorLabel}
+              </span>
+            ) : null}
             <span className="font-heading text-sm font-bold text-sgp-blue-bright">
               {item.conveyorCode ?? '—'}
             </span>
@@ -184,7 +203,14 @@ export function JornadaColaboradorGestorPage() {
   ])
 
   const [searchParams, setSearchParams] = useSearchParams()
-  const colaboradorId = searchParams.get('colaboradorId')?.trim() || ''
+  const colaboradorIdsParam = searchParams.get('colaboradorIds')
+  const legacyColaboradorId = searchParams.get('colaboradorId')
+  const colaboradorIds = useMemo(
+    () => parseColaboradorIdsParam(colaboradorIdsParam, legacyColaboradorId),
+    [colaboradorIdsParam, legacyColaboradorId],
+  )
+  const hasSelection = colaboradorIds.length > 0
+  const isMultiSelection = colaboradorIds.length > 1
   const conveyorFilter = searchParams.get('conveyorId')?.trim() || ''
   const periodPresetRaw = searchParams.get('periodPreset')?.trim() || '7d'
   const periodPreset = (
@@ -225,7 +251,7 @@ export function JornadaColaboradorGestorPage() {
   }, [])
 
   const loadJourney = useCallback(async () => {
-    if (!colaboradorId) {
+    if (colaboradorIds.length === 0) {
       setJourney(null)
       setError(null)
       setLoading(false)
@@ -240,14 +266,19 @@ export function JornadaColaboradorGestorPage() {
     setLoading(true)
     setError(null)
     try {
-      const data = await fetchOperationalJourney(colaboradorId, {
+      const query = {
         limit: 20,
         periodPreset,
         ...(conveyorFilter ? { conveyorId: conveyorFilter } : {}),
         ...(periodPreset === 'custom' && periodFrom && periodTo
           ? operationalDayRangeIso(periodFrom, periodTo)
           : {}),
-      })
+      }
+      // 1 colaborador mantém o endpoint de sempre; 2+ usam a jornada consolidada.
+      const data =
+        colaboradorIds.length === 1
+          ? await fetchOperationalJourney(colaboradorIds[0]!, query)
+          : await fetchOperationalJourneyForCollaborators(colaboradorIds, query)
       setJourney(data)
     } catch (e) {
       setJourney(null)
@@ -255,13 +286,13 @@ export function JornadaColaboradorGestorPage() {
         module: 'gestor',
         action: 'jornada_colaborador_load',
         route: pathname,
-        entityId: colaboradorId || undefined,
+        entityId: colaboradorIds.join(',') || undefined,
       })
       setError(resolveJourneyLoadUserMessage(e, n))
     } finally {
       setLoading(false)
     }
-  }, [colaboradorId, conveyorFilter, periodPreset, periodFrom, periodTo, pathname])
+  }, [colaboradorIds, conveyorFilter, periodPreset, periodFrom, periodTo, pathname])
 
   useEffect(() => {
     void loadJourney()
@@ -280,6 +311,40 @@ export function JornadaColaboradorGestorPage() {
       .map(([id, name]) => ({ id, name }))
       .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'))
   }, [journey])
+
+  const collaboratorOptions = useMemo<CollaboratorMultiSelectOption[]>(
+    () =>
+      collabOptions.map((c) => ({
+        id: c.id,
+        label: c.fullName.trim() || c.id,
+      })),
+    [collabOptions],
+  )
+
+  const collaboratorLabelById = useMemo(() => {
+    const map = new Map<string, string>()
+    for (const o of collaboratorOptions) map.set(o.id, o.label)
+    for (const c of journey?.collaborators ?? []) {
+      const name = c.fullName?.trim()
+      if (name) map.set(c.id, name)
+    }
+    return map
+  }, [collaboratorOptions, journey])
+
+  /** Nome do colaborador do registro — só rotulado quando o escopo tem vários. */
+  const resolveRecordCollaboratorLabel = useCallback(
+    (record: { collaboratorId?: string; collaboratorName?: string | null }): string | null => {
+      if (!isMultiSelection) return null
+      const name = record.collaboratorName?.trim()
+      if (name) return name
+      const id = record.collaboratorId?.trim()
+      if (!id) return null
+      return collaboratorLabelById.get(id) ?? id
+    },
+    [isMultiSelection, collaboratorLabelById],
+  )
+
+  const selectedNames = colaboradorIds.map((id) => collaboratorLabelById.get(id) ?? id)
 
   const patchParams = (patch: Record<string, string | undefined>) => {
     const next = new URLSearchParams(searchParams)
@@ -306,28 +371,32 @@ export function JornadaColaboradorGestorPage() {
       </header>
 
       <section className="mt-8 max-w-5xl rounded-xl border border-white/[0.08] bg-sgp-app-panel-deep/40 p-4 md:p-5">
-        <label className="flex max-w-xl flex-col gap-2 text-xs font-medium text-slate-400">
-          Colaborador
-          <select
-            className="rounded-lg border border-white/10 bg-sgp-app-panel-deep px-3 py-2.5 text-sm text-slate-200"
-            value={colaboradorId}
-            disabled={collabsLoading}
-            onChange={(e) => {
-              const v = e.target.value
+        <div className="flex max-w-xl flex-col gap-2 text-xs font-medium text-slate-400">
+          <span>Colaboradores</span>
+          <CollaboratorMultiSelectStrip
+            options={collaboratorOptions}
+            selectedIds={colaboradorIds}
+            loading={collabsLoading}
+            maxSelected={MAX_JORNADA_COLABORADORES}
+            emptyHint="Selecione um ou mais colaboradores."
+            aria-label="Adicionar colaborador à jornada"
+            onChange={(next) => {
               patchParams({
-                colaboradorId: v || undefined,
+                colaboradorIds: next.length > 0 ? next.join(',') : undefined,
+                // o legado `colaboradorId` sai de cena ao editar a seleção
+                colaboradorId: undefined,
                 conveyorId: undefined,
               })
             }}
-          >
-            <option value="">Selecione…</option>
-            {collabOptions.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.fullName.trim() || c.id}
-              </option>
-            ))}
-          </select>
-        </label>
+          />
+          {selectedNames.length > 0 ? (
+            <p className="text-[11px] font-normal text-slate-500">
+              {selectedNames.length === 1
+                ? selectedNames[0]
+                : `${selectedNames.length} colaboradores: ${selectedNames.join(' · ')}`}
+            </p>
+          ) : null}
+        </div>
         <label className="mt-4 flex max-w-xl flex-col gap-2 text-xs font-medium text-slate-400">
           Recorte temporal
           <select
@@ -405,7 +474,7 @@ export function JornadaColaboradorGestorPage() {
               type="button"
               className="sgp-cta-secondary !py-2 text-sm"
               onClick={() => void loadJourney()}
-              disabled={loading || !colaboradorId}
+              disabled={loading || !hasSelection}
             >
               Tentar novamente
             </button>
@@ -413,7 +482,7 @@ export function JornadaColaboradorGestorPage() {
         </div>
       )}
 
-      {loading && colaboradorId ? <JornadaGestorSkeleton /> : null}
+      {loading && hasSelection ? <JornadaGestorSkeleton /> : null}
 
       {!loading && !error && journey && (
         <>
@@ -424,6 +493,15 @@ export function JornadaColaboradorGestorPage() {
             </span>
             <span className="text-slate-600"> · </span>
             <span className="text-slate-500">preset: {journey.query.periodPreset}</span>
+            {isMultiSelection ? (
+              <>
+                <span className="text-slate-600"> · </span>
+                <span className="text-slate-400">
+                  escopo consolidado de {colaboradorIds.length} colaboradores (totais somados;
+                  percentuais recalculados sobre os totais)
+                </span>
+              </>
+            ) : null}
           </p>
 
           <section className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -538,6 +616,7 @@ export function JornadaColaboradorGestorPage() {
                   <AssignmentCard
                     key={item.assigneeId}
                     item={item}
+                    collaboratorLabel={resolveRecordCollaboratorLabel(item)}
                     showApontamento={canApontamentoGestor}
                     apontamentoGestorHref={
                       canApontamentoGestor
@@ -569,6 +648,7 @@ export function JornadaColaboradorGestorPage() {
                   <AssignmentCard
                     key={item.assigneeId}
                     item={item}
+                    collaboratorLabel={resolveRecordCollaboratorLabel(item)}
                     showApontamento={canApontamentoGestor}
                     apontamentoGestorHref={
                       canApontamentoGestor
@@ -599,6 +679,11 @@ export function JornadaColaboradorGestorPage() {
                     className="flex flex-wrap items-center justify-between gap-2 border-b border-white/[0.05] py-2 last:border-0"
                   >
                     <span className="text-slate-200">
+                      {resolveRecordCollaboratorLabel(p) ? (
+                        <span className="mr-2 text-amber-100/90">
+                          {resolveRecordCollaboratorLabel(p)} ·
+                        </span>
+                      ) : null}
                       {p.conveyorName} · {p.stepName}
                     </span>
                     <span className="tabular-nums text-slate-400">
@@ -630,6 +715,11 @@ export function JornadaColaboradorGestorPage() {
                   <li key={e.id} className="flex flex-col gap-1 px-4 py-3 text-sm md:flex-row md:items-center md:justify-between">
                     <div>
                       <div className="flex flex-wrap items-center gap-2">
+                        {resolveRecordCollaboratorLabel(e) ? (
+                          <span className="rounded-md border border-sgp-gold/30 bg-sgp-gold/[0.12] px-2 py-0.5 text-[11px] font-bold text-amber-100">
+                            {resolveRecordCollaboratorLabel(e)}
+                          </span>
+                        ) : null}
                         <p className="font-medium text-slate-200">{e.conveyorName}</p>
                         {e.entryOrigin === 'UNASSIGNED_EXCEPTION' ? (
                           <span
@@ -679,7 +769,7 @@ export function JornadaColaboradorGestorPage() {
         </>
       )}
 
-      {!colaboradorId && !loading && !collabsLoading && (
+      {!hasSelection && !loading && !collabsLoading && (
         <div className="sgp-panel sgp-panel-hover mt-10 max-w-lg rounded-2xl border border-white/[0.08] p-6">
           <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-sgp-gold">
             {transversalUxCopy.gestorSelectCollaboratorTitle}

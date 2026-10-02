@@ -2,8 +2,14 @@ import type { Request, Response } from 'express'
 import type pg from 'pg'
 import { ok } from '../../shared/http/ok.js'
 import { uuidParamSchema } from '../collaborators/collaborators.schemas.js'
-import { serviceGetOperationalJourney } from './operational-journey.service.js'
-import { operationalJourneyQuerySchema } from './operational-journey.schemas.js'
+import {
+  serviceGetOperationalJourney,
+  serviceGetOperationalJourneyForCollaborators,
+} from './operational-journey.service.js'
+import {
+  operationalJourneyCollaboratorIdsSchema,
+  operationalJourneyQuerySchema,
+} from './operational-journey.schemas.js'
 
 function queryString(v: unknown): string | undefined {
   if (typeof v === 'string') return v
@@ -22,5 +28,32 @@ export async function getOperationalJourney(req: Request, res: Response): Promis
     conveyorId: queryString(req.query.conveyorId),
   })
   const data = await serviceGetOperationalJourney(pool, { collaboratorId, query: q })
+  res.json(ok(data))
+}
+
+/**
+ * Jornada consolidada de 1..N colaboradores (`?collaboratorIds=a,b,c`). Mesmo contrato
+ * de GET /collaborators/:id/operational-journey, com `collaborators` e a identificação
+ * do colaborador em cada alocação / apontamento.
+ */
+export async function getOperationalJourneyForCollaborators(
+  req: Request,
+  res: Response,
+): Promise<void> {
+  const pool = req.app.locals.pool as pg.Pool
+  const collaboratorIds = operationalJourneyCollaboratorIdsSchema.parse(
+    queryString(req.query.collaboratorIds) ?? '',
+  )
+  const q = operationalJourneyQuerySchema.parse({
+    periodPreset: queryString(req.query.periodPreset),
+    from: queryString(req.query.from),
+    to: queryString(req.query.to),
+    limit: queryString(req.query.limit),
+    conveyorId: queryString(req.query.conveyorId),
+  })
+  const data = await serviceGetOperationalJourneyForCollaborators(pool, {
+    collaboratorIds,
+    query: q,
+  })
   res.json(ok(data))
 }

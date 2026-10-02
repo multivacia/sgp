@@ -1,7 +1,23 @@
 import type { MyActivityItem } from '../my-activities/my-activities.types'
 
+export type OperationalJourneyCollaborator = {
+  id: string
+  fullName: string | null
+}
+
+/**
+ * Alocação da jornada + identificação do colaborador. Os campos de colaborador são
+ * opcionais para tolerar respostas de versões anteriores da API.
+ */
+export type OperationalJourneyAssignment = MyActivityItem & {
+  collaboratorId?: string
+  collaboratorName?: string | null
+}
+
 export type OperationalJourneyTimeEntry = {
   id: string
+  collaboratorId?: string
+  collaboratorName?: string | null
   conveyorId: string
   conveyorName: string
   stepNodeId: string
@@ -17,6 +33,8 @@ export type OperationalJourneyTimeEntry = {
 
 export type PendenciaTempoItem = {
   assigneeId: string
+  collaboratorId?: string
+  collaboratorName?: string | null
   conveyorId: string
   conveyorName: string
   stepNodeId: string
@@ -37,12 +55,16 @@ export type OperationalPeriodPreset =
 
 export type OperationalJourneyData = {
   meta: { semanticsVersion: '1.5' }
+  /** Primeiro colaborador do escopo — compatibilidade com a jornada de 1 colaborador. */
   collaborator: { id: string; fullName: string | null }
+  /** Escopo consolidado: 1..N colaboradores, na ordem solicitada. */
+  collaborators?: OperationalJourneyCollaborator[]
   period: { from: string; to: string }
   query: {
     limit: number
     conveyorId: string | null
     periodPreset: OperationalPeriodPreset
+    collaboratorIds?: string[]
   }
   load: {
     assignmentCount: number
@@ -79,7 +101,7 @@ export type OperationalJourneyData = {
       items: PendenciaTempoItem[]
     }
   }
-  assignmentsOpen: MyActivityItem[]
-  assignmentsAtRisk: MyActivityItem[]
+  assignmentsOpen: OperationalJourneyAssignment[]
+  assignmentsAtRisk: OperationalJourneyAssignment[]
   recentTimeEntries: OperationalJourneyTimeEntry[]
 }

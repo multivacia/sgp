@@ -6,24 +6,28 @@ export type CollaboratorBriefRow = {
   full_name: string | null
 }
 
-export async function findCollaboratorBrief(
+/**
+ * Fichas mínimas dos colaboradores do escopo (1..N). Mantém `deleted_at IS NULL`;
+ * ids inexistentes simplesmente não voltam (o serviço decide o erro).
+ */
+export async function listCollaboratorBriefs(
   pool: pg.Pool,
-  collaboratorId: string,
-): Promise<CollaboratorBriefRow | null> {
+  collaboratorIds: string[],
+): Promise<CollaboratorBriefRow[]> {
   const r = await pool.query<CollaboratorBriefRow>(
     `
     SELECT c.id::text, c.full_name
     FROM collaborators c
-    WHERE c.id = $1::uuid AND c.deleted_at IS NULL
+    WHERE c.id = ANY($1::uuid[]) AND c.deleted_at IS NULL
     `,
-    [collaboratorId],
+    [collaboratorIds],
   )
-  return r.rows[0] ?? null
+  return r.rows
 }
 
-export async function sumRealizedMinutesTotalForCollaborator(
+export async function sumRealizedMinutesTotalForCollaborators(
   pool: pg.Pool,
-  collaboratorId: string,
+  collaboratorIds: string[],
   conveyorId: string | null,
 ): Promise<number> {
   const r = await pool.query<{ s: string | null }>(
@@ -31,18 +35,18 @@ export async function sumRealizedMinutesTotalForCollaborator(
     SELECT COALESCE(SUM(minutes), 0)::text AS s
     FROM conveyor_time_entries
     WHERE deleted_at IS NULL
-      AND collaborator_id = $1::uuid
+      AND collaborator_id = ANY($1::uuid[])
       AND ($2::uuid IS NULL OR conveyor_id = $2::uuid)
     `,
-    [collaboratorId, conveyorId],
+    [collaboratorIds, conveyorId],
   )
   return Number.parseInt(r.rows[0]?.s ?? '0', 10) || 0
 }
 
-export async function sumRealizedMinutesInPeriodForCollaborator(
+export async function sumRealizedMinutesInPeriodForCollaborators(
   pool: pg.Pool,
   args: {
-    collaboratorId: string
+    collaboratorIds: string[]
     from: Date
     to: Date
     conveyorId: string | null
@@ -53,18 +57,20 @@ export async function sumRealizedMinutesInPeriodForCollaborator(
     SELECT COALESCE(SUM(minutes), 0)::text AS s
     FROM conveyor_time_entries
     WHERE deleted_at IS NULL
-      AND collaborator_id = $1::uuid
+      AND collaborator_id = ANY($1::uuid[])
       AND entry_at >= $2::timestamptz
       AND entry_at <= $3::timestamptz
       AND ($4::uuid IS NULL OR conveyor_id = $4::uuid)
     `,
-    [args.collaboratorId, args.from, args.to, args.conveyorId],
+    [args.collaboratorIds, args.from, args.to, args.conveyorId],
   )
   return Number.parseInt(r.rows[0]?.s ?? '0', 10) || 0
 }
 
 export type TimeEntryHistoryRow = {
   id: string
+  collaborator_id: string
+  collaborator_name: string | null
   conveyor_id: string
   conveyor_name: string
   conveyor_node_id: string
@@ -90,10 +96,15 @@ export type ExtraTimeEntryTopDescriptionRow = {
   entries_count: string
 }
 
-export async function listTimeEntriesForCollaboratorInPeriod(
+/**
+ * Histórico recente do escopo: uma linha por apontamento (sem duplicidade entre
+ * colaboradores, já que cada lançamento pertence a um único colaborador). O `limit`
+ * é aplicado ao conjunto consolidado, ordenado do mais recente para o mais antigo.
+ */
+export async function listTimeEntriesForCollaboratorsInPeriod(
   pool: pg.Pool,
   args: {
-    collaboratorId: string
+    collaboratorIds: string[]
     from: Date
     to: Date
     conveyorId: string | null
@@ -104,6 +115,8 @@ export async function listTimeEntriesForCollaboratorInPeriod(
     `
     SELECT
       cte.id::text,
+      cte.collaborator_id::text AS collaborator_id,
+      col.full_name AS collaborator_name,
       cte.conveyor_id::text,
       cv.name AS conveyor_name,
       cte.conveyor_node_id::text,
@@ -119,23 +132,24 @@ export async function listTimeEntriesForCollaboratorInPeriod(
     INNER JOIN conveyors cv ON cv.id = cte.conveyor_id AND cv.deleted_at IS NULL
     INNER JOIN conveyor_nodes step
       ON step.id = cte.conveyor_node_id AND step.deleted_at IS NULL
+    LEFT JOIN collaborators col ON col.id = cte.collaborator_id
     WHERE cte.deleted_at IS NULL
-      AND cte.collaborator_id = $1::uuid
+      AND cte.collaborator_id = ANY($1::uuid[])
       AND cte.entry_at >= $2::timestamptz
       AND cte.entry_at <= $3::timestamptz
       AND ($4::uuid IS NULL OR cte.conveyor_id = $4::uuid)
     ORDER BY cte.entry_at DESC, cte.created_at DESC
     LIMIT $5
     `,
-    [args.collaboratorId, args.from, args.to, args.conveyorId, args.limit],
+    [args.collaboratorIds, args.from, args.to, args.conveyorId, args.limit],
   )
   return r.rows
 }
 
-export async function summarizeExtraTimeEntriesInPeriodForCollaborator(
+export async function summarizeExtraTimeEntriesInPeriodForCollaborators(
   pool: pg.Pool,
   args: {
-    collaboratorId: string
+    collaboratorIds: string[]
     from: Date
     to: Date
   },
@@ -149,12 +163,12 @@ export async function summarizeExtraTimeEntriesInPeriodForCollaborator(
     INNER JOIN operational_extra_time_entry_descriptions d
       ON d.id = e.description_id
      AND d.deleted_at IS NULL
-    WHERE e.collaborator_id = $1::uuid
+    WHERE e.collaborator_id = ANY($1::uuid[])
       AND e.deleted_at IS NULL
       AND e.entry_date >= ($2::timestamptz AT TIME ZONE '${OPERATIONAL_TIMEZONE}')::date
       AND e.entry_date <= ($3::timestamptz AT TIME ZONE '${OPERATIONAL_TIMEZONE}')::date
     `,
-    [args.collaboratorId, args.from, args.to],
+    [args.collaboratorIds, args.from, args.to],
   )
   const row = r.rows[0]
   return {
@@ -163,10 +177,15 @@ export async function summarizeExtraTimeEntriesInPeriodForCollaborator(
   }
 }
 
-export async function listTopExtraTimeEntryDescriptionsInPeriodForCollaborator(
+/**
+ * Top descrições de apontamento extra do escopo consolidado: agrupa por descrição
+ * somando todos os colaboradores selecionados antes de ordenar (nunca um top por
+ * colaborador concatenado).
+ */
+export async function listTopExtraTimeEntryDescriptionsInPeriodForCollaborators(
   pool: pg.Pool,
   args: {
-    collaboratorId: string
+    collaboratorIds: string[]
     from: Date
     to: Date
     limit: number
@@ -190,7 +209,7 @@ export async function listTopExtraTimeEntryDescriptionsInPeriodForCollaborator(
     INNER JOIN operational_extra_time_entry_descriptions d
       ON d.id = e.description_id
      AND d.deleted_at IS NULL
-    WHERE e.collaborator_id = $1::uuid
+    WHERE e.collaborator_id = ANY($1::uuid[])
       AND e.deleted_at IS NULL
       AND e.entry_date >= ($2::timestamptz AT TIME ZONE '${OPERATIONAL_TIMEZONE}')::date
       AND e.entry_date <= ($3::timestamptz AT TIME ZONE '${OPERATIONAL_TIMEZONE}')::date
@@ -198,7 +217,7 @@ export async function listTopExtraTimeEntryDescriptionsInPeriodForCollaborator(
     ORDER BY SUM(e.minutes) DESC, COUNT(*) DESC, d.description ASC
     LIMIT $4::int
     `,
-    [args.collaboratorId, args.from, args.to, args.limit],
+    [args.collaboratorIds, args.from, args.to, args.limit],
   )
   return r.rows.map((row) => ({
     descriptionId: row.description_id,
