@@ -12,11 +12,10 @@
 - Branch: `cursor/padronizar-contexto-ia-e3aa`
 - Base: `develop`
 - SHA inicial: `4345b5dad40ea212163ce944ee915f2b0fca3068`
-- SHA final (tip local): ver `git rev-parse HEAD` após o commit de ajuste deste retorno
+- SHA final: preenchido no encerramento com o tip da branch local
 - Commit principal da padronização: `953d183b257d5f1d21bb65b0d4346114cb840a9c`
 - Commit/push/PR:
-  - Commit local principal: `953d183b` — `docs(ai): padroniza contexto com CLAUDE.md curto e docs/ai/context`
-  - Commit local de ajuste do retorno/checkpoint: este commit
+  - Commits locais: `953d183b` (padronização) + commits de sincronização do retorno/checkpoint
   - Push: **não** (sem autorização)
   - PR/merge: **não** (sem autorização)
 - Arquivo de retorno ainda não publicado no remoto até autorização de push.
