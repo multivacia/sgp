@@ -1,8 +1,22 @@
 import type { OperationalBucket } from '../../shared/operationalBucket.js'
 import type { MyActivityItemApi } from '../my-activities/my-activities.dto.js'
 
+/** Identificação do colaborador dono de cada registro do escopo consolidado. */
+export type OperationalJourneyCollaboratorApi = {
+  id: string
+  fullName: string | null
+}
+
+/** Alocação do escopo + identificação do colaborador a que pertence. */
+export type OperationalJourneyAssignmentApi = MyActivityItemApi & {
+  collaboratorId: string
+  collaboratorName: string | null
+}
+
 export type OperationalJourneyTimeEntryApi = {
   id: string
+  collaboratorId: string
+  collaboratorName: string | null
   conveyorId: string
   conveyorName: string
   stepNodeId: string
@@ -18,6 +32,8 @@ export type OperationalJourneyTimeEntryApi = {
 
 export type PendenciaTempoItemApi = {
   assigneeId: string
+  collaboratorId: string
+  collaboratorName: string | null
   conveyorId: string
   conveyorName: string
   stepNodeId: string
@@ -40,16 +56,25 @@ export type OperationalJourneyApi = {
   meta: {
     semanticsVersion: '1.5'
   }
+  /** Primeiro colaborador do escopo — mantido para compatibilidade (1 colaborador). */
   collaborator: { id: string; fullName: string | null }
+  /** Escopo completo: 1..N colaboradores, na ordem solicitada. */
+  collaborators: OperationalJourneyCollaboratorApi[]
   period: { from: string; to: string }
   query: {
     limit: number
     conveyorId: string | null
     periodPreset: '7d' | '15d' | '30d' | 'month' | 'custom'
+    collaboratorIds: string[]
   }
   load: {
+    /** Alocações do escopo (uma por colaborador × STEP; nunca o mesmo registro duas vezes). */
     assignmentCount: number
-    /** Previsto estrutural: soma do tempo unitário × quantidade dos STEPs alocados. */
+    /**
+     * Previsto estrutural: soma do tempo unitário × quantidade, uma vez por alocação
+     * colaborador × STEP. Com vários colaboradores no mesmo STEP, o previsto do STEP
+     * participa uma vez por colaborador alocado (carga dos selecionados).
+     */
     plannedMinutesOnStepsSum: number
   }
   /** Cobertura de tempo: realizado acumulado nos mesmos STEPs / previsto estrutural do escopo. */
@@ -83,7 +108,7 @@ export type OperationalJourneyApi = {
       items: PendenciaTempoItemApi[]
     }
   }
-  assignmentsOpen: MyActivityItemApi[]
-  assignmentsAtRisk: MyActivityItemApi[]
+  assignmentsOpen: OperationalJourneyAssignmentApi[]
+  assignmentsAtRisk: OperationalJourneyAssignmentApi[]
   recentTimeEntries: OperationalJourneyTimeEntryApi[]
 }

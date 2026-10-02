@@ -15,6 +15,7 @@ import { getCollaboratorsOperationalHealthSummary } from './collaborator-operati
 import {
   getOperationalJourney,
   getOperationalJourneyExportXlsx,
+  getOperationalJourneyForCollaborators,
 } from '../operational-journey/operational-journey.controller.js'
 
 /** Leitura para fluxos operacionais autenticados (esteiras, matrizes). */
@@ -40,6 +41,12 @@ export function collaboratorsRouter(): Router {
     '/collaborators/operational-health-summary',
     ...auth,
     asyncRoute(getCollaboratorsOperationalHealthSummary),
+  )
+  // Antes de `/collaborators/:id` para não ser capturado como id.
+  r.get(
+    '/collaborators/operational-journey',
+    ...authJourney,
+    asyncRoute(getOperationalJourneyForCollaborators),
   )
   r.get(
     '/collaborators/operational-journey/export.xlsx',

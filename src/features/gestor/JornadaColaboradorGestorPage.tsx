@@ -13,14 +13,16 @@ import {
   EXPORT_OPERATIONAL_JOURNEY_FAIL_MESSAGE,
   exportOperationalJourneyToExcel,
   fetchOperationalJourney,
+  fetchOperationalJourneyForCollaborators,
 } from '../../services/operational-journey/operationalJourneyApiService'
 import {
-  aggregateOperationalJourneyTotals,
-  JOURNEY_MAX_SELECTED_COLLABORATORS,
-  journeyCollaboratorIdsToParams,
-  mergeOperationalJourneyDetails,
-  parseJourneyCollaboratorIds,
-} from '../../domain/operational-journey/aggregateOperationalJourneys'
+  CollaboratorMultiSelectStrip,
+  type CollaboratorMultiSelectOption,
+} from '../../components/collaborators/CollaboratorMultiSelectStrip'
+import {
+  MAX_JORNADA_COLABORADORES,
+  parseColaboradorIdsParam,
+} from './jornadaColaboradorScope'
 import { listAdminCollaborators } from '../../services/admin/adminCollaboratorsApiService'
 import type { AdminCollaborator } from '../../domain/collaborators/collaborator.types'
 import {
@@ -103,25 +105,17 @@ function formatPeriodLabel(fromIso: string, toIso: string): string {
   }
 }
 
-function CollaboratorBadge({ name }: { name: string }) {
-  return (
-    <span className="rounded-md border border-sgp-gold/30 bg-sgp-gold/[0.08] px-2 py-0.5 text-[11px] font-bold text-amber-100/95">
-      {name}
-    </span>
-  )
-}
-
 function AssignmentCard({
   item,
   apontamentoGestorHref,
   showApontamento,
-  collaboratorName,
+  collaboratorLabel,
 }: {
   item: MyActivityItem
   apontamentoGestorHref: string | null
   showApontamento: boolean
-  /** Exibido quando a jornada consolida vários colaboradores. */
-  collaboratorName?: string
+  /** Identificação do colaborador da alocação (escopo com vários colaboradores). */
+  collaboratorLabel?: string | null
 }) {
   const deadlineLine = formatDeadlineLine(item.estimatedDeadline)
   return (
@@ -129,7 +123,11 @@ function AssignmentCard({
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div className="min-w-0 space-y-2">
           <div className="flex flex-wrap items-center gap-2">
-            {collaboratorName ? <CollaboratorBadge name={collaboratorName} /> : null}
+            {collaboratorLabel ? (
+              <span className="rounded-md border border-sgp-gold/30 bg-sgp-gold/[0.12] px-2 py-0.5 text-[11px] font-bold text-amber-100">
+                {collaboratorLabel}
+              </span>
+            ) : null}
             <span className="font-heading text-sm font-bold text-sgp-blue-bright">
               {item.conveyorCode ?? '—'}
             </span>
@@ -197,10 +195,6 @@ function AssignmentCard({
   )
 }
 
-function apontamentoGestorHrefFor(item: { stepNodeId: string; conveyorId: string }): string {
-  return `/app/gestao/apontamento/${encodeURIComponent(item.stepNodeId)}?conveyorId=${encodeURIComponent(item.conveyorId)}&from=jornada_gestao`
-}
-
 export function JornadaColaboradorGestorPage() {
   const { pathname } = useLocation()
   const { canAny } = useAuth()
@@ -211,8 +205,14 @@ export function JornadaColaboradorGestorPage() {
   ])
 
   const [searchParams, setSearchParams] = useSearchParams()
-  const selectedKey = parseJourneyCollaboratorIds(searchParams).join(',')
-  const selectedIds = useMemo(() => (selectedKey ? selectedKey.split(',') : []), [selectedKey])
+  const colaboradorIdsParam = searchParams.get('colaboradorIds')
+  const legacyColaboradorId = searchParams.get('colaboradorId')
+  const colaboradorIds = useMemo(
+    () => parseColaboradorIdsParam(colaboradorIdsParam, legacyColaboradorId),
+    [colaboradorIdsParam, legacyColaboradorId],
+  )
+  const hasSelection = colaboradorIds.length > 0
+  const isMultiSelection = colaboradorIds.length > 1
   const conveyorFilter = searchParams.get('conveyorId')?.trim() || ''
   const periodPresetRaw = searchParams.get('periodPreset')?.trim() || '7d'
   const periodPreset = (
@@ -225,16 +225,11 @@ export function JornadaColaboradorGestorPage() {
 
   const [collabOptions, setCollabOptions] = useState<AdminCollaborator[]>([])
   const [collabsLoading, setCollabsLoading] = useState(true)
-  const [journeys, setJourneys] = useState<OperationalJourneyData[] | null>(null)
+  const [journey, setJourney] = useState<OperationalJourneyData | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [exporting, setExporting] = useState(false)
   const [exportError, setExportError] = useState<string | null>(null)
-  /**
-   * Sequência de carga: só a resposta da última requisição é aplicada. Sem isso, trocar
-   * colaborador/período rápido podia exibir totais e detalhe de uma seleção anterior.
-   */
-  const loadSeqRef = useRef(0)
 
   useEffect(() => {
     let cancelled = false
@@ -259,6 +254,7 @@ export function JornadaColaboradorGestorPage() {
     }
   }, [])
 
+  /** Recorte da tela — o mesmo é usado na carga e na exportação (a exportação ignora o limit). */
   const journeyQuery = useMemo(
     () => ({
       periodPreset,
@@ -270,16 +266,19 @@ export function JornadaColaboradorGestorPage() {
     [periodPreset, conveyorFilter, periodFrom, periodTo],
   )
 
+  /** Descarta respostas de cargas antigas quando a seleção/recorte muda no meio da requisição. */
+  const loadSeqRef = useRef(0)
+
   const loadJourney = useCallback(async () => {
     const seq = ++loadSeqRef.current
-    if (selectedIds.length === 0) {
-      setJourneys(null)
+    if (colaboradorIds.length === 0) {
+      setJourney(null)
       setError(null)
       setLoading(false)
       return
     }
     if (periodPreset === 'custom' && (!periodFrom || !periodTo)) {
-      setJourneys(null)
+      setJourney(null)
       setError('Intervalo personalizado: indique as datas de início e fim.')
       setLoading(false)
       return
@@ -287,65 +286,101 @@ export function JornadaColaboradorGestorPage() {
     setLoading(true)
     setError(null)
     try {
-      const data = await Promise.all(
-        selectedIds.map((id) => fetchOperationalJourney(id, { limit: 20, ...journeyQuery })),
-      )
+      const query = { limit: 20, ...journeyQuery }
+      // 1 colaborador mantém o endpoint de sempre; 2+ usam a jornada consolidada.
+      const data =
+        colaboradorIds.length === 1
+          ? await fetchOperationalJourney(colaboradorIds[0]!, query)
+          : await fetchOperationalJourneyForCollaborators(colaboradorIds, query)
       if (seq !== loadSeqRef.current) return
-      setJourneys(data)
+      setJourney(data)
     } catch (e) {
       if (seq !== loadSeqRef.current) return
-      setJourneys(null)
+      setJourney(null)
       const n = reportClientError(e, {
         module: 'gestor',
         action: 'jornada_colaborador_load',
         route: pathname,
-        entityId: selectedIds.join(',') || undefined,
+        entityId: colaboradorIds.join(',') || undefined,
       })
       setError(resolveJourneyLoadUserMessage(e, n))
     } finally {
       if (seq === loadSeqRef.current) setLoading(false)
     }
-  }, [selectedIds, journeyQuery, periodPreset, periodFrom, periodTo, pathname])
+  }, [colaboradorIds, journeyQuery, periodPreset, periodFrom, periodTo, pathname])
 
   useEffect(() => {
     void loadJourney()
   }, [loadJourney])
 
-  const isMulti = (journeys?.length ?? 0) > 1
-  const journey = journeys?.[0] ?? null
-  const totals = useMemo(
-    () => (journeys ? aggregateOperationalJourneyTotals(journeys) : null),
-    [journeys],
-  )
-  const details = useMemo(
-    () => (journeys ? mergeOperationalJourneyDetails(journeys) : null),
-    [journeys],
-  )
-
   const conveyorChoices = useMemo(() => {
-    if (!journeys) return []
+    if (!journey) return []
     const map = new Map<string, string>()
     const add = (id: string, name: string) => {
       if (!map.has(id)) map.set(id, name)
     }
-    for (const j of journeys) {
-      for (const x of j.assignmentsOpen) add(x.conveyorId, x.conveyorName)
-      for (const x of j.assignmentsAtRisk) add(x.conveyorId, x.conveyorName)
-      for (const x of j.recentTimeEntries) add(x.conveyorId, x.conveyorName)
-    }
+    for (const x of journey.assignmentsOpen) add(x.conveyorId, x.conveyorName)
+    for (const x of journey.assignmentsAtRisk) add(x.conveyorId, x.conveyorName)
+    for (const x of journey.recentTimeEntries) add(x.conveyorId, x.conveyorName)
     return [...map.entries()]
       .map(([id, name]) => ({ id, name }))
       .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'))
-  }, [journeys])
+  }, [journey])
 
-  const collabNameById = useMemo(() => {
+  const collaboratorOptions = useMemo<CollaboratorMultiSelectOption[]>(
+    () =>
+      collabOptions.map((c) => ({
+        id: c.id,
+        label: c.fullName.trim() || c.id,
+      })),
+    [collabOptions],
+  )
+
+  const collaboratorLabelById = useMemo(() => {
     const map = new Map<string, string>()
-    for (const c of collabOptions) map.set(c.id, c.fullName.trim() || c.id)
-    for (const j of journeys ?? []) {
-      if (j.collaborator.fullName?.trim()) map.set(j.collaborator.id, j.collaborator.fullName.trim())
+    for (const o of collaboratorOptions) map.set(o.id, o.label)
+    for (const c of journey?.collaborators ?? []) {
+      const name = c.fullName?.trim()
+      if (name) map.set(c.id, name)
     }
     return map
-  }, [collabOptions, journeys])
+  }, [collaboratorOptions, journey])
+
+  /** Nome do colaborador do registro — só rotulado quando o escopo tem vários. */
+  const resolveRecordCollaboratorLabel = useCallback(
+    (record: { collaboratorId?: string; collaboratorName?: string | null }): string | null => {
+      if (!isMultiSelection) return null
+      const name = record.collaboratorName?.trim()
+      if (name) return name
+      const id = record.collaboratorId?.trim()
+      if (!id) return null
+      return collaboratorLabelById.get(id) ?? id
+    },
+    [isMultiSelection, collaboratorLabelById],
+  )
+
+  const handleExport = async () => {
+    if (!hasSelection || exporting) return
+    setExporting(true)
+    setExportError(null)
+    try {
+      await exportOperationalJourneyToExcel(colaboradorIds, journeyQuery)
+    } catch (e) {
+      const n = reportClientError(e, {
+        module: 'gestor',
+        action: 'jornada_colaborador_export',
+        route: pathname,
+        entityId: colaboradorIds.join(','),
+      })
+      setExportError(
+        n.userMessage.trim() ? formatUserError(n) : EXPORT_OPERATIONAL_JOURNEY_FAIL_MESSAGE,
+      )
+    } finally {
+      setExporting(false)
+    }
+  }
+
+  const selectedNames = colaboradorIds.map((id) => collaboratorLabelById.get(id) ?? id)
 
   const patchParams = (patch: Record<string, string | undefined>) => {
     const next = new URLSearchParams(searchParams)
@@ -355,41 +390,6 @@ export function JornadaColaboradorGestorPage() {
     }
     setSearchParams(next, { replace: true })
   }
-
-  const setSelectedCollaborators = (ids: string[]) => {
-    setExportError(null)
-    patchParams({
-      ...journeyCollaboratorIdsToParams(ids),
-      conveyorId: undefined,
-    })
-  }
-
-  const canAddMore = selectedIds.length < JOURNEY_MAX_SELECTED_COLLABORATORS
-  const addableOptions = collabOptions.filter((c) => !selectedIds.includes(c.id))
-
-  const handleExport = async () => {
-    if (selectedIds.length === 0 || exporting) return
-    setExporting(true)
-    setExportError(null)
-    try {
-      await exportOperationalJourneyToExcel(selectedIds, journeyQuery)
-    } catch (e) {
-      const n = reportClientError(e, {
-        module: 'gestor',
-        action: 'jornada_colaborador_export',
-        route: pathname,
-        entityId: selectedIds.join(','),
-      })
-      setExportError(n.userMessage.trim() ? formatUserError(n) : EXPORT_OPERATIONAL_JOURNEY_FAIL_MESSAGE)
-    } finally {
-      setExporting(false)
-    }
-  }
-
-  const historyLimit = journey?.query.limit ?? 20
-  const historyTruncated = (journeys ?? []).some(
-    (j) => j.recentTimeEntries.length >= j.query.limit,
-  )
 
   return (
     <PageCanvas>
@@ -401,73 +401,38 @@ export function JornadaColaboradorGestorPage() {
         <h1 className="sgp-page-title mt-3">Jornada por colaborador</h1>
         <p className="sgp-page-lead max-w-3xl">
           Carga, sinais de atraso, cobertura de tempo no escopo alocado e histórico de apontamentos.
-          Selecione um ou vários colaboradores. Recortes temporais padronizados (7 / 15 / 30 dias,
-          mês UTC ou intervalo personalizado). {transversalUxCopy.navHintBacklog}
+          Recortes temporais padronizados (7 / 15 / 30 dias, mês UTC ou intervalo personalizado).{' '}
+          {transversalUxCopy.navHintBacklog}
         </p>
       </header>
 
       <section className="mt-8 max-w-5xl rounded-xl border border-white/[0.08] bg-sgp-app-panel-deep/40 p-4 md:p-5">
-        <div className="flex max-w-3xl flex-col gap-2 text-xs font-medium text-slate-400">
-          <span id="jornada-colaboradores-label">
-            Colaboradores{selectedIds.length > 0 ? ` (${selectedIds.length})` : ''}
-          </span>
-          {selectedIds.length > 0 ? (
-            <ul className="flex flex-wrap gap-2" aria-labelledby="jornada-colaboradores-label">
-              {selectedIds.map((id) => {
-                const name = collabNameById.get(id) ?? id
-                return (
-                  <li key={id}>
-                    <button
-                      type="button"
-                      className="inline-flex min-h-[40px] items-center gap-2 rounded-full border border-white/12 bg-white/[0.06] px-3 py-1.5 text-sm text-slate-100 hover:border-rose-400/40"
-                      aria-label={`Remover ${name}`}
-                      title={`Remover ${name}`}
-                      onClick={() => setSelectedCollaborators(selectedIds.filter((x) => x !== id))}
-                    >
-                      <span>{name}</span>
-                      <span aria-hidden className="text-slate-400">
-                        ×
-                      </span>
-                    </button>
-                  </li>
-                )
-              })}
-              {selectedIds.length > 1 ? (
-                <li>
-                  <button
-                    type="button"
-                    className="inline-flex min-h-[40px] items-center rounded-full px-3 py-1.5 text-sm text-slate-400 underline-offset-2 hover:underline"
-                    onClick={() => setSelectedCollaborators([])}
-                  >
-                    Limpar seleção
-                  </button>
-                </li>
-              ) : null}
-            </ul>
-          ) : null}
-          <select
-            aria-label={selectedIds.length === 0 ? 'Colaborador' : 'Adicionar colaborador'}
-            className="max-w-xl rounded-lg border border-white/10 bg-sgp-app-panel-deep px-3 py-2.5 text-sm text-slate-200"
-            value=""
-            disabled={collabsLoading || !canAddMore}
-            onChange={(e) => {
-              const v = e.target.value
-              if (v) setSelectedCollaborators([...selectedIds, v])
+        <div className="flex max-w-xl flex-col gap-2 text-xs font-medium text-slate-400">
+          <span>Colaboradores</span>
+          <CollaboratorMultiSelectStrip
+            options={collaboratorOptions}
+            selectedIds={colaboradorIds}
+            loading={collabsLoading}
+            maxSelected={MAX_JORNADA_COLABORADORES}
+            emptyHint="Selecione um ou mais colaboradores."
+            aria-label="Adicionar colaborador à jornada"
+            onChange={(next) => {
+              setExportError(null)
+              patchParams({
+                colaboradorIds: next.length > 0 ? next.join(',') : undefined,
+                // o legado `colaboradorId` sai de cena ao editar a seleção
+                colaboradorId: undefined,
+                conveyorId: undefined,
+              })
             }}
-          >
-            <option value="">
-              {!canAddMore
-                ? `Limite de ${JOURNEY_MAX_SELECTED_COLLABORATORS} colaboradores atingido`
-                : selectedIds.length === 0
-                  ? 'Selecione…'
-                  : 'Adicionar outro colaborador…'}
-            </option>
-            {addableOptions.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.fullName.trim() || c.id}
-              </option>
-            ))}
-          </select>
+          />
+          {selectedNames.length > 0 ? (
+            <p className="text-[11px] font-normal text-slate-500">
+              {selectedNames.length === 1
+                ? selectedNames[0]
+                : `${selectedNames.length} colaboradores: ${selectedNames.join(' · ')}`}
+            </p>
+          ) : null}
         </div>
         <label className="mt-4 flex max-w-xl flex-col gap-2 text-xs font-medium text-slate-400">
           Recorte temporal
@@ -512,7 +477,7 @@ export function JornadaColaboradorGestorPage() {
             </label>
           </div>
         )}
-        {journeys && (conveyorChoices.length > 0 || conveyorFilter) && (
+        {journey && conveyorChoices.length > 0 && (
           <label className="mt-4 flex max-w-xl flex-col gap-2 text-xs font-medium text-slate-400">
             Esteira (opcional)
             <select
@@ -532,20 +497,20 @@ export function JornadaColaboradorGestorPage() {
             </select>
           </label>
         )}
-        {selectedIds.length > 0 ? (
+        {hasSelection ? (
           <div className="mt-5 flex flex-wrap items-center gap-3">
             <button
               type="button"
               className="sgp-cta-secondary !py-2.5 text-sm disabled:opacity-40"
               onClick={() => void handleExport()}
-              disabled={exporting || loading || !journeys}
+              disabled={exporting || loading || !journey}
             >
               {exporting ? 'Exportando…' : 'Exportar Excel'}
             </button>
             <span className="text-xs text-slate-500">
-              {selectedIds.length === 1
+              {colaboradorIds.length === 1
                 ? 'Resumo, todos os apontamentos do período e extra esteira do colaborador.'
-                : `Resumo por colaborador, todos os apontamentos do período e totais dos ${selectedIds.length} colaboradores.`}
+                : `Resumo por colaborador, todos os apontamentos do período e totais dos ${colaboradorIds.length} colaboradores.`}
             </span>
           </div>
         ) : null}
@@ -568,7 +533,7 @@ export function JornadaColaboradorGestorPage() {
               type="button"
               className="sgp-cta-secondary !py-2 text-sm"
               onClick={() => void loadJourney()}
-              disabled={loading || selectedIds.length === 0}
+              disabled={loading || !hasSelection}
             >
               Tentar novamente
             </button>
@@ -576,9 +541,9 @@ export function JornadaColaboradorGestorPage() {
         </div>
       )}
 
-      {loading && selectedIds.length > 0 ? <JornadaGestorSkeleton /> : null}
+      {loading && hasSelection ? <JornadaGestorSkeleton /> : null}
 
-      {!loading && !error && journey && totals && details && (
+      {!loading && !error && journey && (
         <>
           <p className="mt-6 text-sm text-slate-500">
             {operationalLabels.minutosApontadosPeriodo} + histórico recente — intervalo:{' '}
@@ -587,34 +552,32 @@ export function JornadaColaboradorGestorPage() {
             </span>
             <span className="text-slate-600"> · </span>
             <span className="text-slate-500">preset: {journey.query.periodPreset}</span>
-            {isMulti ? (
+            {isMultiSelection ? (
               <>
                 <span className="text-slate-600"> · </span>
-                <span className="text-slate-300">
-                  Totais consolidados de {totals.collaboratorCount} colaboradores
+                <span className="text-slate-400">
+                  escopo consolidado de {colaboradorIds.length} colaboradores (totais somados;
+                  percentuais recalculados sobre os totais)
                 </span>
               </>
             ) : null}
           </p>
 
-          <section
-            className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4"
-            data-testid="jornada-totais"
-          >
+          <section className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <div className="sgp-panel sgp-panel-hover !p-4">
               <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
                 Alocações (escopo)
               </p>
               <p className="mt-1 font-heading text-2xl font-bold text-slate-50">
-                {totals.assignmentCount}
+                {journey.load.assignmentCount}
               </p>
             </div>
             <div className="sgp-panel sgp-panel-hover !p-4">
               <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
-                {operationalLabels.previstoEstrutural} (soma STEPs)
+                {operationalLabels.previstoEstrutural} (soma das alocações)
               </p>
               <p className="mt-1 font-heading text-2xl font-bold text-slate-50">
-                {formatHumanMinutes(totals.plannedMinutesOnStepsSum)}
+                {formatHumanMinutes(journey.load.plannedMinutesOnStepsSum)}
               </p>
             </div>
             <div className="sgp-panel sgp-panel-hover !p-4">
@@ -622,7 +585,7 @@ export function JornadaColaboradorGestorPage() {
                 {operationalLabels.minutosApontadosPeriodo}
               </p>
               <p className="mt-1 font-heading text-2xl font-bold text-sgp-gold-warm">
-                {formatHumanMinutes(totals.realizedMinutesInPeriod)}
+                {formatHumanMinutes(journey.execution.realizedMinutesInPeriod)}
               </p>
             </div>
             <div className="sgp-panel sgp-panel-hover !p-4">
@@ -630,7 +593,7 @@ export function JornadaColaboradorGestorPage() {
                 {operationalLabels.minutosApontadosAcumulado} (escopo)
               </p>
               <p className="mt-1 font-heading text-2xl font-bold text-slate-50">
-                {formatHumanMinutes(totals.realizedMinutesTotal)}
+                {formatHumanMinutes(journey.execution.realizedMinutesTotal)}
               </p>
             </div>
           </section>
@@ -641,17 +604,16 @@ export function JornadaColaboradorGestorPage() {
                 Extra esteira (período)
               </p>
               <p className="mt-1 font-heading text-2xl font-bold text-slate-50">
-                {formatHumanMinutes(totals.extra.totalMinutes)}
+                {formatHumanMinutes(journey.extraTimeEntriesSummary.totalMinutes)}
               </p>
               <p className="mt-2 text-xs text-slate-400">
-                {totals.extra.entriesCount > 0
-                  ? `${totals.extra.entriesCount} lançamento(s) fora de esteira neste período.`
+                {journey.extraTimeEntriesSummary.entriesCount > 0
+                  ? `${journey.extraTimeEntriesSummary.entriesCount} lançamento(s) fora de esteira neste período.`
                   : 'Nenhum apontamento extra no período.'}
-                {conveyorFilter ? ' Não depende do filtro de esteira.' : ''}
               </p>
-              {totals.extra.topDescriptions.length > 0 ? (
+              {journey.extraTimeEntriesSummary.topDescriptions.length > 0 ? (
                 <ul className="mt-3 space-y-1 text-xs text-slate-300">
-                  {totals.extra.topDescriptions.map((item) => (
+                  {journey.extraTimeEntriesSummary.topDescriptions.map((item) => (
                     <li key={item.descriptionId} className="flex items-center justify-between gap-2">
                       <span className="truncate">{item.description}</span>
                       <span className="shrink-0 tabular-nums text-slate-400">
@@ -669,14 +631,14 @@ export function JornadaColaboradorGestorPage() {
               {operationalLabels.coberturaTempo}
             </p>
             <p className="mt-1 font-heading text-2xl font-bold text-amber-100">
-              {formatCoberturaTempoRatio(totals.cobertura.ratio)}
+              {formatCoberturaTempoRatio(journey.coberturaTempo.ratio)}
             </p>
             <p className="mt-2 text-xs text-amber-100/80">
-              Numerador: soma dos apontamentos nos STEPs alocados. Denominador:{' '}
-              {operationalLabels.previstoEstrutural} no mesmo conjunto de STEPs.{' '}
-              {totals.cobertura.ratio === null
+              Numerador: soma dos apontamentos nas alocações do escopo. Denominador:{' '}
+              {operationalLabels.previstoEstrutural} no mesmo conjunto de alocações.{' '}
+              {journey.coberturaTempo.ratio === null
                 ? 'Não aplicável se o previsto estrutural no escopo for ≤ 0.'
-                : `${formatHumanMinutes(totals.cobertura.realizadoMinutos)} / ${formatHumanMinutes(totals.cobertura.previstoMinutos)}.`}
+                : `${formatHumanMinutes(journey.coberturaTempo.realizadoMinutosAcumuladoEscopo)} / ${formatHumanMinutes(journey.coberturaTempo.previstoMinutosEscopo)}.`}
             </p>
           </section>
 
@@ -685,60 +647,14 @@ export function JornadaColaboradorGestorPage() {
               {operationalLabels.pressaoAtraso} (alocações no bucket «em atraso»)
             </p>
             <p className="mt-1 font-heading text-2xl font-bold text-rose-100">
-              {totals.pressaoAtrasoAlocacoes}
+              {journey.signals.pressaoAtrasoAlocacoes}
             </p>
             <p className="mt-2 text-xs text-rose-100/75">
-              Contagem por situação: rascunho {totals.byBucket.em_elaboracao}, aguardando planejamento{' '}
-              {totals.byBucket.aguardando_planejamento}, em execução {totals.byBucket.em_execucao},
-              em atraso {totals.byBucket.em_atraso}, finalizadas {totals.byBucket.finalizadas}
+              Contagem por situação: rascunho {journey.risk.byBucket.em_elaboracao}, aguardando planejamento{' '}
+              {journey.risk.byBucket.aguardando_planejamento}, em execução {journey.risk.byBucket.em_execucao},
+              em atraso {journey.risk.byBucket.em_atraso}, finalizadas {journey.risk.byBucket.finalizadas}
             </p>
           </section>
-
-          {isMulti ? (
-            <section className="mt-10 max-w-5xl" data-testid="jornada-resumo-colaboradores">
-              <h2 className="font-heading text-sm font-bold uppercase tracking-[0.12em] text-slate-50">
-                Resumo por colaborador
-              </h2>
-              <div className="mt-4 overflow-x-auto rounded-xl border border-white/[0.08] bg-sgp-app-panel-deep/35">
-                <table className="min-w-full text-sm">
-                  <thead>
-                    <tr className="text-left text-[10px] font-bold uppercase tracking-wider text-slate-500">
-                      <th className="px-4 py-3">Colaborador</th>
-                      <th className="px-4 py-3 text-right">Alocações</th>
-                      <th className="px-4 py-3 text-right">{operationalLabels.previstoEstrutural}</th>
-                      <th className="px-4 py-3 text-right">{operationalLabels.minutosApontadosPeriodo}</th>
-                      <th className="px-4 py-3 text-right">Extra esteira</th>
-                      <th className="px-4 py-3 text-right">{operationalLabels.coberturaTempo}</th>
-                      <th className="px-4 py-3 text-right">Em atraso</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-white/[0.06] tabular-nums text-slate-300">
-                    {journeys!.map((j) => (
-                      <tr key={j.collaborator.id}>
-                        <td className="px-4 py-2.5 text-slate-200">
-                          {j.collaborator.fullName?.trim() || j.collaborator.id}
-                        </td>
-                        <td className="px-4 py-2.5 text-right">{j.load.assignmentCount}</td>
-                        <td className="px-4 py-2.5 text-right">
-                          {formatHumanMinutes(j.load.plannedMinutesOnStepsSum)}
-                        </td>
-                        <td className="px-4 py-2.5 text-right">
-                          {formatHumanMinutes(j.execution.realizedMinutesInPeriod)}
-                        </td>
-                        <td className="px-4 py-2.5 text-right">
-                          {formatHumanMinutes(j.extraTimeEntriesSummary.totalMinutes)}
-                        </td>
-                        <td className="px-4 py-2.5 text-right">
-                          {formatCoberturaTempoRatio(j.coberturaTempo.ratio)}
-                        </td>
-                        <td className="px-4 py-2.5 text-right">{j.signals.pressaoAtrasoAlocacoes}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </section>
-          ) : null}
 
           <section className="mt-10">
             <h2 className="font-heading text-sm font-bold uppercase tracking-[0.12em] text-slate-50">
@@ -747,7 +663,7 @@ export function JornadaColaboradorGestorPage() {
             <p className="mt-1 text-sm text-slate-500">
               Alocações em esteiras ainda não concluídas (bucket ≠ concluídas).
             </p>
-            {details.assignmentsOpen.length === 0 ? (
+            {journey.assignmentsOpen.length === 0 ? (
               <p className="mt-4 text-sm text-slate-500">
                 {conveyorFilter
                   ? transversalUxCopy.journeyEmptyFiltered
@@ -755,13 +671,17 @@ export function JornadaColaboradorGestorPage() {
               </p>
             ) : (
               <ul className="mt-6 space-y-4">
-                {details.assignmentsOpen.map(({ item, collaboratorId, collaboratorName }) => (
+                {journey.assignmentsOpen.map((item) => (
                   <AssignmentCard
-                    key={`${collaboratorId}:${item.assigneeId}`}
+                    key={item.assigneeId}
                     item={item}
-                    collaboratorName={isMulti ? collaboratorName : undefined}
+                    collaboratorLabel={resolveRecordCollaboratorLabel(item)}
                     showApontamento={canApontamentoGestor}
-                    apontamentoGestorHref={canApontamentoGestor ? apontamentoGestorHrefFor(item) : null}
+                    apontamentoGestorHref={
+                      canApontamentoGestor
+                        ? `/app/gestao/apontamento/${encodeURIComponent(item.stepNodeId)}?conveyorId=${encodeURIComponent(item.conveyorId)}&from=jornada_gestao`
+                        : null
+                    }
                   />
                 ))}
               </ul>
@@ -775,7 +695,7 @@ export function JornadaColaboradorGestorPage() {
             <p className="mt-1 text-sm text-slate-500">
               Alocações cuja esteira está no bucket «em atraso» ({operationalLabels.pressaoAtraso}).
             </p>
-            {details.assignmentsAtRisk.length === 0 ? (
+            {journey.assignmentsAtRisk.length === 0 ? (
               <p className="mt-4 text-sm text-slate-500">
                 {conveyorFilter
                   ? transversalUxCopy.journeyEmptyFiltered
@@ -783,13 +703,17 @@ export function JornadaColaboradorGestorPage() {
               </p>
             ) : (
               <ul className="mt-6 space-y-4">
-                {details.assignmentsAtRisk.map(({ item, collaboratorId, collaboratorName }) => (
+                {journey.assignmentsAtRisk.map((item) => (
                   <AssignmentCard
-                    key={`${collaboratorId}:${item.assigneeId}`}
+                    key={item.assigneeId}
                     item={item}
-                    collaboratorName={isMulti ? collaboratorName : undefined}
+                    collaboratorLabel={resolveRecordCollaboratorLabel(item)}
                     showApontamento={canApontamentoGestor}
-                    apontamentoGestorHref={canApontamentoGestor ? apontamentoGestorHrefFor(item) : null}
+                    apontamentoGestorHref={
+                      canApontamentoGestor
+                        ? `/app/gestao/apontamento/${encodeURIComponent(item.stepNodeId)}?conveyorId=${encodeURIComponent(item.conveyorId)}&from=jornada_gestao`
+                        : null
+                    }
                   />
                 ))}
               </ul>
@@ -804,17 +728,21 @@ export function JornadaColaboradorGestorPage() {
               STEPs em aberto com previsto estrutural superior ao acumulado apontado pelo colaborador
               (ordenado por maior diferença). Sinal operacional.
             </p>
-            {totals.pendenciaTempoCount === 0 ? (
+            {journey.signals.pendenciaTempo.count === 0 ? (
               <p className="mt-4 text-sm text-slate-500">Nenhuma neste recorte.</p>
             ) : (
               <ul className="mt-4 space-y-2 rounded-xl border border-white/[0.08] bg-sgp-app-panel-deep/30 p-3 text-sm">
-                {details.pendencias.map(({ item: p, collaboratorId, collaboratorName }) => (
+                {journey.signals.pendenciaTempo.items.map((p) => (
                   <li
-                    key={`${collaboratorId}:${p.assigneeId}`}
+                    key={p.assigneeId}
                     className="flex flex-wrap items-center justify-between gap-2 border-b border-white/[0.05] py-2 last:border-0"
                   >
-                    <span className="flex flex-wrap items-center gap-2 text-slate-200">
-                      {isMulti ? <CollaboratorBadge name={collaboratorName} /> : null}
+                    <span className="text-slate-200">
+                      {resolveRecordCollaboratorLabel(p) ? (
+                        <span className="mr-2 text-amber-100/90">
+                          {resolveRecordCollaboratorLabel(p)} ·
+                        </span>
+                      ) : null}
                       {p.conveyorName} · {p.stepName}
                     </span>
                     <span className="tabular-nums text-slate-400">
@@ -831,13 +759,12 @@ export function JornadaColaboradorGestorPage() {
               Histórico recente
             </h2>
             <p className="mt-1 text-sm text-slate-500">
-              {operationalLabels.minutosApontadosPeriodo}: últimos lançamentos (máx. {historyLimit}{' '}
-              linhas{isMulti ? ' por colaborador' : ''}).
-              {historyTruncated
-                ? ' O total do período considera todos os lançamentos; a exportação traz a lista completa.'
-                : ''}
+              {operationalLabels.minutosApontadosPeriodo}: últimos lançamentos (máx.{' '}
+              {journey.query.limit} linhas
+              {isMultiSelection ? ' no conjunto dos colaboradores' : ''}). A exportação traz a lista
+              completa.
             </p>
-            {details.recentTimeEntries.length === 0 ? (
+            {journey.recentTimeEntries.length === 0 ? (
               <p className="mt-4 text-sm text-slate-500">
                 {conveyorFilter
                   ? transversalUxCopy.journeyEmptyFiltered
@@ -845,14 +772,15 @@ export function JornadaColaboradorGestorPage() {
               </p>
             ) : (
               <ul className="mt-4 divide-y divide-white/[0.06] rounded-xl border border-white/[0.08] bg-sgp-app-panel-deep/35">
-                {details.recentTimeEntries.map(({ item: e, collaboratorId, collaboratorName }) => (
-                  <li
-                    key={`${collaboratorId}:${e.id}`}
-                    className="flex flex-col gap-1 px-4 py-3 text-sm md:flex-row md:items-center md:justify-between"
-                  >
+                {journey.recentTimeEntries.map((e) => (
+                  <li key={e.id} className="flex flex-col gap-1 px-4 py-3 text-sm md:flex-row md:items-center md:justify-between">
                     <div>
                       <div className="flex flex-wrap items-center gap-2">
-                        {isMulti ? <CollaboratorBadge name={collaboratorName} /> : null}
+                        {resolveRecordCollaboratorLabel(e) ? (
+                          <span className="rounded-md border border-sgp-gold/30 bg-sgp-gold/[0.12] px-2 py-0.5 text-[11px] font-bold text-amber-100">
+                            {resolveRecordCollaboratorLabel(e)}
+                          </span>
+                        ) : null}
                         <p className="font-medium text-slate-200">{e.conveyorName}</p>
                         {e.entryOrigin === 'UNASSIGNED_EXCEPTION' ? (
                           <span
@@ -902,7 +830,7 @@ export function JornadaColaboradorGestorPage() {
         </>
       )}
 
-      {selectedIds.length === 0 && !loading && !collabsLoading && (
+      {!hasSelection && !loading && !collabsLoading && (
         <div className="sgp-panel sgp-panel-hover mt-10 max-w-lg rounded-2xl border border-white/[0.08] p-6">
           <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-sgp-gold">
             {transversalUxCopy.gestorSelectCollaboratorTitle}

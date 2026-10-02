@@ -72,3 +72,35 @@ export const operationalJourneyExportCollaboratorIdsSchema = z
         message: `Selecione no máximo ${OPERATIONAL_JOURNEY_EXPORT_MAX_COLLABORATORS} colaboradores por exportação.`,
       }),
   )
+
+/** Teto de colaboradores por consulta — protege o custo da jornada consolidada. */
+export const MAX_JOURNEY_COLLABORATORS = 20
+
+/**
+ * `collaboratorIds=a,b,c` — escopo multi-colaborador. Remove duplicados preservando a
+ * ordem de entrada; exige ao menos 1 id e no máximo {@link MAX_JOURNEY_COLLABORATORS}.
+ */
+export const operationalJourneyCollaboratorIdsSchema = z
+  .string({
+    required_error: 'Informe collaboratorIds com ao menos um colaborador.',
+    invalid_type_error: 'Informe collaboratorIds com ao menos um colaborador.',
+  })
+  .transform((raw) => {
+    const seen = new Set<string>()
+    const ids: string[] = []
+    for (const part of raw.split(',')) {
+      const id = part.trim()
+      if (id === '' || seen.has(id)) continue
+      seen.add(id)
+      ids.push(id)
+    }
+    return ids
+  })
+  .pipe(
+    z
+      .array(z.string().uuid({ message: 'collaboratorIds contém identificador inválido.' }))
+      .min(1, { message: 'Informe collaboratorIds com ao menos um colaborador.' })
+      .max(MAX_JOURNEY_COLLABORATORS, {
+        message: `Selecione no máximo ${MAX_JOURNEY_COLLABORATORS} colaboradores por consulta.`,
+      }),
+  )

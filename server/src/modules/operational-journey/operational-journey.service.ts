@@ -1,5 +1,9 @@
 import type pg from 'pg'
 import type { OperationalBucket } from '../../shared/operationalBucket.js'
+import {
+  operationalBucketSortRank,
+  parseFlexibleDeadlineToDate,
+} from '../../shared/operationalBucket.js'
 import { resolveActivityPlannedTotalMinutes } from '../../shared/activityOperationalQuantity.js'
 import { computeCoberturaTempo } from '../../shared/coberturaTempo.js'
 import {
@@ -15,7 +19,11 @@ import {
 } from '../../shared/operationalWorkDate.js'
 import { ErrorCodes } from '../../shared/errors/errorCodes.js'
 import { serviceListActivitiesForCollaborator } from '../my-activities/my-activities.service.js'
-import type { OperationalJourneyApi } from './operational-journey.dto.js'
+import type {
+  OperationalJourneyApi,
+  OperationalJourneyAssignmentApi,
+  OperationalJourneyCollaboratorApi,
+} from './operational-journey.dto.js'
 import {
   buildOperationalJourneyExportFilename,
   buildOperationalJourneyExportWorkbookBuffer,
@@ -25,17 +33,18 @@ import {
   findCollaboratorBrief,
   findConveyorBrief,
   listAllTimeEntriesForCollaboratorInPeriod,
+  listCollaboratorBriefs,
   listExtraTimeEntriesInPeriodForCollaborator,
-  listTopExtraTimeEntryDescriptionsInPeriodForCollaborator,
-  listTimeEntriesForCollaboratorInPeriod,
-  summarizeExtraTimeEntriesInPeriodForCollaborator,
-  sumRealizedMinutesInPeriodForCollaborator,
-  sumRealizedMinutesTotalForCollaborator,
+  listTopExtraTimeEntryDescriptionsInPeriodForCollaborators,
+  listTimeEntriesForCollaboratorsInPeriod,
+  summarizeExtraTimeEntriesInPeriodForCollaborators,
+  sumRealizedMinutesInPeriodForCollaborators,
+  sumRealizedMinutesTotalForCollaborators,
 } from './operational-journey.repository.js'
 import type { OperationalJourneyQuery } from './operational-journey.schemas.js'
 
 const COBERTURA_FORMULA =
-  'realizado_minutos_acumulados_nos_steps_alocados / previsto_estrutural_unitario_x_quantidade (escopo fechado; null se previsto ≤ 0)'
+  'realizado_minutos_acumulados_nos_steps_alocados / previsto_estrutural_unitario_x_quantidade (escopo fechado; previsto conta uma vez por alocação colaborador × STEP; null se previsto ≤ 0)'
 
 /** Previsto estrutural da atividade: total já calculado, senão unitário × quantidade. */
 export function structuralPlannedMinutesForJourney(activity: {
@@ -49,6 +58,12 @@ export function structuralPlannedMinutesForJourney(activity: {
   return resolveActivityPlannedTotalMinutes(activity.plannedMinutes, activity.plannedQuantity)
 }
 
+/**
+ * Previsto estrutural do escopo: representa a carga dos colaboradores selecionados, então
+ * participa uma vez por alocação colaborador × STEP. Dois colaboradores alocados no mesmo
+ * STEP de 60 min somam 120 min previstos — par do realizado, que também é por colaborador
+ * (cobertura 100% se ambos apontarem 60 min, nunca 200%).
+ */
 export function sumJourneyStructuralPlannedMinutes(
   activities: Array<{
     plannedMinutes: number | null
@@ -57,6 +72,56 @@ export function sumJourneyStructuralPlannedMinutes(
   }>,
 ): number {
   return activities.reduce((sum, activity) => sum + structuralPlannedMinutesForJourney(activity), 0)
+}
+
+/**
+ * Minutos apontados acumulados no escopo. Cada alocação traz o realizado do próprio
+ * colaborador naquele STEP (mesma granularidade do previsto: colaborador × STEP), então
+ * a soma por alocação não duplica apontamentos.
+ */
+export function sumJourneyRealizedMinutes(
+  activities: Array<{ realizedMinutes: number | null }>,
+): number {
+  return activities.reduce((sum, a) => sum + (a.realizedMinutes ?? 0), 0)
+}
+
+export function countJourneyAssignmentsByBucket(
+  activities: Array<{ operationalBucket: OperationalBucket }>,
+): Record<OperationalBucket, number> {
+  const byBucket = emptyBucketCounts()
+  for (const a of activities) byBucket[a.operationalBucket]++
+  return byBucket
+}
+
+/**
+ * Ordenação consolidada de alocações de vários colaboradores: bucket operacional →
+ * prazo → nome da esteira. Empates mantêm a ordem recebida (ordenação estável), que
+ * já é a ordem da matriz por colaborador — logo, com 1 colaborador a lista não muda.
+ */
+export function sortJourneyAssignments<
+  T extends {
+    operationalBucket: OperationalBucket
+    estimatedDeadline: string | null
+    conveyorName: string
+  },
+>(activities: T[]): T[] {
+  return [...activities].sort((a, b) => {
+    const br =
+      operationalBucketSortRank(a.operationalBucket) -
+      operationalBucketSortRank(b.operationalBucket)
+    if (br !== 0) return br
+
+    const da = parseFlexibleDeadlineToDate(a.estimatedDeadline)
+    const db = parseFlexibleDeadlineToDate(b.estimatedDeadline)
+    const ma = da === null ? Number.POSITIVE_INFINITY : da.getTime()
+    const mb = db === null ? Number.POSITIVE_INFINITY : db.getTime()
+    if (ma !== mb) return ma - mb
+
+    return a.conveyorName
+      .trim()
+      .toLocaleLowerCase('pt-BR')
+      .localeCompare(b.conveyorName.trim().toLocaleLowerCase('pt-BR'), 'pt-BR')
+  })
 }
 
 const MAX_PENDENCIAS = 48
@@ -72,6 +137,40 @@ function emptyBucketCounts(): Record<OperationalBucket, number> {
     finalizadas: 0,
     canceladas: 0,
   }
+}
+
+/**
+ * Pendência de tempo por alocação colaborador × STEP: previsto da alocação acima do
+ * acumulado apontado por aquele colaborador. Um STEP compartilhado gera uma pendência
+ * por colaborador, cada uma identificada pelo seu colaborador e coerente com a soma
+ * do previsto e do realizado do escopo.
+ */
+export function buildJourneyPendenciaItems(
+  openAssignments: OperationalJourneyAssignmentApi[],
+): OperationalJourneyApi['signals']['pendenciaTempo']['items'] {
+  const items: OperationalJourneyApi['signals']['pendenciaTempo']['items'] = []
+  for (const a of openAssignments) {
+    const p = structuralPlannedMinutesForJourney(a)
+    const r = a.realizedMinutes ?? 0
+    if (p > r) {
+      items.push({
+        assigneeId: a.assigneeId,
+        collaboratorId: a.collaboratorId,
+        collaboratorName: a.collaboratorName,
+        conveyorId: a.conveyorId,
+        conveyorName: a.conveyorName,
+        stepNodeId: a.stepNodeId,
+        stepName: a.stepName,
+        areaName: a.areaName,
+        optionName: a.optionName,
+        plannedMinutes: p,
+        realizedMinutes: a.realizedMinutes,
+        gapMinutes: p - r,
+      })
+    }
+  }
+  items.sort((x, y) => y.gapMinutes - x.gapMinutes)
+  return items
 }
 
 /**
@@ -122,6 +221,7 @@ function resolveJourneyPeriod(
   return r
 }
 
+/** Jornada de um colaborador — escopo de 1, sobre a mesma consolidação. */
 export async function serviceGetOperationalJourney(
   pool: pg.Pool,
   args: {
@@ -129,56 +229,93 @@ export async function serviceGetOperationalJourney(
     query: OperationalJourneyQuery
   },
 ): Promise<OperationalJourneyApi> {
-  const brief = await findCollaboratorBrief(pool, args.collaboratorId)
-  if (!brief) {
+  return serviceGetOperationalJourneyForCollaborators(pool, {
+    collaboratorIds: [args.collaboratorId],
+    query: args.query,
+  })
+}
+
+/**
+ * Jornada consolidada de 1..N colaboradores. Valores absolutos (minutos previstos,
+ * apontados, contagens) são somados sobre o conjunto; percentuais — cobertura de tempo —
+ * são recalculados a partir dos totais consolidados, nunca pela média dos percentuais
+ * individuais. Cada alocação e cada apontamento continua identificado pelo colaborador.
+ */
+export async function serviceGetOperationalJourneyForCollaborators(
+  pool: pg.Pool,
+  args: {
+    collaboratorIds: string[]
+    query: OperationalJourneyQuery
+  },
+): Promise<OperationalJourneyApi> {
+  const collaboratorIds = [...new Set(args.collaboratorIds.map((id) => id.trim()).filter(Boolean))]
+  if (collaboratorIds.length === 0) {
+    throw new AppError(
+      'Informe ao menos um colaborador para a jornada.',
+      400,
+      ErrorCodes.VALIDATION_ERROR,
+    )
+  }
+
+  const briefs = await listCollaboratorBriefs(pool, collaboratorIds)
+  const briefById = new Map(briefs.map((b) => [b.id, b]))
+  if (collaboratorIds.some((id) => !briefById.has(id))) {
     throw new AppError('Colaborador não encontrado.', 404, ErrorCodes.NOT_FOUND)
   }
+  const collaborators: OperationalJourneyCollaboratorApi[] = collaboratorIds.map((id) => ({
+    id,
+    fullName: briefById.get(id)!.full_name,
+  }))
 
   const { from, to, preset } = resolveJourneyPeriod(args.query)
 
   const conveyorId = args.query.conveyorId ?? null
   const limit = args.query.limit
 
-  const assignments = await serviceListActivitiesForCollaborator(pool, args.collaboratorId, {
-    conveyorId,
-  })
+  const perCollaborator = await Promise.all(
+    collaboratorIds.map((collaboratorId) =>
+      serviceListActivitiesForCollaborator(pool, collaboratorId, { conveyorId }),
+    ),
+  )
+  const assignments = sortJourneyAssignments(
+    collaborators.flatMap((collaborator, i) =>
+      perCollaborator[i]!.map<OperationalJourneyAssignmentApi>((a) => ({
+        ...a,
+        collaboratorId: collaborator.id,
+        collaboratorName: collaborator.fullName,
+      })),
+    ),
+  )
 
-  const byBucket = emptyBucketCounts()
-  for (const a of assignments) {
-    byBucket[a.operationalBucket]++
-  }
-
-  let realizadoAcumuladoEscopo = 0
-  for (const a of assignments) {
-    realizadoAcumuladoEscopo += a.realizedMinutes ?? 0
-  }
+  const byBucket = countJourneyAssignmentsByBucket(assignments)
+  const realizadoAcumuladoEscopo = sumJourneyRealizedMinutes(assignments)
   const plannedSum = sumJourneyStructuralPlannedMinutes(assignments)
 
   const cobertura = computeCoberturaTempo(realizadoAcumuladoEscopo, plannedSum)
 
   const [realizedInPeriod, realizedTotal, rawEntries, extraSummary, extraTopDescriptions] =
     await Promise.all([
-    sumRealizedMinutesInPeriodForCollaborator(pool, {
-      collaboratorId: args.collaboratorId,
+    sumRealizedMinutesInPeriodForCollaborators(pool, {
+      collaboratorIds,
       from,
       to,
       conveyorId,
     }),
-    sumRealizedMinutesTotalForCollaborator(pool, args.collaboratorId, conveyorId),
-    listTimeEntriesForCollaboratorInPeriod(pool, {
-      collaboratorId: args.collaboratorId,
+    sumRealizedMinutesTotalForCollaborators(pool, collaboratorIds, conveyorId),
+    listTimeEntriesForCollaboratorsInPeriod(pool, {
+      collaboratorIds,
       from,
       to,
       conveyorId,
       limit,
     }),
-    summarizeExtraTimeEntriesInPeriodForCollaborator(pool, {
-      collaboratorId: args.collaboratorId,
+    summarizeExtraTimeEntriesInPeriodForCollaborators(pool, {
+      collaboratorIds,
       from,
       to,
     }),
-    listTopExtraTimeEntryDescriptionsInPeriodForCollaborator(pool, {
-      collaboratorId: args.collaboratorId,
+    listTopExtraTimeEntryDescriptionsInPeriodForCollaborators(pool, {
+      collaboratorIds,
       from,
       to,
       limit: MAX_TOP_EXTRA_DESCRIPTIONS,
@@ -190,30 +327,13 @@ export async function serviceGetOperationalJourney(
   )
   const assignmentsAtRisk = assignments.filter((a) => a.operationalBucket === 'em_atraso')
 
-  const pendenciaItems: OperationalJourneyApi['signals']['pendenciaTempo']['items'] = []
-  for (const a of assignmentsOpen) {
-    const p = structuralPlannedMinutesForJourney(a)
-    const r = a.realizedMinutes ?? 0
-    if (p > r) {
-      pendenciaItems.push({
-        assigneeId: a.assigneeId,
-        conveyorId: a.conveyorId,
-        conveyorName: a.conveyorName,
-        stepNodeId: a.stepNodeId,
-        stepName: a.stepName,
-        areaName: a.areaName,
-        optionName: a.optionName,
-        plannedMinutes: p,
-        realizedMinutes: a.realizedMinutes,
-        gapMinutes: p - r,
-      })
-    }
-  }
-  pendenciaItems.sort((x, y) => y.gapMinutes - x.gapMinutes)
+  const pendenciaItems = buildJourneyPendenciaItems(assignmentsOpen)
   const pendenciaSliced = pendenciaItems.slice(0, MAX_PENDENCIAS)
 
   const recentTimeEntries = rawEntries.map((r) => ({
     id: r.id,
+    collaboratorId: r.collaborator_id,
+    collaboratorName: r.collaborator_name,
     conveyorId: r.conveyor_id,
     conveyorName: r.conveyor_name,
     stepNodeId: r.conveyor_node_id,
@@ -234,9 +354,10 @@ export async function serviceGetOperationalJourney(
       semanticsVersion: '1.5',
     },
     collaborator: {
-      id: brief.id,
-      fullName: brief.full_name,
+      id: collaborators[0]!.id,
+      fullName: collaborators[0]!.fullName,
     },
+    collaborators,
     period: {
       from: from.toISOString(),
       to: to.toISOString(),
@@ -245,6 +366,7 @@ export async function serviceGetOperationalJourney(
       limit,
       conveyorId,
       periodPreset: preset,
+      collaboratorIds,
     },
     load: {
       assignmentCount: assignments.length,

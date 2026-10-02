@@ -37,6 +37,23 @@ export async function fetchOperationalJourney(
   return requestJson<OperationalJourneyData>('GET', path)
 }
 
+/**
+ * Jornada consolidada de vários colaboradores (`?collaboratorIds=a,b,c`) — mesmo
+ * contrato da jornada de 1 colaborador, com `collaborators` e a identificação do
+ * colaborador em cada alocação / apontamento.
+ */
+export async function fetchOperationalJourneyForCollaborators(
+  collaboratorIds: string[],
+  query?: OperationalJourneyQuery,
+): Promise<OperationalJourneyData> {
+  const qs = new URLSearchParams(operationalJourneyQueryString(query))
+  qs.set('collaboratorIds', collaboratorIds.map((id) => id.trim()).filter(Boolean).join(','))
+  return requestJson<OperationalJourneyData>(
+    'GET',
+    `${BASE}/collaborators/operational-journey?${qs.toString()}`,
+  )
+}
+
 /** Jornada do colaborador logado — mesmo contrato que a jornada gerencial. */
 export async function fetchMyOperationalJourney(
   query?: OperationalJourneyQuery,
