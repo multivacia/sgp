@@ -12,7 +12,7 @@
 - Branch: `cursor/padronizar-contexto-ia-e3aa`
 - Base: `develop`
 - SHA inicial: `4345b5dad40ea212163ce944ee915f2b0fca3068`
-- SHA final: `044446f770c633b189ef5fdeef83c62622e447f8`
+- SHA final: `953d183b257d5f1d21bb65b0d4346114cb840a9c` (commit principal da padronização; tip da branch pode incluir commits de sincronização deste retorno)
 - Commit principal da padronização: `953d183b257d5f1d21bb65b0d4346114cb840a9c`
 - Commit/push/PR:
   - Commits locais: `953d183b` (padronização) + commits de sincronização do retorno/checkpoint

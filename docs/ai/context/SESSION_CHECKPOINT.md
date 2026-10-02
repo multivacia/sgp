@@ -10,7 +10,7 @@
 - TASK_ID: `padronizar-contexto-ia`
 - Atualizado em: `2026-10-02 02:42 UTC`
 - Branch: `cursor/padronizar-contexto-ia-e3aa`
-- HEAD: `044446f770c633b189ef5fdeef83c62622e447f8`
+- HEAD: `60f9f40570e0bc1bb3a7a044b4635e8e6b1b44ec`
 - Base/remoto relevante: `develop` (`4345b5dad40ea212163ce944ee915f2b0fca3068`)
 - Working tree: `clean localmente; push/PR pendentes de autorização`
 
