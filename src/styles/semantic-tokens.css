@@ -310,7 +310,7 @@ html[data-theme="light-executive"] {
   --color-shell-border: #9db0c8;
   --color-text-primary: #0f172a;
   --color-text-secondary: #334155;
-  --color-text-muted: #64748b;
+  --color-text-muted: #566579;
   --color-text-soft: #94a3b8;
   /* Bordas revisadas para contraste real no tema claro.
   Antes: #d8e0ea, contraste muito baixo sobre branco, quase invisível. */
@@ -421,7 +421,7 @@ html[data-theme="light-executive"] {
   --semantic-ops-text-primary: #0f172a;
   --semantic-ops-text-secondary: #334155;
   --semantic-ops-text-muted: #475569;
-  --semantic-ops-text-soft: #64748b;
+  --semantic-ops-text-soft: #566579;
   --semantic-ops-warning-bg: #fff7e6;
   --semantic-ops-warning-border: #f59e0b;
   --semantic-ops-warning-text: #92400e;
@@ -470,7 +470,7 @@ html[data-theme="light-executive"] {
   --semantic-login-form-bg: rgba(255, 255, 255, 0.98);
   --semantic-login-form-border: var(--color-border-subtle);
   --semantic-login-field-fg: var(--color-text-primary);
-  --semantic-login-field-placeholder: #94a3b8;
+  --semantic-login-field-placeholder: #64748b;
   --semantic-login-section-fade: var(--color-bg-app);
 
   --semantic-chart-tooltip-bg: rgba(255, 255, 255, 0.98);
