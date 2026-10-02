@@ -12,9 +12,11 @@
 - Branch: `cursor/padronizar-contexto-ia-e3aa`
 - Base: `develop`
 - SHA inicial: `4345b5dad40ea212163ce944ee915f2b0fca3068`
-- SHA final: *(preenchido após commit local)*
+- SHA final (tip local): ver `git rev-parse HEAD` após o commit de ajuste deste retorno
+- Commit principal da padronização: `953d183b257d5f1d21bb65b0d4346114cb840a9c`
 - Commit/push/PR:
-  - Commit local: sim (quando executado nesta entrega)
+  - Commit local principal: `953d183b` — `docs(ai): padroniza contexto com CLAUDE.md curto e docs/ai/context`
+  - Commit local de ajuste do retorno/checkpoint: este commit
   - Push: **não** (sem autorização)
   - PR/merge: **não** (sem autorização)
 - Arquivo de retorno ainda não publicado no remoto até autorização de push.
@@ -81,13 +83,11 @@ f0f26fb8f497d0eff97755b473ed2046f9c932c65db9436641814f8e267c8e84  SESSION_CHECKP
 
 Autorizar commit/push da branch `cursor/padronizar-contexto-ia-e3aa` e abrir PR contra `develop` para revisão humana.
 
-## git status (ao gerar este retorno, pré-commit)
+## git status (final)
 
 ```text
 On branch cursor/padronizar-contexto-ia-e3aa
- M CLAUDE.md
-?? docs/ai/context/
-?? docs/ai/returns/
+nothing to commit, working tree clean
 ```
 
 ## Uso/tokens disponíveis

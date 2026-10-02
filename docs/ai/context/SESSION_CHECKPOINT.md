@@ -10,9 +10,9 @@
 - TASK_ID: `padronizar-contexto-ia`
 - Atualizado em: `2026-10-02 02:42 UTC`
 - Branch: `cursor/padronizar-contexto-ia-e3aa`
-- HEAD: `ver git rev-parse HEAD após commit local`
+- HEAD: `953d183b257d5f1d21bb65b0d4346114cb840a9c`
 - Base/remoto relevante: `develop` (`4345b5dad40ea212163ce944ee915f2b0fca3068`)
-- Working tree: `alterações locais de docs de contexto; push/PR pendentes de autorização`
+- Working tree: `clean localmente; push/PR pendentes de autorização`
 
 ## Objetivo atual
 
