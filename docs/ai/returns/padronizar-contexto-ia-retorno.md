@@ -5,20 +5,21 @@
 - TASK_ID: `padronizar-contexto-ia`
 - Data/hora: `2026-10-02 02:42 UTC`
 - Objetivo: padronizar o contexto de IA no repositório (novo `CLAUDE.md` + `docs/ai/context/*`), preservando `AGENTS.md` e a estrutura atual de `docs/ai/`, sem alterar código-fonte da aplicação.
-- Status final: `CONCLUÍDO_LOCALMENTE` (push/PR/merge não autorizados)
+- Status final: `MERGED_EM_DEVELOP`
 
 ## Git
 
-- Branch: `cursor/padronizar-contexto-ia-e3aa`
+- Branch de trabalho: `cursor/padronizar-contexto-ia-e3aa`
 - Base: `develop`
 - SHA inicial: `4345b5dad40ea212163ce944ee915f2b0fca3068`
-- SHA final: `953d183b257d5f1d21bb65b0d4346114cb840a9c` (commit principal da padronização; tip da branch pode incluir commits de sincronização deste retorno)
+- SHA final (tip `develop` após merge): `4798efbac17bd73256a5df4f0435fa4cafa43f10`
 - Commit principal da padronização: `953d183b257d5f1d21bb65b0d4346114cb840a9c`
 - Commit/push/PR:
-  - Commits locais: `953d183b` (padronização) + commits de sincronização do retorno/checkpoint
-  - Push: **não** (sem autorização)
-  - PR/merge: **não** (sem autorização)
-- Arquivo de retorno ainda não publicado no remoto até autorização de push.
+  - Push da feature: sim (`origin/cursor/padronizar-contexto-ia-e3aa`)
+  - PR: https://github.com/multivacia/sgp/pull/31 (`MERGED`)
+  - Merge em `develop`: sim, `--no-ff`, sem force-push
+  - Estratégia: tip de `develop` estava em `4345b5da` (sem commits novos à frente); merge trouxe apenas os 4 arquivos de docs
+- Diff do merge vs tip anterior de `develop`: somente `CLAUDE.md` + `docs/ai/context/*` + retorno.
 
 ## Resumo
 
@@ -74,18 +75,17 @@ f0f26fb8f497d0eff97755b473ed2046f9c932c65db9436641814f8e267c8e84  SESSION_CHECKP
 
 ## Pendências / riscos / ressalvas
 
-- Push, PR e merge aguardam autorização humana explícita.
 - Adaptadores (`.cursor/`, `.claude/`) ainda referenciam `CLAUDE.md` de forma genérica; compatível, mas futuros ajustes de registry/README de `docs/ai/` podem citar `docs/ai/context/` explicitamente (fora do escopo desta tarefa).
 - Pasta `docs/ai/prompts/` referida no novo `CLAUDE.md` ainda não foi criada (não solicitada nesta atividade).
 
 ## Próximo passo recomendado
 
-Autorizar commit/push da branch `cursor/padronizar-contexto-ia-e3aa` e abrir PR contra `develop` para revisão humana.
+Nenhum obrigatório para esta atividade. Homologar normalmente a partir de `develop` (`4798efba`).
 
 ## git status (final)
 
 ```text
-On branch cursor/padronizar-contexto-ia-e3aa
+On branch develop
 nothing to commit, working tree clean
 ```
 
