@@ -515,7 +515,7 @@ export function JornadaColaboradorGestorPage() {
             </div>
             <div className="sgp-panel sgp-panel-hover !p-4">
               <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
-                {operationalLabels.previstoEstrutural} (soma STEPs)
+                {operationalLabels.previstoEstrutural} (soma das alocações)
               </p>
               <p className="mt-1 font-heading text-2xl font-bold text-slate-50">
                 {formatHumanMinutes(journey.load.plannedMinutesOnStepsSum)}
@@ -575,8 +575,8 @@ export function JornadaColaboradorGestorPage() {
               {formatCoberturaTempoRatio(journey.coberturaTempo.ratio)}
             </p>
             <p className="mt-2 text-xs text-amber-100/80">
-              Numerador: soma dos apontamentos nos STEPs alocados. Denominador:{' '}
-              {operationalLabels.previstoEstrutural} no mesmo conjunto de STEPs.{' '}
+              Numerador: soma dos apontamentos nas alocações do escopo. Denominador:{' '}
+              {operationalLabels.previstoEstrutural} no mesmo conjunto de alocações.{' '}
               {journey.coberturaTempo.ratio === null
                 ? 'Não aplicável se o previsto estrutural no escopo for ≤ 0.'
                 : `${formatHumanMinutes(journey.coberturaTempo.realizadoMinutosAcumuladoEscopo)} / ${formatHumanMinutes(journey.coberturaTempo.previstoMinutosEscopo)}.`}
