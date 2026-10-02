@@ -34,7 +34,7 @@ import {
 import type { OperationalJourneyQuery } from './operational-journey.schemas.js'
 
 const COBERTURA_FORMULA =
-  'realizado_minutos_acumulados_nos_steps_alocados / previsto_estrutural_unitario_x_quantidade (escopo fechado; STEP compartilhado conta uma vez; null se previsto ≤ 0)'
+  'realizado_minutos_acumulados_nos_steps_alocados / previsto_estrutural_unitario_x_quantidade (escopo fechado; previsto conta uma vez por alocação colaborador × STEP; null se previsto ≤ 0)'
 
 /** Previsto estrutural da atividade: total já calculado, senão unitário × quantidade. */
 export function structuralPlannedMinutesForJourney(activity: {
@@ -48,6 +48,12 @@ export function structuralPlannedMinutesForJourney(activity: {
   return resolveActivityPlannedTotalMinutes(activity.plannedMinutes, activity.plannedQuantity)
 }
 
+/**
+ * Previsto estrutural do escopo: representa a carga dos colaboradores selecionados, então
+ * participa uma vez por alocação colaborador × STEP. Dois colaboradores alocados no mesmo
+ * STEP de 60 min somam 120 min previstos — par do realizado, que também é por colaborador
+ * (cobertura 100% se ambos apontarem 60 min, nunca 200%).
+ */
 export function sumJourneyStructuralPlannedMinutes(
   activities: Array<{
     plannedMinutes: number | null
@@ -59,34 +65,9 @@ export function sumJourneyStructuralPlannedMinutes(
 }
 
 /**
- * Previsto estrutural do conjunto de STEPs alocados — cada STEP entra uma única vez,
- * mesmo quando vários colaboradores do escopo estão alocados nele (senão o denominador
- * da cobertura de tempo seria inflado e a cobertura, subestimada).
- *
- * Com 1 colaborador o resultado é idêntico a {@link sumJourneyStructuralPlannedMinutes}:
- * o índice único (STEP, colaborador) impede alocação repetida no mesmo STEP.
- */
-export function sumJourneyStructuralPlannedMinutesByStep(
-  activities: Array<{
-    stepNodeId: string
-    plannedMinutes: number | null
-    plannedQuantity?: number | null
-    plannedTotalMinutes?: number | null
-  }>,
-): number {
-  const perStep = new Map<string, number>()
-  for (const activity of activities) {
-    if (perStep.has(activity.stepNodeId)) continue
-    perStep.set(activity.stepNodeId, structuralPlannedMinutesForJourney(activity))
-  }
-  let sum = 0
-  for (const minutes of perStep.values()) sum += minutes
-  return sum
-}
-
-/**
  * Minutos apontados acumulados no escopo. Cada alocação traz o realizado do próprio
- * colaborador naquele STEP, então a soma por alocação não duplica apontamentos.
+ * colaborador naquele STEP (mesma granularidade do previsto: colaborador × STEP), então
+ * a soma por alocação não duplica apontamentos.
  */
 export function sumJourneyRealizedMinutes(
   activities: Array<{ realizedMinutes: number | null }>,
@@ -149,9 +130,10 @@ function emptyBucketCounts(): Record<OperationalBucket, number> {
 }
 
 /**
- * Pendência de tempo por alocação: previsto estrutural do STEP acima do acumulado
- * apontado por aquele colaborador. Um STEP compartilhado gera uma pendência por
- * colaborador (registros distintos), cada uma identificada pelo seu colaborador.
+ * Pendência de tempo por alocação colaborador × STEP: previsto da alocação acima do
+ * acumulado apontado por aquele colaborador. Um STEP compartilhado gera uma pendência
+ * por colaborador, cada uma identificada pelo seu colaborador e coerente com a soma
+ * do previsto e do realizado do escopo.
  */
 export function buildJourneyPendenciaItems(
   openAssignments: OperationalJourneyAssignmentApi[],
@@ -297,7 +279,7 @@ export async function serviceGetOperationalJourneyForCollaborators(
 
   const byBucket = countJourneyAssignmentsByBucket(assignments)
   const realizadoAcumuladoEscopo = sumJourneyRealizedMinutes(assignments)
-  const plannedSum = sumJourneyStructuralPlannedMinutesByStep(assignments)
+  const plannedSum = sumJourneyStructuralPlannedMinutes(assignments)
 
   const cobertura = computeCoberturaTempo(realizadoAcumuladoEscopo, plannedSum)
 

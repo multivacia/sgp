@@ -71,8 +71,9 @@ export type OperationalJourneyApi = {
     /** Alocações do escopo (uma por colaborador × STEP; nunca o mesmo registro duas vezes). */
     assignmentCount: number
     /**
-     * Previsto estrutural: soma do tempo unitário × quantidade dos STEPs alocados.
-     * Com vários colaboradores no mesmo STEP, o previsto do STEP entra uma única vez.
+     * Previsto estrutural: soma do tempo unitário × quantidade, uma vez por alocação
+     * colaborador × STEP. Com vários colaboradores no mesmo STEP, o previsto do STEP
+     * participa uma vez por colaborador alocado (carga dos selecionados).
      */
     plannedMinutesOnStepsSum: number
   }

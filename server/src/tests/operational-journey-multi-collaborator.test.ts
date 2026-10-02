@@ -6,7 +6,6 @@ import {
   sortJourneyAssignments,
   sumJourneyRealizedMinutes,
   sumJourneyStructuralPlannedMinutes,
-  sumJourneyStructuralPlannedMinutesByStep,
 } from '../modules/operational-journey/operational-journey.service.js'
 import {
   MAX_JOURNEY_COLLABORATORS,
@@ -44,15 +43,14 @@ function assignment(
   } as OperationalJourneyAssignmentApi
 }
 
-describe('jornada consolidada — previsto estrutural do conjunto de STEPs', () => {
-  it('STEP compartilhado por dois colaboradores entra uma única vez', () => {
+describe('jornada consolidada — previsto estrutural por alocação colaborador × STEP', () => {
+  it('STEP compartilhado por dois colaboradores participa uma vez por alocação', () => {
     const assignments = [
-      assignment({ collaboratorId: COLAB_A, stepNodeId: 'step-1', plannedTotalMinutes: 100 }),
-      assignment({ collaboratorId: COLAB_B, stepNodeId: 'step-1', plannedTotalMinutes: 100 }),
+      assignment({ collaboratorId: COLAB_A, stepNodeId: 'step-1', plannedTotalMinutes: 60 }),
+      assignment({ collaboratorId: COLAB_B, stepNodeId: 'step-1', plannedTotalMinutes: 60 }),
     ]
-    expect(sumJourneyStructuralPlannedMinutesByStep(assignments)).toBe(100)
-    // soma por alocação (sem deduplicar) inflaria o previsto:
-    expect(sumJourneyStructuralPlannedMinutes(assignments)).toBe(200)
+    expect(assignments).toHaveLength(2)
+    expect(sumJourneyStructuralPlannedMinutes(assignments)).toBe(120)
   })
 
   it('STEPs distintos somam normalmente', () => {
@@ -60,22 +58,46 @@ describe('jornada consolidada — previsto estrutural do conjunto de STEPs', () 
       assignment({ collaboratorId: COLAB_A, stepNodeId: 'step-1', plannedTotalMinutes: 100 }),
       assignment({ collaboratorId: COLAB_B, stepNodeId: 'step-2', plannedTotalMinutes: 40 }),
     ]
-    expect(sumJourneyStructuralPlannedMinutesByStep(assignments)).toBe(140)
+    expect(sumJourneyStructuralPlannedMinutes(assignments)).toBe(140)
   })
 
-  it('com 1 colaborador é idêntico à soma por alocação (índice único STEP × colaborador)', () => {
+  it('com 1 colaborador o previsto é a soma das suas alocações (comportamento atual)', () => {
     const assignments = [
       assignment({ collaboratorId: COLAB_A, stepNodeId: 'step-1', plannedTotalMinutes: 100 }),
       assignment({ collaboratorId: COLAB_A, stepNodeId: 'step-2', plannedTotalMinutes: 35 }),
     ]
-    expect(sumJourneyStructuralPlannedMinutesByStep(assignments)).toBe(
-      sumJourneyStructuralPlannedMinutes(assignments),
-    )
+    expect(sumJourneyStructuralPlannedMinutes(assignments)).toBe(135)
   })
 })
 
 describe('jornada consolidada — minutos apontados e cobertura de tempo', () => {
-  it('soma o realizado de cada colaborador sem duplicar o STEP compartilhado', () => {
+  it('STEP compartilhado: 2 × 60 previstos e 2 × 60 apontados → cobertura 100% (nunca 200%)', () => {
+    const assignments = [
+      assignment({
+        collaboratorId: COLAB_A,
+        stepNodeId: 'step-1',
+        plannedTotalMinutes: 60,
+        realizedMinutes: 60,
+      }),
+      assignment({
+        collaboratorId: COLAB_B,
+        stepNodeId: 'step-1',
+        plannedTotalMinutes: 60,
+        realizedMinutes: 60,
+      }),
+    ]
+    const previsto = sumJourneyStructuralPlannedMinutes(assignments)
+    const realizado = sumJourneyRealizedMinutes(assignments)
+    const cobertura = computeCoberturaTempo(realizado, previsto)
+    expect(assignments).toHaveLength(2)
+    expect(previsto).toBe(120)
+    expect(realizado).toBe(120)
+    expect(cobertura.ratio).toBe(1)
+    // deduplicar o denominador por STEP (60) resultaria em 200%
+    expect(realizado / 60).toBe(2)
+  })
+
+  it('soma o realizado de cada colaborador sem duplicar apontamentos', () => {
     const assignments = [
       assignment({
         collaboratorId: COLAB_A,
@@ -109,7 +131,7 @@ describe('jornada consolidada — minutos apontados e cobertura de tempo', () =>
         realizedMinutes: 10,
       }),
     ]
-    const previsto = sumJourneyStructuralPlannedMinutesByStep(assignments)
+    const previsto = sumJourneyStructuralPlannedMinutes(assignments)
     const realizado = sumJourneyRealizedMinutes(assignments)
     const cobertura = computeCoberturaTempo(realizado, previsto)
     expect(previsto).toBe(300)
@@ -130,7 +152,7 @@ describe('jornada consolidada — minutos apontados e cobertura de tempo', () =>
     ]
     const cobertura = computeCoberturaTempo(
       sumJourneyRealizedMinutes(assignments),
-      sumJourneyStructuralPlannedMinutesByStep(assignments),
+      sumJourneyStructuralPlannedMinutes(assignments),
     )
     expect(cobertura.ratio).toBeNull()
   })
