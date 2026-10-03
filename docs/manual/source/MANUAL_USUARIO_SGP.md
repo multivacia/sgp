@@ -1832,13 +1832,198 @@ As duas filas leem o **mesmo planejamento publicado** e aplicam a **mesma regra 
 
 # 11. Minha Jornada
 
-> [PENDENTE DE ENRIQUECIMENTO — não publicar como capítulo final]
+## Para que serve
 
-- períodos disponíveis e intervalo personalizado
-- previsto, realizado e cobertura de tempo
-- Extra Esteira no resumo do período
-- sinais de pendência
-- por que a lista na tela pode mostrar menos itens do que os totais
+**Minha jornada** reúne as atividades atribuídas diretamente ao seu nome e os apontamentos de tempo registrados para você. Ela ajuda a conferir de onde vêm o **previsto** e o **realizado**, consultar a **data de realização** e reencontrar a esteira de um apontamento.
+
+A tela combina duas leituras: as atividades e seu tempo previsto atual, e o trabalho registrado no período escolhido. Por isso, escolher um período não transforma o previsto em uma meta daquele período. Use **Minha fila** para consultar o trabalho distribuído no plano semanal para um dia específico.
+
+Na versão atual, **cobertura** e **Extra Esteira** não são exibidos em Minha jornada. As limitações de quantidade e de conclusão descritas adiante também precisam ser consideradas ao ler os números.
+
+## Onde fica
+
+No menu lateral, entre em **Colaborador → Minha jornada**. O título da página é **Minha jornada**; abaixo dele aparece o nome do colaborador associado à conta.
+
+O botão **Atualizar** fica no alto da página. **Período e filtros** abre as opções de consulta. Abaixo dos números ficam as colunas **Pendentes**, **Em andamento** e **Concluídas**, seguidas de **Apontamentos no período**.
+
+## Quem costuma ter acesso
+
+Qualquer pessoa que tenha entrado no sistema pode abrir Minha jornada, inclusive gestores e administradores. Para carregar os dados, a conta precisa estar **vinculada a um colaborador operacional**.
+
+A jornada é sempre a do colaborador associado à conta. Não existe seleção de outra pessoa nessa tela. O nome exibido permite conferir de quem são os dados; se estiver incorreto ou faltar o vínculo, peça ao administrador para revisar o cadastro.
+
+Uma atividade atribuída apenas à equipe, ou apenas distribuída no planejamento semanal, não entra automaticamente nos cartões da jornada: eles dependem da atribuição direta ao seu nome. Seus apontamentos nessas atividades podem aparecer no histórico mesmo sem um cartão correspondente.
+
+## Como fazer
+
+### Escolher o período
+
+1. Abra **Período e filtros**.
+2. Em **Recorte temporal**, escolha uma opção.
+3. Confira as datas mostradas em **Janela**.
+4. Aguarde a atualização dos números e dos apontamentos.
+
+| Opção | O que considera |
+|---|---|
+| **Últimos 7 dias** | período padrão; as últimas 168 horas até o momento da consulta |
+| **Últimos 15 dias** | as últimas 360 horas até o momento da consulta |
+| **Últimos 30 dias** | as últimas 720 horas até o momento da consulta |
+| **Mês atual (UTC)** | do início do primeiro dia do mês em São Paulo até o momento da consulta; o complemento do rótulo está incorreto |
+| **Intervalo personalizado** | os dias informados em **De (data)** e **Até (data)**, incluindo os dois dias completos, pela referência de São Paulo |
+
+As três opções de últimos dias são períodos móveis, não semanas de segunda a sexta nem dias completos de calendário. A data inicial mostrada em **Janela** não revela a hora de corte: um apontamento daquele dia pode ficar fora se foi realizado antes do início do período.
+
+Para consultar **hoje**, escolha **Intervalo personalizado** e informe hoje nos dois campos. Para consultar uma semana ou um mês passado, informe suas datas inicial e final. Não há opções próprias de **Hoje** ou **Esta semana**, nem setas para avançar ou voltar um período.
+
+No intervalo personalizado, o início deve ser igual ou anterior ao fim. A consulta não impõe duração máxima nem impede escolher datas futuras; isso não autoriza registrar trabalho em uma data futura. Ao trocar a opção de período, as datas personalizadas são apagadas.
+
+[IMAGEM SUGERIDA: Período e filtros aberto, com o intervalo personalizado e a Janela visíveis.]
+
+### Filtrar uma esteira
+
+Em **Esteira (opcional)**, escolha uma esteira ou mantenha **Todas**. A seleção atualiza os cartões, o previsto, o realizado e o histórico dessa esteira; trocar o período mantém esse filtro.
+
+A lista de opções é formada pelas atividades e pelos apontamentos carregados na própria tela. Ela pode não oferecer uma esteira que só tenha registros antigos, fora dos apontamentos exibidos. Depois de filtrar, use **Todas** para voltar às demais opções; se nenhuma opção aparecer, abra novamente Minha jornada pelo menu para iniciar uma consulta sem filtros.
+
+### Ler previsto e realizado
+
+| Número exibido | De onde vem |
+|---|---|
+| **Previsto** | soma do tempo previsto das atividades com atribuição direta ao seu nome, na estrutura atual das esteiras; não usa os minutos distribuídos no plano semanal |
+| **Realizado (período)** e **Minutos apontados (período)** | soma de todos os apontamentos em atividades registrados para você cuja data de realização está no período escolhido |
+| **Minutos apontados (acumulado)** | soma dos seus apontamentos em atividades, incluindo os realizados antes do período escolhido |
+| **Atividades** | quantidade de vínculos diretos com atividades; pode incluir atividades de esteiras finalizadas ou canceladas que não aparecem nas colunas |
+| **Pendente (em aberto)** | quantidade de atividades apresentadas nas colunas Pendentes e Em andamento; não é tempo faltante |
+| **Esteiras em atraso** | conta suas atividades vinculadas a esteiras consideradas em atraso; várias atividades da mesma esteira podem aumentar esse número |
+
+Os valores de tempo aparecem em minutos ou horas e minutos. Sem tempo previsto cadastrado, uma atividade não acrescenta minutos ao previsto; no cartão, o valor pode aparecer como **—**.
+
+**Atenção à quantidade prevista:** nesta versão, a jornada usa o tempo de **uma unidade** de cada atividade, mesmo quando há várias unidades previstas. Por exemplo, uma atividade de 30 minutos por unidade com 4 unidades previstas acrescenta **30 minutos**, e não 2 horas, ao previsto da jornada. Se isso afetar sua leitura, confira a estrutura da esteira com a gestão.
+
+O realizado soma os minutos efetivamente registrados: a **quantidade executada não multiplica nem reduz o tempo**. Um apontamento de 45 minutos continua somando 45 minutos, qualquer que seja a quantidade executada informada.
+
+### Consultar as atividades
+
+Cada cartão mostra a atividade, o código e o nome da esteira, seu papel **Principal** ou **Apoio**, o previsto e **Realizado na etapa**. Esse último rótulo significa o **seu tempo acumulado naquela atividade**, incluindo apontamentos anteriores ao período escolhido.
+
+Use **Expandir detalhe** para ver a tarefa e o setor, apresentados como **Opção · Área**, a situação da esteira e o prazo estimado, quando houver. **Recolher detalhe** fecha essas informações. **Ver esteira** abre a esteira relacionada.
+
+As colunas seguem a situação da **esteira**, não a conclusão individual da atividade:
+
+| Coluna | Como interpretar |
+|---|---|
+| **Pendentes** | atividades de esteiras em elaboração, aguardando planejamento ou em planejamento, quando não estão classificadas em atraso |
+| **Em andamento** | atividades de esteiras a iniciar ou em andamento, e também as classificadas em atraso pelo prazo da esteira |
+| **Concluídas** | a coluna existe, mas não recebe as atividades encerradas na consulta atual; consulte os apontamentos e a Minha fila para conferir o trabalho realizado |
+
+Não use a posição do cartão nem a palavra **Concluída** ao lado dele como confirmação de conclusão. Essa palavra também pode aparecer em um cartão de **Pendentes**, no lugar de Apontar, embora a atividade ainda não esteja concluída.
+
+### Consultar os apontamentos
+
+Em **Apontamentos no período**, cada registro mostra a esteira, a atividade, o tempo apontado, a data de realização e um link **Esteira**. A ordem começa pelos apontamentos com data de realização mais recente; em caso de empate, vem primeiro o registrado mais recentemente.
+
+A lista exibe **até 20 apontamentos**. Não há botão para carregar os próximos registros. Para conferir um lançamento mais antigo, restrinja o intervalo ou filtre sua esteira.
+
+O selo **Exceção** indica um apontamento fora da sua atribuição; **Fora de sequência** indica trabalho realizado fora da sequência recomendada. Ao posicionar o cursor sobre o selo, sua justificativa pode aparecer como informação de apoio.
+
+A lista não mostra quantidade executada, observação, todos os tipos de justificativa nem a identificação de quem registrou por você. Para conferir esses detalhes, consulte o apontamento na esteira com a gestão. A ausência de selo não significa que o registro não tenha justificativa.
+
+### Iniciar um apontamento
+
+Quando o cartão oferecer **Apontar**, ele abre a página **Apontamento** da atividade. Informe a **data de realização**, os **Minutos realizados**, a **Quantidade executada** e, se necessário, a observação. Use **Registrar apontamento** para salvar.
+
+A data começa em **hoje, pela referência de São Paulo**, mesmo que você esteja consultando um período antigo. Confira-a antes de registrar. Os valores iniciais de 30 minutos e 1 unidade também precisam ser ajustados ao trabalho realizado.
+
+Após salvar, você retorna à Minha jornada e os dados são consultados novamente. O retorno abre o período padrão de últimos 7 dias, sem conservar o intervalo nem o filtro de esteira anteriores.
+
+Essa página registra tempo; não oferece conclusão da atividade. Para registrar e concluir ou informar uma justificativa exigida, use **Apontar horas** na barra superior, conforme o capítulo 7.
+
+## O que esperar
+
+### O que muda com o período e o planejamento
+
+O período selecionado altera o **realizado no período** e a lista de apontamentos. Ele não limita o previsto, as atividades, o realizado acumulado, os grupos nem a contagem de atraso.
+
+Distribuir a mesma atividade em dias diferentes, mudar seus minutos no planejamento, salvar uma revisão, republicar ou remover um item do plano semanal não transforma o previsto da jornada em uma soma diária. Essa tela consulta os vínculos e os tempos atuais da estrutura da esteira. Alterar esses vínculos ou tempos pode mudar o previsto; retirar apenas o item do planejamento não equivale a retirar o vínculo.
+
+**Minha fila** abre por padrão no dia atual do dispositivo e permite navegar por dia. **Minha jornada** abre nos últimos 7 dias e mostra suas datas de realização pela referência de São Paulo. Nenhuma das duas herda automaticamente a data escolhida na outra.
+
+### Onde entram seus registros
+
+Apontamentos feitos pela Minha fila, pela barra superior, pelo Modo Fábrica ou pela gestão em seu nome entram no realizado da jornada quando pertencem a você. O tempo segue a **data de realização**, não o dia em que o lançamento foi registrado.
+
+Um apontamento em atividade fora do plano semanal também pode aparecer no realizado e no histórico. Ele não cria um cartão na jornada nem um vínculo de atividade por si só.
+
+Apontamentos removidos deixam de aparecer e de somar. Se a gestão corrigir os minutos, a próxima atualização considera o novo tempo; corrigir apenas a quantidade executada não altera os totais de tempo. A remoção da própria atividade ou da esteira também retira seus apontamentos dessa consulta.
+
+Ao perder um vínculo direto, ou quando a atividade, a tarefa ou o setor deixa de estar ativo, o cartão e sua contribuição ao previsto podem desaparecer. Os apontamentos já feitos podem continuar no realizado enquanto a atividade e a esteira permanecerem cadastradas sem remoção.
+
+### Por que os totais e as listas podem divergir
+
+- O **realizado no período** soma todos os apontamentos válidos do período; a lista mostra apenas os 20 mais recentes.
+- O **realizado acumulado** inclui apontamentos anteriores ao período.
+- Os cartões mostram vínculos atuais com atividades; o histórico pode incluir trabalho em atividades sem esses vínculos.
+- O previsto e a contagem de atividades incluem vínculos de esteiras finalizadas ou canceladas que não chegam às colunas da tela.
+- O previsto permanece o mesmo ao trocar apenas o período, e nesta versão não considera a quantidade de várias unidades.
+- O filtro de esteira restringe a consulta de atividades e apontamentos, mas não garante que todas as esteiras com histórico estejam disponíveis no seletor.
+
+Por exemplo: 25 apontamentos de 10 minutos no período somam **250 minutos** no realizado, embora a lista mostre no máximo 20 registros. Isso não significa que os outros cinco foram removidos.
+
+### Cobertura e Extra Esteira
+
+**Minha jornada não mostra um percentual de cobertura, saldo ou diferença de tempo, nem uma lista de atividades com cobertura incompleta.** O contador **Pendente (em aberto)** é uma contagem de cartões, não uma comparação entre horas previstas e trabalhadas.
+
+Cobertura é a comparação do tempo acumulado apontado nas atividades atribuídas com o previsto dessas mesmas atividades. Ela não comprova conclusão e não equivale a dividir o realizado do período pelo previsto mostrado no alto. A gestão pode consultar esse indicador em **Jornada por colaborador**; a limitação de quantidade prevista descrita neste capítulo também afeta essa leitura.
+
+Quando não há tempo previsto, a cobertura não se aplica. Ela pode ultrapassar 100% quando o tempo acumulado supera o previsto; isso também não confirma conclusão.
+
+**Extra Esteira não aparece na lista, em um bloco separado ou nos totais de realizado de Minha jornada; também não entra na cobertura.** Sua ausência aqui não significa que o lançamento falhou. Confira os registros em **Apontar horas → Extra esteira → Últimos apontamentos extra esteira**. A gestão tem o resumo de Extra Esteira em **Jornada por colaborador**.
+
+Minha jornada consulta apenas você e não oferece exportação. A Jornada por colaborador permite à gestão consultar uma ou várias pessoas, ver cobertura, Extra Esteira e pendências de tempo, e exportar os apontamentos. Seu uso será tratado no capítulo 12.
+
+### Conclusão, pendências e atualização
+
+Concluir uma atividade na Minha fila não a transfere automaticamente para **Concluídas** na jornada: enquanto a esteira continuar em andamento, o cartão pode permanecer em **Em andamento**, contar como pendente e manter **Apontar** disponível. A tentativa de registrar novo tempo nessa atividade será recusada. O mesmo cuidado vale para uma atividade dispensada.
+
+Concluir sem registrar tempo novo não cria um apontamento nem aumenta o realizado. Atingir ou ultrapassar o previsto também não conclui uma atividade.
+
+Para conferir uma ação feita em outra tela, ou pela gestão, entre novamente em Minha jornada ou use **Atualizar**. A página não acompanha essas mudanças continuamente. Ao registrar pela gaveta da barra superior, fechar a gaveta também não atualiza a jornada; use **Atualizar**.
+
+O número **Esteiras em atraso** segue o prazo e a situação atuais da esteira. Ele não identifica apontamentos atrasados nem o atraso de cada atividade no dia planejado.
+
+## Quando algo é bloqueado
+
+### A jornada não carrega
+
+| Situação ou mensagem | O que fazer |
+|---|---|
+| **Sua conta não está vinculada a um colaborador operacional. Peça ao administrador para associar seu acesso.** | peça ao administrador para corrigir o vínculo; a consulta não carrega dados de outra pessoa como alternativa |
+| **Intervalo personalizado: indique início e fim.** | preencha as duas datas; Tentar novamente só aparece depois de completar o intervalo |
+| intervalo com início posterior ao fim | corrija as datas; a consulta é recusada |
+| falha de comunicação ou indisponibilidade | confira a conexão e use **Tentar novamente** ou **Atualizar**; a faixa de erro apresenta a orientação recebida |
+| sessão expirada ou acesso recusado | entre novamente ou solicite revisão do acesso, conforme a mensagem |
+
+Durante a consulta, **Atualizar** passa a **Atualizando…**. Ao escolher um intervalo incompleto ou ocorrer uma falha de carga, os dados anteriores deixam de ser exibidos.
+
+### A tela está vazia ou falta um registro
+
+As mensagens **Nada neste estado no recorte atual.**, **Nenhuma atividade em execução neste recorte.** e **Sem alocações concluídas listadas aqui — veja apontamentos abaixo.** indicam colunas sem cartões. Não comprovam ausência de tempo trabalhado.
+
+Se não houver apontamentos, a tela informa que não há registro com data na janela e sugere ampliar o período ou apontar em uma atividade aberta. Com filtro de esteira, a mensagem pode ser **Sem alocações ou apontamentos neste recorte. Experimente outro período ou remova o filtro de esteira.**
+
+Confira o período, a data de realização e o filtro; depois use **Atualizar**. Para um registro antigo, reduza o intervalo ao dia em que o trabalho foi realizado. Para Extra Esteira, consulte a aba própria de apontamento.
+
+### Apontar está disponível, mas o registro é recusado
+
+O botão da jornada considera a classificação da esteira e pode continuar disponível em atividade concluída ou dispensada, ou em esteira ainda não liberada para produção. Ele não garante que o registro será aceito.
+
+Mensagens como **Esta atividade já está concluída operacionalmente; não é possível novo apontamento.** e **Esta atividade foi dispensada; não é possível novo apontamento.** indicam que não cabe novo registro naquela atividade. Confira sua situação com a gestão, sem repetir o lançamento.
+
+Se o vínculo com a atividade tiver mudado, a página Apontamento pode informar que ela não consta nas suas atribuições atuais. Volte à jornada, atualize a consulta e confira a atividade correta.
+
+Se houver exigência de justificativa, a página aberta por **Apontar** não oferece campo para atendê-la. Use **Apontar horas** na barra superior, procure a mesma atividade e informe a justificativa pelo caminho descrito no capítulo 7. Não coloque a justificativa apenas em **Observação**: isso não atende à exigência.
+
+As demais regras de data, tempo, quantidade e situação da atividade estão no capítulo 7. Nesta tela, ultrapassar o previsto não cria um bloqueio próprio nem um aviso de cobertura.
 
 ---
 

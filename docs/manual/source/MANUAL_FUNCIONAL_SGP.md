@@ -777,12 +777,11 @@ O manual deve explicitar essa diferença.
 
 ## JOR-001 — Períodos
 
-Janelas de consulta incluem recortes como:
-- Hoje
-- Esta semana
-- Últimos 7 dias
-- Últimos 30 dias
-- Este mês
+Reconfirmação em 2026-10-03, na rodada `manual-usuario-sgp-cap11-minha-jornada`: os seletores oferecem **Últimos 7 dias**, **Últimos 15 dias**, **Últimos 30 dias**, **Mês atual (UTC)** e **Intervalo personalizado**. O padrão é 7 dias.
+
+Não existem presets de Hoje ou Esta semana. Esses recortes exigem intervalo personalizado. Os últimos N dias são janelas móveis de N × 24 horas até agora; mês usa o início do mês civil de São Paulo, apesar do rótulo incorreto.
+
+Evidências: `src/lib/operationalSemantics.ts:56-65`, `src/features/colaborador/JornadaPage.tsx:249-255,419-465`, `server/src/shared/operationalPeriod.ts:29-68`.
 
 ## JOR-002 — Informações
 
@@ -800,7 +799,9 @@ Relaciona:
 
 ## JOR-003 — Apontamentos extras
 
-Apontamentos fora de esteira também alimentam leitura operacional da jornada.
+O serviço compartilhado calcula Extra Esteira separadamente, mas **Minha Jornada não o exibe**: não há lista, bloco ou acréscimo aos totais de realizado. Também não participa da cobertura. A exibição do resumo pertence à **Jornada Gerencial**, que reutiliza o mesmo serviço.
+
+Evidências: `operational-journey.service.ts:296-322,394-398`, `JornadaPage.tsx:383-656` e `JornadaColaboradorGestorPage.tsx:603-625`. Ver detalhes em 45.6.
 
 ---
 
@@ -2718,25 +2719,27 @@ Não deve ser interpretado como meia-noite UTC.
 
 ## 45.3 Limite da tela x universo dos totais
 
-A tela pode limitar o histórico recente exibido.
+Minha Jornada solicita e mostra no máximo **20** apontamentos, ordenados por `entry_at DESC, created_at DESC`, sem paginação ou controle para carregar mais. A Jornada Gerencial também solicita 20 no conjunto consultado. O contrato de consulta aceita `limit` de 1 a 100, mas essas telas fixam 20.
 
-Os totais do período, entretanto, usam o universo completo do período.
+Os totais do período usam todos os apontamentos de esteira válidos no período, sem esse limite. Acumulado usa todas as datas. A lista e ambos os totais excluem apontamento, esteira ou atividade com `deleted_at` preenchido; não exigem alocação atual nem atividade ativa.
 
-A exportação Excel traz todos os apontamentos do período, sem esse limite visual.
+A exportação Excel **da Jornada Gerencial** traz todos os apontamentos do período, sem limite de linhas, e Extra Esteira em separado. Minha Jornada não oferece exportação.
+
+Evidências: `JornadaPage.tsx:272-281,596-600`, `JornadaColaboradorGestorPage.tsx:289`, `operational-journey.schemas.ts:3-12`, `operational-journey.repository.ts:32-40,347-434`, `operational-journey.service.ts:427-453`.
 
 ## 45.4 Jornada — previsto estrutural
 
-Revisão de 2026-10-03. Vocabulário alinhado ao produto: a unidade de cálculo é a **alocação** (vínculo colaborador × atividade), não a atividade isolada.
+Reconfirmação em 2026-10-03, na rodada do capítulo 11. A fonte é `listActivitiesRawForCollaborator`: alocações diretas ativas em `conveyor_node_assignees`, com atividade, setor e tarefa ativos e não removidos, e esteira não removida. A consulta não expande equipe e não lê os itens do planejamento semanal. Também não filtra o status de conclusão/dispensa da atividade nem o período.
 
-O previsto de cada alocação usa:
+O serviço soma o previsto **uma vez por alocação colaborador × atividade**. No escopo de duas pessoas alocadas à mesma atividade, cada pessoa contribui com seu previsto; não há rateio. Republicar ou remover um item do plano semanal não remove por si só a alocação estrutural.
 
-`minutos por unidade × quantidade prevista`
+**Defeito confirmado no caminho real de dados:** o helper usa `minutos por unidade × quantidade prevista` (ou `plannedTotalMinutes` quando disponível), porém o SELECT de `listActivitiesRawForCollaborator` **não retorna `step.planned_quantity`**. O mapeamento recebe quantidade ausente, assume 1 e calcula o total com essa quantidade. Portanto, nas consultas atuais de ambas as jornadas, o previsto efetivo usa **uma unidade**, mesmo quando a atividade tem quantidade maior. O teste unitário do helper não verifica essa omissão do SELECT.
 
-ou o total já resolvido quando disponível.
+Exemplo determinado por esse código, sem execução de banco: atividade de 30 min/unidade e quantidade 4 contribui com 30 min por alocação, não 120 min. Nenhuma correção de código foi realizada.
 
-No escopo consolidado de vários colaboradores, o previsto é contado **uma vez por alocação colaborador × atividade**, de modo que a mesma atividade compartilhada não é somada em duplicidade.
+Minha Jornada mostra "Previsto" no resumo e tempo unitário no cartão. A expressão "Previsto estrutural (soma das alocações)" é da Jornada Gerencial.
 
-A interface rotula o indicador como "previsto estrutural (soma das alocações)".
+Evidências: `my-activities.repository.ts:25-82`, `my-activities.service.ts:71-85,141-150`, `activityOperationalQuantity.ts:18-25,56-62`, `operational-journey.service.ts:43-71,275-294`, `JornadaPage.tsx:125,154-157,387-402`, `server/src/tests/operational-journey-structural-planned.test.ts` (somente lido, não executado).
 
 ## 45.5 Cobertura de tempo
 
@@ -2744,19 +2747,27 @@ Fórmula:
 
 `realizado acumulado nas alocações do escopo ÷ previsto estrutural do mesmo conjunto de alocações`
 
-Se o previsto do escopo for ≤ 0, a cobertura não é aplicável.
+Se o previsto do escopo for ≤ 0, a cobertura não é aplicável (`ratio = null`); realizado maior que zero não muda essa regra. Não há teto de 100% nem arredondamento no cálculo. A apresentação gerencial arredonda para uma casa decimal (`Math.round(ratio * 1000) / 10`) e admite valores acima de 100%.
 
-Texto da interface: "Numerador: soma dos apontamentos nas alocações do escopo. Denominador: previsto estrutural no mesmo conjunto de alocações."
+O numerador soma o realizado acumulado **do próprio colaborador** em cada atividade atualmente alocada, não o realizado no período nem o acumulado global. Extra Esteira fica fora. A omissão de quantidade descrita em 45.4 afeta o denominador.
+
+**Minha Jornada não renderiza cobertura** nem saldo/diferença. O serviço devolve o cálculo, mas a exibição e o texto a seguir pertencem à **Jornada Gerencial**: "Numerador: soma dos apontamentos nas alocações do escopo. Denominador: previsto estrutural no mesmo conjunto de alocações."
+
+Evidências: `operational-journey.service.ts:78-82,290-294,384-389`, `server/src/shared/coberturaTempo.ts:14-28`, `src/lib/operationalSemantics.ts:67-70`, `JornadaColaboradorGestorPage.tsx:629-643`, `JornadaPage.tsx:383-656`.
 
 ## 45.6 Extra Esteira
 
-A Jornada agrega:
+O serviço compartilhado das jornadas agrega separadamente:
 
 - total de minutos extras;
 - número de lançamentos;
-- descrições mais frequentes.
+- até três descrições com maior soma de minutos (desempates por quantidade de lançamentos e descrição).
 
-Quando há filtro de esteira, Extra Esteira continua independente desse filtro.
+Considera a data civil de realização em São Paulo (`entry_date`), o colaborador consultado, registro não removido e descrição não removida. Quando há filtro de esteira, Extra Esteira continua independente desse filtro.
+
+**Exibição:** o resumo é renderizado na Jornada Gerencial; Minha Jornada não consome esses campos na apresentação. Não soma ao realizado de esteira nem à cobertura em nenhuma das jornadas.
+
+Evidências: `operational-journey.repository.ts:438-517`, `operational-journey.service.ts:296-322,390-399`, `JornadaColaboradorGestorPage.tsx:603-625`, `JornadaPage.tsx:383-656`.
 
 ## 45.7 Sinais de pendência
 
@@ -2764,7 +2775,13 @@ Atividade aberta entra em pendência temporal quando:
 
 `previsto estrutural > realizado acumulado`.
 
-O gap é apresentado como sinal operacional.
+O serviço retorna a contagem completa e até **48** itens, ordenados pela maior diferença, sem filtro de período. "Aberta" aqui exclui esteira finalizada/cancelada, não atividade individual concluída/dispensada.
+
+Esse sinal de diferença é apresentado somente na **Jornada Gerencial**. Minha Jornada não renderiza `signals.pendenciaTempo`: seu "Pendente (em aberto)" conta cartões das colunas Pendentes e Em andamento.
+
+Além disso, o serviço exclui os buckets finalizadas/canceladas de `assignmentsOpen` e `assignmentsAtRisk`; a Minha Jornada usa apenas essas duas listas para construir as três colunas. Assim, a coluna **Concluídas permanece vazia**, embora os totais possam incluir essas alocações. Os cartões e o botão Apontar seguem o bucket da **esteira**, não o status individual da atividade.
+
+Evidências: `operational-journey.service.ts:140-171,325-331`, `JornadaPage.tsx:128-130,313-360,561-590`, `JornadaColaboradorGestorPage.tsx:723-748`.
 
 ## 45.8 Jornada Gerencial — múltiplos colaboradores
 
@@ -3674,7 +3691,7 @@ O rótulo `Mês atual (UTC)` **não está apenas no arquivo exportado**. Ele apa
 |---|---|
 | Arquivo de exportação da Jornada | `server/src/modules/operational-journey/operational-journey.export.ts` |
 | **Seletor de período do Dashboard (em tela)** | `src/features/gestor/DashboardPage.tsx` |
-| **Catálogo de rótulos de período (em tela)** | `src/lib/operationalSemantics.ts` |
+| **Catálogo de rótulos usado pelos seletores de Minha Jornada e Jornada Gerencial (em tela)** | `src/lib/operationalSemantics.ts:56-65`; `JornadaPage.tsx:432-437`; `JornadaColaboradorGestorPage.tsx` |
 
 ### Impacto
 Maior do que o registrado na fotografia anterior. A regra de cálculo está alinhada a São Paulo, mas o rótulo exibido **ao escolher o período** — e não só no arquivo baixado — induz interpretação incorreta do recorte temporal.
