@@ -5,7 +5,7 @@
 - **Status final:** concluída
 - **Branch:** `docs/manual-usuario-sgp-cap07-apontamentos`
 - **SHA base:** `310ba2f9d95e94f36528be507ff4080ab159e199` — conferido contra `origin/docs/manual-usuario-sgp-cap05-painel-operacional`, **idêntico ao esperado**
-- **SHA final:** ver seção "Commit e push"
+- **SHA final:** `dd9da8b8` (commit do capítulo) + commit de registro deste SHA
 - **Working tree ao encerrar:** limpo
 
 ## Arquivos alterados
@@ -260,7 +260,8 @@ Pendências das rodadas anteriores seguem abertas, sem alteração.
 - Commit: `docs(manual): escreve capítulo 7 — Apontamentos`
 - Branch remota: `origin/docs/manual-usuario-sgp-cap07-apontamentos`
 - PR: não criado. Merge: não realizado. Force-push: não realizado. Nenhuma branch excluída.
-- SHA final: `<preenchido no commit de registro>`
+- SHA do commit do capítulo: `dd9da8b8`
+- Um segundo commit registra este SHA neste retorno, mesmo padrão já usado em `docs/ai/returns/`; sem amend e sem force-push.
 
 ## Uso de contexto / sessão
 
