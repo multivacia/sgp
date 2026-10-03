@@ -4,7 +4,8 @@
 **Data/hora:** 2026-10-03
 **Branch:** `docs/manual-usuario-sgp-cap09-agenda-semana`
 **SHA base:** `aa8c3ad87bc221e08d2677b004af99b88c45be06` — conferido contra `origin/docs/manual-usuario-sgp-cap08-planejamento-semanal`, igual ao esperado pelo prompt
-**SHA final:** registrado no commit seguinte a este arquivo (padrão do repositório)
+**SHA final do conteúdo:** `23d195a707993f2edb4d8b308b51f3109fe606ac`
+**Registro do SHA:** commit seguinte a este, contendo apenas esta linha (padrão do repositório)
 **Status final:** concluído
 
 ---
