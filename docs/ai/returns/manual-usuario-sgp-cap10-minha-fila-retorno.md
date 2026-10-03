@@ -497,8 +497,9 @@ Capítulo **11 — Minha Jornada**: é a tela a que o capítulo 10 remete para t
 
 ## 25. Commit e push
 
-- Commit documental único na branch `docs/manual-usuario-sgp-cap10-minha-fila`.
-- **SHA final:** `__SHA_FINAL__`
+- Commit documental na branch `docs/manual-usuario-sgp-cap10-minha-fila`: `32b7e474d2e720a0655adf81d881fbb691e45c51` — capítulo 10, capítulo 21 e este retorno.
+- Commit seguinte, apenas para gravar neste arquivo o identificador do commit documental: é o **tip atual da branch** e, por ser o commit que contém esta própria linha, seu identificador não pode ser escrito dentro dele. Obter com `git rev-parse docs/manual-usuario-sgp-cap10-minha-fila`.
+- Histórico **não** reescrito: nenhum `--amend`, nenhum force-push.
 - Push para `origin/docs/manual-usuario-sgp-cap10-minha-fila`.
 - Sem PR, sem merge, sem force-push.
 - Estado final do working tree: **clean**.
