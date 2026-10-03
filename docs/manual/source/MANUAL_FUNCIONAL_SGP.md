@@ -14,7 +14,7 @@
 
 **Método desta revisão:** auditoria por leitura de código, migrations e testes do repositório. **Nenhuma tela foi executada ou observada visualmente e nenhum banco foi consultado.**
 
-**Revisão de 2026-10-03 — correções factuais aplicadas:** ATI-001 (estados efetivamente persistidos), ATI-003/ATI-005 (duas ações distintas com o mesmo destino), 45.4/45.5 (vocabulário de alocação), JOG-002/45.8 (seleção multi-colaborador e tetos), VAL-004, VAL-006, VAL-014, VAL-015 e VAL-017. Evidências em:
+**Revisão de 2026-10-03 — correções factuais aplicadas:** ATI-001 (estados efetivamente persistidos), ATI-003/ATI-005 (duas ações distintas com o mesmo destino), 45.4/45.5 (vocabulário de alocação), JOG-002/45.8 (seleção multi-colaborador e tetos), VAL-004, VAL-006, VAL-013 (0 minutos no Modo Fábrica), VAL-014, VAL-015 e VAL-017. Evidências em:
 `docs/ai/reports/auditoria-cobertura-funcional-manual-2026-10-02/RELATORIO_AUDITORIA_COBERTURA_FUNCIONAL_MANUAL.md`
 
 ---
@@ -3342,7 +3342,8 @@ Situação após esta revisão:
 | VAL-014 — Eventos BLOCKED/PAUSED | resolvido para fins documentais; limpeza técnica pendente |
 | VAL-015 — Rotas sem ponto de entrada | achado resolvido; decisão de produto pendente |
 | VAL-017 — Rótulo “Mês atual (UTC)” | reconfirmado e ampliado / aberto |
-| VAL-001 a VAL-003, VAL-005, VAL-007 a VAL-013, VAL-016 | abertos, sem alteração nesta revisão |
+| VAL-013 — Modo Fábrica com 0 minutos | parcialmente resolvido; inconsistência de validação de tela em aberto |
+| VAL-001 a VAL-003, VAL-005, VAL-007 a VAL-012, VAL-016 | abertos, sem alteração nesta revisão |
 
 Esta seção concentra propositalmente todas as situações em que a análise não permite fechar uma regra definitiva.
 
@@ -3561,20 +3562,29 @@ Definir se:
 
 ---
 
-## VAL-013 — Kiosk aceita apontamento com 0 minutos em situações específicas
+## VAL-013 — Modo Fábrica com 0 minutos: conclusão sem novo tempo
 
-### Encontrado
-Produção Web exige minutos > 0.
+**Status:** **parcialmente resolvido** em 2026-10-03. A aceitação de 0 minutos é **deliberada e documentada no código** para um caso específico; o que resta aberto é uma divergência entre a validação da tela e a do servidor.
 
-A lógica do Kiosk permite prosseguir com 0 minutos quando, por exemplo:
+### Encontrado — revisão de 2026-10-03
 
-- o colaborador marca a atividade como concluída; ou
-- informa percentual de sessão diferente de zero.
+Correção da fotografia anterior, que tratava os dois casos como aceitos. **Apenas o primeiro é.**
+
+| Combinação no totem | Validação da tela | Validação do servidor | Resultado real |
+|---|---|---|---|
+| 0 minutos **+ concluir atividade** | permite | permite | **aceito** — conclusão sem novo tempo trabalhado |
+| 0 minutos **+ percentual de sessão ≠ 0**, sem concluir | **permite** enviar | **recusa**: “minutes deve ser maior que zero.” | **recusado** — a tela deixa tentar e o servidor nega |
+| 0 minutos, sem concluir e sem percentual | bloqueia o botão | — | bloqueado antes do envio |
+
+O caso aceito é intencional e está descrito no próprio código (`serviceCreateProductionTimeEntry`, em `server/src/modules/production/production-time-entries.service.ts`): representa conclusão quando o tempo já foi apontado antes. Nesse fluxo **não é inserida linha em `conveyor_time_entries`** — a constraint `chk_conveyor_time_entries_minutes_positive` exige `minutes > 0`. A rastreabilidade fica no status/timestamp de conclusão do nó e no evento `CONVEYOR_STEP_COMPLETED`; a resposta HTTP usa DTO sintético, sem registro persistido de apontamento.
+
+A área autenticada continua exigindo minutos ≥ 1 em qualquer caso; lá a conclusão sem tempo é feita pela ação própria de concluir, não pelo formulário de apontamento.
+
+### Pendência remanescente
+A segunda linha da tabela é inconsistência real de produto: `canSubmitKioskProductionTimeEntry` (`src/domain/production/kioskActivityCardLogic.ts`) só bloqueia quando **minutos, percentual e conclusão** estão todos em zero/desligado. Como o percentual inicia no último valor registrado da atividade, um colaborador pode abrir o cartão, tocar em registrar sem escolher o tempo e receber erro do servidor em vez de botão desabilitado.
 
 ### Decisão necessária
-Confirmar se essa diferença é deliberada.
-
-Se não for, padronizar os canais antes de escrever a regra definitiva no guia do colaborador.
+Alinhar a validação da tela à do servidor, bloqueando o envio quando houver 0 minutos sem conclusão marcada. Não há decisão pendente sobre o fluxo de conclusão sem novo tempo — ele é deliberado.
 
 ---
 

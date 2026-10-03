@@ -3,7 +3,7 @@
 **Produto:** SGP+ · Multivacia / ARGOS
 **Versão da aplicação nesta revisão:** 1.9.8
 **Revisão deste manual:** 2026-10-03
-**Situação:** base editorial criada; capítulos 1 a 3, 5, 7, 20 e 21 com conteúdo final. Os capítulos 4, 6 e 8 a 19 seguem marcados como pendentes e **não devem ser publicados** como versão final.
+**Situação:** base editorial criada; capítulos 1 a 3, 5, 7, 13, 20 e 21 com conteúdo final. Os capítulos 4, 6, 8 a 12 e 14 a 19 seguem marcados como pendentes e **não devem ser publicados** como versão final.
 
 > **Este é o documento canônico do manual do usuário.** Versões em HTML ou PDF devem ser geradas a partir daqui.
 >
@@ -820,16 +820,342 @@ A página **Apontamento** aberta a partir de **Minha jornada** tem data, minutos
 
 # 13. Modo Fábrica
 
-> [PENDENTE DE ENRIQUECIMENTO — não publicar como capítulo final]
+## Para que serve
 
-- o que é o Modo Fábrica e as duas formas de acesso: totem e navegador da fábrica
-- entrar com colaborador e **PIN**; criar o PIN no primeiro acesso
-- situações da credencial: sem credencial, aguardando criação de PIN, bloqueada, desabilitada
-- bloqueio por tentativas e como destravar
-- apontar pelo cartão de atividade, concluir e justificar
-- **Outra atividade**: localizar atividade fora da fila
-- **Extra Esteira** no Modo Fábrica
-- diferenças entre o totem e o navegador
+O Modo Fábrica é por onde o colaborador registra produção no piso de fábrica. Ele mostra a fila do dia, deixa apontar o tempo trabalhado, concluir a atividade e registrar tempo que não pertence a nenhuma esteira — tudo em telas grandes, feitas para uso rápido e sem teclado.
+
+É um canal separado do resto do sistema: não tem menu lateral, não tem relatórios e não exige e-mail e senha. A entrada é **colaborador + PIN**.
+
+## Onde fica
+
+O Modo Fábrica funciona em **duas formas de acesso**, abertas em equipamentos preparados pela própria operação. Você não chega a elas pelo menu do sistema: o equipamento já abre na tela certa.
+
+| Forma de acesso | Como se reconhece | Para que serve |
+|---|---|---|
+| **Totem** | tela cheia, sem barra do navegador; cabeçalho **SGP · Modo Fábrica** e a pergunta **Quem é você?** | uso principal no piso: fila, apontamento, conclusão, Outra atividade e Extra Esteira |
+| **Navegador da fábrica** | cabeçalho **SGP+ Produção** com o seu nome e o botão **Sair** | consulta e apontamento com quantidade; recursos reduzidos |
+
+As duas usam a mesma credencial e a mesma fila. O que muda está na comparação ao final do capítulo.
+
+O equipamento precisa estar autorizado. Em um aparelho não liberado, a lista de colaboradores não carrega e aparece **"Este dispositivo não está autorizado para o modo produção."** com a orientação *"Entre em contato com o responsável pelo dispositivo."*
+
+## Quem costuma ter acesso
+
+Qualquer colaborador operacional ativo **que tenha credencial de produção liberada**. Não depende de ter conta de acesso ao sistema: o Modo Fábrica é do colaborador, não do usuário.
+
+Sua credencial pode estar em um de quatro estados:
+
+| Estado | O que significa | O que fazer |
+|---|---|---|
+| liberada | tudo certo, basta o PIN | entrar normalmente |
+| sem PIN configurado | nunca foi criada uma credencial para você | pedir ao gestor que libere o acesso |
+| bloqueada | muitas tentativas erradas de PIN | esperar o bloqueio passar, ou pedir ao gestor para redefinir o PIN |
+| desabilitada | o acesso foi desligado | falar com o gestor |
+
+Quem libera, redefine PIN e desliga acesso é quem administra colaboradores, em **Colaboradores** (capítulo 16).
+
+## Como fazer
+
+### Entrar: escolher o colaborador
+
+1. Na tela inicial do totem, sob o título **Quem é você?**, encontre seu cartão. Os cartões vêm em ordem alfabética, com foto, nome e equipe.
+2. Se a lista for longa, use **Buscar colaborador…** e digite parte do seu nome.
+3. Toque no seu cartão.
+
+Cartões de quem não pode entrar aparecem **apagados**. Tocando neles, o próprio sistema diz o motivo:
+
+- **"PIN não configurado. Solicite ao gestor."**
+- **"Acesso bloqueado. Solicite ao gestor."**
+- **"Acesso desabilitado."**
+
+No navegador da fábrica o fluxo é o mesmo, com o campo **Digite o nome…** e um botão **Atualizar** para recarregar a lista. As mensagens ali são um pouco mais longas: *"PIN ainda não configurado. Solicite ao gestor."*, *"Acesso bloqueado por tentativas incorretas. Solicite ao gestor."* e *"Acesso de produção desabilitado. Solicite ao gestor."*
+
+### Digitar o PIN
+
+Depois de escolher o colaborador aparece sua foto, seu nome e a instrução **"Digite seu PIN de 4 dígitos"**.
+
+1. Toque os números no teclado da tela. Cada dígito acende um ponto.
+2. Ao completar o quarto dígito, o sistema **entra automaticamente** — não há botão de confirmar.
+3. Errou um número? Use o botão de apagar o último dígito.
+4. Escolheu a pessoa errada? Use **← Voltar à seleção**.
+
+PIN errado mostra **"PIN inválido. Tente novamente."** e limpa os pontos.
+
+> **Use sempre um PIN de 4 dígitos.** O totem aceita exatamente 4; o navegador da fábrica e o cadastro aceitam de 4 a 8. Um PIN com mais de 4 dígitos é aceito no navegador, mas **não é digitável no totem**. Com 4 dígitos você entra nas duas formas de acesso. A padronização é pendência conhecida — veja o capítulo 21.
+
+### Criar o PIN
+
+Acontece em duas situações: no primeiro acesso depois de o gestor liberar sua credencial, e sempre que o gestor redefinir seu PIN.
+
+Nesses casos, logo após entrar com o PIN provisório, o totem abre a criação de PIN:
+
+1. **"Crie seu PIN de 4 dígitos"** — *"Este será seu acesso pessoal ao Modo Fábrica"*. Digite os 4 números.
+2. **"Confirme seu novo PIN"** — *"Digite o mesmo PIN novamente para confirmar"*. Repita.
+3. Pronto: o sistema já abre sua fila.
+
+Se os dois não coincidirem: **"Os PINs não coincidem. Tente novamente."**
+
+Não é permitido manter o PIN provisório. Escolher o mesmo número que o gestor entregou devolve **"Escolha um PIN diferente do PIN inicial padrão."**
+
+Escolha um PIN que só você saiba: é ele que identifica o seu trabalho nos registros.
+
+### Ler a sua fila
+
+Entrou, aparece o cabeçalho com sua foto, seu nome e quantas atividades você tem. A fila vem do **planejamento da semana já publicado** pelo gestor, para a data de hoje, incluindo o que ficou em atraso de dias anteriores.
+
+O totem mostra a fila de dois jeitos, alternados pelos dois botõezinhos do cabeçalho:
+
+- **Modo carrossel** — uma atividade por vez, grande. Avance e volte pelas flechas **Próxima atividade** / **Atividade anterior**, ou **arraste o dedo** na tela. Os pontinhos indicam sua posição.
+- **Modo lista** — todas de uma vez, agrupadas em **Próxima atividade recomendada**, **Atenção à sequência** e **Demais atividades**.
+
+Ao abrir, o carrossel já se posiciona na **atividade recomendada**. Depois de cada apontamento, ele volta a se posicionar nela.
+
+Para achar algo específico, use **Buscar atividade…** — procura por atividade, setor e tarefa.
+
+Cada cartão traz:
+
+| O que aparece | O que significa |
+|---|---|
+| Esteira, Tarefa, Setor e o nome da atividade | onde o trabalho se encaixa |
+| **Realizado: N min · Planejado: N min** | o tempo já apontado e o tempo previsto para você naquela atividade |
+| **Tempo previsto: N%** | quanto do tempo previsto já foi consumido (para em 100%) |
+| etiqueta **Próxima atividade recomendada** | é por ela que a sequência sugere começar |
+| etiqueta de atenção à sequência | há atividade anterior ainda pendente |
+| **"Tempo previsto atingido. Marque como concluída para liberar a próxima atividade."** | o realizado alcançou o previsto, e a atividade continua aberta |
+
+### Registrar um apontamento
+
+No cartão da atividade:
+
+1. Confirme a **data em que o trabalho foi realizado**. Começa em hoje, com os atalhos **Hoje** e **Ontem**.
+2. Em **Tempo trabalhado**, toque um dos botões — **15**, **30**, **45** ou **60 min** — ou digite outro valor no campo **outro**.
+3. Ajuste **Evolução da atividade (nesta sessão)**, a barra de 0 a 100%. Ela anda de 5 em 5 e mostra uma frase conforme avança: *Não iniciado*, *Só começando…*, *Metade do caminho*, *Quase lá!*, *Concluído!* e outras.
+4. Preencha a **justificativa**, se a tela pedir.
+5. Se este foi o último trabalho da atividade, ligue **Concluir atividade ao registrar**.
+6. Toque **Registrar apontamento**.
+
+Aparece uma tela de confirmação com um visto verde e **"Apontamento registrado!"**, mais a data usada. Em cerca de três segundos o totem volta à fila, já recarregada.
+
+**A barra de evolução é uma leitura sua do avanço, independente do tempo.** Ela não conclui a atividade e não substitui o tempo trabalhado: quem conclui é o botão de concluir.
+
+No totem **não existe campo de quantidade executada**. Se a atividade precisa de quantidade registrada, isso é feito pelo navegador da fábrica ou pela área autenticada (capítulo 7).
+
+### Quando o sistema pede justificativa
+
+Duas situações, que podem acontecer juntas. Em nenhuma delas o apontamento é bloqueado: você continua, explicando o motivo.
+
+**1. Atividade anterior pendente.** Aparece a faixa **Fora de sequência — confirme o apontamento**, com a lista das atividades anteriores em aberto e o aviso *"Existem etapas anteriores pendentes. Informe uma justificativa para apontar."*
+
+**2. Tempo acima do previsto.** Aparece a faixa **Tempo acima do previsto — confirme o apontamento**, com o aviso *"Este apontamento ultrapassa o tempo planejado da atividade. Informe uma justificativa para registrar."*
+
+Em qualquer dos casos o botão muda para **Registrar apontamento (exceção)** e o campo **Justificativa operacional** passa a ser obrigatório. Escolha um motivo da lista; algumas opções pedem um **Complemento**. A justificativa precisa ter **no mínimo 3 caracteres**.
+
+A conta do tempo acima do previsto considera **o que já foi apontado mais o que você está apontando agora**. Se a soma passar do previsto, a justificativa é pedida — mesmo que este apontamento sozinho seja pequeno.
+
+### Concluir uma atividade
+
+A conclusão é sempre uma decisão sua. **Consumir o tempo previsto não conclui nada** — quando o previsto é alcançado, o cartão apenas avisa e sugere concluir para liberar a próxima.
+
+Para concluir, ligue **Concluir atividade ao registrar** antes de registrar. A confirmação vira **"Atividade concluída. Avançando…"**.
+
+Se você marcar para concluir com a barra de evolução abaixo de 80%, o totem pede confirmação:
+
+> **Confirmar conclusão?** Você marcou como concluída, mas indicou apenas N% de progresso nesta sessão. Confirma mesmo assim?
+
+Escolha **Confirmar** ou **Cancelar**. É só uma conferência — não impede nada.
+
+Reabrir uma atividade concluída não é possível pelo Modo Fábrica: é ação de gestão (capítulo 6).
+
+### Concluir sem registrar tempo novo
+
+Já apontou o tempo antes e só falta encerrar a atividade? Deixe o **Tempo trabalhado** em zero, ligue **Concluir atividade ao registrar** e registre. A atividade é concluída **sem criar um novo apontamento de tempo**.
+
+Fora desse caso, o tempo é obrigatório: registrar sem informar minutos e sem ligar a conclusão devolve o aviso de que o tempo precisa ser maior que zero.
+
+### Outra atividade
+
+Serve para apontar uma atividade que **não está na sua fila** — porque não foi planejada para você, ou porque não é sua alocação.
+
+1. No cabeçalho da fila, toque **+ Outra atividade**.
+2. Digite ao menos **2 caracteres** na busca (*"Digite ao menos 2 caracteres…"*) e escolha a atividade na lista.
+3. Confirme a **data de realização**.
+4. Informe os **Minutos** — pelos botões de atalho ou no campo **outro**. Aqui o mínimo é 1: não existe conclusão sem tempo.
+5. Use **Observação** se precisar.
+6. Preencha a **Justificativa** — ela é exigida justamente porque a atividade está fora da sua fila ou da sua alocação, e também se houver atividade anterior pendente.
+7. Confira o resumo — Colaborador, Atividade, Contexto, Data, Minutos, Observação, Justificativa — e toque **Confirmar apontamento**.
+
+Registrado, aparece **"Apontamento registrado!"** e o totem volta à fila.
+
+Por **Outra atividade** você **não conclui** a atividade e **não informa quantidade**: ela serve para lançar tempo.
+
+### Extra Esteira
+
+Serve para o tempo que **não pertence a nenhuma atividade de esteira** — apoio, organização, deslocamento, parada e situações do tipo.
+
+1. No cabeçalho da fila, toque **+ Extra esteira**.
+2. Em **Descrição**, escolha um motivo da lista mantida pela gestão (*"Selecione uma descrição..."*).
+3. Confirme a **data de realização**.
+4. Informe os **Minutos** — atalhos ou campo **outro**, mínimo 1.
+5. Use **Observação** se precisar, até 500 caracteres.
+6. Confira o resumo e toque **Confirmar apontamento**.
+
+Extra Esteira não tem quantidade, não tem justificativa e não conclui atividade nenhuma. Se a lista de motivos não carregar, aparece **"Não foi possível carregar as descrições."**; se estiver vazia, não há o que escolher e o registro não avança — peça à gestão para cadastrar os motivos.
+
+### Atualizar a fila
+
+O botão **Atualizar**, no cabeçalho da fila do totem, recarrega suas atividades. Enquanto carrega, mostra **Atualizando…**.
+
+Use quando o gestor publicar ou ajustar o planejamento com você já logado. **Atualizar não encerra sua sessão e não pede o PIN de novo**: só busca a fila outra vez. Se falhar, aparece um aviso com o motivo e a fila anterior continua na tela.
+
+Depois de cada apontamento a fila já é recarregada sozinha — o **Atualizar** é para as mudanças feitas por outras pessoas.
+
+No navegador da fábrica não existe esse botão na tela da fila; há um **Atualizar** apenas na escolha do colaborador.
+
+### Sair
+
+Toque **Sair**, no cabeçalho. A sessão é encerrada e o totem volta à tela **Quem é você?**.
+
+**Saia sempre ao terminar.** Enquanto a sessão estiver aberta, qualquer pessoa no equipamento registra trabalho **no seu nome**. Sair é o que protege o seu registro.
+
+A sessão também expira sozinha: por inatividade e por tempo total de uso. Os prazos são definidos pela administração — tipicamente 30 minutos sem uso e 12 horas de duração máxima. Expirada, o Modo Fábrica volta à seleção de colaborador e é preciso entrar com o PIN de novo.
+
+## O que esperar
+
+### A fila depende do planejamento publicado
+
+Sem planejamento publicado para a semana, **sua fila fica vazia** — não é falha do equipamento nem do seu acesso. É o caso mais comum de "não aparece nada para mim".
+
+Aparecem na fila as atividades planejadas para você, de hoje e as atrasadas de dias anteriores. Saem da fila as que você concluiu, as dispensadas e as de esteira que não está liberada para produção.
+
+### O que muda depois de registrar
+
+| O que acontece | Onde aparece |
+|---|---|
+| o tempo entra no seu histórico | **Minha jornada**, na área autenticada |
+| o realizado da atividade aumenta | detalhe da esteira e Evolução das Esteiras |
+| a esteira é iniciada, se ainda estava a iniciar | Painel operacional |
+| a atividade sai da sua fila, se você concluiu | sua fila, na recarga automática |
+| o apontamento fora de sequência fica marcado como exceção | histórico da esteira |
+
+O apontamento é contabilizado **no dia que você escolheu**, não no dia em que digitou.
+
+### Não há aviso sonoro
+
+O Modo Fábrica confirma o registro **apenas na tela**: o visto verde e a mensagem **"Apontamento registrado!"**. Não existe bip nem qualquer som. Em ambiente ruidoso, confie na tela.
+
+### Fila, Outra atividade e Extra Esteira
+
+| | Atividade da fila | Outra atividade | Extra Esteira |
+|---|---|---|---|
+| de onde vem | planejamento publicado para você | busca em atividades em aberto | catálogo de motivos |
+| ligada a uma esteira | sim | sim | não |
+| minutos | podem ser zero, só para concluir | mínimo 1 | mínimo 1 |
+| evolução da sessão | sim | não | não |
+| justificativa | quando exigida | sempre | nunca |
+| conclui atividade | pode | não | não se aplica |
+| quantidade | não existe no totem | não | não |
+
+### Totem e navegador da fábrica
+
+| | Totem | Navegador da fábrica |
+|---|---|---|
+| título na tela | **SGP · Modo Fábrica** | **SGP+ Produção** |
+| escolha do colaborador | cartões com foto, busca por nome | lista com busca e botão **Atualizar** |
+| PIN | exatamente 4 dígitos, entra ao completar | 4 a 8 dígitos, com confirmação |
+| criar/trocar PIN | sim, 4 dígitos | sim, 4 a 8 dígitos |
+| fila | carrossel ou lista, com busca | lista com filtros **Todas**, **Pendentes**, **Concluídas** |
+| apontar tempo | sim | sim |
+| **quantidade executada** | **não existe** | **existe** |
+| evolução da sessão | sim | não |
+| **concluir atividade** | **sim** | **não** — o botão **Concluir etapa** está desativado, com o aviso *"Disponível na próxima etapa"* |
+| **Outra atividade** | **sim** | **não** |
+| **Extra Esteira** | **sim** | **não** |
+| atualizar a fila | botão **Atualizar** | não há na tela da fila |
+| sair | botão **Sair** | botão **Sair** |
+
+Em resumo: o **totem é o canal completo** da operação. O navegador da fábrica serve para consultar a fila e apontar tempo com quantidade, mas não conclui atividade, não tem Outra atividade e não tem Extra Esteira.
+
+### Telas feitas para o piso
+
+O totem ocupa a tela inteira, sem barra de navegador, e só a área das atividades rola. Os botões são grandes e não há seleção de texto. Isso é de propósito: evita toques acidentais e perda de contexto durante o trabalho. Não é preciso ajustar zoom nem rolar a página para encontrar os botões.
+
+## Quando algo é bloqueado
+
+### Não consigo entrar
+
+| O que você vê | Por que | O que fazer |
+|---|---|---|
+| **"PIN não configurado. Solicite ao gestor."** | nunca foi criada credencial para você | pedir a liberação a quem administra colaboradores |
+| **"Acesso bloqueado. Solicite ao gestor."** | tentativas erradas de PIN em excesso | esperar o bloqueio passar — tipicamente 15 minutos — ou pedir ao gestor para redefinir seu PIN, o que libera na hora |
+| **"Acesso desabilitado."** | o acesso de produção foi desligado | falar com o gestor |
+| **"PIN inválido. Tente novamente."** | o PIN digitado está errado | digitar de novo com atenção; o bloqueio chega depois de algumas tentativas (tipicamente 5) |
+| **"PIN inválido ou acesso não habilitado."** | PIN errado **ou** credencial indisponível — a mensagem é a mesma de propósito | conferir o PIN; se persistir, falar com o gestor |
+| **"Não foi possível entrar agora. Tente novamente mais tarde."** | o acesso está bloqueado neste momento | esperar e tentar de novo, ou pedir a redefinição |
+| **"Este dispositivo não está autorizado para o modo produção."** | o equipamento não foi liberado para o Modo Fábrica | falar com o responsável pelo dispositivo |
+| **"Não foi possível carregar os colaboradores."** | falha ao buscar a lista | tocar **Tentar novamente** |
+
+### Não consigo criar o PIN
+
+| O que você vê | Por que | O que fazer |
+|---|---|---|
+| **"Os PINs não coincidem. Tente novamente."** | a confirmação ficou diferente | repetir os dois passos com calma |
+| **"Escolha um PIN diferente do PIN inicial padrão."** | você tentou manter o PIN provisório | escolher um número só seu |
+| **"Não foi possível alterar o PIN. Tente novamente."** | falha ao salvar | tentar de novo; se persistir, chamar o gestor |
+
+### A fila está vazia ou a atividade não aparece
+
+| O que você vê | Por que | O que fazer |
+|---|---|---|
+| **"Nenhuma atividade disponível no momento."** | não há planejamento publicado para você, ou tudo já foi concluído | tocar **Atualizar**; se continuar vazia, confirmar com o gestor se o planejamento da semana foi publicado |
+| **"Nenhuma atividade encontrada para essa busca."** | o texto digitado não casa com nada | limpar a busca |
+| **"Nenhuma atividade planejada para você no momento."** e *"Confirme com o gestor se o planejamento da fábrica já foi publicado."* | no navegador da fábrica, sem plano publicado | falar com o gestor |
+| **"Nenhuma atividade para este filtro."** | no navegador, o filtro escolhido não tem itens | trocar para **Todas** |
+| **"Não foi possível carregar suas atividades."** | o **Atualizar** falhou | tocar **Atualizar** de novo; a fila anterior continua na tela |
+| a atividade existe mas não está na fila | não foi planejada para você | usar **+ Outra atividade**, com justificativa |
+
+### Não consigo apontar nesta atividade
+
+| O que você vê | Por que | O que fazer |
+|---|---|---|
+| **"Atividade concluída"** no cartão | já foi encerrada | nada a fazer; reabrir é ação de gestão |
+| **"Apontamento bloqueado para esta atividade"** | a esteira não está liberada para produção, a atividade foi dispensada, ou o item saiu do plano | falar com o gestor |
+| **"Esta atividade já foi concluída operacionalmente."** | mesma situação, na área do cartão | atualizar a fila |
+| **"Apontamento não disponível para esta atividade no momento."** | a atividade não aceita apontamento agora | atualizar a fila e conferir com o gestor |
+| **"Esta atividade já está concluída operacionalmente; não é possível novo apontamento."** | outra pessoa concluiu antes de você salvar | tocar **Atualizar** |
+| **"Esta atividade foi dispensada; não é possível novo apontamento."** | a atividade foi dispensada pela gestão | falar com o gestor |
+| **"Esta esteira está finalizada e não permite novos apontamentos."** | a esteira foi encerrada | falar com o gestor |
+| **"Esta atividade não está incluída na sequência operacional da esteira."** | a atividade não entra na sequência daquela esteira | falar com o gestor |
+
+### O sistema recusou meu registro
+
+| O que você vê | Por que | O que fazer |
+|---|---|---|
+| **"Selecione uma justificativa operacional para este apontamento."** | a justificativa é obrigatória neste caso | escolher um motivo da lista |
+| **"Esta justificativa exige complemento."** | o motivo escolhido pede detalhe | escrever o complemento |
+| **"A justificativa deve ter pelo menos 3 caracteres."** | a justificativa ficou curta | escrever um motivo completo |
+| **"Informe uma justificativa para executar esta atividade fora da sequência recomendada."** | há atividade anterior pendente | preencher a justificativa e registrar de novo |
+| **"Informe uma justificativa para apontar acima do tempo previsto da atividade."** | a soma passou do tempo previsto | preencher a justificativa e registrar de novo |
+| aviso de que o tempo precisa ser maior que zero | você registrou sem informar minutos e sem ligar a conclusão | informar o tempo, ou ligar **Concluir atividade ao registrar** |
+| **"A data de realização não pode ser futura."** | a data escolhida é posterior a hoje | usar **Hoje**, **Ontem** ou uma data anterior |
+| **"Colaborador inexistente, inativo ou indisponível."** | seu cadastro de colaborador não está ativo | falar com quem administra colaboradores |
+| **"Não foi possível registrar o apontamento."** | falha ao salvar | tentar de novo; se persistir, chamar o gestor |
+
+### A sessão caiu
+
+| O que você vê | Por que | O que fazer |
+|---|---|---|
+| o totem voltou sozinho para **Quem é você?** | a sessão expirou por inatividade ou por tempo total | entrar de novo com seu PIN; nenhum apontamento já confirmado é perdido |
+| **"Sessão de produção inválida ou expirada."** | a sessão não vale mais, ou a credencial foi desligada durante o uso | entrar de novo; se não conseguir, falar com o gestor |
+
+[IMAGEM SUGERIDA: Tela inicial do totem — cabeçalho SGP · Modo Fábrica com "Quem é você?", a busca por nome e a grade de cartões, incluindo um cartão apagado de colaborador sem acesso]
+
+[IMAGEM SUGERIDA: Teclado de PIN — foto e nome do colaborador, a instrução de 4 dígitos e os pontos indicando os dígitos já digitados]
+
+[IMAGEM SUGERIDA: Cartão de atividade no modo carrossel — Realizado e Planejado, o percentual de tempo previsto, os botões de tempo, a barra de evolução da sessão e o botão de concluir ao registrar]
+
+[IMAGEM SUGERIDA: Cartão com a faixa de tempo acima do previsto aberta e o campo de justificativa obrigatório, com o botão mudado para Registrar apontamento (exceção)]
+
+[IMAGEM SUGERIDA: Fluxo Outra atividade na etapa de revisão, mostrando Colaborador, Atividade, Contexto, Data, Minutos e Justificativa antes de confirmar]
 
 ---
 
@@ -966,6 +1292,7 @@ Se um usuário relatar o uso de alguma dessas telas, o acesso foi por endereço 
 |---|---|---|
 | **Busca rápida…** | barra superior | campo visível e não funcional; reservado para entrega futura |
 | **Alertas** | menu do seu nome | item visível e sem efeito; reservado para entrega futura |
+| **Concluir etapa** | cartão da fila, no navegador da fábrica do Modo Fábrica | botão permanentemente desativado, com o aviso *"Disponível na próxima etapa"*; concluir atividade só pelo totem |
 
 Não geram chamado.
 
@@ -984,6 +1311,8 @@ Os termos técnicos abaixo são reproduzidos **apenas** para você reconhecê-lo
 | Botão **"Remover (soft delete)"**, em Usuários e Colaboradores | **remover preservando o histórico** | o registro deixa de aparecer e pode ser restaurado |
 | Textos de filtro que citam nomes internos de parâmetro, no Painel operacional | o filtro correspondente | sem efeito sobre o uso; basta usar os filtros da tela |
 | **"passo"**, nas telas de Apontamento gerencial ("Lançamentos no passo", "Apontamento gerencial neste passo") | **atividade** | mesmo conceito, nome diferente |
+| **"Voltando ao Kiosk…"**, após registrar por Outra atividade ou Extra Esteira no totem | voltando ao **Modo Fábrica** | "Kiosk" é o nome interno do totem |
+| **"SGP+ Produção"**, no cabeçalho do navegador da fábrica | **Modo Fábrica** | o totem exibe "SGP · Modo Fábrica"; os dois cabeçalhos deveriam usar o mesmo nome |
 
 ### Página Apontamento sem campo de justificativa
 
