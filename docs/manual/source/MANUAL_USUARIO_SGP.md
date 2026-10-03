@@ -379,8 +379,10 @@ As duas exceções são **Finalizada** e **Cancelada**: uma vez encerrada, a est
 Esteira **sem prazo estimado** nunca é contada como atrasada. Não é um erro de cálculo: sem prazo registrado, não há com o que comparar.
 
 > **Limitação atual — leia antes de confiar no cartão Em atraso.**
-> O painel só consegue calcular atraso quando o prazo estimado da esteira foi registrado como uma **data**. No cadastro de **Nova esteira**, porém, o campo **Prazo estimado** pede um **número de dias**. Prazos informados dessa forma não são reconhecidos como data, e a esteira não é contada como atrasada — o cartão pode ficar em zero mesmo havendo esteiras atrasadas na prática. Em alguns casos o efeito é o oposto: a esteira passa a aparecer como atrasada desde a criação.
-> Enquanto isso não for corrigido, **não use o cartão Em atraso como fonte única** para decidir prioridade. Confira o prazo na esteira. O registro desta pendência está no capítulo 21.
+> O painel só reconhece o prazo da esteira quando consegue interpretá-lo como **uma data única**. O cadastro, porém, não guarda o prazo assim: a tela de **Nova esteira** — e a de **Alterar Esteira** — pede **Início previsto** e **Fim previsto**, e o sistema grava as duas datas juntas, em uma única linha de texto. Com duas datas nessa linha, o painel não identifica nenhuma delas e trata a esteira como **sem prazo**.
+> O efeito prático é direto: **uma esteira cadastrada normalmente pela tela atual pode nunca entrar em Em atraso, mesmo depois de passar do fim previsto.** O cartão fica em zero enquanto há esteiras atrasadas de fato.
+> Esteiras antigas, ou criadas por outros caminhos, podem ter o prazo gravado em formatos diferentes e aí o resultado é inconsistente: algumas são reconhecidas corretamente, outras aparecem atrasadas desde a criação, e quando só uma das duas datas foi preenchida o painel pode acabar comparando com a data errada. Não há como saber pelo cartão em que caso cada esteira se encaixa.
+> Enquanto isso não for corrigido, **não use o cartão Em atraso como fonte única** para decidir prioridade. Confira o prazo na própria esteira. O registro desta pendência está no capítulo 21.
 
 ### O atalho Ativas
 
@@ -3836,7 +3838,7 @@ O cartão e o filtro **Em atraso** só reconhecem o prazo da esteira quando ele 
 
 Consequência prática: **esteira cadastrada pela tela atual de Nova esteira tende a nunca ser contada como atrasada**, porque o par Início/Fim previsto não é reconhecido como data. Os demais formatos da tabela abaixo ocorrem em esteiras antigas e nas criadas por documento.
 
-> **Correção de 2026-10-03.** Até esta revisão, este anexo e o capítulo 5 afirmavam que o campo **Prazo estimado** do cadastro de Nova esteira "pede um número de dias". A verificação no código mostrou que essa tela **não tem mais** esse campo: ela pede duas datas. O campo de texto livre **Prazo estimado** sobrevive apenas na criação **Por documento** e na exibição de prazos antigos. A falha de leitura do atraso permanece; o que estava errado era a causa descrita. O texto equivalente no capítulo 5 ainda não foi corrigido.
+> **Correção de 2026-10-03.** Até esta revisão, este anexo e o capítulo 5 afirmavam que o campo **Prazo estimado** do cadastro de Nova esteira "pede um número de dias". A verificação no código mostrou que essa tela **não tem mais** esse campo: ela pede duas datas. O campo de texto livre **Prazo estimado** sobrevive apenas na criação **Por documento** e na exibição de prazos antigos. A falha de leitura do atraso permanece; o que estava errado era a causa descrita. O texto equivalente no capítulo 5 foi corrigido na mesma data, em rodada própria.
 
 Efeitos observados:
 
