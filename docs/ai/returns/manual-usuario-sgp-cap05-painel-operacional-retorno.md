@@ -5,7 +5,7 @@
 - **Status final:** concluída
 - **Branch:** `docs/manual-usuario-sgp-cap05-painel-operacional`
 - **SHA base:** `eee4788c9ba2f8142ce035a4b5c6df39a697adbf` — conferido contra `origin/docs/manual-usuario-sgp-base-p0`, **idêntico ao esperado**
-- **SHA final:** ver seção "Commit e push"
+- **SHA final:** `f4e714f9` (commit do capítulo) + commit de registro deste SHA
 - **Working tree ao encerrar:** limpo
 
 ## Arquivos alterados
@@ -207,7 +207,8 @@ Branches intactas, conferidas após o push:
 - Commit: `docs(manual): escreve capítulo 5 — Painel operacional`
 - Branch remota: `origin/docs/manual-usuario-sgp-cap05-painel-operacional`
 - PR: não criado. Merge: não realizado. Force-push: não realizado. Nenhuma branch excluída.
-- SHA final: `<preenchido no commit de registro>`
+- SHA do commit do capítulo: `f4e714f9`
+- Um segundo commit registra este SHA neste retorno, mesmo padrão já usado em `docs/ai/returns/`; sem amend e sem force-push.
 
 ## Uso de contexto / sessão
 
