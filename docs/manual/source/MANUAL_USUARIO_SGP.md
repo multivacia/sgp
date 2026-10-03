@@ -3,7 +3,7 @@
 **Produto:** SGP+ · Multivacia / ARGOS
 **Versão da aplicação nesta revisão:** 1.9.8
 **Revisão deste manual:** 2026-10-03
-**Situação:** base editorial criada; capítulos 1 a 3, 5, 7, 8, 13, 20 e 21 com conteúdo final. Os capítulos 4, 6, 9 a 12 e 14 a 19 seguem marcados como pendentes e **não devem ser publicados** como versão final.
+**Situação:** base editorial criada; capítulos 1 a 3, 5, 7 a 9, 13, 20 e 21 com conteúdo final. Os capítulos 4, 6, 10 a 12 e 14 a 19 seguem marcados como pendentes e **não devem ser publicados** como versão final.
 
 > **Este é o documento canônico do manual do usuário.** Versões em HTML ou PDF devem ser geradas a partir daqui.
 >
@@ -1115,14 +1115,378 @@ Sem nada planejado: **"Nenhuma atividade planejada nesta semana."**
 
 # 9. Agenda da semana
 
-> [PENDENTE DE ENRIQUECIMENTO — não publicar como capítulo final]
+## Para que serve
 
-- arrastar do backlog para colaborador e dia
-- mover, atribuir em lote e remover do plano
-- concluir atividade pela agenda e quando é pedida justificativa
-- o painel **Atenção** e o que ele reúne
-- salvar revisão e publicar
-- uso em tela sensível ao toque
+A Agenda da semana é uma **segunda forma de mexer no mesmo plano semanal** do capítulo 8.
+
+Não é outro planejamento. É a mesma semana, o mesmo plano, as mesmas versões de rascunho e publicado. O que muda é o jeito de trabalhar: aqui você **arrasta atividades** para a grade de colaborador e dia, atribui em lote quando há muita coisa parada, e resolve pendências por uma gaveta de atenção. Foi feita para distribuir rápido e para funcionar em tela sensível ao toque.
+
+A consequência prática é direta: **o que você faz aqui aparece no Planejamento, e o que você faz lá aparece aqui.** São duas janelas para o mesmo trabalho.
+
+Use a Agenda quando o objetivo é distribuir e ajustar com agilidade. Use o Planejamento (capítulo 8) quando precisar de ajuste fino de tempo, filtros, exportações em Excel ou dos painéis de diagnóstico completos.
+
+## Onde fica
+
+Menu lateral, agrupamento **Gestão** → **Agenda da semana**. O item aparece com o selo **Novo**.
+
+O título na tela é **Agenda da Semana**, com a frase *"Distribua e acompanhe atividades por colaborador — visualização da semana operacional."*
+
+## Quem costuma ter acesso
+
+Exatamente a mesma capacidade do Planejamento: quem pode criar e alterar esteiras.
+
+Sem ela, o item não aparece no menu. Dentro da tela não há recortes por perfil — quem entra pode distribuir, salvar e publicar.
+
+A ação **Concluir** no cartão depende dessa mesma permissão de gestão. **Apontar tempo** e **Imprimir ticket** não dependem dela.
+
+## Como fazer
+
+### Entender o que a Agenda compartilha com o Planejamento
+
+Vale conhecer a divisão antes de começar, para não procurar na tela errada.
+
+**É o mesmo em ambas as telas:**
+
+| | |
+|---|---|
+| a semana | segunda a sexta, mesma navegação |
+| o plano e suas versões | rascunho, publicado vigente e revisão em planejamento |
+| a lista de atividades disponíveis | mesma origem e mesmas regras de quem entra |
+| o tempo planejado de cada item | o mesmo valor, usado pelo Modo Fábrica |
+| a capacidade do colaborador | mesmos valores e mesma regra de sobrecarga |
+| salvar e publicar | mesmos botões, mesmas mensagens, mesmo efeito |
+| as divergências de sincronização | mesma lista e mesma ação de aplicar |
+| os apontamentos fora do plano | mesma lista |
+
+**Só a Agenda tem:**
+
+- arrastar e soltar na grade, e atribuição por toque;
+- **Alocação em lote**, com sugestão de quem tem mais folga;
+- a gaveta **Atenção** com contador;
+- abas de dia para trabalhar um dia por vez em tela pequena;
+- todos os colaboradores ativos sempre visíveis como linhas, mesmo sem nada planejado.
+
+**Só o Planejamento tem (capítulo 8):**
+
+- o campo **Minutos planejados** editável ao incluir a atividade;
+- as duas exportações em Excel;
+- filtros do quadro e busca no plano;
+- o painel **Esteiras aguardando encaixe**;
+- **Histórico da semana**, **Desvios da semana** e **Principais desvios**;
+- a ação **Reabrir** no cartão;
+- **Imprimir tickets visíveis**, com o recorte dos filtros.
+
+### Escolher a semana
+
+A semana vai de **segunda a sexta**, como no Planejamento.
+
+As setas **‹** e **›** andam uma semana para trás e para frente, com o intervalo `dd/mm/aaaa → dd/mm/aaaa` entre elas. Ao abrir, carrega a semana de hoje. Semanas passadas e futuras são abertas e editadas sem restrição.
+
+Ao lado aparece o selo do estado do plano — **Rascunho**, **Publicado vigente** ou **Revisão em planejamento** — e, quando houver, **Alterações não publicadas**. Se a semana nunca foi salva: **"Nenhum plano salvo nesta semana ainda."**
+
+> **Atenção.** Trocar de semana **descarta alterações não salvas, sem aviso nem confirmação.** O mesmo vale para sair da tela. O único sinal é o aviso **"Alterações não salvas — use 'Salvar rascunho' antes de publicar."** Salve antes de navegar.
+
+### Ler a grade
+
+A grade tem **Colaborador** nas linhas e os cinco dias nas colunas. A coluna do dia de hoje recebe o selo **Hoje**.
+
+| Onde | O que mostra |
+|---|---|
+| cabeçalho do dia | o dia, a data e o total já planejado naquele dia |
+| linha do colaborador | o total da semana e quantas atividades, ou **"Sem atividades nesta semana"** |
+| célula | o planejado e a capacidade do dia, e os cartões em ordem |
+| célula vazia | **"Nenhuma atividade planejada."** |
+
+**Todos os colaboradores ativos aparecem**, inclusive os sem nada planejado — é isso que permite arrastar para quem está livre. Se não houver nenhum: **"Nenhum colaborador ativo encontrado."**
+
+Em tela pequena, a grade mostra **um dia por vez**, escolhido pelas abas de dia (cada aba traz o dia, a data e uma barra com a carga daquele dia). Em tela grande, a semana inteira aparece de uma vez e as abas não são exibidas.
+
+A legenda das cores dos cartões, visível em tela grande, é: **Planejada**, **Em execução**, **Concluída** e **Divergente**.
+
+### Abrir as atividades disponíveis
+
+A lista não fica na tela: ela abre em uma gaveta.
+
+No canto inferior direito há um botão redondo **+ Backlog**, com o número de atividades disponíveis. Ele pulsa quando há três ou mais. Clicar abre a gaveta **Backlog operacional**.
+
+Dentro dela: a busca **"Buscar esteira / atividade…"** com o botão **Buscar**, e um cartão por atividade com a esteira, a tarefa, o setor e **"Pendente: {tempo}"** — o tempo que ainda falta.
+
+Cada cartão pode trazer os selos **Fora de sequência**, **Sem responsável** e **Atrasada**.
+
+> **Atenção.** O selo **Atrasada** não é confiável, porque depende de como o prazo foi preenchido no cadastro da esteira. Confira o prazo na própria esteira antes de priorizar por ele. Pendência registrada no capítulo 21.
+
+As regras de quem entra nessa lista são **as mesmas do capítulo 8** — mesma origem, mesmas exclusões, mesma exceção para atividades incluídas tardiamente. Consulte a tabela de exclusões daquele capítulo.
+
+Quando tudo já foi distribuído: **"Todas as atividades carregadas no backlog já foram planejadas nesta semana."** Quando a busca não encontra nada: **"Nenhuma atividade encontrada para a busca."** Quando não há nada disponível: **"Nenhuma atividade disponível no backlog operacional. Esteiras com Plano Operacional enviado à fábrica aparecem em Aguardando encaixe."** — esse painel de encaixe fica no Planejamento, não aqui.
+
+> **Atenção.** Assim como no Planejamento, uma atividade **dispensada** pode aparecer nessa lista e ser distribuída. Na Agenda o sintoma é visível: o cartão na grade mostra o selo **Dispensada** e o menu dele não oferece **Apontar tempo** nem **Concluir**. Se vir isso, remova do plano. Pendência registrada no capítulo 21.
+
+### Distribuir uma atividade
+
+Dois caminhos, e os dois produzem o mesmo resultado.
+
+**Arrastando.** Pegue o cartão na gaveta e arraste para a célula do colaborador no dia desejado. A gaveta se fecha sozinha para liberar a visão da grade, e aparece uma faixa no alto: *"Arrastando: {atividade} — solte sobre um espaço livre da agenda"*, com **Cancelar**. A célula de destino se destaca quando você passa por cima.
+
+**Por toque.** Toque em **Atribuir** no cartão da gaveta. A gaveta fecha e a faixa muda para *"Atribuindo: {atividade} — toque num espaço livre da grade"*. Todas as células passam a mostrar **"Toque para atribuir aqui"**. Toque na célula desejada e pronto. **Cancelar** desfaz.
+
+Em tela sensível ao toque, arrastar exige **pressionar e segurar por um instante** antes de mover — é o que evita que a rolagem da página seja confundida com um arraste. Se preferir não arrastar, o caminho por toque faz o mesmo.
+
+Em qualquer dos dois, se você soltar fora de uma célula válida, nada acontece: a faixa desaparece e a atividade continua disponível. Não há mensagem de erro.
+
+> O tempo planejado é definido **automaticamente** com o tempo que ainda falta na atividade. **A Agenda não oferece campo para alterar esse valor.** Isso tem consequência no Modo Fábrica — veja "O tempo planejado e o Modo Fábrica", em "O que esperar".
+
+### Distribuir várias de uma vez
+
+Quando há **três ou mais** atividades disponíveis, a gaveta exibe um convite no topo: *"{N} itens parados no backlog"*, com o botão **Alocar tudo em lote**.
+
+Abre a tela **Alocação em lote**, que passa as atividades **uma por uma**:
+
+| Elemento | O que faz |
+|---|---|
+| **"Item N de M"** e o percentual | onde você está na fila |
+| **"Próximo item do backlog"** | a atividade atual, com esteira, setor e tempo previsto |
+| **Sugestão** | o colaborador com **a maior folga da semana**, e quanto tempo livre ele tem |
+| **"Atribuir a {nome} · {dia}"** | aceita a sugestão e passa para a próxima |
+| **"Escolher outra pessoa ou dia"** | abre **Pessoa** (cada um com sua folga) e **Dia**; depois, **Confirmar alocação** |
+| **"Deixar para depois"** | manda a atividade para o fim da fila, sem descartá-la |
+| **"Voltar à agenda"** | sai do lote a qualquer momento, mantendo o que já foi atribuído |
+
+A sugestão é calculada pela folga da semana — capacidade menos o que já está planejado, somando os cinco dias. Para quem não tem capacidade cadastrada, o cálculo assume uma jornada padrão de 8 horas por dia.
+
+Ao terminar a fila: **"Fila concluída."** e, de volta à grade, **"Todos os itens do lote foram atribuídos ao rascunho."**
+
+A palavra *rascunho* na mensagem é literal e importante: **o lote não salva nada.** Tudo continua sendo alteração local até você salvar.
+
+### Mover entre dias e colaboradores
+
+| O que fazer | Como |
+|---|---|
+| mudar o **dia**, mesmo colaborador | arraste o cartão para outra célula da mesma linha — ou, em tela pequena, **solte o cartão sobre a aba do dia** |
+| mudar o **colaborador** | arraste para a célula de outra linha |
+| mudar **os dois** | arraste para a célula cruzando a linha e a coluna desejadas |
+| mudar a **ordem** dentro da célula | arraste o cartão sobre outro cartão da mesma célula |
+
+Soltar um cartão sobre outro **de célula diferente** move a atividade para aquela célula, posicionando-a antes do cartão de destino.
+
+Não há restrição por situação: uma atividade **já publicada**, **com apontamentos** ou **concluída** pode ser movida do mesmo jeito. O que foi apontado não se perde — apontamento é registro de execução e não acompanha o planejamento. Mas lembre-se de que, enquanto a nova posição não for publicada, o colaborador continua vendo a anterior.
+
+### Remover do plano
+
+Cada cartão tem um botão **⋯** (*"Ações da atividade"*) com a opção **Remover do plano**. Não há confirmação.
+
+O comportamento **depende do estado da semana**, e esta é a principal diferença de funcionamento em relação ao capítulo 8:
+
+| Estado da semana | O que acontece ao remover |
+|---|---|
+| **Rascunho** (nunca publicada) | sai apenas da tela; só é gravado quando você salvar |
+| **Publicado vigente** ou **Revisão em planejamento** | a Agenda **grava a remoção na hora**, como revisão, e confirma com *"Revisão salva. A fila dos colaboradores continua usando a última versão publicada."* |
+
+Ou seja: em uma semana já publicada, **remover é imediato e não precisa de salvar** — mas **continua não chegando ao colaborador** até você publicar. A versão publicada ainda tem a atividade; a revisão já não tem.
+
+Em qualquer dos casos a atividade volta a ficar disponível na gaveta do backlog, pronta para ser redistribuída.
+
+Se a gravação automática falhar, aparece **"Não foi possível salvar a revisão do plano."** e a tela recarrega a semana para mostrar o estado real.
+
+### Salvar
+
+O botão de salvar muda de nome conforme o estado, como no Planejamento:
+
+- **Salvar rascunho** — semana sem versão publicada. Confirmação: **"Rascunho salvo."**
+- **Salvar alterações** — semana com versão publicada. Confirmação: **"Revisão salva. A fila dos colaboradores continua usando a última versão publicada."**
+
+Só fica ativo quando há algo não salvo.
+
+### Publicar
+
+**Publicar plano** leva a semana para a fábrica. Confirmação: **"Plano publicado. A fila dos colaboradores foi atualizada."**
+
+As condições são **idênticas** às do capítulo 8. O botão fica desativado quando:
+
+| Situação | O que o botão informa |
+|---|---|
+| há alterações não salvas | — (salve primeiro) |
+| o plano está vazio | **"Adicione ao menos uma atividade antes de publicar o plano."** |
+| já está publicado e não há revisão | **"Este plano já está publicado."** |
+
+### Concluir uma atividade pela Agenda
+
+O menu **⋯** do cartão oferece, conforme a situação da atividade:
+
+| Opção | Quando aparece |
+|---|---|
+| **Apontar tempo** | atividade não concluída e não dispensada |
+| **Concluir** | atividade não concluída e não dispensada, e você tem a permissão de gestão |
+| **Imprimir ticket** | sempre |
+| **Remover do plano** | sempre |
+
+**Apontar tempo** abre o mesmo registro de horas do capítulo 7, com os mesmos campos e as mesmas regras. Não há exigência de justificativa por tempo acima do previsto aqui — essa exigência é só do Modo Fábrica (capítulo 13).
+
+**Concluir** segue dois passos:
+
+1. Se a atividade estiver **fora da sequência recomendada** — porque há atividade anterior ainda aberta —, o sistema pede a justificativa: *"Esta atividade está fora da sequência recomendada. Informe a justificativa para concluí-la:"*. Deixar em branco recusa a conclusão com **"Informe uma justificativa para concluir fora da sequência."**
+2. Em seguida, a confirmação **"Confirmar conclusão desta atividade?"**
+
+Concluída, aparece **"Atividade concluída."**, o cartão muda de cor e o menu dele deixa de oferecer **Apontar tempo** e **Concluir**.
+
+É possível concluir **sem nenhum apontamento** — o sistema não exige tempo registrado para concluir pela Agenda.
+
+A conclusão **não** depende de salvar nem de publicar: ela é registrada na atividade, não no planejamento. E **não há como reabrir pela Agenda** — para isso, use o cartão no Planejamento (capítulo 8) ou a estrutura da esteira (capítulo 6).
+
+## O que esperar
+
+### O que a publicação muda
+
+Igual ao capítulo 8, porque é o mesmo plano: a fila do colaborador em **Minha Fila** (capítulo 10) e no **Modo Fábrica** (capítulo 13) **só reflete a versão publicada**.
+
+Enquanto a semana estiver em rascunho ou revisão, nada do que você montou aqui chega a ninguém — nem o que foi atribuído em lote, nem o que foi movido, nem o que foi removido com gravação automática.
+
+Publicar uma revisão substitui a versão anterior inteira.
+
+### O tempo planejado e o Modo Fábrica
+
+Ponto de atenção real, por causa de uma diferença entre as duas telas.
+
+O tempo planejado de cada item é o valor que o **Modo Fábrica** usa como previsto: quando o apontado passa dele, o colaborador precisa justificar o excesso (capítulo 13).
+
+Na Agenda, esse valor é definido **automaticamente** com o tempo que ainda falta na atividade, e **não há campo para alterá-lo**. Então:
+
+- distribuir pela Agenda aceita o tempo sugerido pelo sistema, qualquer que seja;
+- se você precisa de um tempo diferente do sugerido, faça essa atividade pelo **Planejamento** (capítulo 8), onde o campo **Minutos planejados** é editável;
+- mover a atividade entre dias ou pessoas **não** altera o tempo planejado.
+
+### Capacidade e sobrecarga
+
+Mesmas regras e mesmos valores do capítulo 8, exibidos de outra forma.
+
+Cada célula mostra o planejado e a capacidade do dia daquele colaborador. Quando passa do limite, a célula ganha o aviso **"Capacidade excedida em {tempo}"**.
+
+Quando uma ação sua faz uma célula cruzar o limite, abre o mesmo aviso **Capacidade diária ultrapassada**, com Colaborador, Data, Capacidade diária, Tempo planejado e Excedente — e a mesma frase: **"Você pode continuar o planejamento normalmente."**
+
+**Sobrecarga não bloqueia nada**, nem na Agenda nem no Planejamento. Não há faixa de alerta antes do limite: 100% exatos ainda é normal.
+
+O aviso só aparece quando a carga da célula **aumentou** e cruzou o limite. Remover trabalho ou reordenar não dispara nada. Os totais da célula, do dia e da semana são recalculados a cada alteração, antes de salvar.
+
+### A gaveta Atenção
+
+No alto da tela, a faixa de resumo traz **Planejado**, **Realizado** e **Equipe no plano**. Ao lado, quando há algo a tratar, aparece o botão **Atenção** com um número.
+
+Esse número reúne **exatamente duas coisas**, e nada além disso:
+
+| Categoria | O que é |
+|---|---|
+| **divergências de sincronização** | o plano da esteira e o planejamento da semana discordam |
+| **apontamentos fora do plano** | houve apontamento em atividade que não está no plano da semana |
+
+O resumo ao lado do número detalha a composição — *"{n} divergência(s)"* e *"{n} fora do plano"*.
+
+**Sobrecarga de capacidade e atividade sem responsável não entram nessa contagem.** Sobrecarga aparece na própria célula; a falta de responsável aparece como selo no cartão do backlog.
+
+Clicar abre a gaveta **Itens de atenção**, com a frase *"Divergências de sincronização e apontamentos fora do plano semanal."* e os dois painéis. Fecha por **Fechar** ou pela tecla Esc.
+
+Quando não há nada: **"Nenhum item de atenção nesta semana."**
+
+### Pendências de sincronização
+
+Primeiro painel da gaveta, o mesmo do capítulo 8.
+
+Lista as atividades em que o **plano da esteira** e o **planejamento da semana** discordam, sempre em um destes quatro pontos: **Data**, **Minutos**, **Colaborador** e **Equipe**. Cada linha mostra os dois lados para comparação, e o cartão na grade recebe o selo de pendência e a cor **Divergente**.
+
+Tem ação: **Aplicar plano da esteira** traz os valores do plano da esteira para o planejamento da semana, confirmando com **"Valores do plano da esteira aplicados ao planejamento da fábrica."**
+
+Alternativa: ajustar à mão na grade, se a decisão da fábrica é que vale.
+
+Não há sincronização automática — a divergência fica visível até você agir. Depois de aplicar ou ajustar, **a mudança ainda precisa ser publicada** para chegar ao colaborador.
+
+Sem divergências: **"Nenhuma pendência nesta semana."**
+
+### Fora do planejado
+
+Segundo painel da gaveta, também o mesmo do capítulo 8.
+
+Lista os apontamentos da semana em atividades **que não estão no plano daquela semana**. O critério é por **atividade**: se ela está no plano, nenhum apontamento dela aparece aqui, mesmo feito por outra pessoa ou em outro dia.
+
+É **informativo** — o painel não tem nenhuma ação. Não há como incorporar o apontamento ao plano a partir dele. O que você faz com a informação é decidir se aquele trabalho deveria estar planejado e, se sim, distribuí-lo na grade.
+
+O painel não altera capacidade nem interfere na publicação.
+
+Sem nada fora do plano: **"Nenhum apontamento fora do plano nesta semana."**
+
+### Imprimir tickets
+
+No alto da tela, **Imprimir tickets da semana (N)** abre a mesma janela do capítulo 8, com **Agrupar por** (Responsável ou Tarefa / esteira), **Incluir atividades concluídas** e os estados do agente de impressão local.
+
+Cada cartão também oferece **Imprimir ticket** no menu **⋯**, para uma atividade só.
+
+A Agenda **não** tem o botão "Imprimir tickets visíveis" — ele depende dos filtros do quadro, que só existem no Planejamento.
+
+## Quando algo é bloqueado
+
+### A semana não carrega
+
+| O que você vê | Por que | O que fazer |
+|---|---|---|
+| **"Carregando semana…"** que não termina | a semana está sendo buscada | aguarde; se persistir, recarregue |
+| **"Não foi possível carregar o plano desta semana."** | falha ao buscar a semana | troque de semana e volte, ou recarregue; se persistir, abra chamado |
+| **"Nenhum colaborador ativo encontrado."** | não há colaborador ativo cadastrado | não há onde distribuir; verifique o cadastro de colaboradores (capítulo 16) |
+
+### Não consigo distribuir a atividade
+
+| O que você vê | Por que | O que fazer |
+|---|---|---|
+| a atividade não está na gaveta | as regras de elegibilidade do capítulo 8 a excluíram | confira a situação da esteira e se ela já não está planejada |
+| arrastei e nada aconteceu | a atividade **já está no plano desta semana**, ou foi solta fora de uma célula válida | procure-a na grade; se já estiver lá, não é possível repeti-la |
+| o cartão mostra o selo **Dispensada** | atividade dispensada que entrou no plano | remova do plano; ela nunca chegaria ao colaborador |
+| **"Todas as atividades carregadas no backlog já foram planejadas nesta semana."** | não há mais nada a distribuir | nada a fazer |
+| **"Nenhuma atividade encontrada para a busca."** | a busca não encontrou nada | revise o termo buscado |
+
+Quando uma tentativa é recusada pelo sistema no momento de salvar, as mensagens são as mesmas do capítulo 8 — entre elas **"Cada Atividade só pode aparecer uma vez no plano."** e **"Atividade já está planejada em outro plano semanal."**
+
+### Perdi alterações
+
+| O que aconteceu | Por que | O que fazer |
+|---|---|---|
+| troquei de semana e o que eu tinha montado sumiu | a troca de semana descarta alterações não salvas, sem aviso | salve antes de navegar; o aviso **"Alterações não salvas"** é o sinal |
+| saí da tela e perdi o que havia distribuído | não existe proteção ao sair com alterações pendentes | o mesmo |
+| atribuí tudo em lote e a fila do colaborador não mudou | o lote só monta o rascunho | salve e publique |
+
+### Não consigo salvar ou publicar
+
+| O que você vê | Por que | O que fazer |
+|---|---|---|
+| **"Não foi possível salvar o rascunho."** | falha ao gravar | tente de novo; se persistir, abra chamado |
+| **"Não foi possível salvar as alterações no plano ativo."** | falha ao gravar a revisão | o mesmo |
+| **"Não foi possível salvar a revisão do plano."** | falha na gravação automática de uma remoção em semana publicada | a tela recarrega a semana; confira se a remoção valeu e repita |
+| **"As datas deste plano estão inconsistentes. Recarregue a semana e tente novamente. Se o problema continuar, acione o suporte."** | as datas da tela e do plano gravado não coincidem | recarregue a semana e repita |
+| botão de publicar desativado sem aviso | há alterações não salvas | salve primeiro |
+| **"Adicione ao menos uma atividade antes de publicar o plano."** | o plano está vazio | distribua ao menos uma atividade |
+| **"Este plano já está publicado."** | não há revisão a publicar | para mudar, altere, salve e publique |
+| **"Não foi possível publicar o plano."** | falha ao publicar | tente de novo; se persistir, abra chamado |
+
+### Não consigo concluir
+
+| O que você vê | Por que | O que fazer |
+|---|---|---|
+| o menu do cartão não mostra **Concluir** | a atividade já está concluída ou dispensada, ou você não tem a permissão de gestão | confira a situação no selo do cartão |
+| **"Informe uma justificativa para concluir fora da sequência."** | a justificativa foi deixada em branco | informe o motivo e repita |
+| **"Não foi possível concluir a atividade."** | falha ao concluir | tente de novo; se persistir, abra chamado |
+| quero reabrir uma atividade concluída | a Agenda não oferece essa ação | use o cartão no Planejamento (capítulo 8) ou a estrutura da esteira (capítulo 6) |
+
+### Impressão
+
+| O que você vê | Por que | O que fazer |
+|---|---|---|
+| botão de tickets desativado | não há atividade planejada na semana | distribua atividades |
+| **"Agente local indisponível"** | o agente de impressão não respondeu | a impressão sai pelo navegador; para impressão direta, acione quem cuida da estação |
+
+[IMAGEM SUGERIDA: Agenda da Semana — cabeçalho com navegação de semana e selo de estado, faixa de resumo com o botão Atenção e a grade colaborador × dia preenchida]
+
+[IMAGEM SUGERIDA: arraste em andamento — a faixa "Arrastando: {atividade} — solte sobre um espaço livre da agenda" no alto, com a célula de destino destacada]
+
+[IMAGEM SUGERIDA: gaveta "Backlog operacional" aberta a partir do botão + Backlog, com o convite "Alocar tudo em lote" e os cartões de atividade]
+
+[IMAGEM SUGERIDA: tela "Alocação em lote" com o progresso, o bloco Sugestão e os botões de atribuir, escolher outra pessoa e deixar para depois]
+
+[IMAGEM SUGERIDA: gaveta "Itens de atenção" com os dois painéis — Pendências de sincronização, com o botão Aplicar plano da esteira, e Fora do planejado]
 
 ---
 
@@ -1688,24 +2052,59 @@ Efeitos observados:
 
 **Orientação até a correção:** não usar o cartão **Em atraso** como fonte única de prioridade; conferir o prazo na própria esteira. Pendência de produto registrada.
 
+#### O selo "Atrasada" do backlog usa outra regra, também incorreta
+
+Divergência confirmada em 2026-10-03, de alcance distinto da anterior.
+
+O selo **Atrasada** nos cartões de atividade disponível — no **Backlog operacional** do Planejamento semanal e da Agenda da semana — **não** usa o cálculo descrito acima. É outra regra, com outras falhas, sobre o mesmo campo **Prazo estimado** mal tipado.
+
+| Como o prazo foi registrado | O que o selo faz |
+|---|---|
+| qualquer número de dias (ex.: 7, 15, 30, 10,5) | nunca marca **Atrasada** |
+| período no formato "Início previsto … · Fim previsto …" | nunca marca **Atrasada** |
+| data no formato 2026-09-01 (já passada) | marca corretamente |
+| data no formato 2026-10-20 (futura) | corretamente não marca |
+| data no formato brasileiro, dia de 01 a 19 (ex.: 01/02/2026) | marca **Atrasada** sempre, mesmo com prazo futuro |
+| data no formato brasileiro, dia de 20 a 31 (ex.: 25/12/2026) | não marca, mesmo com prazo já vencido |
+
+Em resumo: o selo só é confiável quando o prazo foi registrado como data no formato ano-mês-dia. Com número de dias nunca acusa atraso; com data em formato brasileiro o resultado depende do dia digitado, não do prazo real.
+
+**Orientação até a correção:** não priorizar pelo selo **Atrasada**; conferir o prazo na própria esteira. Mesma causa de fundo da divergência anterior — o campo **Prazo estimado** aceita texto livre. Pendência de produto registrada.
+
 ### Atividade dispensada volta a aparecer como planejável
 
-Divergência confirmada em 2026-10-03, com impacto no planejamento da semana.
+Divergência confirmada em 2026-10-03 no Planejamento semanal; alcance ampliado em 2026-10-03 após verificação independente na Agenda da semana.
 
-Uma atividade **dispensada** continua aparecendo na lista de atividades disponíveis para planejar, no **Backlog operacional** do Planejamento semanal, e o sistema **permite distribuí-la e publicá-la**. Não há recusa nem aviso.
+Uma atividade **dispensada** continua aparecendo na lista de atividades disponíveis para planejar e o sistema **permite distribuí-la e publicá-la**. Não há recusa nem aviso.
+
+**Afeta as duas telas de planejamento**, porque ambas consultam a mesma lista de atividades disponíveis e gravam pelo mesmo caminho: o **Backlog operacional** do Planejamento semanal (capítulo 8) e a gaveta **Backlog operacional** da Agenda da semana (capítulo 9).
 
 O efeito é um item que ocupa a semana sem nunca ser executável:
 
 | Onde | O que acontece |
 |---|---|
-| Backlog operacional | a atividade dispensada aparece como disponível |
-| quadro do planejamento | aceita ser distribuída; soma minutos na capacidade do colaborador |
+| Backlog operacional, nas duas telas | a atividade dispensada aparece como disponível |
+| quadro do planejamento e grade da agenda | aceita ser distribuída; soma minutos na capacidade do colaborador |
 | exportações em Excel | sai nas planilhas como item planejado |
 | fila do colaborador e Modo Fábrica | **não aparece** — é tratada como encerrada |
 
 Na prática, o planejamento mostra trabalho que o colaborador nunca receberá, e a capacidade do dia fica comprometida por um item inexistente.
 
-**Orientação até a correção:** ao planejar, não distribuir atividades dispensadas. Se a atividade precisar voltar ao trabalho, usar antes **Restaurar dispensada** na estrutura da esteira (capítulo 6) e só então planejá-la. Se uma atividade dispensada já estiver no plano, removê-la do quadro, salvar e publicar de novo. Pendência de produto registrada.
+**Como reconhecer na Agenda da semana:** o cartão na grade exibe o selo **Dispensada** e o menu dele **não** oferece **Apontar tempo** nem **Concluir** — só **Imprimir ticket** e **Remover do plano**. É o sintoma visível mais confiável.
+
+**Orientação até a correção:** ao planejar, não distribuir atividades dispensadas. Se a atividade precisar voltar ao trabalho, usar antes **Restaurar dispensada** na estrutura da esteira (capítulo 6) e só então planejá-la. Se uma atividade dispensada já estiver no plano, removê-la, salvar e publicar de novo. Pendência de produto registrada.
+
+### Agenda da semana descarta alterações não salvas sem avisar
+
+Divergência confirmada em 2026-10-03, com risco de perda de trabalho.
+
+Na **Agenda da semana**, trocar de semana pelas setas ‹ › ou sair da tela **descarta silenciosamente** tudo o que foi distribuído, movido ou reordenado e ainda não foi salvo. Não há confirmação, não há bloqueio de navegação e não há recuperação.
+
+O único sinal é o aviso **"Alterações não salvas — use 'Salvar rascunho' antes de publicar."**, que é informativo e fácil de não ver depois de uma sessão longa de arraste. O caso mais custoso é o fluxo **Alocação em lote**: ele pode atribuir dezenas de atividades de uma vez e termina dizendo que tudo foi atribuído **ao rascunho** — nada gravado.
+
+Há uma exceção, que vale apenas para remoções: em semana já publicada, **Remover do plano** é gravado na hora como revisão e não se perde.
+
+**Orientação até a correção:** salvar antes de trocar de semana ou sair da tela, sempre, e especialmente ao terminar uma alocação em lote. Pendência de produto registrada.
 
 ## 21.4 Diferença de PIN entre as formas de acesso
 
