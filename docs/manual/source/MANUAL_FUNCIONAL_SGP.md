@@ -2,13 +2,20 @@
 
 **Repositório:** `multivacia/sgp`  
 **Branch de referência:** `develop`  
-**Commit analisado:** `8e9fd062c6edf350ffab095c6aba986dd9520860`  
-**Data da fotografia:** 2026-10-01  
-**Natureza:** fonte funcional viva derivada de auditoria reversa do código  
+**Commit analisado:** `c611d10feacf329bdc217fe391ebf47a90a6ea7a`  
+**Data da fotografia:** 2026-10-03  
+**Fotografia anterior:** `8e9fd062c6edf350ffab095c6aba986dd9520860` (2026-10-01)  
+**Natureza:** **matriz técnica / fonte funcional auditável.** Não é o manual do usuário.  
+**Manual do usuário:** `docs/manual/source/MANUAL_USUARIO_SGP.md` — artefato canônico destinado ao usuário final, do qual HTML/PDF devem ser derivados. Este documento não deve ser convertido em tutorial passo a passo.  
 **Regra de atualização:** qualquer mudança de comportamento, estado, permissão, validação, mensagem relevante ou efeito sistêmico deve avaliar atualização deste documento  
-**Documentos atuais analisados:**
+**Documentos atuais analisados (alvo das classificações de cobertura):**
 - `docs/manual/colaborador.html`
 - `docs/manual/gestor-esteira.html`
+
+**Método desta revisão:** auditoria por leitura de código, migrations e testes do repositório. **Nenhuma tela foi executada ou observada visualmente e nenhum banco foi consultado.**
+
+**Revisão de 2026-10-03 — correções factuais aplicadas:** ATI-001 (estados efetivamente persistidos), ATI-003/ATI-005 (duas ações distintas com o mesmo destino), 45.4/45.5 (vocabulário de alocação), JOG-002/45.8 (seleção multi-colaborador e tetos), VAL-004, VAL-006, VAL-014, VAL-015 e VAL-017. Evidências em:
+`docs/ai/reports/auditoria-cobertura-funcional-manual-2026-10-02/RELATORIO_AUDITORIA_COBERTURA_FUNCIONAL_MANUAL.md`
 
 ---
 
@@ -38,6 +45,8 @@ Sempre que não for possível chegar a uma conclusão segura, o ponto é marcado
 
 ## 1.1 Classificação da cobertura documental
 
+> **Referente das classificações.** Toda avaliação de "Cobertura atual" neste documento — inclusive a coluna homônima da tabela 2.1 e a tabela da seção 37 — refere-se aos **HTML derivados já existentes** (`docs/manual/colaborador.html` e `docs/manual/gestor-esteira.html`), **não a este arquivo** nem ao novo `MANUAL_USUARIO_SGP.md`. Ler "AUSENTE" como se descrevesse a cobertura deste documento é um erro de leitura.
+
 Cada funcionalidade recebe uma destas classificações:
 
 | Classificação | Significado |
@@ -61,7 +70,7 @@ As regras são agrupadas em códigos estáveis por domínio:
 - `CRT-*` Criação/importação de esteiras
 - `EST-*` Estrutura da esteira
 - `CIC-*` Ciclo de vida da esteira
-- `ATI-*` Atividades/STEP
+- `ATI-*` Atividades
 - `DES-*` Designações e responsáveis
 - `POP-*` Plano Operacional da Esteira
 - `PLS-*` Planejamento Semanal
@@ -84,6 +93,19 @@ As regras são agrupadas em códigos estáveis por domínio:
 - `SUP-*` Chamados
 - `SYS-*` Configurações Sistêmicas
 
+## 1.3 Convenções de vocabulário
+
+Convenções fixadas em 2026-10-03, válidas para este documento e obrigatórias no `MANUAL_USUARIO_SGP.md`.
+
+| Conceito | Termo funcional **preferencial** | Termos técnicos/legados | Observação |
+|---|---|---|---|
+| Unidade executável de trabalho dentro de um setor | **atividade** | `STEP`, "etapa" | `STEP` é identificador técnico de implementação. Só pode aparecer em contexto declaradamente técnico (evidências, nomes de arquivo, taxonomia de eventos, citações literais de mensagem). **Nunca** como termo preferencial, e nunca no manual do usuário. |
+| Canal operacional de apontamento do colaborador (totem e navegador) | **Modo Fábrica** | "Kiosk", "Produção Web" | "Modo Fábrica" é o nome exibido na interface. Kiosk e Produção Web passam a designar as **formas de acesso** ao Modo Fábrica, usadas aqui por precisão técnica. |
+| Vínculo entre colaborador (ou equipe) e atividade | **alocação** | "assignee", `TEAM`, `COLLABORATOR` | O produto já adotou "alocação" na interface da Jornada. |
+| Situação operacional de uma atividade | **situação da atividade** | `PENDING`, `COMPLETED`, `REOPENED`, `ABORTED` | Os códigos persistidos permanecem nesta matriz por rastreabilidade; não são vocabulário de usuário. |
+
+**Regra de aplicação:** a substituição é semântica e contextual. Não se faz troca cega que quebre evidências, caminhos de arquivo, nomes de código, identificadores de regra ou citações literais de mensagens do sistema.
+
 ---
 
 # 2. Mapa de Domínios Funcionais do SGP+
@@ -91,6 +113,8 @@ As regras são agrupadas em códigos estáveis por domínio:
 Esta seção oferece a visão macro do sistema. Ela deve ser usada como índice funcional e como ponto de entrada para entender dependências entre módulos.
 
 ## 2.1 Visão geral
+
+> A coluna **Cobertura atual** avalia os HTML derivados (`colaborador.html`, `gestor-esteira.html`), não este documento.
 
 | Domínio | Responsabilidade principal | Perfis principais | Dependências relevantes | Cobertura atual |
 |---|---|---|---|---|
@@ -101,15 +125,15 @@ Esta seção oferece a visão macro do sistema. Ela deve ser usada como índice 
 | Criação de Esteira | Criar estrutura manual, matriz ou documento | Gestor | Matrizes, Colaboradores, Equipes | PARCIAL |
 | Estrutura da Esteira | Tarefas, setores, atividades, tempos, quantidades | Gestor | Apontamentos, Planejamento, Histórico | SUPERFICIAL |
 | Ciclo de Vida | Estados e transições da esteira | Gestor | Planejamento, Produção, Apontamentos | INCORRETO/PARCIAL |
-| Atividades/STEP | Estado operacional de cada atividade | Gestor/Colaborador | Sequência, Apontamentos, Planejamento | SUPERFICIAL |
+| Atividades | Situação operacional de cada atividade | Gestor/Colaborador | Sequência, Apontamentos, Planejamento | SUPERFICIAL |
 | Designações | Responsável, apoio, equipe | Gestor | Colaboradores, Equipes, Apontamentos | PARCIAL |
 | Plano Operacional | Planejamento macro da esteira | Gestor | Estrutura, Planejamento Semanal | SUPERFICIAL |
 | Planejamento Semanal | Distribuição da fábrica por semana | Gestor | Capacidade, Produção, Fila | EXTREMAMENTE INSUFICIENTE |
 | Agenda da Semana | Visão e movimentação operacional semanal | Gestor | Planejamento Semanal | AUSENTE |
 | Apontamentos | Registro de tempo e quantidade | Colaborador/Gestor | Sequência, Justificativas, Jornada | SUPERFICIAL |
 | Sequência Operacional | Ordem recomendada de execução | Colaborador/Gestor | Estrutura, Atividades, Apontamentos | INCORRETO |
-| Kiosk | Produção touch-first por PIN | Colaborador | Produção, Credencial, Planejamento | PARCIAL/DIVERGENTE |
-| Produção Web | Produção pelo navegador | Colaborador | Produção, Credencial, Planejamento | SUPERFICIAL |
+| Modo Fábrica — totem (Kiosk) | Produção touch-first por PIN | Colaborador | Produção, Credencial, Planejamento | PARCIAL/DIVERGENTE |
+| Modo Fábrica — navegador (Produção Web) | Produção pelo navegador | Colaborador | Produção, Credencial, Planejamento | SUPERFICIAL |
 | Minha Fila | Fila diária do colaborador | Colaborador | Planejamento publicado, Sequência | INCORRETO/PARCIAL |
 | Minhas Atividades | Visão das atividades designadas | Colaborador | Designações, Esteiras | PARCIAL |
 | Jornada | Histórico e leitura operacional individual | Colaborador | Apontamentos, Extras | SUPERFICIAL |
@@ -165,7 +189,7 @@ Prioridade alta:
 - Estrutura
 - Plano Operacional
 - Planejamento Semanal
-- Kiosk/Produção
+- Modo Fábrica (Kiosk/Produção Web)
 - Jornada
 - Evolução
 - Configurações Operacionais
@@ -287,15 +311,30 @@ O FAQ atual afirma que uma esteira concluída pode ser reaberta por transição 
 
 ## ATI-001 — Estados
 
-Estados encontrados:
-- `PENDING`
-- `IN_PROGRESS`
-- `BLOCKED`
-- `COMPLETED`
-- `REOPENED`
-- `ABORTED`
+### Estados efetivamente persistidos pelo sistema
 
-Para sequência, `COMPLETED` e `ABORTED` são estados encerrados.
+Revisão de 2026-10-03. Apenas quatro situações são realmente gravadas pelo backend:
+
+| Código persistido | Situação funcional | Quem escreve |
+|---|---|---|
+| `PENDING` | Pendente | valor inicial da atividade (`server/migrations/0028_conveyor_nodes_step_operational.sql`) |
+| `COMPLETED` | Concluída | `conveyor-step-operational.service.ts` (concluir atividade) |
+| `REOPENED` | Reaberta | `conveyor-step-operational.service.ts` (reabrir) e `conveyor-step-abort.service.ts` (restaurar dispensa) |
+| `ABORTED` | Dispensada | `conveyor-step-abort.service.ts` (dispensar atividade) |
+
+Para a sequência operacional, `COMPLETED` e `ABORTED` são situações encerradas (`isStepClosedForSequence`).
+
+### Códigos declarados sem caminho de escrita
+
+`IN_PROGRESS` e `BLOCKED` existem no tipo `ConveyorNodeStepOperationalStatusDb` e na constraint da migration `0028`, mas **nenhum serviço do backend os grava**. A busca por `'IN_PROGRESS'` e `'BLOCKED'` em `server/src` retorna apenas declarações de tipo e comparações defensivas em `canTransitionStepStatus`.
+
+**Consequência documental:** não apresentar "em andamento" nem "bloqueada" como situações de atividade que o sistema atribui. Ver VAL-006 e VAL-014.
+
+### Rótulos derivados da camada de apresentação
+
+A interface do detalhe da esteira exibe seis rótulos — Pendente, Pronta, Em execução, Pausada, Concluída, Bloqueada (`src/features/esteiras/EsteiraDetalhePage.tsx`) — que **não são tradução dos códigos persistidos**. "Pronta", "Pausada" e o contador "Apontáveis" são derivados em tela a partir de sequência, alocação e apontamentos.
+
+**Não confundir rótulo derivado com situação persistida.** Ao documentar comportamento, usar a tabela de situações persistidas; ao documentar o que o usuário lê, usar os rótulos da tela e explicar a regra que os produz.
 
 ## ATI-002 — Concluir atividade
 
@@ -305,7 +344,20 @@ A conclusão é um evento operacional independente do consumo do tempo previsto.
 
 ## ATI-003 — Reabrir atividade concluída
 
-Somente atividade `COMPLETED` pode ser reaberta.
+Revisão de 2026-10-03.
+
+**Duas ações distintas levam à mesma situação `REOPENED`**, cada uma com sua própria pré-condição e sua própria mensagem de bloqueio. Não são sinônimos e não devem ser descritas como uma só.
+
+| Ação do usuário | Pré-condição | Destino | Serviço |
+|---|---|---|---|
+| **Reabrir atividade** (ATI-003) | situação `COMPLETED` | `REOPENED` | `conveyor-step-operational.service.ts` |
+| **Restaurar atividade dispensada** (ATI-005) | situação `ABORTED` | `REOPENED` | `conveyor-step-abort.service.ts` |
+
+A máquina de estados (`canTransitionStepStatus`) aceita `→ REOPENED` a partir de `COMPLETED` **ou** `ABORTED`; são as duas rotas de API que restringem cada ação a uma única origem.
+
+### Reabrir atividade
+
+Pré-condição: situação `COMPLETED`. Atividade dispensada **não** é reaberta por esta ação — usa-se ATI-005.
 
 Destino:
 `REOPENED`
@@ -313,8 +365,10 @@ Destino:
 Permissão observada:
 `conveyors.create`
 
-Mensagem backend:
+Mensagem backend quando a origem não é `COMPLETED`:
 “A etapa só pode ser reaberta quando estiver concluída.”
+
+A tela oferece campo de observação ao reabrir.
 
 ## ATI-004 — Dispensar atividade
 
@@ -333,7 +387,13 @@ A dispensa:
 
 `ABORTED → REOPENED`
 
+Ação distinta de ATI-003. Pré-condição: situação `ABORTED`.
+
 A restauração limpa os campos de aborto da atividade.
+
+Mensagens backend observadas:
+“A atividade só pode ser restaurada quando estiver dispensada.”
+“Não é possível restaurar atividades em esteira finalizada ou cancelada.”
 
 **Efeito importante:** itens de planejamento anteriormente cancelados não são reativados automaticamente.
 
@@ -546,7 +606,9 @@ A tabela abaixo funciona como índice de suporte. A mensagem literal pode sofrer
 | MSG-ATI-002 | Atividade | usuário sem colaborador vinculado | “Conta sem colaborador operacional vinculado. Contacte o administrador.” | vincular usuário e colaborador |
 | MSG-ATI-003 | Atividade | conclusão fora de produção | “Esta esteira não está liberada para conclusão operacional de atividades.” | avançar/liberar a esteira |
 | MSG-ATI-004 | Atividade | colaborador sem alocação tentando concluir diretamente | “Para concluir esta atividade, informe uma justificativa ao registrar o apontamento.” | usar fluxo de apontamento por exceção |
-| MSG-ATI-005 | Atividade | reabrir estado diferente de concluído | “A etapa só pode ser reaberta quando estiver concluída.” | apenas `COMPLETED` pode reabrir |
+| MSG-ATI-005 | Atividade | **ação Reabrir** aplicada a situação diferente de concluída | “A etapa só pode ser reaberta quando estiver concluída.” | a ação Reabrir exige situação concluída; atividade **dispensada** usa a ação Restaurar (ATI-005), com mensagem própria — ver MSG-ATI-006 |
+| MSG-ATI-006 | Atividade | **ação Restaurar** aplicada a situação diferente de dispensada | “A atividade só pode ser restaurada quando estiver dispensada.” | restaurar exige atividade dispensada |
+| MSG-ATI-007 | Atividade | restaurar dispensa em esteira encerrada | “Não é possível restaurar atividades em esteira finalizada ou cancelada.” | encerrar a esteira impede restauração |
 | MSG-APO-001 | Apontamento | atividade concluída | “Esta atividade já foi concluída operacionalmente.” | reabrir antes, quando aplicável |
 | MSG-APO-002 | Apontamento | atividade dispensada | apontamento não permitido em atividade dispensada | restaurar a dispensa quando aplicável |
 | MSG-APO-003 | Apontamento | data futura | “A data de realização não pode ser futura.” | usar data atual ou retroativa |
@@ -746,21 +808,35 @@ Apontamentos fora de esteira também alimentam leitura operacional da jornada.
 
 ## JOG-001 — Visão por colaborador
 
-Existe funcionalidade gerencial para analisar jornada de colaboradores.
+Tela gerencial de análise de jornada, em `/app/gestao/jornada-colaborador`, sob `collaborators_admin.view`.
 
-## JOG-002 — Múltiplos colaboradores
+## JOG-002 — Seleção de múltiplos colaboradores
 
-A `develop` de referência inclui evolução para consulta de múltiplos colaboradores.
+Revisão de 2026-10-03: **entregue e em produção**, não mais uma evolução prevista. Entrou em `develop` depois da fotografia anterior desta matriz.
+
+- A tela permite selecionar vários colaboradores ao mesmo tempo, com faixa de seleção por avatares.
+- Um colaborador usa a consulta individual; dois ou mais usam a jornada consolidada, com totais somados.
+- **Teto da consulta em tela: 20 colaboradores.** Mesmo teto no frontend e no backend.
+- Duplicados são removidos preservando a ordem de entrada.
+- No escopo consolidado, o previsto conta uma vez por alocação colaborador × atividade.
+
+Mensagem de limite: “Selecione no máximo 20 colaboradores por consulta.”
 
 ## JOG-003 — Exportação XLSX
 
 Existe exportação da visão.
 
+**Teto da exportação: 50 colaboradores** — diferente do teto de 20 da consulta em tela. Os dois limites são independentes e não devem ser apresentados como um só.
+
+Mensagem de limite: “Selecione no máximo 50 colaboradores por exportação.”
+
 **Cobertura atual:** AUSENTE.
 
 ---
 
-# 14. Kiosk
+# 14. Modo Fábrica — totem (Kiosk)
+
+> **Vocabulário.** A interface chama este canal de **Modo Fábrica**. "Kiosk" é a designação técnica da forma de acesso por totem, mantida aqui por precisão. No manual do usuário, usar sempre "Modo Fábrica". Ver 1.3.
 
 ## KSK-001 — Entrada
 
@@ -818,7 +894,9 @@ Utiliza catálogo de descrições.
 
 ---
 
-# 15. Produção Web
+# 15. Modo Fábrica — navegador (Produção Web)
+
+> **Vocabulário.** Mesma observação da seção 14: o usuário lê "Modo Fábrica". "Produção Web" é a designação técnica do acesso pelo navegador.
 
 ## PRD-001 — Autenticação
 
@@ -985,6 +1063,20 @@ Foram observados conceitos:
 ## CRT-006 — Diagnóstico de estrutura sintética
 
 O sistema pode bloquear criação quando detecta item agregado sintético que duplicaria a estrutura real.
+
+## CRT-007 — Laboratório de Esteiras (implementado, não exposto)
+
+Registrado em 2026-10-03.
+
+Existe um quarto caminho de criação: compor uma esteira a partir de **múltiplas matrizes**, em `/app/gestao/esteiras/laboratorio`, sob `conveyors.create`.
+
+Fluxo: catálogo de matrizes → configurar cada bloco aplicado → montar a estrutura → revisar → criar.
+
+Fonte: `src/features/esteiras/laboratorio-esteiras/` (14 arquivos); rota em `src/routes/AppRoutes.tsx`; título em `src/lib/page-meta.ts`.
+
+**Não exposto na navegação:** não há item de menu nem link de entrada em nenhuma tela. Ver VAL-015.
+
+**Regra documental:** não apresentar no manual do usuário enquanto não houver ponto de entrada confirmado.
 
 ---
 
@@ -1601,6 +1693,8 @@ Não há serviços/dados próprios consolidados.
 ---
 
 # 37. Funcionalidades não mapeadas ou praticamente não mapeadas
+
+> Esta tabela avalia os **HTML derivados** (`colaborador.html`, `gestor-esteira.html`). Vários dos itens abaixo **estão** cobertos neste documento (por exemplo, Agenda da Semana na seção 43.13 e Planejamento Semanal na seção 43).
 
 | Funcionalidade | Situação |
 |---|---|
@@ -2464,7 +2558,9 @@ A interface suporta:
 A disponibilidade de impressão silenciosa depende da configuração da estação/navegador ou do agente local; não é uma garantia do navegador padrão.
 
 
-# 44. Fila, Produção Web e Kiosk — Diferenças por Canal
+# 44. Fila e Modo Fábrica — Diferenças por Forma de Acesso
+
+> As duas formas de acesso ao Modo Fábrica (totem/Kiosk e navegador/Produção Web) compartilham fila e credencial, mas não os mesmos campos de tela. Ver 1.3.
 
 ## 44.1 Fonte da fila
 
@@ -2630,19 +2726,27 @@ A exportação Excel traz todos os apontamentos do período, sem esse limite vis
 
 ## 45.4 Jornada — previsto estrutural
 
-O previsto usa:
+Revisão de 2026-10-03. Vocabulário alinhado ao produto: a unidade de cálculo é a **alocação** (vínculo colaborador × atividade), não a atividade isolada.
 
-`minutos unitários × quantidade prevista`
+O previsto de cada alocação usa:
+
+`minutos por unidade × quantidade prevista`
 
 ou o total já resolvido quando disponível.
+
+No escopo consolidado de vários colaboradores, o previsto é contado **uma vez por alocação colaborador × atividade**, de modo que a mesma atividade compartilhada não é somada em duplicidade.
+
+A interface rotula o indicador como "previsto estrutural (soma das alocações)".
 
 ## 45.5 Cobertura de tempo
 
 Fórmula:
 
-`realizado acumulado nos STEPs alocados ÷ previsto estrutural do mesmo escopo`
+`realizado acumulado nas alocações do escopo ÷ previsto estrutural do mesmo conjunto de alocações`
 
-Se previsto ≤ 0, a cobertura é `null`/não aplicável.
+Se o previsto do escopo for ≤ 0, a cobertura não é aplicável.
+
+Texto da interface: "Numerador: soma dos apontamentos nas alocações do escopo. Denominador: previsto estrutural no mesmo conjunto de alocações."
 
 ## 45.6 Extra Esteira
 
@@ -2663,6 +2767,13 @@ Atividade aberta entra em pendência temporal quando:
 O gap é apresentado como sinal operacional.
 
 ## 45.8 Jornada Gerencial — múltiplos colaboradores
+
+**Dois tetos distintos** (revisão de 2026-10-03):
+
+| Operação | Mínimo | Máximo |
+|---|---|---|
+| Consulta na tela (jornada consolidada) | 1 | **20** |
+| Exportação XLSX | 1 | **50** |
 
 A exportação aceita de 1 a 50 colaboradores.
 
@@ -3214,6 +3325,25 @@ A tabela abaixo não pretende listar todos os arquivos existentes, mas aponta as
 
 # 49. Pontos sem consenso / decisões funcionais necessárias
 
+**Legenda de status (revisão de 2026-10-03):**
+
+| Status | Significado |
+|---|---|
+| **aberto** | continua dependendo de decisão humana |
+| **reconfirmado** | divergência verificada novamente contra o código atual; segue aberta |
+| **resolvido para fins documentais** | o achado técnico foi fechado com evidência e a regra documental está definida; pode restar decisão técnica ou de produto |
+
+Situação após esta revisão:
+
+| VAL | Status |
+|---|---|
+| VAL-004 — Regra de PIN | reconfirmado / aberto |
+| VAL-006 — Status BLOCKED | resolvido para fins documentais; limpeza técnica pendente |
+| VAL-014 — Eventos BLOCKED/PAUSED | resolvido para fins documentais; limpeza técnica pendente |
+| VAL-015 — Rotas sem ponto de entrada | achado resolvido; decisão de produto pendente |
+| VAL-017 — Rótulo “Mês atual (UTC)” | reconfirmado e ampliado / aberto |
+| VAL-001 a VAL-003, VAL-005, VAL-007 a VAL-013, VAL-016 | abertos, sem alteração nesta revisão |
+
 Esta seção concentra propositalmente todas as situações em que a análise não permite fechar uma regra definitiva.
 
 ## VAL-001 — Quantidade prevista após existirem apontamentos
@@ -3279,13 +3409,17 @@ Confirmar:
 
 ## VAL-004 — Regra de PIN
 
-### Encontrado
-Backend e Produção Web aceitam 4 a 8 dígitos.
+**Status:** divergência **reconfirmada** em 2026-10-03. Permanece **aberta** — depende de decisão humana.
 
-Kiosk trabalha com exatamente 4.
+### Encontrado
+Backend e acesso por navegador aceitam 4 a 8 dígitos (`PIN_REGEX = /^\d{4,8}$/` em `server/src/modules/production/production.schemas.ts`).
+
+O totem do Modo Fábrica trabalha com exatamente 4 dígitos, tanto no teclado de entrada quanto na tela de criação de PIN (`PIN_LENGTH = 4` em `src/features/kiosk/KioskPinPad.tsx` e `src/features/kiosk/KioskChangePin.tsx`).
+
+**Efeito prático:** um PIN de 4 dígitos funciona em todos os acessos; um PIN de 5 a 8 dígitos é aceito pelo backend e pelo navegador, mas não é digitável no totem.
 
 ### Decisão
-Padronizar regra funcional ou documentar explicitamente diferença entre canais.
+Padronizar a regra funcional ou documentar explicitamente a diferença entre as formas de acesso. Até a decisão, o manual do usuário deve orientar o uso de PIN de 4 dígitos.
 
 ---
 
@@ -3305,13 +3439,18 @@ Definir se:
 
 ## VAL-006 — Status BLOCKED da atividade
 
+**Status:** **resolvido** em 2026-10-03 para fins documentais. `BLOCKED` não tem caminho de escrita; não é situação funcional disponível. Mantida aqui a decisão técnica de limpeza do código, que segue pendente de decisão humana.
+
 ### Encontrado
-Estado existe no domínio.
+O código `BLOCKED` existe no tipo `ConveyorNodeStepOperationalStatusDb` e na constraint da migration `0028`, mas **nenhum serviço do backend o grava**: a busca por `'BLOCKED'` em `server/src` retorna apenas declarações de tipo e comparações defensivas em `canTransitionStepStatus`.
 
-Não foi identificado nesta auditoria um fluxo de usuário homologado e inequívoco responsável por aplicar/remover manualmente esse estado.
+A única interface que oferecia "Registrar bloqueio" / "Desbloquear atividade" é `src/features/esteiras/GestorAtividadeMenu.tsx`, renderizada exclusivamente por `EsteiraDetalheMockPage` — componente **não referenciado por nenhuma rota ou outro componente**. Além de inalcançável, ele gravava apenas em memória (`src/mocks/esteira-gestao-runtime.ts`), sem chamada de API.
 
-### Decisão
-Não descrever operação manual de bloqueio até confirmar origem e finalidade.
+### Decisão documental (aplicada)
+Não documentar bloqueio de atividade como funcionalidade disponível, em nenhum artefato. Ver ATI-001.
+
+### Decisão técnica pendente
+Decidir se `BLOCKED` deve ser removido do tipo e da constraint, ou se há entrega futura prevista que o utilize.
 
 ---
 
@@ -3439,7 +3578,9 @@ Se não for, padronizar os canais antes de escrever a regra definitiva no guia d
 
 ---
 
-## VAL-014 — Eventos BLOCKED/PAUSED sem fluxo operacional confirmado
+## VAL-014 — Eventos BLOCKED/PAUSED sem produtor no backend
+
+**Status:** **resolvido** em 2026-10-03 para fins documentais. Os eventos existem apenas na camada de apresentação, sem produtor algum. Não são funcionalidade entregue.
 
 ### Encontrado
 A taxonomia de eventos possui:
@@ -3449,33 +3590,38 @@ A taxonomia de eventos possui:
 - `CONVEYOR_STEP_PAUSED`;
 - `CONVEYOR_STEP_RESUMED`.
 
-O estado `BLOCKED` também existe no domínio.
+Os quatro aparecem **somente** em `src/domain/conveyors/operationalEventTaxonomy.ts` e `src/domain/conveyors/formatConveyorOperationalEvent.ts` — ou seja, a linha do tempo da esteira sabe **renderizar** esses eventos.
 
-Nesta auditoria não foi identificado fluxo homologado inequívoco de usuário que produza todos esses eventos.
+A busca pelos quatro identificadores em `server/src` e em `server/migrations` retorna **zero ocorrências**: nenhum serviço, rota ou migration os produz ou persiste.
 
-### Decisão necessária
-Confirmar se são:
-- funcionalidades futuras;
-- legado;
-- API sem UI;
-- ou fluxo ativo ainda não localizado.
+### Decisão documental (aplicada)
+Não apresentar bloquear/desbloquear/pausar/retomar atividade como comandos disponíveis, em nenhum artefato.
 
-Até a confirmação, não apresentar esses comandos ao usuário no manual.
+### Decisão técnica pendente
+Confirmar se é legado a remover ou entrega futura prevista.
 
 ---
 
-## VAL-015 — Descoberta de “Minhas Atividades”
+## VAL-015 — Rotas sem ponto de entrada de navegação
+
+**Status:** achado **resolvido** em 2026-10-03 — não existe ponto de entrada algum. A **decisão de produto** sobre o que fazer a respeito permanece aberta.
 
 ### Encontrado
-A rota `/app/minhas-atividades` existe.
+Três rotas autenticadas existem e funcionam, mas **não possuem item de menu nem link a partir de qualquer tela**. São alcançáveis apenas digitando a URL.
 
-Ela não aparece na configuração atual do menu lateral principal auditado.
+| Rota | Tela | Situação |
+|---|---|---|
+| `/app/minhas-atividades` | Minhas Atividades | sem item de menu; há ícone definido em `src/components/AppSidebar.tsx` para uma rota que o menu não expõe |
+| `/app/meu-trabalho` | Meu Trabalho | sem item de menu; é placeholder declarado (ver seção 34) |
+| `/app/gestao/esteiras/laboratorio` | Laboratório de Esteiras | sem item de menu e **sem nenhum link de entrada**; busca por `esteiras/laboratorio` retorna apenas a própria feature, `AppRoutes.tsx` e `src/lib/page-meta.ts` |
 
-### Decisão necessária
-Confirmar se:
-- o acesso ocorre por outro atalho/contexto;
-- a retirada do menu é intencional;
-- ou há problema de descoberta/navegação.
+`COLABORADOR_NAV_ITEMS` em `src/lib/shell/app-nav-config.ts` contém somente Minha fila, Chamados e Minha jornada.
+
+### Decisão documental (aplicada)
+O `MANUAL_USUARIO_SGP.md` **não** ensina o usuário a acessar essas telas por URL e não as apresenta como disponíveis. O Laboratório de Esteiras fica registrado nesta matriz como funcionalidade implementada e não exposta.
+
+### Decisão de produto pendente
+Para cada uma das três rotas: expor na navegação, remover, ou manter oculta deliberadamente. A presença de ícones em `AppSidebar.tsx` para rotas sem item de menu sugere intenção revertida ou pendente.
 
 ---
 
@@ -3505,20 +3651,26 @@ Definir uma permissão específica e quais papéis devem recebê-la.
 
 ---
 
-## VAL-017 — Rótulo “Mês atual (UTC)” na exportação de Jornada
+## VAL-017 — Rótulo “Mês atual (UTC)” na Jornada e no Dashboard
+
+**Status:** divergência **confirmada e ampliada** em 2026-10-03. Permanece aberta.
 
 ### Encontrado
-A implementação atual de `resolveOperationalPeriod('month')` usa o início do mês civil em `America/Sao_Paulo`.
+A implementação atual de `resolveOperationalPeriod('month')` usa o início do mês civil em `America/Sao_Paulo` (`server/src/shared/operationalPeriod.ts` → `operationalMonthStart`; `OPERATIONAL_TIMEZONE = 'America/Sao_Paulo'` em `server/src/shared/operationalWorkDate.ts`).
 
-O arquivo de exportação da Jornada ainda possui o rótulo:
+O rótulo `Mês atual (UTC)` **não está apenas no arquivo exportado**. Ele aparece em três pontos:
 
-`Mês atual (UTC)`
+| Onde | Arquivo |
+|---|---|
+| Arquivo de exportação da Jornada | `server/src/modules/operational-journey/operational-journey.export.ts` |
+| **Seletor de período do Dashboard (em tela)** | `src/features/gestor/DashboardPage.tsx` |
+| **Catálogo de rótulos de período (em tela)** | `src/lib/operationalSemantics.ts` |
 
 ### Impacto
-A regra de cálculo está alinhada a São Paulo, mas o texto exportado pode induzir interpretação incorreta.
+Maior do que o registrado na fotografia anterior. A regra de cálculo está alinhada a São Paulo, mas o rótulo exibido **ao escolher o período** — e não só no arquivo baixado — induz interpretação incorreta do recorte temporal.
 
 ### Decisão necessária
-Corrigir apenas o rótulo para refletir a regra real, sem alterar o cálculo.
+Corrigir o rótulo nos três pontos para refletir a regra real, sem alterar o cálculo. Esta matriz apenas registra a divergência; nenhuma correção de produto foi aplicada.
 
 ---
 
