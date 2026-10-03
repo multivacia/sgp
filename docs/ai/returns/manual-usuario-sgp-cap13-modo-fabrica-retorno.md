@@ -5,7 +5,7 @@
 - **Status final:** concluída
 - **Branch:** `docs/manual-usuario-sgp-cap13-modo-fabrica`
 - **SHA base:** `11a8fa0c49dec611c09b0dd766a378c8fd60c6d6` — conferido contra `origin/docs/manual-usuario-sgp-cap07-apontamentos`, **idêntico ao esperado**
-- **SHA final:** ver seção "Commit e push"
+- **SHA final:** `73606601` (commit do capítulo) + commit de registro deste SHA
 - **Working tree ao encerrar:** limpo
 
 ## Arquivos alterados
@@ -340,7 +340,8 @@ Pendências das rodadas anteriores seguem abertas, sem alteração.
 - Commit: `docs(manual): escreve capítulo 13 — Modo Fábrica`
 - Branch remota: `origin/docs/manual-usuario-sgp-cap13-modo-fabrica`
 - PR: não criado. Merge: não realizado. Force-push: não realizado. Nenhuma branch excluída.
-- SHA final: `<preenchido no commit de registro>`
+- SHA do commit do capítulo: `73606601`
+- Um segundo commit registra este SHA neste retorno, mesmo padrão já usado em `docs/ai/returns/`; sem amend e sem force-push.
 
 ## Uso de contexto / sessão
 
