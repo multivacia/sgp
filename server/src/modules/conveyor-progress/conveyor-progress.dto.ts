@@ -1,5 +1,4 @@
 import type {
-  TimeEfficiencyClassification,
   TimeEfficiencyStatus,
   WeightedTimeEfficiencySummary,
 } from '../../shared/conveyorProgressMetrics.js'
@@ -21,7 +20,6 @@ export type ActivityTimeEfficiencyDto = {
   efficiencyPct: number | null
   deviationMinutes: number | null
   deviationPct: number | null
-  classification: TimeEfficiencyClassification | null
 }
 
 export type AggregateTimeEfficiencyDto = WeightedTimeEfficiencySummary

@@ -6,6 +6,7 @@ import {
   formatProductionDate,
   formatProductionMinutes,
   productionTrackTimeDisabledTitle,
+  resolveProductionExceededMinutes,
   resolveProductionOperationalStatusDisplay,
 } from '../../domain/production/production.helpers'
 import { getProductionWorkQueue, PRODUCTION_WORK_QUEUE_ERROR_MESSAGE } from '../../services/production/productionApiService'
@@ -197,6 +198,10 @@ function WorkQueueCard({
   onTrackTime: () => void
 }) {
   const statusDisplay = resolveProductionOperationalStatusDisplay(item)
+  const exceededMinutes = resolveProductionExceededMinutes(
+    item.plannedMinutes,
+    item.realizedMinutes,
+  )
 
   return (
     <div className="flex flex-col gap-4 rounded-2xl border border-white/10 bg-sgp-night/60 px-5 py-5 sm:px-6">
@@ -227,13 +232,15 @@ function WorkQueueCard({
           value={formatProductionMinutes(item.plannedMinutes)}
         />
         <CardField
-          label="Apontado"
+          label="Apontado/Realizado"
           value={item.realizedMinutes > 0 ? formatProductionMinutes(item.realizedMinutes) : '—'}
         />
-        <CardField
-          label="Pendente"
-          value={item.pendingMinutes > 0 ? formatProductionMinutes(item.pendingMinutes) : '—'}
-        />
+        {exceededMinutes != null ? (
+          <CardField
+            label="Tempo excedido"
+            value={formatProductionMinutes(exceededMinutes)}
+          />
+        ) : null}
         {item.hasPreviousPendingStep && item.requiresOutOfSequenceJustification ? (
           <div className="col-span-2 sm:col-span-3">
             <p className="text-xs text-slate-300">
