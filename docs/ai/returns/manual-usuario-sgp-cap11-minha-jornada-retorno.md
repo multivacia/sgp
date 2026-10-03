@@ -8,8 +8,8 @@
 - Repositório: `multivacia/sgp`.
 - Branch de trabalho: `docs/manual-usuario-sgp-cap11-minha-jornada`.
 - SHA base: `673a65e613442b9b8c58c7a31d2401d04962a3c8`.
-- SHA do commit de conteúdo desta rodada: `__SHA_CONTEUDO__`.
-- Tip final desta rodada: `__SHA_TIP__` — commit complementar de metadados, sem amend nem reescrita de histórico.
+- SHA do commit de conteúdo desta rodada: `050e22145098cc10e4b6025df18e28d002be2fdd`.
+- Tip final desta rodada: o próprio commit complementar de metadados, obtido pela referência da branch (`git rev-parse origin/docs/manual-usuario-sgp-cap11-minha-jornada`); não pode constar dentro de si, e foi informado na resposta da sessão — commit complementar de metadados, sem amend nem reescrita de histórico.
 - SHA do commit de conteúdo da sessão de origem: `ff338e38d0006eb30d2af01dc13bfbfc3a257a31` — **referência de auditoria apenas; nunca foi publicado**. O conteúdo desta rodada foi reproduzido pelo patch integral, logo os SHAs são novos.
 - Estado: capítulo escrito na origem, reconferido no código nesta rodada, commitado e **publicado** na branch do capítulo 11.
 - PR, merge, force-push e exclusão de branches: **nenhum**.
@@ -371,8 +371,8 @@ Inventário remoto comparado antes e depois da publicação desta rodada: **28 r
 ## Commit, publicação, riscos e próximo passo
 
 - As alterações são exclusivamente documentais, restritas aos quatro arquivos autorizados, na branch do capítulo 11 baseada no tip correto do capítulo 10.
-- Commit de conteúdo desta rodada: `__SHA_CONTEUDO__`. Commit complementar de metadados (SHAs reais e estado de publicação): `__SHA_TIP__`. Nenhum amend, rebase, force-push ou reescrita de histórico.
-- Publicação: `git push -u origin docs/manual-usuario-sgp-cap11-minha-jornada`, push normal, fast-forward a partir da base. Confirmada remotamente: __ESTADO_PUBLICACAO__
+- Commit de conteúdo desta rodada: `050e22145098cc10e4b6025df18e28d002be2fdd`. Commit complementar de metadados (SHAs reais e estado de publicação): o próprio commit complementar de metadados, obtido pela referência da branch (`git rev-parse origin/docs/manual-usuario-sgp-cap11-minha-jornada`); não pode constar dentro de si, e foi informado na resposta da sessão. Nenhum amend, rebase, force-push ou reescrita de histórico.
+- Publicação: `git push -u origin docs/manual-usuario-sgp-cap11-minha-jornada`, push normal, fast-forward a partir da base. Confirmada remotamente: o commit de conteúdo `050e2214` foi lido no GitHub em `refs/heads/docs/manual-usuario-sgp-cap11-minha-jornada` e seu detalhamento retornou exatamente os quatro arquivos autorizados (`SESSION_CHECKPOINT.md` 41/-49, retorno +391 como novo, `MANUAL_FUNCIONAL_SGP.md` 40/-23, `MANUAL_USUARIO_SGP.md` 191/-6), idênticos ao `git diff --numstat` local. O commit de metadados foi publicado no push seguinte, também fast-forward.
 - Nenhum PR criado, nenhum merge, nenhuma branch excluída. `main`, `develop`, `homol` e toda a cadeia documental anterior intactas.
 - Os SHAs da sessão de origem (`ff338e38…` como conteúdo e `b17cbbfe…` como tip local) **nunca foram publicados** e permanecem apenas como referência de auditoria. O conteúdo foi reproduzido pelo patch integral, verificado por SHA-256.
 

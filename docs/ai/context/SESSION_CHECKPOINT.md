@@ -9,8 +9,8 @@
 - Repositório: `multivacia/sgp`
 - Branch: `docs/manual-usuario-sgp-cap11-minha-jornada`
 - SHA base: `673a65e613442b9b8c58c7a31d2401d04962a3c8`
-- SHA do commit de conteúdo: `__SHA_CONTEUDO__`
-- Tip final: `__SHA_TIP__`
+- SHA do commit de conteúdo: `050e22145098cc10e4b6025df18e28d002be2fdd`
+- Tip final: o próprio commit complementar de metadados, obtido pela referência da branch (`git rev-parse origin/docs/manual-usuario-sgp-cap11-minha-jornada`); não pode constar dentro de si, e foi informado na resposta da sessão
 - Estado: concluído e publicado; working tree limpo.
 
 ## Objetivo e escopo
