@@ -4,7 +4,8 @@
 **Data/hora:** 2026-10-03
 **Branch:** `docs/manual-usuario-sgp-cap08-planejamento-semanal`
 **SHA inicial:** `2a53f4572b7b71667ee8f30f36bdad5213988bb1`
-**SHA final:** registrado no commit seguinte a este arquivo (padrão do repositório)
+**SHA final do conteúdo:** `97b3c57caae794de93b3e70c77f366a767df0328`
+**Registro do SHA:** commit seguinte a este, contendo apenas esta linha (padrão do repositório)
 **Status final:** concluído
 
 ---
@@ -159,7 +160,7 @@ No seletor **Visualização** do Planejamento semanal, a opção de visão por d
 | Comando | Resultado real |
 |---|---|
 | `git rev-parse HEAD` (antes de alterar) | `2a53f4572b7b71667ee8f30f36bdad5213988bb1` — igual ao SHA base exigido |
-| `git status --short` | antes do commit: `M docs/manual/source/MANUAL_USUARIO_SGP.md` + o retorno como arquivo novo |
+| `git status --short` | antes do commit: `M docs/manual/source/MANUAL_USUARIO_SGP.md` + o retorno como arquivo novo; após o commit de registro do SHA: árvore limpa |
 | `git diff --stat` | `docs/manual/source/MANUAL_USUARIO_SGP.md | 374 insertions(+), 9 deletions(-)` — arquivo único |
 | `git diff --check` | sem avisos |
 | contagem de blocos `## ` no capítulo 8 | 6, na ordem exigida |
