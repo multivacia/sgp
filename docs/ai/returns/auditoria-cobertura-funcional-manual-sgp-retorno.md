@@ -5,7 +5,7 @@
 - **Status final:** concluída
 - **Branch:** `docs/auditoria-cobertura-funcional-manual-sgp` (criada a partir de `origin/develop`)
 - **SHA inicial / base:** `c611d10feacf329bdc217fe391ebf47a90a6ea7a` (= `origin/develop` = `origin/main` no início)
-- **SHA final:** ver seção "Commit e push" abaixo
+- **SHA final:** `0beb5dbe9e2098754d6e0d43d0384e30658a09db` (commit do relatório) + commit de registro deste SHA
 - **Working tree ao encerrar:** limpo
 
 ## Objetivo
@@ -126,7 +126,8 @@ Seguir a sequência da seção J do relatório, começando pela **Etapa 0** (dec
 - PR: não criado (o enunciado da atividade determina não abrir PR).
 - Merge em `develop` ou `main`: não realizado.
 - Force-push / reescrita de histórico: não realizados.
-- SHA do commit: `<preenchido após o commit — ver seção final>`
+- SHA do commit do relatório: `0beb5dbe9e2098754d6e0d43d0384e30658a09db`
+- Um segundo commit registra este SHA neste retorno (mesmo padrão já usado em `docs/ai/returns/` do repositório); sem amend e sem force-push.
 
 ## Uso de contexto / sessão
 
