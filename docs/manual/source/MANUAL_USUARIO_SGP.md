@@ -3,7 +3,7 @@
 **Produto:** SGP+ · Multivacia / ARGOS
 **Versão da aplicação nesta revisão:** 1.9.8
 **Revisão deste manual:** 2026-10-03
-**Situação:** base editorial criada; capítulos 1 a 3, 5, 7 a 9, 13, 20 e 21 com conteúdo final. Os capítulos 4, 6, 10 a 12 e 14 a 19 seguem marcados como pendentes e **não devem ser publicados** como versão final.
+**Situação:** base editorial criada; capítulos 1 a 3, 5, 7 a 13, 20 e 21 com conteúdo final. Os capítulos 4, 6 e 14 a 19 seguem marcados como pendentes e **não devem ser publicados** como versão final.
 
 > **Este é o documento canônico do manual do usuário.** Versões em HTML ou PDF devem ser geradas a partir daqui.
 >
@@ -2029,13 +2029,411 @@ As demais regras de data, tempo, quantidade e situação da atividade estão no 
 
 # 12. Jornada Gerencial
 
-> [PENDENTE DE ENRIQUECIMENTO — não publicar como capítulo final]
+## Para que serve
 
-- consultar um colaborador e consultar vários ao mesmo tempo
-- limite de colaboradores por consulta e limite diferente na exportação
-- como ler os totais no escopo consolidado
-- exportação em Excel e o que ela traz
-- diferença em relação à **Minha jornada**
+**Jornada por colaborador** é a tela em que a gestão responde quatro perguntas sobre uma ou várias pessoas: **quanto estava previsto**, **quanto foi realizado**, **onde há desvio** e **para quem olhar primeiro**.
+
+Ela reúne, no mesmo lugar, as atividades atribuídas a cada colaborador com o tempo previsto da estrutura das esteiras, os minutos apontados no período escolhido, o tempo acumulado, a **cobertura de tempo**, o resumo de **Extra Esteira**, as **pendências de tempo**, os sinais de atraso, o histórico recente de apontamentos e a **exportação em Excel**.
+
+É a versão analítica da **Minha jornada** (capítulo 11): mesma origem dos dados, mas com seleção de pessoas, mais indicadores e exportação.
+
+Dois cuidados valem desde já, e são detalhados adiante:
+
+- **cobertura é comparação de tempo, não conclusão de trabalho.** Ela não diz que a atividade terminou;
+- **nesta versão o previsto considera uma unidade de cada atividade**, mesmo quando há várias previstas. Isso reduz o previsto e, por consequência, infla a cobertura.
+
+## Onde fica
+
+No menu lateral, no bloco **Estrutura e administração**, entre em **Jornada por colaborador**.
+
+O título da página é **Jornada por colaborador**. Logo abaixo, uma linha resume o que a tela traz. Em seguida vem o quadro de consulta, sempre nesta ordem:
+
+| Elemento | Para que |
+|---|---|
+| **Colaboradores** | faixa de seleção das pessoas consultadas |
+| **Recorte temporal** | escolha do período |
+| **De (data)** e **Até (data)** | só aparecem no intervalo personalizado |
+| **Esteira (opcional)** | só aparece depois de carregar uma consulta com esteiras disponíveis |
+| **Exportar Excel** | só aparece com pelo menos uma pessoa selecionada |
+
+Abaixo do quadro ficam os números do escopo, **Extra esteira (período)**, **Cobertura de tempo**, **Pressão de atraso**, as listas **Em aberto** e **Em risco**, **Pendência de tempo** e **Histórico recente**.
+
+Não há botão **Atualizar** nesta tela. A consulta é refeita quando você muda a seleção, o período ou o filtro de esteira.
+
+## Quem costuma ter acesso
+
+Esta tela é de **gestão**. Ela aparece no menu para quem tem permissão de consultar o cadastro de colaboradores — tipicamente gestão de produção, coordenação e administração.
+
+| Situação | O que acontece |
+|---|---|
+| sem a permissão | o item **não aparece** no menu; ao digitar o endereço, a tela abre com **Sem permissão para esta área** e *"Não tem permissão para acessar este conteúdo. Contate um administrador se precisar de acesso."* |
+| com a permissão | a tela abre e a lista de colaboradores carrega |
+
+Diferente da **Minha jornada**, esta consulta **não exige que a sua própria conta esteja vinculada a um colaborador operacional**. Você consulta a jornada de outras pessoas, não a sua.
+
+O botão **Apontamento gerencial**, nos cartões de atividade, depende de **outra** permissão — a de corrigir apontamentos ou lançar em nome de outro colaborador. Quem pode abrir a jornada mas não tem essa permissão vê a tela completa **sem** esse botão; **Ver esteira** continua disponível. As regras de correção estão no capítulo 7.
+
+## Como fazer
+
+### Selecionar os colaboradores
+
+1. Em **Colaboradores**, use o botão **+**.
+2. Digite parte do nome em **Buscar colaborador…** para reduzir a lista.
+3. Clique no nome desejado. Ele passa a aparecer como um círculo com as iniciais.
+4. Repita para incluir outras pessoas.
+5. Aguarde o carregamento dos números.
+
+| Ação | Como fazer |
+|---|---|
+| **incluir** uma pessoa | botão **+**, depois o nome na lista |
+| **buscar** | campo **Buscar colaborador…**, por parte do nome |
+| **remover** uma pessoa | clique no círculo com as iniciais dela |
+| **remover todas** | **Limpar seleção** |
+
+A lista oferece os colaboradores **ativos e não removidos**, em ordem alfabética. Quem está inativo não aparece para seleção.
+
+O máximo é de **20 colaboradores por consulta**. Ao atingir esse número, o botão **+** fica indisponível e informa *"Selecione no máximo 20 colaboradores"*. Para trocar alguém, remova um nome antes de incluir outro.
+
+Logo abaixo da faixa, a tela confirma quem está no escopo: com uma pessoa, aparece o nome; com várias, aparece **"3 colaboradores: Nome · Nome · Nome"**. O título da página **não muda** com a seleção — confira sempre essa linha antes de ler os números.
+
+Pontos importantes da seleção:
+
+- **mudar a seleção limpa o filtro de esteira** e **mantém** o período escolhido;
+- a consulta fica registrada no endereço da página: **recarregar a página preserva** a seleção, o período e o filtro;
+- sair e voltar pelo menu **não** recupera a consulta anterior: a tela reabre sem ninguém selecionado;
+- **Limpar seleção** apaga os números e devolve a tela ao estado inicial, com o convite **Escolha um colaborador**.
+
+[IMAGEM SUGERIDA: Quadro de consulta com três colaboradores selecionados na faixa de iniciais, o popover de busca aberto e a linha de confirmação dos nomes.]
+
+### Escolher o período
+
+Em **Recorte temporal**, escolha uma opção. O catálogo e o cálculo são **os mesmos da Minha jornada**:
+
+| Opção | O que considera |
+|---|---|
+| **Últimos 7 dias** | período padrão; as últimas 168 horas até o momento da consulta |
+| **Últimos 15 dias** | as últimas 360 horas até o momento da consulta |
+| **Últimos 30 dias** | as últimas 720 horas até o momento da consulta |
+| **Mês atual (UTC)** | do início do primeiro dia do mês em São Paulo até o momento da consulta; o complemento do rótulo está incorreto |
+| **Intervalo personalizado** | os dias informados em **De (data)** e **Até (data)**, incluindo os dois dias completos, pela referência de São Paulo |
+
+As três opções de últimos dias são períodos móveis, não semanas nem dias completos de calendário. Para consultar **hoje**, use **Intervalo personalizado** com a mesma data nos dois campos. Não há opções de **Hoje** ou **Esta semana**, nem setas para avançar ou voltar um período.
+
+No intervalo personalizado, o início deve ser igual ou anterior ao fim; caso contrário a consulta é recusada. Não há duração máxima e não há impedimento para escolher datas futuras — o que não autoriza registrar trabalho em data futura. Ao trocar a opção de período, as datas personalizadas são apagadas.
+
+Depois do carregamento, uma linha acima dos números mostra o intervalo efetivamente consultado. Ao lado dela aparece um código curto do recorte escolhido; ele é informativo e está registrado no capítulo 21.
+
+### Filtrar uma esteira
+
+Em **Esteira (opcional)**, escolha uma esteira ou mantenha **Todas**.
+
+O filtro vale para as alocações, o previsto, a cobertura, o realizado, as pendências, o histórico e a exportação. **Extra Esteira é a exceção: o resumo e a planilha de Extra Esteira ignoram esse filtro**, porque esse tempo não pertence a nenhuma esteira.
+
+A lista de opções é montada a partir das alocações e dos apontamentos já carregados na tela. Ela pode não oferecer uma esteira que só tenha registros antigos, fora do histórico exibido. Trocar o período mantém o filtro; trocar a seleção de pessoas o remove.
+
+### Exportar em Excel
+
+1. Confirme a seleção, o período e o filtro de esteira.
+2. Aguarde os números carregarem.
+3. Clique em **Exportar Excel**.
+4. O botão passa a **Exportando…** até o arquivo ser gerado.
+
+O botão só funciona com pelo menos uma pessoa selecionada e com a consulta já carregada. Enquanto a tela está carregando, ou enquanto outra exportação está em andamento, ele fica indisponível.
+
+A exportação usa **o mesmo período e o mesmo filtro de esteira da tela**, para **as mesmas pessoas** selecionadas. Pela interface, o limite da exportação é portanto o mesmo da consulta: **20 colaboradores**. Para um grupo maior, exporte em mais de uma rodada.
+
+### Corrigir um apontamento
+
+Nos cartões das listas **Em aberto** e **Em risco**, quem tem permissão de gestão de apontamentos vê o botão **Apontamento gerencial**. Ele abre a tela de correção **daquela atividade**, onde é possível:
+
+- lançar horas em nome de um colaborador **já alocado** naquela atividade, com **motivo obrigatório**;
+- editar os minutos ou a quantidade executada de um lançamento existente;
+- remover um lançamento, com motivo.
+
+Os campos, as regras de data, as justificativas exigidas e o registro na trilha administrativa estão no **capítulo 7**. Este capítulo não os repete.
+
+Dois avisos sobre o retorno:
+
+- a tela de correção **não devolve você à jornada**: o link de voltar leva ao **Dashboard**. Para retomar a consulta, use o botão de voltar do navegador ou entre novamente em **Jornada por colaborador**;
+- a jornada **não se atualiza sozinha** depois da correção. Veja **Atualização da consulta**, adiante.
+
+## O que esperar
+
+### Ler previsto, realizado e cobertura
+
+Os quatro números do alto resumem o escopo selecionado:
+
+| Número | De onde vem |
+|---|---|
+| **Alocações (escopo)** | quantidade de vínculos diretos entre as pessoas selecionadas e atividades; **não** é quantidade de esteiras |
+| **Previsto estrutural (soma das alocações)** | soma do tempo previsto dessas atividades, na estrutura atual das esteiras |
+| **Minutos apontados (período)** | soma dos apontamentos em atividades cuja **data de realização** está no período |
+| **Minutos apontados (acumulado) (escopo)** | soma dos apontamentos em atividades dessas pessoas em todo o histórico, sem limite de período |
+
+O que **previsto estrutural** é — e o que não é:
+
+- vem das **atribuições diretas** das pessoas às atividades, na estrutura da esteira. **Não** vem do planejamento semanal;
+- **não é limitado pelo período**: escolher outro recorte não muda esse número;
+- conta **uma vez por pessoa e por atividade**. Duas pessoas selecionadas na mesma atividade de 60 minutos somam 120 minutos previstos — o que é coerente, porque o realizado também é contado por pessoa;
+- atividade atribuída **só à equipe**, ou apenas distribuída no planejamento semanal, **não** entra;
+- inclui atividades de esteiras **finalizadas ou canceladas** e atividades já **concluídas ou dispensadas**, que não aparecem nas listas da tela;
+- atividade sem tempo previsto cadastrado não acrescenta minutos; no cartão o valor aparece como **—**.
+
+**Atenção à quantidade prevista.** Nesta versão, o previsto usa o tempo de **uma unidade** de cada atividade, mesmo quando há várias previstas. Uma atividade de 30 minutos por unidade com 4 unidades previstas acrescenta **30 minutos**, não 2 horas. O efeito é duplo: o previsto fica **menor** que o real e a **cobertura fica maior** do que deveria. Em atividades com várias unidades, confira a estrutura da esteira antes de concluir que há sobra de tempo. Pendência registrada no capítulo 21.
+
+O que **realizado** inclui:
+
+- apontamentos em atividades registrados para aquelas pessoas, pela **data de realização** e não pela data em que foram lançados;
+- registros feitos pela Minha fila, pela barra superior, pelo Modo Fábrica e os lançados **pela gestão em nome da pessoa**;
+- apontamentos **fora da atribuição** da pessoa (selo **Exceção**) e **fora de sequência**;
+- apontamentos em atividades que **não** têm cartão na tela.
+
+O que **não** entra no realizado: apontamentos removidos, tempo de **Extra Esteira** e a quantidade executada — **a quantidade não multiplica nem reduz o tempo**. Um apontamento de 45 minutos soma 45 minutos, qualquer que seja a quantidade informada.
+
+**Cobertura de tempo** é um painel próprio, com o percentual em destaque e a sua própria explicação na tela. Leia-a assim:
+
+| Parte | O que é |
+|---|---|
+| **numerador** | tempo acumulado que essas pessoas apontaram **nas atividades em que estão alocadas** |
+| **denominador** | previsto estrutural **dessas mesmas alocações** |
+
+Consequências práticas:
+
+- a cobertura **não** é o resultado de dividir **Minutos apontados (acumulado)** por **Previsto estrutural**. O acumulado do cartão inclui trabalho em atividades **sem** alocação da pessoa; a cobertura, não. Os dois números podem divergir legitimamente;
+- a cobertura **não** é limitada pelo período: ela compara acumulado contra previsto, sempre;
+- sem previsto no escopo, a tela mostra **— (não aplicável)** e explica que não se aplica quando o previsto é zero ou menor. **Não** mostra 0%;
+- a cobertura **pode passar de 100%**, quando o tempo apontado supera o previsto. Isso indica tempo acima do previsto, **não** conclusão;
+- o percentual é arredondado com uma casa decimal;
+- com várias pessoas, o percentual é **recalculado sobre os totais somados** — nunca a média dos percentuais individuais;
+- a limitação de quantidade prevista descrita acima **afeta diretamente o denominador**.
+
+**Cobertura não é percentual de conclusão física do trabalho.** Ela mede tempo. Uma atividade pode estar em 150% de cobertura e continuar inacabada, e pode estar em 20% e já ter sido concluída.
+
+**Pressão de atraso** conta **alocações** em esteiras consideradas em atraso — várias atividades da mesma esteira aumentam o número. Abaixo dele, a tela traz uma contagem por situação da esteira. Essa contagem **não lista todas as situações possíveis**: situações como *em planejamento* e *cancelada* não têm linha própria ali, embora as alocações correspondentes contem nos totais do escopo.
+
+[IMAGEM SUGERIDA: Resumo do escopo com os quatro números, o painel de Cobertura de tempo e o painel de Pressão de atraso.]
+
+### Extra Esteira
+
+O painel **Extra esteira (período)** mostra o tempo de apoio, deslocamento, limpeza e outras tarefas que não pertencem a nenhuma atividade de esteira. Ele traz:
+
+- o **total de minutos** do período;
+- a quantidade de lançamentos — *"N lançamento(s) fora de esteira neste período."*;
+- até **três descrições principais**, cada uma com o tempo somado e a quantidade de lançamentos, da que consumiu mais tempo para a que consumiu menos.
+
+Regras de leitura:
+
+- o período segue o **dia de lançamento**, pela referência de São Paulo;
+- **o filtro de esteira não se aplica** a este painel;
+- **Extra Esteira fica fora do realizado das atividades e fora da cobertura.** Esse tempo não aparece nos cartões de minutos apontados nem altera o percentual de cobertura;
+- com várias pessoas, o total, a contagem e as descrições são **consolidados**, sem separação por pessoa. A divisão por colaborador existe **na exportação**;
+- quando não houver lançamentos, aparece *"Nenhum apontamento extra no período."*. Isso não significa que um lançamento falhou — confira o período e a data do lançamento.
+
+### Pendências de tempo
+
+**Pendência de tempo** lista as alocações em que o **previsto estrutural é maior que o tempo acumulado** apontado por aquela pessoa naquela atividade. É um sinal de onde ainda falta tempo registrado.
+
+| Característica | Comportamento |
+|---|---|
+| universo | alocações em esteiras **ainda não finalizadas nem canceladas** |
+| comparação | **acumulada**, não limitada ao período escolhido |
+| ordenação | da **maior diferença** para a menor |
+| informação exibida | a esteira, a atividade e a diferença de tempo; com várias pessoas, também o nome do colaborador |
+| quantidade listada | no máximo **48 linhas** |
+| ação | **apenas informativa** — a lista não tem link para outra tela |
+| vazio | *"Nenhuma neste recorte."* |
+
+Duas ressalvas:
+
+- a lista **inclui atividades já concluídas ou dispensadas**, desde que a esteira continue aberta. Pendência aqui significa *tempo previsto não coberto*, não *trabalho por fazer*;
+- a tela **não informa o total** de pendências quando há mais de 48. Esse total aparece na exportação, na coluna **Pendências de tempo** da aba **Resumo**.
+
+### As listas de alocações
+
+Duas listas apresentam os cartões de atividade:
+
+| Lista | O que traz |
+|---|---|
+| **Em aberto** | alocações em esteiras que não estão finalizadas nem canceladas |
+| **Em risco** | alocações cuja esteira está **em atraso** |
+
+**As duas listas se sobrepõem:** uma alocação em atraso aparece em **Em aberto** e novamente em **Em risco**. Não some os cartões das duas listas — você contaria a mesma alocação duas vezes. Para contagem, use **Alocações (escopo)** e **Pressão de atraso**.
+
+Cada cartão mostra o código e o nome da esteira, a situação da esteira, o papel **Principal** ou **Apoio**, a atividade, a tarefa e o setor, o previsto da atividade, o tempo acumulado daquela pessoa nela e o prazo, quando houver. Com várias pessoas selecionadas, um selo identifica de quem é a alocação. **Ver esteira** abre a esteira.
+
+Os cartões vêm ordenados pela situação da esteira — em atraso primeiro, depois aguardando planejamento, em planejamento, em execução e rascunho —, em seguida pelo prazo e pelo nome da esteira.
+
+### Histórico de apontamentos
+
+**Histórico recente** lista os apontamentos em atividades do período. Cada linha mostra a esteira, a atividade, o tempo apontado, a data de realização e um link **Esteira**. Com várias pessoas, um selo identifica o colaborador de cada registro.
+
+| Característica | Comportamento |
+|---|---|
+| limite | **20 linhas**, no conjunto de todas as pessoas selecionadas |
+| ordenação | data de realização mais recente primeiro; em empate, o registrado mais recentemente |
+| filtros | respeita o período e o filtro de esteira |
+| paginação | **não existe**; não há botão para carregar mais |
+| Extra Esteira | **não aparece** nesta lista |
+| correção | não se edita nem remove um registro aqui; use **Apontamento gerencial** |
+
+Os selos **Exceção** e **Fora de sequência** indicam, respectivamente, apontamento fora da atribuição da pessoa e trabalho realizado fora da sequência recomendada. Ao posicionar o cursor sobre o selo, a justificativa pode aparecer como informação de apoio.
+
+A lista **não** mostra quantidade executada, observação, o texto completo das justificativas nem quem registrou em nome da pessoa. Esses dados estão **na exportação**.
+
+**O histórico não tem o mesmo universo da exportação.** Com 20 linhas no máximo, ele é uma amostra do período; a exportação traz **todos** os apontamentos. A própria tela avisa isso ao lado do título.
+
+### Uma pessoa × várias pessoas
+
+| Elemento | Com uma pessoa | Com várias pessoas |
+|---|---|---|
+| **título da página** | **Jornada por colaborador** | igual — o título não muda |
+| **identificação** | o nome aparece abaixo da faixa de seleção | **"N colaboradores: Nome · Nome"** abaixo da faixa |
+| **linha do intervalo** | intervalo consultado | intervalo consultado **e** o aviso de escopo consolidado |
+| **alocações, previsto, realizado, Extra Esteira, pressão de atraso** | valores da pessoa | **somados** sobre todas as pessoas |
+| **cobertura** | realizado ÷ previsto da pessoa | **recalculada sobre os totais**, nunca média de percentuais |
+| **cartões de atividade** | sem identificação de pessoa | cada cartão ganha o **selo com o nome** |
+| **pendências de tempo** | uma linha por alocação | uma linha por alocação **e por pessoa**, com o nome; mesmo limite de 48 |
+| **histórico** | até 20 registros da pessoa | até 20 registros **no conjunto**, cada um com o nome |
+| **totais por pessoa** | o escopo já é a pessoa | **não existem na tela** — só na exportação |
+| **filtros** | iguais | iguais |
+| **exportação** | uma linha de resumo | uma linha **por pessoa** e uma linha **Total geral** |
+
+O ponto mais importante: na tela, o escopo consolidado **soma** e **identifica cada registro**, mas **não decompõe os totais por pessoa**. Para saber quem contribuiu com o quê, use a exportação. É ela que responde *"para quais pessoas eu preciso olhar?"* quando a consulta tem várias pessoas.
+
+### Por que os totais e as listas podem divergir
+
+- **Minutos apontados (período)** soma todos os apontamentos válidos do período; o histórico mostra no máximo 20 linhas. Trinta apontamentos de 10 minutos somam **300 minutos** e exibem 20 linhas — nada foi removido.
+- **Minutos apontados (acumulado)** inclui apontamentos anteriores ao período.
+- O **numerador da cobertura** considera só as atividades em que a pessoa está alocada; o acumulado do cartão considera todas.
+- **Alocações (escopo)** e **Previsto estrutural** incluem atividades de esteiras finalizadas e canceladas, que não chegam às listas.
+- **Em aberto** e **Em risco** compartilham as alocações em atraso.
+- **Extra Esteira** não entra no realizado nem na cobertura, e não obedece ao filtro de esteira.
+- **Pendência de tempo** é acumulada; não mede o período escolhido.
+- O **previsto** não muda ao trocar o período, e nesta versão não considera várias unidades.
+- O seletor de esteira só oferece as esteiras presentes nos dados já carregados.
+
+### O que a exportação traz
+
+O arquivo tem **três abas**:
+
+| Aba | Conteúdo |
+|---|---|
+| **Resumo** | cabeçalho com período, esteira filtrada, quantidade de colaboradores e data de geração; depois **uma linha por colaborador** e, com mais de uma pessoa, a linha **Total geral** |
+| **Apontamentos** | **todos** os apontamentos em atividades do período, agrupados por colaborador, com **Subtotal** por pessoa e **Total geral** quando há mais de uma |
+| **Extra esteira** | os lançamentos fora de esteira do período, com subtotal por pessoa; a própria aba avisa que **não dependem do filtro de esteira** |
+
+As colunas da aba **Resumo** são: Colaborador, Código, Matrícula, Apontamentos no período, Minutos apontados (período), Extra esteira (período), Lançamentos extra esteira, Alocações (escopo), Previsto estrutural (escopo), Minutos apontados (acumulado), Cobertura de tempo, Alocações em atraso e Pendências de tempo. A cobertura aparece como percentual ou **Não aplicável**; na linha **Total geral** ela é recalculada sobre as somas.
+
+A aba **Apontamentos** traz, para cada registro: Colaborador, Código, Data, Código/OS, Esteira, Tarefa, Setor, Atividade, Tempo, Minutos, **Qtd executada**, **Origem** (*Alocado* ou *Exceção (sem alocação)*), **Fora de sequência**, **Justificativa** e **Observações**.
+
+A aba **Extra esteira** traz Colaborador, Código, Data, Descrição, Tempo, Minutos e Observações.
+
+Diferenças entre a tela e a exportação:
+
+| Assunto | Na tela | Na exportação |
+|---|---|---|
+| apontamentos do período | até **20 linhas** | **todos**, sem limite de linhas |
+| quantidade executada | não aparece | coluna própria |
+| origem, fora de sequência, justificativa, observação | apenas selos e dica ao passar o cursor | colunas próprias |
+| totais por pessoa | não existem no escopo consolidado | uma linha por pessoa |
+| Extra Esteira por pessoa | consolidado | separado por pessoa |
+| pendências de tempo | até 48 linhas, sem total | **apenas o total**, sem a lista |
+| alocações | listas de cartões | **apenas as contagens e as somas** |
+
+O nome do arquivo identifica o escopo e o período — por exemplo `jornada-colaborador-2026-09-26-a-2026-10-03.xlsx` para uma pessoa, e `jornada-3-colaboradores-2026-09-26-a-2026-10-03.xlsx` para três.
+
+O tempo é gravado como duração, somável no Excel, e há também a coluna em minutos. O cabeçalho da aba **Resumo** registra a regra: *período* são os apontamentos com data no intervalo; *escopo/acumulado* são as alocações e os apontamentos de todo o histórico.
+
+Não há aba com a lista de alocações nem com a lista de pendências: para esses dois, a exportação traz somente os números.
+
+[IMAGEM SUGERIDA: Aba Resumo da exportação, com uma linha por colaborador e a linha Total geral destacada.]
+
+### Atualização da consulta
+
+Esta tela **não** acompanha mudanças continuamente e **não tem botão Atualizar**.
+
+| O que você faz | O que acontece |
+|---|---|
+| muda a seleção de pessoas | a consulta é refeita; o filtro de esteira é removido |
+| muda o período ou as datas | a consulta é refeita; a seleção e o filtro de esteira permanecem |
+| muda o filtro de esteira | a consulta é refeita |
+| recarrega a página | a consulta é refeita com a mesma seleção, período e filtro |
+| corrige um apontamento em outra tela | **nada muda** até você refazer a consulta |
+| alguém aponta horas enquanto a tela está aberta | **nada muda** até você refazer a consulta |
+
+Para ver o efeito de uma correção, volte à jornada e **recarregue a página** — a seleção, o período e o filtro são preservados. Trocar o período e voltar ao anterior também refaz a consulta. Enquanto a consulta carrega, os números anteriores deixam de ser exibidos e um espaço reservado ocupa o lugar deles.
+
+Em caso de falha, a faixa de erro oferece **Tentar novamente** — é o único botão de recarga desta tela, e ele só existe quando houve erro.
+
+### Diferenças em relação à Minha jornada
+
+As duas telas usam a mesma origem de dados e o mesmo catálogo de períodos. O que muda é o alcance e o que é exibido:
+
+| Minha jornada (capítulo 11) | Jornada por colaborador (este capítulo) |
+|---|---|
+| só a própria pessoa | **uma ou várias** pessoas, até 20 |
+| acesso pelo **vínculo da conta** com um colaborador | acesso **gerencial**, por permissão; não exige vínculo da sua conta |
+| visão simplificada, em colunas de situação | visão analítica, com indicadores e sinais |
+| **não** mostra cobertura | **mostra** cobertura de tempo |
+| **não** mostra Extra Esteira | **mostra** o resumo de Extra Esteira |
+| **não** mostra pendências de tempo | **mostra** pendências de tempo |
+| **sem** exportação | **exportação em Excel** |
+| botão **Atualizar** disponível | **sem** botão Atualizar; refaça a consulta pelos filtros |
+| botão **Apontar** para a própria pessoa | botão **Apontamento gerencial**, para corrigir e lançar por outra pessoa |
+
+A limitação de quantidade prevista e a regra de que cobertura mede tempo, não conclusão, valem igualmente nas duas telas.
+
+## Quando algo é bloqueado
+
+### A consulta não carrega
+
+| Situação ou mensagem | O que fazer |
+|---|---|
+| **Escolha um colaborador** / *"Selecione um colaborador na lista para carregar a jornada operacional (carga, risco e histórico)."* | nenhuma pessoa selecionada; use o botão **+**. O atalho **Abrir cadastro de colaboradores** leva ao cadastro, não carrega a jornada |
+| *"Selecione um ou mais colaboradores."* | mesma situação, indicada ao lado da faixa de seleção |
+| **Intervalo personalizado: indique as datas de início e fim.** | preencha os dois campos; a consulta fica suspensa até isso |
+| intervalo com início posterior ao fim | corrija as datas; a consulta é recusada |
+| *"Colaborador não encontrado."* | a pessoa foi removida do cadastro, ou o endereço traz uma pessoa inexistente; limpe a seleção e escolha de novo |
+| falha de comunicação ou indisponibilidade | a faixa de erro traz a orientação recebida e *"Verifique sua conexão e tente novamente."*; use **Tentar novamente** |
+| sessão expirada ou acesso recusado | entre novamente ou solicite revisão do acesso, conforme a mensagem |
+| **Sem permissão para esta área** | a conta não tem permissão para esta tela; fale com quem administra os acessos |
+
+Quando a carga falha, os dados anteriores deixam de ser exibidos. Corrigir o motivo e refazer a consulta recompõe a tela.
+
+### O botão + não aceita mais ninguém
+
+Você atingiu o máximo de **20 colaboradores**. O botão informa *"Selecione no máximo 20 colaboradores"*. Remova alguém clicando no círculo das iniciais, ou faça a consulta em mais de uma rodada.
+
+Se a lista do popover trouxer *"Nenhum resultado"*, o texto buscado não corresponde a nenhum nome disponível — apague a busca e confira. *"Todos já adicionados"* significa que todos os colaboradores oferecidos já estão na seleção.
+
+### A tela está vazia ou falta um registro
+
+| Mensagem | O que significa |
+|---|---|
+| *"Nada em aberto neste recorte. Confira o bucket «em atraso» ou o histórico abaixo."* | nenhuma alocação em esteira aberta; confira a lista **Em risco** e o histórico |
+| *"Nenhuma alocação em atraso neste recorte."* | nenhuma alocação em esteira considerada em atraso |
+| *"Nenhuma neste recorte."* | nenhuma pendência de tempo |
+| *"Nenhum apontamento extra no período."* | nenhum lançamento de Extra Esteira no período |
+| *"Sem lançamentos no período. Alargue a janela temporal ou confira outra esteira."* | nenhum apontamento em atividade com data no período |
+| *"Sem alocações ou apontamentos neste recorte. Experimente outro período ou remova o filtro de esteira."* | aparece no lugar das três primeiras quando há **filtro de esteira** ativo |
+
+Nenhuma dessas mensagens comprova ausência de trabalho: confira o período, a **data de realização** do registro procurado e o filtro de esteira. Para um registro antigo, reduza o intervalo ao dia em que o trabalho foi realizado. A palavra **bucket**, que aparece em alguns desses textos, significa **situação da esteira**; veja o capítulo 21.
+
+### A cobertura aparece como não aplicável
+
+A tela mostra **— (não aplicável)** e explica que a cobertura não se aplica quando o previsto do escopo é zero ou menor. Isso ocorre quando as pessoas selecionadas não têm alocação direta, ou quando as atividades alocadas não têm tempo previsto cadastrado. Não é erro e **não** significa cobertura de 0%. Para obter o indicador, confira as atribuições e o tempo previsto na estrutura da esteira.
+
+### A exportação falha
+
+Se o arquivo não for gerado, a tela mostra a mensagem recebida ou **Não foi possível exportar o Excel da jornada.**, abaixo do botão.
+
+O que conferir, nesta ordem: se há pessoas selecionadas; se os números da tela carregaram; se o intervalo personalizado está completo; e a conexão. Depois tente novamente. Trocar a seleção ou o período limpa a mensagem de erro.
+
+### Apontamento gerencial não está disponível
+
+Se o botão **Apontamento gerencial** não aparece nos cartões, a conta tem acesso à consulta, mas não à correção de apontamentos. Essa é uma permissão separada — solicite-a a quem administra os acessos, ou peça a correção a quem já a tem.
+
+Na tela de correção, lançar horas exige que o colaborador esteja **alocado naquela atividade**; se não houver ninguém alocado, a tela informa *"Não há colaboradores alocados neste passo. Aloque antes de apontar."*. As demais regras de data, tempo, justificativa e remoção estão no **capítulo 7**.
 
 ---
 
@@ -2525,7 +2923,9 @@ Os termos técnicos abaixo são reproduzidos **apenas** para você reconhecê-lo
 
 | O que aparece na tela | Leia como | Observação |
 |---|---|---|
-| `STEP`, "Etapa (STEP)", "Alocações em STEPs" | **atividade** | termo técnico legado |
+| `STEP`, "Etapa (STEP)", "Alocações em STEPs", "STEPs em aberto" | **atividade** | termo técnico legado |
+| **"bucket"**, em **Jornada por colaborador** ("bucket «em atraso»", "bucket ≠ concluídas", "Bucket operacional") | **situação da esteira** | termo técnico legado; aparece em títulos e em mensagens de lista vazia |
+| **"preset: 7d"**, na linha do intervalo em **Jornada por colaborador** | o **recorte temporal** escolhido | código curto do período, sem efeito sobre o uso |
 | Situação da atividade exibida em código, no painel de encaixe do planejamento | **situação da atividade** | a tela ainda mostra o código interno em alguns casos |
 | **"Mês atual (UTC)"**, no seletor de período | mês atual pelo calendário local | o cálculo usa o fuso de São Paulo; o rótulo está incorreto |
 | Após redefinir o PIN: "Próximo acesso exigirá nova senha." | próximo acesso exigirá **novo PIN** | o recurso é o PIN do Modo Fábrica, não a senha |
@@ -2554,6 +2954,40 @@ A página **Apontamento**, aberta pelo botão **Apontar** em **Minha jornada**, 
 Quando a atividade exige justificativa (atividade anterior pendente, ou atividade fora da alocação do colaborador), o registro é recusado e não há como atender ao pedido naquela tela.
 
 **Orientação até a correção:** nesses casos, usar o botão **Apontar horas** da barra superior, que tem o campo de justificativa. Pendência de produto registrada.
+
+### Previsto e cobertura das jornadas ignoram a quantidade prevista
+
+Divergência confirmada em 2026-10-03, com impacto direto em decisão de gestão.
+
+As duas telas de jornada — **Minha jornada** (capítulo 11) e **Jornada por colaborador** (capítulo 12) — calculam o **previsto** usando o tempo de **uma unidade** de cada atividade, mesmo quando a estrutura da esteira prevê várias. O mesmo caminho de dados alimenta as duas telas, então o efeito é idêntico nas duas.
+
+| Como a atividade está cadastrada | O que a jornada considera |
+|---|---|
+| 30 min por unidade, **1 unidade** prevista | 30 min — correto |
+| 30 min por unidade, **4 unidades** previstas | **30 min** — deveria ser 2h |
+
+Efeitos em cadeia, todos na **Jornada por colaborador**:
+
+| Indicador | Efeito |
+|---|---|
+| **Previsto estrutural (soma das alocações)** | menor que o previsto real |
+| **Cobertura de tempo** | **maior** que a real, porque o denominador está reduzido; pode indicar folga onde há atraso |
+| **Pendência de tempo** | subestimada; a alocação pode nem entrar na lista |
+| **Exportação em Excel** | reproduz os mesmos valores, nas colunas de previsto, cobertura e pendências |
+
+Outras telas que mostram previsto a partir da estrutura, como o detalhe da esteira, não têm esse desvio — o que explica a divergência entre números de telas diferentes para a mesma atividade.
+
+**Orientação até a correção:** em atividades com mais de uma unidade prevista, não concluir pela cobertura da jornada que houve tempo excedente; conferir o previsto na estrutura da esteira (capítulo 6). Pendência de produto registrada.
+
+### Apontamento gerencial aberto pela jornada volta para o Dashboard
+
+Divergência confirmada em 2026-10-03, de impacto no fluxo de trabalho.
+
+Ao usar **Apontamento gerencial** em um cartão da **Jornada por colaborador**, a tela de correção abre normalmente, mas o link de voltar leva ao **Dashboard** — e não à jornada de onde você saiu. A seleção de colaboradores, o período e o filtro de esteira não são recuperados por esse caminho.
+
+Some-se a isso que a **Jornada por colaborador** não tem botão **Atualizar** e não acompanha mudanças continuamente: a correção feita não aparece na jornada enquanto a consulta não for refeita.
+
+**Orientação até a correção:** depois de corrigir, voltar pelo botão de voltar do navegador — que preserva a consulta — e recarregar a página para ver os novos números. Pendência de produto registrada.
 
 ### Cálculo de atraso no Painel operacional
 
