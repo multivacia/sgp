@@ -3,7 +3,7 @@
 **Produto:** SGP+ · Multivacia / ARGOS
 **Versão da aplicação nesta revisão:** 1.9.8
 **Revisão deste manual:** 2026-10-03
-**Situação:** base editorial criada. Vários capítulos ainda estão marcados como pendentes e **não devem ser publicados** como versão final.
+**Situação:** base editorial criada; capítulos 1 a 3, 5, 20 e 21 com conteúdo final. Os capítulos 4 e 6 a 19 seguem marcados como pendentes e **não devem ser publicados** como versão final.
 
 > **Este é o documento canônico do manual do usuário.** Versões em HTML ou PDF devem ser geradas a partir daqui.
 >
@@ -215,14 +215,244 @@ Há também um tempo máximo total de sessão: ao atingi-lo, é necessário entr
 
 # 5. Painel operacional
 
-> [PENDENTE DE ENRIQUECIMENTO — não publicar como capítulo final]
+## Para que serve
 
-- as sete situações usadas pelos cartões e pelo filtro, e por que **não** são iguais às situações do ciclo de vida da esteira
-- a situação **Em atraso**, que tem prioridade sobre as demais quando o prazo estimado já passou
-- o recorte **Ativas**
-- por que os totais dos cartões e a tabela abaixo podem divergir
-- filtros disponíveis e como combiná-los
-- como abrir o detalhe de uma esteira
+O Painel operacional é a visão única de todas as esteiras da operação. Em uma tela você vê quantas estão em cada situação, quais passaram do prazo, quais já foram encerradas — e desce para a lista completa para encontrar uma esteira específica e abri-la.
+
+É a tela de abertura de quem acompanha produção: serve para responder "como estamos agora" antes de entrar em qualquer detalhe.
+
+## Onde fica
+
+Menu lateral, agrupamento **Gestão** → **Painel operacional**.
+
+É também a tela inicial da área de gestão: ao entrar no sistema você cai nela.
+
+O título exibido na tela é **Painel Operacional de Esteiras**.
+
+## Quem costuma ter acesso
+
+Qualquer pessoa com acesso ao sistema. O painel em si não exige permissão especial.
+
+O que depende de permissão são as ações que partem dele:
+
+| Ação | Depende de |
+|---|---|
+| ver o painel e a lista | nada além do acesso ao sistema |
+| **Nova Esteira Manual** e **Nova esteira por documento** (botões no topo) | permissão de criar esteiras |
+| **Consultar** uma esteira | nada além do acesso ao sistema |
+| **Editar** uma esteira | permissão de criar esteiras |
+| **Excluir** uma esteira | permissão de criar esteiras, e a esteira precisa estar elegível |
+
+Os dois botões do topo aparecem para todos. Se você não tiver a permissão, o botão abre uma tela com o aviso **"Sem permissão para esta área"** — veja o final do capítulo.
+
+## Como fazer
+
+### Ler os cartões
+
+No alto da tela há **seis cartões**, cada um com uma contagem de esteiras:
+
+| Cartão | O que conta |
+|---|---|
+| **Rascunho** | esteira ainda em montagem, não visível para a produção |
+| **Aguard. planejamento** | cadastro concluído, esperando o gestor da fábrica aceitar |
+| **Em planejamento** | gestor definindo equipe, responsáveis e sequência |
+| **Em execução** | já liberada para produção e dentro do prazo |
+| **Em atraso** | passou do prazo estimado e ainda não foi encerrada |
+| **Finalizadas** | encerradas com conclusão |
+
+Cada esteira entra em **um único cartão** — as contagens não se repetem entre cartões.
+
+Não existe cartão para esteiras **canceladas**. Elas continuam no sistema e você as encontra pelo filtro de situação, mas não são contadas em nenhum cartão. Por isso, somar os seis cartões não dá necessariamente o total de esteiras.
+
+### Filtrar pelos cartões
+
+Clique em um cartão. Três coisas acontecem de uma vez:
+
+1. o filtro **Situação** passa a valer para aquele recorte;
+2. a tela desce até a lista;
+3. o cartão clicado fica destacado, para você saber qual recorte está ativo.
+
+Para voltar a ver tudo, mude o filtro **Situação** para **Todas**.
+
+### Filtrar pela lista
+
+Abaixo dos cartões há a faixa de filtros:
+
+| Filtro | Como funciona |
+|---|---|
+| **Buscar** | procura por OS, nome da esteira, cliente e responsável. Não precisa apertar nada: a lista responde enquanto você digita. O texto do campo menciona apenas OS, nome e cliente, mas a busca também encontra pelo responsável. |
+| **Situação** | os recortes do painel. Veja a tabela adiante. |
+| **Prioridade** | Todas, Alta, Média ou Baixa |
+| **Responsável** | lista apenas os responsáveis que de fato aparecem nas esteiras existentes. Esteira sem responsável não gera opção. |
+| **Por página** | 25, 50 ou 100 linhas por página |
+
+O botão **Mais filtros (em breve)** está desligado — é espaço reservado para uma entrega futura.
+
+### Combinar filtros
+
+Os filtros se somam: a lista mostra apenas as esteiras que atendem a **todos** ao mesmo tempo. Buscar "Silva" com situação **Em execução** e prioridade **Alta** devolve só o que satisfaz as três condições.
+
+Sempre que você muda um filtro, a lista volta para a primeira página.
+
+Quando há qualquer filtro ativo, aparecem etiquetas acima da lista mostrando o que está aplicado — **Situação: …**, **Busca: …**, **Prioridade: …**, **Responsável: …**. É a forma mais rápida de perceber que a lista está recortada.
+
+### Abrir uma esteira
+
+A lista traz as colunas **Esteira / OS**, **Responsável**, **Prioridade**, **Situação**, **Entrada** e **Ações**. A ordem é da esteira mais recente para a mais antiga.
+
+Para abrir uma esteira, use o menu da coluna **Ações**, na linha dela:
+
+| Opção | O que faz |
+|---|---|
+| **Consultar** | abre o detalhe da esteira |
+| **Editar** | abre a esteira para alteração de estrutura e dados |
+| **Excluir** | remove a esteira e sua estrutura, após confirmação |
+
+Clicar na linha não abre nada — a entrada é sempre pelo menu de **Ações**.
+
+**Editar** e **Excluir** só aparecem se você tiver permissão. **Excluir** aparece apenas quando a esteira ainda não entrou em produção: rascunho, aguardando planejamento, em planejamento ou a iniciar.
+
+### Navegar pela lista
+
+Acima da lista aparece o total do recorte atual: **"N registro(s) · página X de Y"**. Abaixo, **"A mostrar a–b de N"** e os botões **Anterior** e **Seguinte**.
+
+## O que esperar
+
+### Os cartões e a lista não respondem aos filtros do mesmo jeito
+
+Esta é a diferença mais importante da tela, e a que mais gera dúvida:
+
+- os **cartões** contam **todas** as esteiras, sempre. Nenhum filtro muda esses números;
+- a **lista** respeita os filtros e a paginação.
+
+Então é normal e esperado ver o cartão **Em execução** com 40 e a lista mostrando 3 linhas: você tem um filtro de busca, prioridade ou responsável ativo. A própria tela avisa: *"Os totais dos cards continuam a refletir todas as esteiras carregadas; só a tabela abaixo respeita os filtros."*
+
+Para fazer cartão e lista falarem do mesmo conjunto, limpe busca, prioridade e responsável e deixe apenas a situação.
+
+### Os recortes do painel não são iguais à situação da esteira
+
+O filtro **Situação** oferece sete recortes, mais dois atalhos gerais:
+
+| Opção do filtro | O que traz |
+|---|---|
+| **Todas** | nenhum recorte |
+| **Ativas** | tudo que não foi encerrado — exclui finalizadas e canceladas |
+| **Rascunho / Em elaboração** | esteiras ainda em montagem |
+| **Aguardando planejamento** | prontas para entrar no planejamento |
+| **Em planejamento** | planejamento em elaboração |
+| **Em execução** | liberadas para produção e dentro do prazo |
+| **Em atraso** | passaram do prazo e não foram encerradas |
+| **Finalizadas** | encerradas com conclusão |
+| **Canceladas** | encerradas por cancelamento |
+
+**Atenção ao comparar com a coluna Situação da lista.** Os recortes do painel são agrupamentos; a coluna mostra a situação formal da esteira, que tem rótulos próprios:
+
+| Recorte do painel | O que você lê na coluna Situação |
+|---|---|
+| Rascunho / Em elaboração | Rascunho / Em elaboração |
+| Aguardando planejamento | Aguardando planejamento |
+| Em planejamento | Em planejamento |
+| **Em execução** | **A iniciar** ou **Em andamento** |
+| **Em atraso** | qualquer situação ainda não encerrada |
+| Finalizadas | Finalizada |
+| Canceladas | Cancelada |
+
+Duas consequências práticas:
+
+1. filtrando por **Em execução**, nenhuma linha dirá "Em execução" — elas dirão **A iniciar** ou **Em andamento**. O painel junta as duas porque, para acompanhamento, ambas já estão liberadas para a fábrica;
+2. filtrando por **Em atraso**, as linhas mostram a situação real de cada uma. "Em atraso" é uma leitura de prazo, não uma situação da esteira.
+
+### Como o atraso é calculado
+
+Uma esteira entra em **Em atraso** quando as três condições valem juntas:
+
+1. não está finalizada nem cancelada;
+2. tem **prazo estimado** registrado;
+3. o prazo já passou.
+
+A comparação é por **dia inteiro**, não por hora: no próprio dia do prazo a esteira ainda não é considerada atrasada. Ela passa a contar como atrasada a partir do dia seguinte.
+
+**O atraso tem prioridade sobre a situação.** Se uma esteira ainda em rascunho já passou do prazo, ela sai do cartão **Rascunho** e vai para **Em atraso** — some de um e aparece no outro. O mesmo vale para aguardando planejamento, em planejamento e em execução.
+
+As duas exceções são **Finalizada** e **Cancelada**: uma vez encerrada, a esteira nunca é contada como atrasada, mesmo que tenha estourado o prazo antes de encerrar.
+
+Esteira **sem prazo estimado** nunca é contada como atrasada. Não é um erro de cálculo: sem prazo registrado, não há com o que comparar.
+
+> **Limitação atual — leia antes de confiar no cartão Em atraso.**
+> O painel só consegue calcular atraso quando o prazo estimado da esteira foi registrado como uma **data**. No cadastro de **Nova esteira**, porém, o campo **Prazo estimado** pede um **número de dias**. Prazos informados dessa forma não são reconhecidos como data, e a esteira não é contada como atrasada — o cartão pode ficar em zero mesmo havendo esteiras atrasadas na prática. Em alguns casos o efeito é o oposto: a esteira passa a aparecer como atrasada desde a criação.
+> Enquanto isso não for corrigido, **não use o cartão Em atraso como fonte única** para decidir prioridade. Confira o prazo na esteira. O registro desta pendência está no capítulo 21.
+
+### O atalho Ativas
+
+**Ativas** não é uma situação: é o recorte "tudo que ainda está aberto". Serve para a pergunta mais comum do dia — "o que ainda está em aberto, independente da etapa?".
+
+Ele exclui finalizadas e canceladas, e inclui tudo o mais, atrasadas inclusive. Quando está ativo, a tela mostra uma etiqueta **Ativas** e uma linha explicando o recorte.
+
+### Atualização da lista
+
+A lista é recarregada quando você volta para a janela do sistema depois de usar outro programa ou outra aba. Não é preciso recarregar a página para ver uma esteira criada por outra pessoa.
+
+Enquanto carrega, aparece **"Carregando esteiras…"**.
+
+## Quando algo é bloqueado
+
+### "Nenhum resultado com estes filtros"
+
+A lista está vazia porque o recorte atual não encontrou nada:
+
+> Limpe a busca ou troque situação e prioridade. Se a lista estiver vazia de propósito, crie uma esteira manual ou por documento.
+
+Verifique, nesta ordem:
+
+1. as **etiquetas de filtro** acima da lista — há mais filtros ativos do que você imagina?
+2. a **busca** — um texto antigo pode ter ficado no campo;
+3. a **situação** — volte para **Todas**;
+4. a **página** — se você estava na página 3 e o filtro mudou, a lista volta para a primeira automaticamente, mas vale conferir o contador.
+
+### Não encontro uma esteira que eu esperava ver
+
+Confira na ordem:
+
+1. **Filtros ativos.** É a causa mais comum. Ponha **Situação: Todas**, limpe busca, prioridade e responsável.
+2. **O recorte não é o que você pensa.** Procurando em **Em execução** uma esteira que passou do prazo? Ela está em **Em atraso**. Procurando em **Rascunho** uma que estourou o prazo? Também está em **Em atraso**.
+3. **Ela foi encerrada.** Finalizadas e canceladas saem de **Ativas** e de todos os recortes de etapa. Filtre por **Finalizadas** ou **Canceladas**.
+4. **Canceladas não têm cartão.** Se a esteira foi cancelada, nenhum cartão a mostra — só o filtro.
+5. **Busca pelo campo certo.** A busca cobre OS, nome, cliente e responsável; não cobre o conteúdo das atividades.
+6. **Ela foi excluída.** Esteira excluída não aparece em nenhum recorte. Exclusão só é possível antes da produção começar; depois disso a esteira é cancelada ou finalizada, e nesses casos ela continua na lista.
+
+### "Sem permissão para esta área"
+
+Você clicou em algo que exige permissão que sua conta não tem:
+
+> Não tem permissão para acessar este conteúdo. Contate um administrador se precisar de acesso.
+
+Acontece tipicamente ao usar **Nova Esteira Manual** ou **Nova esteira por documento** sem permissão de criar esteiras. Volte ao painel e peça liberação a quem administra os acessos.
+
+### Faixa vermelha no alto da tela
+
+A lista não pôde ser carregada. A faixa traz o motivo. Tente de novo saindo e voltando para a tela; se persistir, registre um chamado informando o texto exibido.
+
+### Ao excluir uma esteira
+
+A confirmação é explícita:
+
+> **Excluir esteira?** Esta ação removerá definitivamente a esteira … e sua estrutura. Só é permitido excluir esteiras que ainda estão no backlog.
+
+Depois de **Excluir esteira**, o resultado pode ser:
+
+| Mensagem | O que significa | O que fazer |
+|---|---|---|
+| “Esteira excluída com sucesso.” | removida, junto com a estrutura | nada |
+| “Esta esteira já possui apontamentos e não pode ser excluída. Cancele ou finalize para preservar o histórico.” | já houve trabalho registrado | cancele ou finalize, em vez de excluir |
+| “Esta esteira já possui movimentações e não pode ser excluída.” | há vínculos operacionais | cancele ou finalize |
+| “Você não tem permissão para excluir esteiras.” | falta permissão | peça a quem administra os acessos |
+| “Não foi possível excluir a esteira. Tente novamente.” | falha momentânea | tente de novo; se persistir, abra chamado |
+
+A exclusão apaga a esteira. Quando há histórico, o caminho correto é **cancelar** ou **finalizar**: a esteira sai dos recortes em aberto e o histórico fica preservado.
+
+[IMAGEM SUGERIDA: Painel operacional com os seis cartões no alto, um deles destacado como filtro ativo, e a lista abaixo mostrando na coluna Situação rótulos diferentes do nome do cartão selecionado]
+
+[IMAGEM SUGERIDA: Mesma esteira em dois momentos — antes do prazo, contada em Em execução; depois do prazo, contada em Em atraso e ausente do cartão anterior]
 
 ---
 
@@ -481,6 +711,24 @@ Os termos técnicos abaixo são reproduzidos **apenas** para você reconhecê-lo
 | Após redefinir o PIN: "Próximo acesso exigirá nova senha." | próximo acesso exigirá **novo PIN** | o recurso é o PIN do Modo Fábrica, não a senha |
 | Botão **"Remover (soft delete)"**, em Usuários e Colaboradores | **remover preservando o histórico** | o registro deixa de aparecer e pode ser restaurado |
 | Textos de filtro que citam nomes internos de parâmetro, no Painel operacional | o filtro correspondente | sem efeito sobre o uso; basta usar os filtros da tela |
+
+### Cálculo de atraso no Painel operacional
+
+Divergência confirmada em 2026-10-03, com impacto direto na leitura do painel.
+
+O cartão e o filtro **Em atraso** só reconhecem o prazo da esteira quando ele está registrado como **data**. O campo **Prazo estimado** do cadastro de Nova esteira, porém, pede um **número de dias** — e é esse texto que o painel tenta ler como data.
+
+Efeitos observados:
+
+| Como o prazo foi registrado | O que o painel faz |
+|---|---|
+| número de dois dígitos ou mais (ex.: 30) | não reconhece prazo; a esteira **nunca** é contada como atrasada |
+| número de um dígito (ex.: 7) | pode ser lido como uma data no passado; a esteira aparece como atrasada **desde a criação** |
+| período no formato "Início previsto … · Fim previsto …" | não reconhece prazo; nunca é contada como atrasada |
+| data no formato 2026-10-20 ou com dia a partir de 13 (ex.: 25/12/2026) | reconhece corretamente |
+| data com dia até 12 (ex.: 01/02/2026) | dia e mês podem ser invertidos, deslocando o atraso |
+
+**Orientação até a correção:** não usar o cartão **Em atraso** como fonte única de prioridade; conferir o prazo na própria esteira. Pendência de produto registrada.
 
 ## 21.4 Diferença de PIN entre as formas de acesso
 
