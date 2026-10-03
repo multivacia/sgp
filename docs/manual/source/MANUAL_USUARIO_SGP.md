@@ -3,7 +3,7 @@
 **Produto:** SGP+ · Multivacia / ARGOS
 **Versão da aplicação nesta revisão:** 1.9.8
 **Revisão deste manual:** 2026-10-03
-**Situação:** base editorial criada; capítulos 1 a 3, 5, 20 e 21 com conteúdo final. Os capítulos 4 e 6 a 19 seguem marcados como pendentes e **não devem ser publicados** como versão final.
+**Situação:** base editorial criada; capítulos 1 a 3, 5, 7, 20 e 21 com conteúdo final. Os capítulos 4, 6 e 8 a 19 seguem marcados como pendentes e **não devem ser publicados** como versão final.
 
 > **Este é o documento canônico do manual do usuário.** Versões em HTML ou PDF devem ser geradas a partir daqui.
 >
@@ -471,14 +471,286 @@ A exclusão apaga a esteira. Quando há histórico, o caminho correto é **cance
 
 # 7. Apontamentos
 
-> [PENDENTE DE ENRIQUECIMENTO — não publicar como capítulo final]
+## Para que serve
 
-- **apontar horas** pela barra superior: buscar a atividade, informar a data de trabalho, minutos e quantidade
-- quando é exigida **justificativa**: fora de sequência e tempo acima do previsto
-- concluir a atividade no mesmo registro
-- **Extra Esteira**: registrar tempo que não pertence a nenhuma atividade de esteira
-- **correção gerencial**: editar e excluir apontamento, e apontar em nome de outra pessoa
-- situações em que o apontamento é recusado e o que fazer
+Apontar é registrar o trabalho que você fez: em qual atividade, em que dia, quantos minutos e quantas unidades concluiu. É o registro que alimenta sua jornada, o acompanhamento da esteira e todos os indicadores de produção.
+
+O apontamento também é o que **inicia** uma esteira na prática: ao receber o primeiro registro de horas, uma esteira liberada para produção passa a constar como em andamento.
+
+Além do tempo gasto em atividades de esteira, é possível registrar **Extra Esteira** — o tempo de apoio, deslocamento, limpeza e outras tarefas que não pertencem a nenhuma atividade.
+
+Quem tem permissão de gestão pode ainda **corrigir** apontamentos já registrados e **lançar horas em nome de outro colaborador**.
+
+## Onde fica
+
+Há três caminhos, com propósitos diferentes.
+
+| Caminho | Como chegar | Para que |
+|---|---|---|
+| **Apontar horas** | botão na barra superior, presente em **todas as telas** da área autenticada | caminho principal e mais completo: registra em atividade ou Extra Esteira, sem sair da tela onde você está |
+| Página **Apontamento** | em **Minha jornada**, botão **Apontar** na linha da atividade | registra horas em uma atividade específica que você já localizou |
+| **Apontamento gerencial** | em **Jornada por colaborador**, botão **Apontamento gerencial**; ou no detalhe da esteira, link **Apontamento gerencial neste passo** | lançar por outra pessoa, corrigir e remover apontamentos |
+
+No **Modo Fábrica** o apontamento tem telas próprias, feitas para o totem e para o navegador da fábrica. Este capítulo trata da área autenticada; o Modo Fábrica está no capítulo 13.
+
+Nas telas de **Apontamento gerencial** a palavra **passo** aparece no lugar de **atividade** — são a mesma coisa. Veja o capítulo 21.
+
+## Quem costuma ter acesso
+
+| Ação | Quem consegue |
+|---|---|
+| Registrar horas nas suas atividades | qualquer pessoa com acesso ao sistema cuja conta esteja associada a um colaborador |
+| Registrar horas em atividade **fora da sua alocação** | o mesmo, informando uma justificativa |
+| Registrar **Extra Esteira** | o mesmo |
+| **Concluir** uma atividade | quem está alocado nela; e quem pode criar e alterar esteiras |
+| **Reabrir** uma atividade concluída | somente quem pode criar e alterar esteiras |
+| **Lançar horas em nome de outro colaborador** | quem recebeu essa capacidade de gestão |
+| **Corrigir** um apontamento | quem recebeu a capacidade de corrigir apontamentos — e **somente** essa pessoa: você não corrige o seu próprio apontamento sem ela |
+| **Remover** um apontamento | o autor do próprio apontamento; ou quem recebeu a capacidade de remover apontamentos de qualquer pessoa |
+
+**Sua conta precisa estar associada a um colaborador.** Sem esse vínculo, o sistema avisa **"Contexto operacional ausente"** e explica: *"Sua conta não está associada a um colaborador operacional. Peça ao administrador para vincular seu usuário a um colaborador antes de registrar horas ou ver sua jornada."* Nesse estado não é possível apontar nada.
+
+## Como fazer
+
+### Registrar horas em uma atividade
+
+1. Clique em **Apontar horas**, na barra superior. A gaveta abre na aba **Esteira**, com o título **Apontar horas**.
+2. Localize a atividade. A lista vem separada em **Minhas atividades** — aquelas em que você está alocado ou que estão no planejamento publicado para hoje — e, quando aplicável, **Fora da sua alocação**.
+3. Para procurar, use o campo **Pesquisar**. Ele encontra por esteira, código, cliente, veículo, placa, setor e nome da atividade.
+4. Clique em **Apontar** no cartão da atividade. O título muda para **Registrar tempo**.
+5. Confirme ou troque a **data em que o trabalho foi realizado**.
+6. Informe o **tempo (minutos)**.
+7. Informe a **quantidade executada**.
+8. Preencha a **justificativa operacional**, se a tela pedir.
+9. Use **Descrição (opcional)** para uma nota sobre o trabalho.
+10. Clique em **Salvar apontamento**.
+
+Confirmação: **"Apontamento registrado com sucesso."** Quando a data não é hoje, a mensagem acrescenta a data usada.
+
+Para voltar à lista sem salvar, use **← Voltar à lista** ou **Cancelar**.
+
+### Os campos do apontamento
+
+| Campo | Obrigatório | Regras |
+|---|---|---|
+| **Data em que o trabalho foi realizado** | sim | começa em hoje. Atalhos **Hoje** e **Ontem**, mais o calendário. Datas passadas são aceitas sem limite; **data futura não é aceita** |
+| **Tempo (minutos)** | sim | número inteiro, **no mínimo 1**. Zero não é aceito. O campo começa em 0, então o botão de salvar só libera depois de você informar o tempo |
+| **Quantidade executada** | sim | número inteiro, **a partir de 0**. Começa em 1. Significa as unidades concluídas **neste** apontamento — use **0** quando trabalhou sem concluir nenhuma unidade. Deixar o campo vazio impede salvar |
+| **Justificativa operacional** | depende | obrigatória nos casos descritos adiante. Escolhida de uma lista mantida pela gestão; algumas opções pedem um **Complemento** |
+| **Descrição** | não | nota livre sobre o trabalho |
+
+### Quando a atividade não aparece na lista
+
+A lista só oferece atividades que podem receber apontamento: a esteira precisa estar **A iniciar** ou **Em andamento**, e a atividade não pode estar concluída nem dispensada.
+
+Se a atividade que você procura não aparece, marque **Buscar outras atividades**. A tela explica o efeito: *"Inclui atividades em aberto fora da sua alocação. Use pelo menos 2 caracteres na pesquisa. Será necessária uma justificativa ao apontar."*
+
+Essas atividades aparecem no bloco **Fora da sua alocação**, e ao abrir o formulário o sistema avisa: *"Você não está alocado nesta atividade. Para apontar horas, informe uma justificativa (apontamento por exceção)."*
+
+### Quando a justificativa é exigida
+
+Dois casos, e eles podem ocorrer juntos:
+
+**1. Você não está alocado na atividade.** O aviso acima aparece e a justificativa passa a ser obrigatória.
+
+**2. Há atividades anteriores pendentes na esteira.** A tela mostra a faixa **Fora de sequência — confirme o apontamento**, informa quantas atividades anteriores ainda estão pendentes e lista cada uma no formato tarefa › setor › atividade.
+
+Em ambos os casos **nada é bloqueado**: você continua, informando a justificativa. O apontamento fora de sequência fica registrado no histórico da esteira como exceção.
+
+Quando existe atividade anterior pendente mas o sistema **não** exige justificativa, aparece apenas um aviso discreto — por exemplo **"Aguardando etapa …"** ou **"Aguardando N etapas anteriores"**. Nesse caso é só informação.
+
+### Registrar e concluir no mesmo passo
+
+No formulário, abaixo de **Salvar apontamento**, existe **Salvar apontamento e concluir atividade**. Ele grava o tempo e encerra a atividade na mesma operação.
+
+Confirmação: **"Apontamento salvo e atividade concluída."**
+
+Use quando aquele foi o último trabalho da atividade. Se ainda houver trabalho, salve apenas o apontamento: a atividade continua aberta e aceita novos registros.
+
+**Consumir o tempo previsto não conclui a atividade.** A conclusão é sempre uma decisão sua.
+
+### Concluir sem registrar horas
+
+No cartão de uma atividade em que você está alocado, ao lado de **Apontar**, pode aparecer **Concluir atividade**. Use quando não há tempo novo a registrar.
+
+Se a atividade estiver fora de sequência, o sistema pede a justificativa antes de confirmar. Concluída, a mensagem é **"Atividade concluída."**
+
+Esse botão não aparece para atividades fora da sua alocação. Nesse caso o caminho é **Salvar apontamento e concluir atividade**, com justificativa.
+
+Reabrir uma atividade concluída é ação de gestão e está no capítulo 6.
+
+### Registrar Extra Esteira
+
+Para o tempo que não pertence a nenhuma atividade de esteira:
+
+1. Clique em **Apontar horas** e troque para a aba **Extra esteira**. O título passa a **Apontamento extra esteira**.
+2. Em **Descrição do apontamento**, escolha um motivo da lista. A lista é mantida pela gestão em Configurações operacionais.
+3. Confirme a **data em que o trabalho foi realizado**.
+4. Informe o **tempo (minutos)** — mínimo 1.
+5. Use **Observação (opcional)** se precisar detalhar.
+6. Clique em **Salvar apontamento**.
+
+Confirmação: **"Apontamento extra esteira registrado com sucesso."**
+
+Abaixo do formulário, o bloco **Últimos apontamentos extra esteira** mostra seus registros recentes com data e tempo. É aí que você confere o que já lançou.
+
+Se a lista de motivos estiver vazia, aparece **"Não há descrições ativas configuradas."** — peça à gestão para cadastrar os motivos.
+
+### Corrigir, remover e lançar por outra pessoa
+
+Estas três ações ficam na tela **Apontamento gerencial**, alcançável por **Jornada por colaborador** ou pelo detalhe da esteira. A tela avisa o que ela é: *"Registo em nome de um colaborador alocado neste passo. O motivo é obrigatório e fica na trilha administrativa."*
+
+A tela tem duas partes: **Novo lançamento**, para lançar por outra pessoa, e **Lançamentos no passo**, com os apontamentos já registrados naquela atividade.
+
+**Lançar horas em nome de outro colaborador**
+
+1. Em **Novo lançamento**, escolha o **Colaborador (alvo do tempo)**. A lista traz apenas quem está **alocado** naquela atividade.
+2. Confirme a **data em que o trabalho foi realizado**.
+3. Informe os **Minutos**.
+4. Use **Observação (opcional)** se precisar.
+5. Preencha o **Motivo do registro em nome do colaborador** — é **obrigatório**.
+6. Se a atividade estiver fora de sequência, informe também a **justificativa operacional** pedida na tela.
+7. Clique em **Revisar e registrar**, confira o resumo e confirme.
+
+Confirmação: **"Apontamento registrado em nome do colaborador selecionado."**
+
+O lançamento aparece na lista marcado como **Registrado pelo gestor**, com quem lançou e o motivo. Não há campo de quantidade executada neste lançamento: ele registra apenas tempo.
+
+Se ninguém estiver alocado, a tela avisa: **"Não há colaboradores alocados neste passo. Aloque antes de apontar."**
+
+**Corrigir um apontamento**
+
+1. Na lista, clique em **Editar…** na linha do apontamento.
+2. Escolha o que vai mudar: **Minutos** ou **Quantidade**. A tela é explícita — *"Altere o tempo ou a quantidade executada, um de cada vez, e informe o motivo."*
+3. Informe o novo valor. Em quantidade, há ainda **Limpar a quantidade executada**, para deixá-la em branco.
+4. Preencha o **Motivo da correção (obrigatório)**.
+5. Clique em **Salvar**.
+
+Confirmação: **"Apontamento corrigido."**
+
+**Uma correção muda um campo por vez.** Para ajustar tempo e quantidade, faça duas correções.
+
+**A data e a justificativa de um apontamento não são editáveis.** Se a data estiver errada, o caminho é remover o apontamento e registrar de novo com a data correta.
+
+**Remover um apontamento**
+
+1. Clique em **Remover…** na linha do apontamento.
+2. Se a remoção for de um apontamento de outra pessoa — ou se você tem a capacidade de remover apontamentos de qualquer pessoa — a tela exige o **motivo da remoção**. Ao remover o seu próprio lançamento sem essa capacidade, aparece apenas a confirmação *"Confirma a remoção do seu próprio lançamento?"*.
+3. Clique em **Remover**.
+
+Confirmação: **"Apontamento removido."**
+
+Correções e remoções feitas por gestão ficam registradas na **Trilha administrativa**, com o valor anterior, o novo e o motivo.
+
+## O que esperar
+
+### A data de realização manda no dia contabilizado
+
+O apontamento é contabilizado no **dia que você escolheu**, não no dia em que digitou. Lançar hoje um trabalho de ontem faz o tempo contar em ontem — na sua jornada, na esteira e nos indicadores.
+
+A referência é sempre o dia no horário de Brasília. Em lançamentos retroativos o sistema **não** registra nem exibe hora: só a data importa.
+
+Datas passadas não têm limite. **Data futura é recusada**, no campo e na gravação.
+
+### O que muda quando você salva
+
+| O que acontece | Onde você vê |
+|---|---|
+| o tempo entra no seu histórico | **Minha jornada** |
+| o realizado da atividade aumenta | detalhe da esteira e **Evolução das Esteiras** |
+| a esteira é iniciada, se ainda estava a iniciar | **Painel operacional**, que passa a contá-la como em execução |
+| o apontamento fora de sequência fica registrado como exceção | histórico da esteira |
+| a atividade é encerrada, se você usou salvar e concluir | detalhe da esteira e sua fila |
+
+### Previsto, realizado e pendente
+
+Cada cartão da lista mostra três números: **Previsto**, **Realizado** e **Pendente**. O previsto considera o tempo por unidade multiplicado pela quantidade prevista da atividade.
+
+**O sistema não avisa nem bloqueia quando o realizado passa do previsto** nesta área. Os três números estão ali para você julgar; passar do previsto não impede novos apontamentos nem conclui nada. No **Modo Fábrica** o comportamento é outro, e está no capítulo 13.
+
+### Extra Esteira e apontamento em atividade não são a mesma coisa
+
+| | Atividade de esteira | Extra Esteira |
+|---|---|---|
+| vincula a uma esteira | sim | não |
+| descrição | texto livre, opcional | escolhida de uma lista, **obrigatória** |
+| quantidade executada | sim | não existe |
+| justificativa | quando exigida | nunca |
+| conclui atividade | pode | não se aplica |
+| tempo mínimo | 1 minuto | 1 minuto |
+
+### Onde reencontrar o que foi lançado
+
+- **Apontamentos em atividades:** em **Minha jornada**.
+- **Extra Esteira:** no bloco **Últimos apontamentos extra esteira**, dentro da própria aba. Os totais de Extra Esteira de um colaborador aparecem para a gestão em **Jornada por colaborador**.
+- **Todos os apontamentos de uma atividade:** na tela **Apontamento gerencial** daquela atividade, em **Lançamentos no passo**, para quem tem acesso de gestão.
+
+## Quando algo é bloqueado
+
+### Antes de salvar, na própria tela
+
+| O que você vê | Por que | O que fazer |
+|---|---|---|
+| **"A data de realização não pode ser futura."** | a data escolhida é posterior a hoje | use hoje ou uma data anterior |
+| **"Data inválida."** | a data não foi reconhecida | use os atalhos **Hoje** / **Ontem** ou o calendário |
+| **"Informe a data em que o trabalho foi realizado."** | o campo ficou vazio | informe a data |
+| botão **Salvar apontamento** apagado | falta o tempo, a quantidade está vazia, ou falta a justificativa exigida | informe os minutos (mínimo 1), deixe a quantidade preenchida — 0 vale — e complete a justificativa |
+| **"Selecione uma justificativa operacional para este apontamento."** | a justificativa é obrigatória neste caso | escolha uma opção da lista |
+| **"Esta justificativa exige complemento."** | a opção escolhida pede detalhe | escreva o **Complemento** |
+| **"Nenhuma justificativa operacional ativa encontrada."** | não há opções cadastradas | peça à gestão para cadastrar as justificativas |
+| **"Não foi possível carregar as justificativas padronizadas. Informe a justificativa manualmente."** | a lista não carregou | escreva a justificativa no campo de texto |
+
+### Ao tentar salvar
+
+| O que você vê | Por que | O que fazer |
+|---|---|---|
+| **"Esta esteira ainda não foi liberada para produção."** | a esteira está em rascunho | peça ao gestor para avançar a esteira |
+| **"Esta esteira está em planejamento e ainda não permite apontamento."** | a esteira está aguardando ou em planejamento | aguarde a liberação |
+| **"Esta esteira está finalizada e não permite novos apontamentos."** | a esteira foi encerrada | fale com o gestor; reabrir é decisão dele |
+| **"Esta esteira está cancelada e não permite novos apontamentos."** | a esteira foi cancelada | fale com o gestor |
+| **"Esta atividade já está concluída operacionalmente; não é possível novo apontamento."** | a atividade foi concluída | peça a reabertura a quem pode alterar esteiras |
+| **"Esta atividade foi dispensada; não é possível novo apontamento."** | a atividade foi dispensada | peça a restauração a quem pode alterar esteiras |
+| **"Informe uma justificativa para executar esta atividade fora da sequência recomendada."** | há atividades anteriores pendentes e a justificativa não foi informada | preencha a justificativa e salve de novo |
+| **"Conta sem colaborador operacional associado. Contate o administrador."** | sua conta não está associada a um colaborador | peça o vínculo a quem administra os acessos |
+
+### Ao concluir uma atividade
+
+| O que você vê | Por que | O que fazer |
+|---|---|---|
+| **"Esta esteira não está liberada para conclusão operacional de atividades."** | a esteira não está em situação que aceite conclusão | aguarde a liberação |
+| **"Para concluir esta atividade, informe uma justificativa ao registrar o apontamento."** | você não está alocado na atividade | use **Salvar apontamento e concluir atividade**, com justificativa |
+| **"Esta atividade já está concluída."** | outra pessoa concluiu antes | atualize a tela |
+| **"Sem permissão para reabrir esta atividade."** | reabrir exige permissão de gestão de esteiras | peça a quem tem essa permissão |
+| **"Não foi possível concluir esta atividade."** | falha ao concluir | tente de novo; se persistir, abra chamado |
+
+### Na correção gerencial
+
+| O que você vê | Por que | O que fazer |
+|---|---|---|
+| **"Informe o motivo da correção."** | o motivo é obrigatório | escreva o motivo |
+| **"Informe o tempo em minutos, com um número inteiro de pelo menos 1."** | valor de tempo inválido | corrija o número |
+| **"Informe a quantidade executada como um número inteiro igual ou maior que zero, ou limpe a quantidade."** | valor de quantidade inválido | corrija, ou use **Limpar a quantidade executada** |
+| **"Altere apenas o tempo ou apenas a quantidade executada em cada correção."** | você tentou mudar os dois de uma vez | faça duas correções |
+| **"O apontamento foi alterado por outro usuário. Atualize a tela e tente novamente."** | outra pessoa alterou o mesmo apontamento antes de você salvar | recarregue, confira o valor atual e refaça a correção |
+| **"Informe o motivo da remoção."** | o motivo é obrigatório nesse caso | escreva o motivo |
+| **"O colaborador indicado não está alocado nesta atividade."** | o lançamento por terceiro exige alocação ativa | aloque o colaborador na atividade, ou escolha outro |
+| **"Indique o motivo."** | faltou o motivo do lançamento por terceiro | preencha o motivo |
+| **"Colaborador inexistente, inativo ou indisponível."** | o colaborador escolhido não está ativo | verifique o cadastro do colaborador |
+| **"Esta atividade não está incluída na sequência operacional recomendada."** | a atividade não entra na sequência daquela esteira | confira a estrutura da esteira com o gestor |
+| **"Não foi possível remover este apontamento."** | falta permissão para remover apontamento de outra pessoa | peça a quem tem essa capacidade |
+| **"Apontamento não encontrado."** | o apontamento já havia sido removido | atualize a tela |
+
+### Se a justificativa é exigida e não há onde informá-la
+
+A página **Apontamento** aberta a partir de **Minha jornada** tem data, minutos, quantidade e observação, mas **não tem campo de justificativa**. Se aquela atividade exigir justificativa — por estar fora de sequência, ou fora da sua alocação —, o registro será recusado e não haverá como atender ao pedido naquela tela.
+
+**Nesse caso, use o botão Apontar horas da barra superior**, que tem o campo de justificativa. A pendência está registrada no capítulo 21.
+
+[IMAGEM SUGERIDA: Gaveta Apontar horas na aba Esteira — lista com os blocos Minhas atividades e Fora da sua alocação, mostrando num cartão os números Previsto, Realizado e Pendente e os botões Apontar e Concluir atividade]
+
+[IMAGEM SUGERIDA: Formulário Registrar tempo com a faixa de fora de sequência aberta, listando as atividades anteriores pendentes, e os dois botões de salvar]
+
+[IMAGEM SUGERIDA: Tela Apontamento gerencial — Novo lançamento com o motivo obrigatório e, abaixo, a lista de lançamentos com as ações Editar e Remover]
 
 ---
 
@@ -711,6 +983,17 @@ Os termos técnicos abaixo são reproduzidos **apenas** para você reconhecê-lo
 | Após redefinir o PIN: "Próximo acesso exigirá nova senha." | próximo acesso exigirá **novo PIN** | o recurso é o PIN do Modo Fábrica, não a senha |
 | Botão **"Remover (soft delete)"**, em Usuários e Colaboradores | **remover preservando o histórico** | o registro deixa de aparecer e pode ser restaurado |
 | Textos de filtro que citam nomes internos de parâmetro, no Painel operacional | o filtro correspondente | sem efeito sobre o uso; basta usar os filtros da tela |
+| **"passo"**, nas telas de Apontamento gerencial ("Lançamentos no passo", "Apontamento gerencial neste passo") | **atividade** | mesmo conceito, nome diferente |
+
+### Página Apontamento sem campo de justificativa
+
+Divergência confirmada em 2026-10-03.
+
+A página **Apontamento**, aberta pelo botão **Apontar** em **Minha jornada**, oferece data, minutos, quantidade executada e observação — **mas não tem campo de justificativa operacional**.
+
+Quando a atividade exige justificativa (atividade anterior pendente, ou atividade fora da alocação do colaborador), o registro é recusado e não há como atender ao pedido naquela tela.
+
+**Orientação até a correção:** nesses casos, usar o botão **Apontar horas** da barra superior, que tem o campo de justificativa. Pendência de produto registrada.
 
 ### Cálculo de atraso no Painel operacional
 
