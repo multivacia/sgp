@@ -3,7 +3,7 @@
 **Produto:** SGP+ · Multivacia / ARGOS
 **Versão da aplicação nesta revisão:** 1.9.8
 **Revisão deste manual:** 2026-10-03
-**Situação:** base editorial criada; capítulos 1 a 3, 5, 7 a 13, 20 e 21 com conteúdo final. Os capítulos 4, 6 e 14 a 19 seguem marcados como pendentes e **não devem ser publicados** como versão final.
+**Situação:** base editorial criada; capítulos 1 a 3, 5 a 13, 20 e 21 com conteúdo final. Os capítulos 4 e 14 a 19 seguem marcados como pendentes e **não devem ser publicados** como versão final.
 
 > **Este é o documento canônico do manual do usuário.** Versões em HTML ou PDF devem ser geradas a partir daqui.
 >
@@ -458,14 +458,847 @@ A exclusão apaga a esteira. Quando há histórico, o caminho correto é **cance
 
 # 6. Esteiras
 
-> [PENDENTE DE ENRIQUECIMENTO — não publicar como capítulo final]
+## Para que serve
 
-- **localizar e consultar**: busca, filtros e leitura do detalhe da esteira
-- **criar uma esteira**: estrutura montada manualmente, a partir de matriz ou a partir de documento
-- **estrutura da esteira**: tarefa, setor e atividade; tempo por unidade e quantidade prevista
-- **ciclo de vida**: as situações da esteira, quem avança cada etapa e quando é exigido motivo
-- **atividades**: concluir, reabrir, dispensar e restaurar, com as pré-condições de cada ação
-- **inclusão tardia**: os quatro modos de incluir trabalho em uma esteira já iniciada e o efeito no planejamento
+A **esteira** é o trabalho completo que o SGP+ acompanha do início ao fim: um veículo, um pedido, uma entrega. Tudo o que a fábrica executa, planeja e aponta nasce de uma esteira.
+
+Este capítulo responde quatro perguntas:
+
+1. como o trabalho é criado e dividido;
+2. em que situação ele está;
+3. quem executa cada parte;
+4. o que fazer quando o trabalho muda depois de já ter começado.
+
+É o capítulo estrutural do manual. O Planejamento (capítulos 8 e 9), a fila do colaborador (capítulo 10) e o Modo Fábrica (capítulo 13) só funcionam sobre uma esteira que já existe e já tem estrutura.
+
+[IMAGEM SUGERIDA: detalhe de uma esteira em andamento, com cabeçalho, situação, resumo operacional e o início da estrutura operacional]
+
+## Onde fica
+
+### Para criar uma esteira
+
+| Caminho | Abre |
+|---|---|
+| Menu lateral, **Gestão** → **Nova esteira** | a tela de criação, com título **Nova esteira** |
+| Menu lateral, **Gestão** → **Por documento** | a tela **Nova esteira por documento** |
+| **Painel operacional**, botão **Nova Esteira Manual** (topo) | a mesma tela **Nova esteira** |
+| **Painel operacional**, botão **Nova esteira por documento** (topo) | a mesma tela **Nova esteira por documento** |
+
+São dois destinos, com duas entradas cada. O botão do painel e o item de menu levam exatamente à mesma tela.
+
+> O botão do painel chama-se **Nova Esteira Manual**, mas a tela que ele abre também permite começar a partir de uma matriz. O nome do botão é mais estreito do que a tela. Não existe uma terceira tela "manual" separada.
+
+### Para consultar uma esteira
+
+| Caminho | Observação |
+|---|---|
+| **Painel operacional** → menu **Ações** da linha → **Consultar** | a entrada principal; descrita no capítulo 5 |
+| **Painel operacional** → menu **Ações** da linha → **Editar** | abre direto a tela de alteração |
+| **Dashboard** | listas de esteiras com link para o detalhe |
+| **Minha fila** (capítulo 10) | cada cartão leva à esteira da atividade |
+| **Minha jornada** (capítulo 11) e **Jornada por colaborador** (capítulo 12) | cada alocação leva à esteira |
+| tela de **Apontamento** | link **Detalhe da esteira** |
+| **Planejamento semanal** (capítulo 8) | o agrupamento por esteira e o painel de divergências de sincronização levam ao detalhe |
+
+Dentro do detalhe, o botão **Alterar esta esteira** abre a tela **Alterar Esteira**.
+
+> **Atenção:** três blocos do **Planejamento semanal** — **Desvios do responsável principal**, **Histórico da semana** e **Execução fora do plano** — têm links **Abrir esteira** / **Ver esteira** que **não funcionam**: em vez da esteira, levam você à tela inicial. Está registrado no capítulo 21. Para chegar à esteira nesses casos, use o Painel operacional.
+
+## Quem costuma ter acesso
+
+| O que fazer | Depende de |
+|---|---|
+| **consultar** o detalhe de qualquer esteira | nada além do acesso ao sistema |
+| **criar** esteira (qualquer forma) | permissão de criar esteiras |
+| **alterar** dados básicos e estrutura | permissão de criar esteiras |
+| **concluir**, **reabrir**, **dispensar** e **restaurar** atividade pela esteira | permissão de criar esteiras |
+| **incluir novo item** em esteira já existente | permissão de criar esteiras |
+| **avançar**, **voltar** ou **cancelar** a situação da esteira | permissão específica de mudar situação |
+| **excluir** a esteira inteira | permissão de criar esteiras, e a esteira precisa estar elegível |
+
+Duas permissões diferentes governam esta tela: uma para **conteúdo** (dados, estrutura, atividades) e outra para **situação** (avançar, voltar, cancelar). É comum ter a primeira e não a segunda — nesse caso você edita a esteira mas não a faz andar no fluxo.
+
+Quem só consulta vê a esteira inteira: dados, estrutura, tempos, situação e histórico. O que desaparece são os botões.
+
+Quando você não tem a permissão de situação, em lugar dos botões aparece uma linha informando que as transições exigem uma permissão específica — o texto cita o nome interno da permissão, registrado no capítulo 21.
+
+## Como fazer
+
+### 6.1 A estrutura de uma esteira
+
+Toda esteira tem quatro níveis, sempre nesta ordem:
+
+```text
+Esteira            o trabalho completo
+└── Tarefa         um grande bloco de trabalho
+    └── Setor      onde o bloco é executado
+        └── Atividade   a unidade que o colaborador executa e aponta
+```
+
+Leia sempre de cima para baixo:
+
+| Nível | O que é | Exemplo |
+|---|---|---|
+| **Esteira** | o trabalho inteiro, com cliente, veículo, prazo e responsável | "OS 12345 · Gol GTI" |
+| **Tarefa** | um bloco do trabalho | "Revisão completa" |
+| **Setor** | onde aquele bloco acontece | "Tapeçaria" |
+| **Atividade** | o que uma pessoa faz e aponta | "Forrar bancos dianteiros" |
+
+Regras fixas da estrutura, válidas em qualquer forma de criação:
+
+- uma esteira precisa de **pelo menos uma tarefa**;
+- uma tarefa precisa de **pelo menos um setor**;
+- um setor precisa de **pelo menos uma atividade**;
+- todos os quatro precisam de nome.
+
+A **atividade** é o único nível que o colaborador enxerga no dia a dia. É nela que o tempo é apontado, é ela que entra no planejamento e é ela que tem situação própria. Tarefa e setor servem para organizar e para ler a esteira.
+
+A ordem em que tarefas, setores e atividades aparecem na tela **é** a sequência operacional recomendada: o sistema lê a estrutura de cima para baixo e trata o que vem antes como anterior. Isso não bloqueia a execução, mas gera pedido de justificativa quando alguém trabalha fora de ordem — veja o capítulo 7.
+
+[IMAGEM SUGERIDA: bloco Estrutura operacional do detalhe, mostrando Tarefa 1 → Setor 1 → lista de atividades numeradas, com tempo ao lado de cada uma]
+
+### 6.2 Ler o detalhe de uma esteira
+
+O detalhe é a tela de referência da esteira. De cima para baixo:
+
+| Bloco | O que traz |
+|---|---|
+| **Cabeçalho** | nome da esteira, a linha de identificação, a forma de origem (**Manual**, **Base** ou **Misto**), o selo de situação e os botões de ação |
+| **Resumo operacional** | contagem de **Tarefas**, **Setores**, **Atividades** e o **Tempo estimado total** |
+| **Dados básicos** | cliente, responsável, veículo, modelo / versão, placa, prioridade, início e fim previstos, tempo total previsto, total de atividades, criada em, concluída em e observações |
+| **Pendência e concentração por setor e atividade** | compara, por atividade, o previsto da estrutura com os minutos já apontados, e mostra a pendência |
+| **Plano Operacional da Esteira** | bloco próprio de preparação da execução |
+| **Eventos operacionais** | o histórico da esteira |
+| **Estrutura operacional** | a árvore tarefa → setor → atividade, com as ações por atividade |
+
+Pontos que costumam gerar dúvida:
+
+- **a esteira não tem campo de código ou OS.** A linha sob o nome mostra o código quando existe; nas esteiras criadas pelo sistema esse código fica vazio e a linha repete o nome. Por isso a tela de criação sugere escrever a OS dentro do nome — o próprio campo traz o exemplo *"OS 12345 · Gol GTI"*. É também assim que a busca do Painel operacional encontra a esteira pela OS;
+- **Tempo estimado total** e **Tempo total previsto (min)** mostram o mesmo número, calculado da estrutura;
+- a situação exibida é a **situação formal** da esteira, com rótulo próprio. Ela não é igual aos recortes do Painel operacional — em especial, **Em atraso** é leitura de prazo, não situação. Veja o capítulo 5;
+- o **Plano Operacional da Esteira** é um recurso de preparação da execução que vive nesta tela. Esta revisão do manual **não** documenta o passo a passo dele; quando a esteira ainda não tem plano, o bloco mostra *"Esta esteira ainda não possui Plano Operacional."* e, nas situações em que é permitido criar, o botão **Criar plano operacional**.
+
+### 6.3 As formas de criar uma esteira
+
+São **três formas realmente disponíveis**, e elas se distribuem em duas telas:
+
+| Forma | Onde | O que faz |
+|---|---|---|
+| **Montar manualmente** | **Nova esteira** | você cria tarefas, setores e atividades do zero |
+| **A partir de uma matriz** | **Nova esteira** | a estrutura de uma matriz de operação é copiada para a esteira |
+| **Por documento** | **Por documento** | você envia um documento e o sistema propõe a esteira |
+
+Na tela **Nova esteira**, montar manualmente e usar matriz **não são caminhos separados**: é a mesma tela, e você pode combinar os dois — começar de uma matriz e acrescentar tarefas manuais, ou o contrário. O resultado fica registrado como **Manual**, **Base** ou **Misto** no cabeçalho do detalhe.
+
+> Existe uma quarta tela, o **Laboratório de Esteiras**, que compõe uma esteira a partir de várias matrizes. Ela **não tem item de menu nem link em nenhuma tela** e por isso não é um método disponível. O registro está no capítulo 21.
+
+### 6.4 Criar manualmente
+
+A tela **Nova esteira** tem três passos, mostrados como trilho no alto: **Dados básicos → Estrutura → Revisão**. Você pode clicar em qualquer um dos três a qualquer momento — eles indicam o que falta, não prendem você em uma ordem.
+
+**Passo 1 — Dados básicos**
+
+1. Preencha **Nome** — é o único campo obrigatório. O exemplo do campo é *"OS 12345 · Gol GTI"*.
+2. Preencha o que fizer sentido: **Cliente**, **Veículo**, **Placa**, **Modelo / versão**, **Início previsto**, **Fim previsto**, **Responsável**, **Prioridade** e **Observações**.
+3. **Tempo total previsto (min)** não é digitável: é calculado da estrutura. Enquanto a estrutura está vazia, mostra *"0 min"* e a nota *"Calculado após definir a estrutura"*.
+4. Clique em **Continuar para estrutura**. O botão só libera depois que o nome é preenchido.
+
+**Passo 2 — Estrutura**
+
+A tela fica dividida: à esquerda **Bases e extras** (o catálogo), à direita **Sua esteira em montagem**.
+
+Para montar do zero:
+
+1. Clique em **+ Adicionar tarefa manual**. Entra uma tarefa chamada **Tarefa 1**, já com um setor e uma atividade em branco.
+2. Dê nome à tarefa e ao setor.
+3. Em cada atividade, preencha o nome, **Qtd** (quantidade prevista) e **Min/un.** (minutos por unidade).
+4. Use **+ Atividade neste setor** e **+ Setor nesta tarefa** para crescer a estrutura.
+5. Use as setas **↑** e **↓** para ordenar, e **Remover atividade** / **Remover setor** / **Remover tarefa** para enxugar. O último item de cada nível não pode ser removido — a estrutura precisa sempre de pelo menos um de cada.
+6. Em cada atividade, aloque quem executa — veja 6.6.
+
+**Passo 3 — Revisão**
+
+O passo **Revisão** mostra o cartão **Antes de criar**, com **Base**, **Tarefas**, **Setores**, **Atividades**, **Minutos (estrutura)** e a lista de **Pendências**.
+
+- sem pendências, aparece *"Nada a corrigir para criar."*;
+- com pendências, cada uma é listada em uma frase do que falta.
+
+Clique em **Criar esteira**. O botão existe também no cabeçalho, disponível nos três passos.
+
+Não existe uma tela de pré-visualização separada: o cartão **Antes de criar** é a revisão.
+
+[IMAGEM SUGERIDA: passo Estrutura da tela Nova esteira, com o catálogo Bases e extras à esquerda e a esteira em montagem à direita]
+
+### 6.5 Criar a partir de uma matriz
+
+A matriz de operação é um modelo de estrutura mantido em **Matrizes de operação**. Criar a partir dela poupa a montagem item a item.
+
+No passo **Estrutura**, na coluna **Bases e extras**:
+
+1. Em **Escolher base**, use **Buscar base…** para encontrar a matriz. Cada matriz mostra quantas tarefas tem e o total de minutos estimados.
+2. Clique em **Usar esta base**. Todas as tarefas da matriz entram na esteira em montagem.
+3. Se já houver uma matriz na esteira, o botão passa a ser **Trocar base** — ele substitui as tarefas vindas de matriz e **preserva** as tarefas que você acrescentou à mão.
+4. Para acrescentar apenas um pedaço, em **Extras** arraste uma tarefa solta de qualquer matriz para a área de montagem.
+
+**O que a matriz traz:**
+
+| Item | Vem da matriz? |
+|---|---|
+| tarefas, setores e atividades, com nomes | sim |
+| ordem | sim |
+| minutos por unidade de cada atividade | sim |
+| responsável padrão da atividade, como **responsável principal** | sim, quando a matriz tem um |
+| equipe padrão da atividade, como apoio | sim, quando a matriz tem uma |
+| **quantidade prevista** | **não** — toda atividade entra com **1 unidade**, mesmo que a matriz preveja mais |
+
+A última linha é importante: se a matriz prevê 4 unidades de uma atividade, a esteira nasce com 1. **Confira e corrija a quantidade de cada atividade antes de criar.** A divergência está registrada no capítulo 21.
+
+**Depois de criar, a esteira é independente da matriz.** A estrutura é copiada, não vinculada: alterar a matriz depois não muda nenhuma esteira já criada, e alterar a esteira não muda a matriz. A esteira guarda apenas o registro de qual matriz a originou, para consulta.
+
+Tudo o que vem da matriz continua editável — antes de criar, na tela de criação; depois de criar, pela tela **Alterar Esteira**.
+
+### 6.6 Responsável, equipe e alocação
+
+O SGP+ usa três coisas diferentes que é fácil confundir:
+
+| Conceito | Onde fica | O que significa |
+|---|---|---|
+| **Responsável** da esteira | Dados básicos | quem responde pelo trabalho inteiro, para gestão e para a busca do painel |
+| **Colaborador alocado** na atividade | estrutura, em cada atividade | quem o cadastro aponta como executor daquela atividade |
+| **Equipe** alocada na atividade | estrutura, em cada atividade | a equipe envolvida na atividade, sem nome individual |
+
+**O responsável da esteira não executa nada por isso.** Ele é um dado de gestão. Quem aparece como executor é o colaborador alocado na atividade.
+
+Em cada atividade, a faixa de alocação funciona assim:
+
+- o **+** abre a busca **Buscar colaborador ou time…**, com colaboradores e equipes na mesma lista;
+- cada colaborador alocado aparece como um círculo com as iniciais; passar o mouse mostra o nome;
+- o círculo com **anel dourado** é o **responsável principal** da atividade. O primeiro colaborador alocado vira principal automaticamente;
+- cada equipe aparece como uma etiqueta azul com o nome;
+- para remover, clique no círculo do colaborador ou no **×** da etiqueta da equipe.
+
+Regras que a tela cobra:
+
+| Regra | Efeito |
+|---|---|
+| alocar colaboradores exige **exatamente um principal** | sem isso, a criação é recusada com o nome da atividade na mensagem |
+| o mesmo colaborador não repete na mesma atividade | a tela nem oferece quem já está alocado |
+| a mesma equipe não repete na mesma atividade | idem |
+| **equipe nunca é responsável principal** | a equipe entra sempre como apoio |
+| alocar é **opcional** | atividade sem ninguém alocado não impede criar a esteira |
+
+Alocar uma equipe **não** expande os membros dela em alocações individuais: a equipe fica como uma alocação só.
+
+**Alocação estrutural não é trabalho distribuído.** Alocar alguém na estrutura diz quem deveria executar; não coloca nada na fila de ninguém. A fila do colaborador (capítulo 10) e o Modo Fábrica (capítulo 13) só recebem o que foi distribuído **e publicado** no planejamento (capítulos 8 e 9). Os dois conceitos não são equivalentes.
+
+Trocar a equipe de uma atividade não muda o responsável da esteira, e vice-versa: são campos independentes. Um colaborador que deixa de existir no cadastro não pode ser alocado — a inclusão é recusada com *"Colaborador de alocação inexistente, inativo ou indisponível."*. O mesmo vale para equipe inativa.
+
+### 6.7 Tempo por unidade, quantidade prevista e total previsto
+
+Cada atividade tem dois números, lado a lado na estrutura:
+
+| Campo na tela | O que é | Regra |
+|---|---|---|
+| **Min/un.** | minutos para executar **uma** unidade | número inteiro, de 0 para cima; começa em **60** em atividade nova |
+| **Qtd** | **quantidade prevista** de unidades | número inteiro **de 1 para cima**; começa em **1** |
+
+O total previsto da atividade é sempre:
+
+```text
+tempo por unidade  ×  quantidade prevista  =  total previsto
+```
+
+O **Tempo estimado total** da esteira é a soma dos totais previstos de todas as atividades.
+
+Como o detalhe mostra isso em cada atividade:
+
+| Quantidade prevista | O que aparece |
+|---|---|
+| 1 unidade | só o tempo, por exemplo **30 min** |
+| mais de 1 | a conta inteira, por exemplo **4 un. × 30 min = 2 h** |
+
+Limites da **quantidade prevista**:
+
+- **zero não é aceito**, e **fração não é aceita**. Digitar algo fora disso deixa o campo marcado e mostra *"A quantidade prevista deve ser um número inteiro maior ou igual a 1."*;
+- enquanto o campo estiver inválido, a esteira não pode ser criada nem salva.
+
+#### Alterar a quantidade de uma esteira que já existe
+
+O comportamento atual é permissivo. Pela tela **Alterar Esteira** → **Estrutura**, a quantidade prevista de qualquer atividade pode ser alterada:
+
+| Situação | A alteração é aceita? | Exige justificativa? |
+|---|---|---|
+| esteira em **Rascunho / Em elaboração** | sim | não |
+| esteira em qualquer outra situação | sim | **sim** |
+| atividade que **já tem horas apontadas** | **sim** | sim, pela regra da situação |
+| atividade já **concluída** ou **dispensada** | **sim** | sim, pela regra da situação |
+
+Ou seja: **não existe bloqueio por apontamento**. A única barreira fora de **Rascunho / Em elaboração** é a justificativa.
+
+Alterar a quantidade muda o total previsto da atividade, o tempo total da esteira e, em consequência, a pendência de tempo exibida no detalhe. Em atividade que já tem horas apontadas, aumentar a quantidade faz a pendência crescer; reduzir faz encolher — sem tocar nas horas já registradas.
+
+> **Use com cuidado.** O comportamento do sistema é mais permissivo do que a regra de negócio pretendia: alterar a quantidade de uma atividade já em execução reescreve o previsto contra o qual o realizado será comparado. Divergência registrada no capítulo 21.
+
+> **Números diferentes para a mesma atividade.** O previsto do **detalhe da esteira** considera a quantidade e está correto. As telas de **jornada** (capítulos 11 e 12) calculam o previsto como se cada atividade tivesse 1 unidade, e por isso mostram menos. Em atividade com mais de uma unidade, a referência correta é a estrutura da esteira. Registrado no capítulo 21.
+
+### 6.8 Criar por documento — visão geral
+
+O item de menu **Por documento** abre a tela **Nova esteira por documento**. Exige a mesma permissão de criar esteiras.
+
+Em resumo, o caminho é:
+
+1. você **envia um documento em PDF**;
+2. o sistema devolve um **rascunho**: dados sugeridos e itens inferidos, todos editáveis na tela;
+3. você revisa, corrige e decide item por item;
+4. ao confirmar em **Criar esteira no SGP+**, a esteira é criada de verdade e você cai no detalhe dela.
+
+A partir daí, a esteira é uma esteira como qualquer outra: vale tudo o que este capítulo descreve.
+
+Nesta tela, diferente da **Nova esteira**, o prazo é um campo único de texto chamado **Prazo estimado**, geralmente já preenchido pela leitura do documento.
+
+**O passo a passo completo — envio, leitura, revisão de itens e aceite — está no capítulo 17, Importação por documento.** Este capítulo não o repete.
+
+### 6.9 Dados básicos: campos, obrigatoriedade e prazo
+
+Na **Nova esteira** e na **Alterar Esteira**, os campos são os mesmos:
+
+| Campo | Obrigatório? | Como funciona |
+|---|---|---|
+| **Nome** | **sim** | texto livre; é o identificador prático da esteira |
+| **Cliente** | não | texto livre |
+| **Veículo** | não | texto livre |
+| **Placa** | não | texto livre, exibido em maiúsculas; o exemplo é *ABC1D23*, mas o formato não é cobrado |
+| **Modelo / versão** | não | texto livre |
+| **Início previsto** | não | seletor de data |
+| **Fim previsto** | não | seletor de data |
+| **Responsável** | não | lista de colaboradores; não aceita nome digitado |
+| **Prioridade** | não | **Baixa**, **Média** ou **Alta**; já vem em **Média** |
+| **Tempo total previsto (min)** | — | só leitura, calculado da estrutura |
+| **Observações** | não | texto livre |
+
+Duas ausências que surpreendem:
+
+- **não há campo de código ou OS**. Use o nome;
+- **não há verificação de duplicidade**. Duas esteiras podem ter exatamente o mesmo nome, o mesmo cliente e a mesma placa, e o sistema aceita as duas sem aviso. Conferir antes de criar é responsabilidade de quem cadastra.
+
+#### O prazo da esteira
+
+A tela **Nova esteira** pede o prazo como **duas datas**: **Início previsto** e **Fim previsto**. Preencha pelos seletores de data, como a tela pede — não há formato a decorar.
+
+No detalhe, as duas voltam nos campos **Início previsto** e **Fim previsto**. Em esteiras antigas, ou nas criadas **Por documento**, o prazo pode ter sido gravado como um texto único; nesse caso o detalhe mostra uma linha extra chamada **Prazo estimado** com aquele texto como está.
+
+> **Limitação que afeta a leitura de atraso.** O cartão e o filtro **Em atraso** do Painel operacional, e o selo **Atrasada** dos cartões de backlog do Planejamento e da Agenda, só reconhecem o prazo em formatos específicos — e **não** reconhecem o par Início/Fim previsto que a tela de criação produz. Consequência prática: uma esteira cadastrada pela tela atual tende a **nunca** ser contada como atrasada. Não use esses indicadores como fonte única de prioridade; confira o prazo na própria esteira. Registrado no capítulo 21.
+
+### 6.10 Alterar uma esteira existente
+
+O botão **Alterar esta esteira**, no detalhe, abre a tela **Alterar Esteira**. Ela tem as mesmas três abas da criação — **Dados básicos**, **Estrutura** e **Revisão** — já carregadas com a esteira.
+
+O que muda em relação à criação:
+
+- o botão final é **Salvar alterações**, e só libera quando existe algo diferente para salvar. Sem alteração nenhuma, a revisão lista *"Nenhuma alteração para salvar."*;
+- **a estrutura é editável em qualquer situação da esteira** — inclusive finalizada e cancelada. Não há bloqueio por situação;
+- fora de **Rascunho / Em elaboração**, salvar abre a janela **Justificativa da alteração**, com o texto *"Esta esteira já saiu do Backlog. Informe o motivo da alteração para manter a rastreabilidade operacional."* e o campo **Motivo da alteração**. O motivo é obrigatório e precisa ter de 3 a 500 caracteres;
+- a aba **Estrutura** traz também o atalho **Incluir novo item** — veja 6.14.
+
+Ao salvar, você volta para o detalhe com o aviso **"Esteira atualizada com sucesso."**.
+
+> Enquanto houver alteração não salva, os botões de situação ficam desligados, com o aviso **"Existem alterações não salvas. Salve ou descarte antes de mudar o status da esteira."**. Salve primeiro, mude a situação depois.
+
+### 6.11 As situações da esteira
+
+A esteira passa por **sete situações**. Toda esteira nasce em **Rascunho / Em elaboração**.
+
+| Situação | O que significa | Como se entra | O que fica disponível |
+|---|---|---|---|
+| **Rascunho / Em elaboração** | ainda em montagem; invisível para a produção | é a situação de nascimento | **Enviar para planejamento**, **Cancelar esteira**; editar sem justificativa; excluir |
+| **Aguardando planejamento** | cadastro pronto, esperando o gestor da fábrica aceitar | por **Enviar para planejamento**, ou por **Voltar para backlog** | **Aceitar e iniciar planejamento**, **Cancelar esteira**; excluir |
+| **Em planejamento** | gestor definindo equipe, responsáveis e sequência | por **Aceitar e iniciar planejamento**, ou por **Voltar para planejamento** | **Liberar para produção**, **Cancelar esteira**, **Voltar para backlog**; excluir |
+| **A iniciar** | liberada para a fábrica, sem nenhuma hora apontada ainda | por **Liberar para produção** | **Cancelar esteira**, **Voltar para planejamento**, **Voltar para backlog**; excluir; já aceita apontamento |
+| **Em andamento** | tem execução registrada | **automaticamente**, no primeiro apontamento | **Finalizar esteira**, **Cancelar esteira**, **Voltar para planejamento**, **Voltar para backlog**; aceita apontamento |
+| **Finalizada** | encerrada com conclusão | por **Finalizar esteira** | **nenhuma ação de situação**; não aceita apontamento |
+| **Cancelada** | encerrada por cancelamento | por **Cancelar esteira**, de qualquer situação aberta | **nenhuma ação de situação**; não aceita apontamento |
+
+Três consequências práticas:
+
+1. **apontar só é possível em A iniciar e Em andamento.** Nas outras cinco, o apontamento é recusado com a explicação da situação;
+2. **a produção não vê esteira em Rascunho / Em elaboração.** Ela existe só para a gestão;
+3. **Finalizada e Cancelada não oferecem nenhuma ação de situação** na tela. São o fim da linha pelo caminho normal.
+
+[IMAGEM SUGERIDA: cabeçalho do detalhe de uma esteira Em andamento, com o selo de situação e a faixa de botões Finalizar esteira, Cancelar esteira, Voltar para planejamento e Voltar para backlog]
+
+### 6.12 Fazer a esteira avançar
+
+Os botões de avanço ficam no cabeçalho do detalhe e no cabeçalho da tela **Alterar Esteira**. Cada situação tem o seu:
+
+| De | Botão | Para |
+|---|---|---|
+| Rascunho / Em elaboração | **Enviar para planejamento** | Aguardando planejamento |
+| Aguardando planejamento | **Aceitar e iniciar planejamento** | Em planejamento |
+| Em planejamento | **Liberar para produção** | A iniciar |
+| A iniciar | *nenhum* | Em andamento, **automático** |
+| Em andamento | **Finalizar esteira** | Finalizada |
+
+Características do avanço:
+
+- **é um passo por vez, na ordem.** Não existe atalho de Rascunho direto para A iniciar. Tentar pular etapa é recusado;
+- **não há pré-condição de conteúdo.** O sistema não exige estrutura mínima, responsável, prazo ou planejamento publicado para avançar. A conferência é sua;
+- **A iniciar → Em andamento não tem botão.** A esteira passa sozinha quando o **primeiro apontamento** é registrado — tanto pelo totem quanto pelo navegador. É o único avanço que a execução dispara;
+- **finalizar não cobra que as atividades estejam concluídas.** Uma esteira com atividades pendentes aceita **Finalizar esteira**;
+- quem pode avançar é quem tem a permissão de mudar situação. Ao concluir, aparece **"Status da esteira atualizado."**.
+
+Sobre planejamento: **publicar o planejamento não avança a esteira**, e avançar a esteira não publica planejamento. São dois eixos independentes. A esteira fica pronta para entrar no planejamento quando chega a **Aguardando planejamento**; o trabalho semanal em si está nos capítulos 8 e 9.
+
+### 6.13 Fazer a esteira voltar
+
+Existem **duas voltas distintas**, com regras próprias. Ambas pedem motivo.
+
+| Botão | Disponível em | Leva para |
+|---|---|---|
+| **Voltar para planejamento** | A iniciar, Em andamento | **Em planejamento** |
+| **Voltar para backlog** | Em planejamento, A iniciar, Em andamento | **Aguardando planejamento** |
+
+Não as trate como "voltar uma etapa": elas têm destinos diferentes e alcances diferentes. **Voltar para planejamento** tira a esteira da fila da fábrica e a devolve ao planejamento ativo. **Voltar para backlog** recua mais, até a fila de espera do planejamento — e é a única volta disponível quando a esteira está em **Em planejamento**.
+
+Ao clicar, abre uma confirmação:
+
+| Botão | Título | O que a janela explica |
+|---|---|---|
+| **Voltar para planejamento** | *"Voltar esteira para planejamento?"* | *"Esta ação remove a esteira da fila de produção e permite ajustar responsáveis, sequência, datas ou estrutura planejada."* e *"O histórico e os apontamentos já registrados serão preservados."* |
+| **Voltar para backlog** | *"Voltar esteira para backlog?"* | *"Esta ação remove a esteira da produção ou do planejamento ativo e retorna para a fila de planejamento da fábrica."* e *"O histórico, os apontamentos e a estrutura da esteira serão preservados."* |
+
+O campo **Informe o motivo:** é **obrigatório**, texto livre, de 3 a 500 caracteres. Não há catálogo de motivos para retrocesso — ao contrário da dispensa de atividade, que tem lista fixa.
+
+O que acontece depois:
+
+- a esteira muda de situação e o retrocesso entra no histórico, com o motivo que você escreveu;
+- **apontamentos e horas já registradas são preservados** — nada é apagado;
+- a estrutura é preservada;
+- **as duas voltas tiram a esteira das situações que aceitam apontamento.** A partir daí, nenhum colaborador consegue apontar nela até que ela volte a **A iniciar** ou **Em andamento**. Os itens já publicados no planejamento continuam no plano, mas deixam de ser apontáveis;
+- aparece **"Esteira retornada para planejamento."** ou **"Esteira retornada para backlog."**.
+
+Não existe volta de **Finalizada** nem de **Cancelada** por nenhum desses botões.
+
+### 6.14 Cancelar e finalizar
+
+**Cancelar** está disponível em **todas as cinco situações abertas**: Rascunho / Em elaboração, Aguardando planejamento, Em planejamento, A iniciar e Em andamento. O botão é **Cancelar esteira**.
+
+**Esteira Finalizada não oferece Cancelar esteira.** Na prática, pela tela, **finalizada é terminal**: não há nenhuma ação de situação para ela.
+
+O cancelamento é direto: **não há janela de confirmação e não há campo de motivo**. Um clique e a esteira passa a **Cancelada**.
+
+> **Cancele com atenção.** É a ação menos reversível desta tela: sem confirmação, sem motivo e sem volta pela interface.
+
+Efeitos do cancelamento:
+
+| Onde | O que acontece |
+|---|---|
+| **situação da esteira** | passa a **Cancelada** |
+| **apontamentos** | preservados integralmente; nada é apagado |
+| **estrutura e atividades** | preservadas, com as situações que tinham |
+| **novos apontamentos** | recusados, com *"Esta esteira está cancelada e não permite novos apontamentos."* |
+| **dispensar e restaurar atividade** | deixam de ser possíveis |
+| **planejamento** | os itens já publicados não são removidos automaticamente; remova-os no planejamento, pelos capítulos 8 e 9 |
+| **Painel operacional** | sai das contagens dos cartões; aparece pelo filtro **Canceladas** |
+| **editar dados e estrutura** | continua possível, com justificativa |
+
+**Finalizar** segue a mesma lógica: um clique em **Finalizar esteira**, sem confirmação e sem motivo. A data de conclusão é gravada e aparece em **Concluída em**. Novos apontamentos passam a ser recusados com *"Esta esteira está finalizada e não permite novos apontamentos."*.
+
+### 6.15 As situações da atividade
+
+A atividade tem situação própria, independente da esteira. São **quatro situações** de verdade:
+
+| Situação | O que significa | Como se chega |
+|---|---|---|
+| **Pendente** | ainda não encerrada; é como toda atividade nasce | situação inicial |
+| **Concluída** | encerrada com conclusão | por **Concluir atividade** |
+| **Reaberta** | volta a contar como trabalho em aberto | por **Reabrir atividade** ou por **Restaurar** |
+| **Dispensada** | retirada do trabalho, sem ter sido executada | por **Dispensar** |
+
+Como o detalhe mostra cada uma, ao lado do nome da atividade:
+
+| Situação | O que você vê |
+|---|---|
+| **Concluída** | o selo **Atividade concluída** |
+| **Dispensada** | o selo **Dispensada**; passar o mouse mostra o motivo, quem dispensou e quando |
+| **Pendente** | **nenhum selo** |
+| **Reaberta** | **nenhum selo** — fica igual a pendente na tela |
+
+A última linha merece atenção: **uma atividade reaberta não se distingue de uma pendente** olhando a estrutura. Para saber que houve reabertura, consulte **Eventos operacionais**, onde ela aparece como **Atividade reaberta** ou **Dispensa restaurada**.
+
+Separe três coisas que a tela mistura:
+
+1. **a situação da atividade** — as quatro acima;
+2. **a prontidão pela sequência** — não é situação: é a leitura de quem vem antes na estrutura. Uma atividade pendente com anteriores em aberto continua pendente; o que muda é o pedido de justificativa;
+3. **o que o planejamento fez com ela** — estar planejada, publicada ou na fila de alguém é outro eixo, tratado nos capítulos 8, 9 e 10.
+
+O que **não existe**: não há como **bloquear** nem **pausar** uma atividade. Os filtros **Bloqueios** e **Paradas** do histórico existem na tela, mas ficam sempre em zero. Registrado no capítulo 21.
+
+Para a sequência da esteira, **concluída e dispensada valem o mesmo**: as duas liberam as atividades seguintes. Pendente e reaberta continuam bloqueando.
+
+### 6.16 Concluir uma atividade
+
+A ação fica **no detalhe da esteira**, na estrutura operacional: botão **Concluir atividade**, na linha da atividade.
+
+Pré-condições:
+
+- a atividade **não** pode estar concluída nem dispensada — nesses casos o botão não aparece;
+- você precisa da permissão de criar esteiras;
+- **não é preciso apontar nada antes.** Concluir é independente do apontamento: uma atividade sem uma única hora registrada pode ser concluída;
+- **a situação da esteira não impede.** Quem tem a permissão conclui atividade mesmo em esteira ainda em rascunho.
+
+Como fazer:
+
+1. Clique em **Concluir atividade**.
+2. Se não houver atividade anterior em aberto, aparece a pergunta **"Confirmar conclusão desta atividade?"**. Confirme e pronto.
+3. Se houver atividade anterior em aberto, abre a janela **Concluir atividade** com o aviso *"Esta atividade está fora da sequência recomendada."*, a contagem de quantas atividades anteriores continuam pendentes, até três exemplos no formato **Tarefa › Setor › Atividade**, e um campo de **justificativa obrigatório**. Sem justificativa, a conclusão é recusada.
+
+O que esperar:
+
+- o selo **Atividade concluída** aparece na linha; o botão **Concluir atividade** dá lugar a **Reabrir atividade**;
+- **não há mensagem de sucesso** — a tela simplesmente se atualiza;
+- a pendência de tempo daquela atividade vai a zero no bloco de pendência e concentração, independente das horas apontadas;
+- **a atividade seguinte fica liberada**: deixa de pedir justificativa por sequência;
+- o histórico registra **Atividade concluída**;
+- clicar duas vezes não gera erro nem registro duplicado.
+
+O formulário de apontamento em si — data, minutos, quantidade executada, justificativas — é assunto do capítulo 7.
+
+### 6.17 Reabrir uma atividade concluída
+
+**Reabrir aplica-se exclusivamente a atividade concluída.** Não serve para atividade dispensada — para essa, a ação é **Restaurar** (6.19).
+
+O botão **Reabrir atividade** só aparece na linha de uma atividade **concluída**, no detalhe da esteira, e exige a permissão de criar esteiras.
+
+Como fazer:
+
+1. Clique em **Reabrir atividade**.
+2. Abre a janela **Reabrir atividade?**, que explica: *"A atividade voltará a ter pendência calculada normalmente. Os apontamentos e o histórico de conclusão serão mantidos."*
+3. O campo **Observação da reabertura** é **opcional** — o exemplo é *"Contexto para a equipe…"*.
+4. Confirme em **Reabrir atividade**.
+
+O que esperar:
+
+- a atividade passa a **Reaberta** e, na tela, volta a parecer pendente: o selo **Atividade concluída** desaparece e **nenhum selo** entra no lugar;
+- a data e o autor da conclusão são limpos do registro da atividade, mas ficam preservados no histórico;
+- **os apontamentos e as horas continuam todos lá**;
+- a pendência de tempo volta a ser calculada: previsto menos realizado;
+- a atividade volta a bloquear as seguintes pela sequência;
+- aparece **"Atividade reaberta."** e o histórico registra **Atividade reaberta**.
+
+### 6.18 Dispensar uma atividade
+
+**Dispensar** retira a atividade do trabalho sem afirmar que ela foi feita. É para o que não será executado: deixou de ser necessário, foi substituído, entrou por erro.
+
+O botão **Dispensar** fica no detalhe da esteira, na linha da atividade. Pré-condições:
+
+- a atividade **não** pode estar concluída nem dispensada;
+- a esteira **não** pode estar **Finalizada** nem **Cancelada**;
+- permissão de criar esteiras.
+
+> O botão **Dispensar** existe **só no detalhe** da esteira. A tela **Alterar Esteira** não o oferece, mesmo mostrando a mesma estrutura.
+
+Como fazer:
+
+1. Clique em **Dispensar**.
+2. Abre a janela **Dispensar atividade?**, que explica: *"A atividade … deixa de bloquear a sequência e some das filas apontáveis. Horas já apontadas são preservadas. Não é conclusão."*
+3. Escolha o **Motivo** na lista. O catálogo padrão é: **Não é mais necessária**, **Substituída por outra atividade**, **Erro de planejamento / escopo**, **Solicitação do cliente** e **Outro**. A lista é mantida em **Configurações operacionais**, então pode ser diferente na sua operação.
+4. Se o motivo escolhido exigir, aparece o campo **Complemento obrigatório** — é o caso de **Outro**. Sem o complemento, não dá para confirmar.
+5. Confirme.
+
+O que esperar:
+
+- o selo **Dispensada** entra na linha; o motivo, quem dispensou e quando ficam visíveis ao passar o mouse;
+- **as horas já apontadas são preservadas**;
+- **a sequência é liberada**: as atividades seguintes param de pedir justificativa por causa dela;
+- **os itens de plano daquela atividade são cancelados** — tanto no plano da esteira quanto no planejamento semanal. A atividade sai do que estava programado;
+- aparece **"Atividade dispensada."** e o histórico registra **Atividade dispensada**;
+- novos apontamentos passam a ser recusados: *"Esta atividade foi dispensada; não é possível novo apontamento."*
+
+> **Atividade dispensada continua aparecendo como planejável.** Apesar do cancelamento dos itens de plano, ela volta a aparecer na lista de atividades disponíveis do Planejamento e da Agenda, e o sistema aceita distribuí-la e publicá-la de novo. É uma pendência de produto conhecida, com efeitos na fila do colaborador e no Modo Fábrica. Ao planejar, **não** distribua atividade dispensada. Detalhes e sintomas no capítulo 21.
+
+### 6.19 Restaurar uma atividade dispensada
+
+**Restaurar** é a ação específica da atividade **dispensada** — e é diferente de **Reabrir**.
+
+| Ação | Vale para | Botão |
+|---|---|---|
+| **Reabrir atividade** | atividade **concluída** | aparece na linha da concluída |
+| **Restaurar** | atividade **dispensada** | aparece na linha da dispensada |
+
+Pré-condições: a atividade precisa estar **dispensada**, a esteira **não** pode estar Finalizada nem Cancelada, e você precisa da permissão de criar esteiras.
+
+Como fazer: clique em **Restaurar**. **Não há janela de confirmação e não há motivo a informar** — a ação é imediata.
+
+O que esperar:
+
+- a atividade passa a **Reaberta** — o mesmo destino de uma reabertura. O selo **Dispensada** desaparece e nenhum selo entra no lugar;
+- o registro da dispensa anterior é preservado no histórico;
+- a atividade **volta a bloquear** as seguintes pela sequência e volta a ter pendência de tempo;
+- **os itens de plano que a dispensa cancelou não são reativados.** Restaurar devolve a atividade à estrutura, não ao plano;
+- aparece **"Dispensa restaurada."** e o histórico registra **Dispensa restaurada**.
+
+**Por isso, restaurar não basta para voltar a executar.** Para a atividade chegar de novo à fila de alguém, ela precisa ser planejada outra vez e o plano precisa ser **publicado** — capítulos 8 e 9. Enquanto isso não acontecer, ela existe na estrutura e não aparece para ninguém executar.
+
+[IMAGEM SUGERIDA: duas linhas de atividade lado a lado — uma com o selo Dispensada e o botão Restaurar, outra concluída com o botão Reabrir atividade]
+
+### 6.20 Remover da estrutura — e por que não é o mesmo que dispensar
+
+São duas coisas diferentes, e confundi-las custa histórico:
+
+| | **Dispensar atividade** | **Remover da estrutura** |
+|---|---|---|
+| Onde | detalhe da esteira, botão **Dispensar** | **Alterar Esteira** → **Estrutura**, botão **Remover atividade** / **Remover setor** / **Remover tarefa**, e depois **Salvar alterações** |
+| O que faz | marca a atividade como dispensada e a mantém visível | tira o item da estrutura; ele deixa de aparecer |
+| Motivo | obrigatório, escolhido em lista | não há campo de motivo próprio; fora de Rascunho, vale a justificativa geral da alteração |
+| Rastro na tela | selo **Dispensada**, com motivo e autor | nenhum: o item simplesmente não está mais lá |
+| Reversível pela tela | sim, por **Restaurar** | **não** |
+
+Regras da remoção estrutural:
+
+- **tarefa e setor também podem ser removidos**, com a mesma mecânica. Remover um deles leva tudo o que está abaixo;
+- o **último** item de cada nível não pode ser removido: a esteira precisa de pelo menos uma tarefa, cada tarefa de um setor, cada setor de uma atividade;
+- **a remoção é permitida em qualquer situação da esteira**, inclusive com apontamentos existentes. Não há mensagem de recusa;
+- o que acontece depois depende do histórico do item: se ele **não** tem apontamento, plano ou histórico, é apagado de vez; se tem, ele é apenas retirado de vista e o histórico é preservado por baixo. Nos dois casos a tela não avisa qual foi o caso — o item apenas desaparece;
+- o total previsto e as contagens da esteira são recalculados.
+
+**Quando usar o quê:** se o trabalho existia e não será feito, **dispense** — fica o registro de que existia e por que saiu. Remova da estrutura apenas o que entrou por erro de cadastro e nunca deveria estar ali.
+
+Para **excluir a esteira inteira** há uma ação separada, no **Painel operacional** (capítulo 5): menu **Ações** → **Excluir**. Ela só aparece até **A iniciar** e é recusada se a esteira já tiver movimentação.
+
+### 6.21 Incluir trabalho em uma esteira já iniciada
+
+Quando o escopo cresce depois que a esteira já começou, use **Incluir novo item**. É um caminho próprio, de acréscimo: ele **não** mexe no que já existe.
+
+**Onde:** detalhe → **Alterar esta esteira** → aba **Estrutura** → botão **Incluir novo item**.
+
+A janela se chama **Incluir novo item** e avisa: *"A estrutura existente permanece intacta. Itens novos entram no Backlog do Planejamento Semanal quando geram atividades."*
+
+**São quatro modos**, em **O que você deseja incluir?**:
+
+| Modo | Rótulo na tela | O que faz | Onde o item entra |
+|---|---|---|---|
+| 1 | **Tarefa da Matriz** | traz uma tarefa inteira do catálogo, com setores e atividades | como **nova tarefa**, no fim da esteira |
+| 2 | **Tarefa manual** | você monta a tarefa na hora, com setor e atividades | como **nova tarefa**, no fim da esteira |
+| 3 | **Setor em tarefa existente** | acrescenta um setor sob uma tarefa que já existe | no **fim** daquela tarefa |
+| 4 | **Atividade em setor existente** | acrescenta uma atividade sob um setor que já existe | no **fim** daquele setor |
+
+Em todos os quatro:
+
+1. O **Motivo da inclusão** é **obrigatório** — texto livre, de 3 a 500 caracteres, com contador na tela. Sem ele o botão não libera.
+2. Você escolhe o modo.
+3. Nos modos 3 e 4, escolhe a tarefa ou o setor de destino.
+4. Preenche a estrutura nova: nome, **Qtd** e **Min/un.** de cada atividade, e a alocação de quem executa — as mesmas regras de 6.6 e 6.7.
+5. Confirma em **Incluir item**.
+
+O que esperar:
+
+- a estrutura existente **não muda**: nenhuma renumeração, nenhuma atividade mexida, nenhum apontamento afetado;
+- o item novo entra **no fim** do nível escolhido;
+- as contagens e o tempo total previsto da esteira crescem;
+- aparece **"Novo item incluído. As novas atividades estão disponíveis no Backlog do Planejamento Semanal."**;
+- o histórico registra **Item incluído na esteira**, com o motivo.
+
+#### Em que situações a inclusão funciona
+
+**Em todas.** O botão **Incluir novo item** aparece na aba Estrutura para qualquer pessoa com a permissão de alterar, em qualquer situação — e a operação é aceita em qualquer situação, **incluindo Finalizada e Cancelada**. Não há recusa por situação, nem na tela nem ao confirmar.
+
+A tela não sinaliza nada a respeito. Vale como critério próprio:
+
+| Situação da esteira | O que a inclusão significa na prática |
+|---|---|
+| Rascunho / Em elaboração, Aguardando planejamento | trabalho que ainda vai ser planejado normalmente |
+| Em planejamento, A iniciar, Em andamento | é o uso esperado: escopo que cresceu com a esteira em curso |
+| **Finalizada**, **Cancelada** | aceito pelo sistema, mas a esteira **não aceita apontamento** — ninguém poderá executar o item incluído. Se o trabalho é real, reabra o caminho da esteira antes, ou crie outra esteira |
+
+#### O efeito no planejamento
+
+Incluir item **não planeja nada**. O que a inclusão faz é colocar as atividades novas no **Backlog operacional**, disponíveis para planejar.
+
+| Pergunta | Resposta |
+|---|---|
+| a atividade nova entra no plano da semana atual? | **não** |
+| ela fica no backlog, esperando ser planejada? | **sim** |
+| ela entra na fila do colaborador sem planejamento? | **não** |
+| alocar alguém na atividade nova já a coloca na fila dele? | **não** — alocação estrutural não é distribuição |
+| preciso salvar? | não: a inclusão é gravada na hora, pelo próprio botão **Incluir item** |
+| preciso publicar? | **sim**, para chegar à fila de alguém |
+
+Portanto, a sequência completa é: **incluir o item → planejar a atividade → publicar**. Só depois da publicação a atividade aparece na **Minha fila** (capítulo 10) e no **Modo Fábrica** (capítulo 13). Em semana já publicada, a mudança exige nova publicação. O passo a passo de planejar e publicar está nos capítulos 8 e 9.
+
+[IMAGEM SUGERIDA: janela Incluir novo item, com o campo Motivo da inclusão e os quatro cartões de modo]
+
+### 6.22 Imprimir tickets da esteira
+
+No cabeçalho do detalhe, **Imprimir tickets** gera os tickets das atividades desta esteira de uma vez. Abre a janela **Imprimir tickets da esteira**, com:
+
+- o agrupamento: **Estrutura da esteira**, **Tarefa** ou **Responsável**;
+- a opção **Incluir atividades concluídas** — desligada por padrão. A tela informa quantas atividades estão elegíveis e quantas concluídas estão ocultas;
+- o botão **Imprimir**.
+
+O botão fica desligado quando a esteira não tem nenhuma atividade elegível. A impressão de um ticket isolado, a partir de um item do plano, é assunto dos capítulos 8 e 9.
+
+### 6.23 O histórico da esteira
+
+O bloco **Eventos operacionais** traz *"Histórico de mudanças relevantes da esteira."*, agrupado por data, com filtros por categoria — **Todos**, **Atrasos**, **Conclusões**, **Reaberturas**, **Bloqueios**, **Paradas**, **Observações** e **Outros** — e a contagem em cada um. O botão **Carregar mais** traz mais registros, até um teto.
+
+**O que o histórico registra:**
+
+| Evento | Aparece como |
+|---|---|
+| conclusão de atividade | **Atividade concluída** |
+| reabertura de atividade | **Atividade reaberta** |
+| dispensa de atividade | **Atividade dispensada** |
+| restauração de dispensa | **Dispensa restaurada** |
+| inclusão tardia | **Item incluído na esteira**, com o motivo |
+| edição de estrutura | **Estrutura da esteira atualizada** |
+| volta para backlog | **Esteira retornada para backlog**, com o motivo |
+| volta para planejamento | **Esteira retornada para planejamento**, com o motivo |
+| entrada e saída de atraso | **Esteira entrou em atraso** / **Esteira saiu do atraso** |
+
+**O que o histórico não registra** — e é importante saber:
+
+- **os avanços de situação.** Enviar para planejamento, aceitar, liberar para produção e finalizar **não** geram registro no histórico;
+- **o cancelamento da esteira**;
+- as categorias **Bloqueios** e **Paradas** ficam sempre em zero, porque essas ações não existem no sistema.
+
+Ou seja: o histórico é forte em atividades, estrutura e retrocessos, e silencioso sobre o avanço normal da esteira. Para saber quando a esteira foi finalizada, use **Concluída em**, nos dados básicos.
+
+## O que esperar
+
+### Criar não libera para a fábrica
+
+Uma esteira recém-criada nasce em **Rascunho / Em elaboração** e **a produção não a vê**. Depois de **Criar esteira**, você cai no detalhe com o aviso **"Esteira criada com sucesso."** e os atalhos **Ver backlog** e **Ir a Minha fila**.
+
+Para o trabalho chegar a alguém, faltam três coisas, nesta ordem:
+
+1. **fazer a esteira avançar** até pelo menos **A iniciar** (6.12);
+2. **planejar** as atividades (capítulos 8 e 9);
+3. **publicar** o plano.
+
+Nenhuma delas acontece sozinha. Esteira criada e com gente alocada na estrutura, mas sem planejamento publicado, **não aparece para ninguém**.
+
+### Estrutura e plano são coisas diferentes
+
+Esta é a distinção que mais gera dúvida no sistema inteiro:
+
+| | **Estrutura da esteira** | **Plano publicado** |
+|---|---|---|
+| O que é | o que o trabalho é e quem deveria executar | o que está programado para cada pessoa e cada dia |
+| Onde se vê | detalhe e Alterar Esteira | Planejamento, Agenda, Minha fila, Modo Fábrica |
+| **Total previsto** | tempo por unidade × quantidade, somado | minutos distribuídos na semana |
+| Alocar alguém | diz quem deveria fazer | não distribui nada |
+
+**O total previsto da esteira e o tempo planejado da semana não são o mesmo conceito** e não precisam coincidir. O primeiro é a estrutura; o segundo é a semana. No Modo Fábrica, quem dispara justificativa por excesso é o tempo planejado da semana — não o total previsto da esteira. Veja o capítulo 13.
+
+### Números que podem divergir entre telas
+
+| Comparação | O que esperar |
+|---|---|
+| **previsto no detalhe** × **previsto nas jornadas** | o detalhe considera a quantidade prevista e está correto; as jornadas (capítulos 11 e 12) calculam como se cada atividade tivesse 1 unidade e mostram menos. Registrado no capítulo 21 |
+| **quantidade na matriz** × **quantidade na esteira criada** | a esteira nasce com 1 unidade por atividade, qualquer que seja a matriz. Confira antes de criar |
+| **situação da esteira** × **cartões do Painel operacional** | os cartões são recortes, não situações; **Em atraso** é leitura de prazo. Veja o capítulo 5 |
+| **cartão Em atraso** × **prazo real** | esteira cadastrada pela tela atual tende a nunca ser contada como atrasada. Veja o capítulo 21 |
+
+### A tela não acompanha o que outras pessoas fazem
+
+O detalhe mostra o estado do momento em que foi carregado. Ações feitas por outra pessoa, ou um apontamento registrado no totem, só aparecem quando você recarrega a página. As suas próprias ações — concluir, reabrir, dispensar, restaurar, incluir item — atualizam a tela na hora.
+
+### Sair da tela de criação ou de alteração descarta o que não foi salvo
+
+Na **Nova esteira** e na **Alterar Esteira**, nada é gravado antes de **Criar esteira** ou **Salvar alterações**. Trocar de tela com estrutura montada e não salva perde o trabalho. A exceção é o **Incluir novo item**, que grava sozinho ao confirmar.
+
+## Quando algo é bloqueado
+
+### Ao criar
+
+| O que você vê | Por que | O que fazer |
+|---|---|---|
+| **Criar esteira** desligado | falta o nome, ou a estrutura está incompleta | veja a lista **Pendências** no passo Revisão |
+| *"Indique o nome da esteira."* | nome vazio | preencha **Nome** nos Dados básicos |
+| *"Adicione pelo menos uma tarefa."* | estrutura vazia | use **+ Adicionar tarefa manual** ou **Usar esta base** |
+| *"Inclua pelo menos uma tarefa com setor e atividade."* | estrutura sem o mínimo | complete os três níveis |
+| *"Cada tarefa precisa de um título."* / *"Cada setor precisa de um título."* / *"Cada atividade precisa de um título."* | nome em branco em algum nível | preencha o nome indicado |
+| *"Cada tarefa precisa de pelo menos um setor."* / *"Cada setor precisa de pelo menos uma atividade."* | nível vazio | acrescente o que falta |
+| *"A quantidade prevista deve ser um número inteiro maior ou igual a 1."* | **Qtd** com zero, fração, vazio ou texto | digite um inteiro de 1 para cima |
+| *"«Atividade»: com colaboradores alocados, deve haver exatamente um principal."* | há colaboradores sem principal, ou com mais de um | deixe um só com o anel dourado |
+| *"«Atividade»: o mesmo colaborador não pode repetir na atividade."* | colaborador repetido | remova a repetição |
+| *"«Atividade»: time não pode ser responsável principal."* | equipe marcada como principal | o principal tem de ser uma pessoa |
+| *"Colaborador de alocação inexistente, inativo ou indisponível."* | o colaborador saiu do cadastro ou está indisponível | escolha outro, ou regularize o cadastro |
+| *"Time de alocação inexistente ou inativo."* | a equipe foi desativada | escolha outra equipe |
+| *"Esta matriz já está na esteira."* / *"Matriz já adicionada. Soltura ignorada."* | a matriz já foi usada como base | use **Trocar base**, ou traga tarefas soltas em **Extras** |
+| *"Tarefa já adicionada. Soltura ignorada."* | a tarefa já está na esteira | nada a fazer; ela já está lá |
+| *"Matriz sem estrutura utilizável."* / *"Matriz sem tarefas materializáveis."* / *"Nenhuma tarefa com atividades nesta matriz."* | a matriz não tem nenhuma atividade sob tarefa e setor | complete a matriz em **Matrizes de operação**, ou use outra |
+| *"Tarefa sem setores ou atividades utilizáveis."* | a tarefa arrastada está vazia na matriz | escolha outra tarefa |
+| *"Matriz ainda não carregada."* / *"Árvore da matriz não disponível."* / *"Preparando árvores…"* | o catálogo ainda está carregando | aguarde e repita |
+
+### Ao alterar
+
+| O que você vê | Por que | O que fazer |
+|---|---|---|
+| **Salvar alterações** desligado | não há nada diferente do que está gravado | a revisão mostra *"Nenhuma alteração para salvar."* |
+| janela **Justificativa da alteração** | a esteira já saiu de Rascunho / Em elaboração | escreva o **Motivo da alteração** |
+| *"Motivo deve ter entre 3 e 500 caracteres."* | motivo curto demais ou longo demais | ajuste o texto |
+| *"Existem alterações não salvas. Salve ou descarte antes de mudar o status da esteira."* | você tentou mudar a situação com edição pendente | salve primeiro, depois mude a situação |
+
+### Ao mudar a situação
+
+| O que você vê | Por que | O que fazer |
+|---|---|---|
+| nenhum botão de situação, e um aviso sobre permissão | você não tem a permissão de mudar situação | peça a quem administra os acessos |
+| nenhum botão de situação em esteira **Finalizada** ou **Cancelada** | essas situações não oferecem ação | se o trabalho precisa continuar, crie outra esteira |
+| *"Não é permitido mudar de … para …"* | tentativa de pular etapa do fluxo | avance um passo por vez |
+| *"Não é permitido alterar para o mesmo status."* | destino igual à situação atual | nada a fazer |
+| *"Informe o motivo para continuar."* | retrocesso sem motivo, ou com menos de 3 caracteres | escreva o motivo |
+| *"O motivo deve ter no máximo 500 caracteres."* | motivo longo demais | encurte |
+| *"Esta esteira não pode voltar para backlog a partir do status atual."* | **Voltar para backlog** só vale de Em planejamento, A iniciar ou Em andamento | confira a situação |
+| *"Esta esteira não pode voltar para planejamento a partir do status atual."* | **Voltar para planejamento** só vale de A iniciar ou Em andamento | confira a situação |
+
+### Nas ações de atividade
+
+| O que você vê | Por que | O que fazer |
+|---|---|---|
+| nenhum botão na linha da atividade | falta a permissão de criar esteiras | peça acesso |
+| janela **Concluir atividade** com *"Esta atividade está fora da sequência recomendada."* | existe atividade anterior ainda em aberto | escreva a justificativa, ou conclua a anterior primeiro |
+| *"Informe uma justificativa para executar esta atividade fora da sequência recomendada."* | justificativa em branco | preencha |
+| *"Esta atividade não está incluída na sequência operacional recomendada."* / *"Esta atividade não foi encontrada na estrutura atual desta esteira."* | a estrutura mudou desde que a tela carregou | recarregue a página |
+| *"A etapa só pode ser reaberta quando estiver concluída."* | **Reabrir** usado em atividade não concluída | para dispensada, use **Restaurar** |
+| *"Esta atividade já está dispensada."* | dispensa repetida | nada a fazer |
+| *"A atividade só pode ser restaurada quando estiver dispensada."* | **Restaurar** usado fora de dispensada | para concluída, use **Reabrir atividade** |
+| *"Não é possível dispensar atividades em esteira finalizada ou cancelada."* | a esteira está encerrada | reabra o caminho da esteira, ou trate em outra esteira |
+| *"Não é possível restaurar atividades em esteira finalizada ou cancelada."* | idem | idem |
+| *"Informe o complemento do motivo selecionado."* | o motivo escolhido exige complemento, como **Outro** | preencha o complemento |
+| *"Motivo de dispensa inválido."* / *"Motivo de dispensa inativo."* | o motivo saiu do catálogo depois que a janela abriu | feche, reabra e escolha de novo |
+| *"Sem permissão para reabrir esta atividade."* / *"Sem permissão para dispensar ou restaurar esta atividade."* | falta permissão | peça acesso |
+| *"Esta atividade foi dispensada; não é possível novo apontamento."* | tentativa de apontar em dispensada | use **Restaurar** e planeje de novo |
+
+### Ao incluir novo item
+
+| O que você vê | Por que | O que fazer |
+|---|---|---|
+| **Incluir item** desligado | falta o motivo, falta escolher o modo, ou a estrutura nova está incompleta | complete o que falta |
+| *"Preencha os dados da tarefa, do setor e da atividade."* | estrutura nova sem os três níveis preenchidos | complete nome, **Qtd** e **Min/un.** |
+| *"— mínimo 3 caracteres"* junto ao contador | motivo curto demais | escreva um motivo real |
+| *"Nó pai não encontrado ou removido."* / *"Nó pai está inativo."* / *"Nó pai não pertence a esta esteira."* | a tarefa ou o setor de destino mudou desde que a tela carregou | recarregue a página e repita |
+| *"Área tardia deve ser incluída sob uma tarefa."* / *"Atividade tardia deve ser incluída sob um setor."* | destino do tipo errado | escolha uma tarefa para setor, um setor para atividade |
+| *"Sem permissão para incluir item na estrutura da esteira."* | falta permissão | peça acesso |
+| *"Nenhuma tarefa disponível no catálogo."* | nenhuma matriz tem tarefa utilizável | use **Tarefa manual** |
+
+### Ao excluir a esteira
+
+| O que você vê | Por que | O que fazer |
+|---|---|---|
+| **Excluir** não aparece no menu **Ações** | falta permissão, ou a esteira já passou de **A iniciar** | **Cancelar esteira** é o caminho para encerrar sem apagar |
+| *"Esta esteira já possui apontamentos e não pode ser excluída. Cancele ou finalize para preservar o histórico."* | existe hora apontada | cancele ou finalize |
+| *"Esta esteira já possui movimentações e não pode ser excluída."* | existe plano ou item de planejamento ligado à esteira | cancele ou finalize |
+| *"Você não tem permissão para excluir esteiras."* | falta permissão | peça acesso |
+
+### Ao entrar pelo endereço
+
+| O que você vê | Por que | O que fazer |
+|---|---|---|
+| **"Sem permissão para esta área"** | você abriu **Nova esteira**, **Por documento** ou **Alterar Esteira** sem a permissão de criar esteiras | peça acesso; consultar o detalhe continua liberado |
+| *"Esteira inválida."* ou aviso de esteira não encontrada | a esteira foi excluída, ou o endereço está errado | volte pelo **Painel operacional** |
+| a tela inicial, ao clicar **Abrir esteira** / **Ver esteira** no Planejamento semanal | os links desses três blocos estão quebrados | chegue à esteira pelo **Painel operacional**; registrado no capítulo 21 |
 
 ---
 
@@ -2936,6 +3769,7 @@ Os termos técnicos abaixo são reproduzidos **apenas** para você reconhecê-lo
 | **"SGP+ Produção"**, no cabeçalho do navegador da fábrica | **Modo Fábrica** | o totem exibe "SGP · Modo Fábrica"; os dois cabeçalhos deveriam usar o mesmo nome |
 | **"Daily"**, no seletor de Visualização do Planejamento semanal | **visão por dia** | rótulo em inglês em uma interface em português; a opção ao lado, "Semana", está traduzida |
 | **"Atividades de hoje"**, **"Minutos planejados"** e a frase *"Atividades planejadas para hoje, em ordem de execução."*, na Minha fila | os mesmos dados **da data exibida** | os rótulos continuam dizendo "hoje" quando você navega para outro dia; os números sempre acompanham a data escolhida |
+| Aviso sobre transições de situação, no detalhe da esteira e na tela **Alterar Esteira**, quando falta a permissão | **é preciso a permissão de mudar a situação da esteira** | a frase cita o nome interno da permissão em lugar do nome funcional |
 
 ### Numeração dos cartões da Minha fila não segue a ordem da tela
 
@@ -2993,7 +3827,16 @@ Some-se a isso que a **Jornada por colaborador** não tem botão **Atualizar** e
 
 Divergência confirmada em 2026-10-03, com impacto direto na leitura do painel.
 
-O cartão e o filtro **Em atraso** só reconhecem o prazo da esteira quando ele está registrado como **data**. O campo **Prazo estimado** do cadastro de Nova esteira, porém, pede um **número de dias** — e é esse texto que o painel tenta ler como data.
+O cartão e o filtro **Em atraso** só reconhecem o prazo da esteira quando ele está registrado como **data**. O prazo, porém, é guardado como **texto livre**, e nenhuma das telas que o preenchem produz o formato que o painel sabe ler:
+
+| Tela | Como pede o prazo | O que grava |
+|---|---|---|
+| **Nova esteira** e **Alterar Esteira** | dois seletores de data, **Início previsto** e **Fim previsto** | uma linha de texto no formato "Início previsto … · Fim previsto …" |
+| **Nova esteira por documento** | um campo único de texto, **Prazo estimado**, sem validação de formato | o texto como veio do documento ou como foi digitado |
+
+Consequência prática: **esteira cadastrada pela tela atual de Nova esteira tende a nunca ser contada como atrasada**, porque o par Início/Fim previsto não é reconhecido como data. Os demais formatos da tabela abaixo ocorrem em esteiras antigas e nas criadas por documento.
+
+> **Correção de 2026-10-03.** Até esta revisão, este anexo e o capítulo 5 afirmavam que o campo **Prazo estimado** do cadastro de Nova esteira "pede um número de dias". A verificação no código mostrou que essa tela **não tem mais** esse campo: ela pede duas datas. O campo de texto livre **Prazo estimado** sobrevive apenas na criação **Por documento** e na exibição de prazos antigos. A falha de leitura do atraso permanece; o que estava errado era a causa descrita. O texto equivalente no capítulo 5 ainda não foi corrigido.
 
 Efeitos observados:
 
@@ -3054,6 +3897,94 @@ A correção de 2026-10-03 nesta tabela é relevante: até então este anexo afi
 **Como reconhecer na Minha fila:** um cartão no grupo **Concluídas** **sem** o selo **Concluída** é, quase sempre, uma atividade dispensada. Não apontar nela: o registro é recusado ao salvar, com *"Esta atividade foi dispensada; não é possível novo apontamento."*
 
 **Orientação até a correção:** ao planejar, não distribuir atividades dispensadas. Se a atividade precisar voltar ao trabalho, usar antes **Restaurar dispensada** na estrutura da esteira (capítulo 6) e só então planejá-la. Se uma atividade dispensada já estiver no plano, removê-la, salvar e publicar de novo. Para o colaborador, a orientação é não trabalhar em cartão de **Concluídas** sem selo e confirmar com a gestão. Pendência de produto registrada.
+
+### Criação a partir de matriz descarta a quantidade prevista
+
+Divergência confirmada em 2026-10-03, com impacto direto no previsto da esteira.
+
+Ao criar uma esteira a partir de uma matriz de operação, o sistema copia nomes, ordem, minutos por unidade, responsável padrão e equipe padrão de cada atividade — mas **não** copia a **quantidade prevista**. Toda atividade nasce com **1 unidade**, mesmo quando a matriz prevê mais.
+
+| Na matriz de operação | Na esteira criada |
+|---|---|
+| 30 min por unidade, **4 unidades** | 30 min por unidade, **1 unidade** |
+
+O efeito é um total previsto menor que o planejado na matriz, propagando-se para o tempo total da esteira, a pendência de tempo e tudo o que deriva do previsto estrutural.
+
+**Orientação até a correção:** depois de **Usar esta base**, percorrer as atividades no passo **Estrutura** e corrigir o campo **Qtd** antes de criar a esteira. Pendência de produto registrada.
+
+### Quantidade prevista pode ser alterada mesmo com horas já apontadas
+
+Divergência confirmada em 2026-10-03, entre o comportamento implementado e a regra de negócio pretendida.
+
+A regra de negócio do produto prevê que a quantidade prevista de uma atividade só possa mudar **enquanto ela não tiver apontamentos**. O sistema **não aplica esse bloqueio**: pela tela **Alterar Esteira** → **Estrutura**, a quantidade prevista de qualquer atividade pode ser alterada em qualquer situação da esteira, inclusive em atividade que já tem horas apontadas, já concluída ou já dispensada.
+
+A única barreira existente é a **justificativa da alteração**, exigida quando a esteira já saiu de **Rascunho / Em elaboração** — e ela não distingue atividade com apontamento de atividade intocada.
+
+Como o previsto é a referência contra a qual o realizado é comparado, alterar a quantidade de uma atividade em execução reescreve essa referência depois do fato: a pendência de tempo, a cobertura e os desvios passam a ser calculados contra um previsto que não era o vigente quando o trabalho foi feito.
+
+**Orientação até a decisão de produto:** tratar a alteração de quantidade em atividade já apontada como exceção, sempre com justificativa explícita no motivo da alteração. Pendência de produto registrada.
+
+### Incluir novo item é aceito em esteira finalizada ou cancelada
+
+Divergência confirmada em 2026-10-03.
+
+O botão **Incluir novo item**, na tela **Alterar Esteira**, aparece em **qualquer** situação da esteira, e a inclusão é **aceita** em todas elas — incluindo **Finalizada** e **Cancelada**. Não há recusa, nem aviso, nem sinalização de risco na tela.
+
+O resultado é trabalho acrescentado a uma esteira que **não aceita apontamento**: as atividades novas entram na estrutura e no Backlog operacional, mas ninguém consegue executá-las enquanto a esteira permanecer encerrada.
+
+Diferente de outras ações da mesma tela, a dispensa e a restauração de atividade **são** bloqueadas em esteira finalizada ou cancelada. A inclusão tardia é a exceção.
+
+**Orientação até a decisão de produto:** antes de incluir item, conferir a situação da esteira. Se o trabalho é real e a esteira está encerrada, reabrir o caminho dela ou criar outra esteira. Pendência de produto registrada.
+
+### O histórico da esteira não registra o avanço de situação nem o cancelamento
+
+Divergência confirmada em 2026-10-03, com impacto em rastreabilidade.
+
+O bloco **Eventos operacionais** do detalhe da esteira registra conclusão, reabertura, dispensa e restauração de atividade, inclusão tardia, edição de estrutura, entrada e saída de atraso e os dois retrocessos — com motivo.
+
+Não registra:
+
+| O que não entra no histórico |
+|---|
+| **Enviar para planejamento** |
+| **Aceitar e iniciar planejamento** |
+| **Liberar para produção** |
+| **Finalizar esteira** |
+| **Cancelar esteira** |
+
+Ou seja, o histórico é detalhado sobre atividades e retrocessos e **silencioso sobre o avanço normal da esteira e sobre o cancelamento**. Não há como saber pela tela quem enviou a esteira para planejamento, quem a liberou para produção, quem a finalizou ou quem a cancelou.
+
+Some-se a isso que **Cancelar esteira** e **Finalizar esteira** não pedem confirmação nem motivo: um clique encerra a esteira, sem registro de quem foi e por quê. Para a finalização resta a data em **Concluída em**; para o cancelamento, nada.
+
+Os filtros **Bloqueios** e **Paradas** do mesmo bloco ficam permanentemente em zero, porque bloquear e pausar atividade não existem no sistema (ver 21.5).
+
+**Orientação até a correção:** registrar decisões de encerramento fora do sistema quando a rastreabilidade for necessária, e usar a janela de **Justificativa da alteração** para deixar contexto quando a ação envolver edição. Pendência de produto registrada.
+
+### Atividade reaberta não se distingue de atividade pendente
+
+Divergência confirmada em 2026-10-03, de impacto na leitura da estrutura.
+
+Na **Estrutura operacional** do detalhe da esteira, a atividade **concluída** exibe o selo **Atividade concluída** e a **dispensada** exibe o selo **Dispensada**. A atividade **reaberta** — por **Reabrir atividade** ou por **Restaurar** — **não recebe selo nenhum** e fica visualmente idêntica a uma atividade que nunca foi tocada.
+
+Como **Restaurar** também leva a atividade para reaberta, uma atividade que já foi dispensada e depois restaurada também não deixa marca visível na estrutura.
+
+**Orientação:** para saber se houve reabertura ou restauração, consultar o bloco **Eventos operacionais**, onde os registros aparecem como **Atividade reaberta** e **Dispensa restaurada**. Pendência de produto registrada.
+
+### Links de esteira quebrados no Planejamento semanal
+
+Divergência confirmada em 2026-10-03, de impacto na navegação.
+
+Três blocos do **Planejamento semanal** oferecem um link para abrir a esteira do item e **o link não funciona**: em vez da esteira, ele leva o usuário à tela inicial, perdendo também o contexto da semana que estava aberta.
+
+| Bloco | Rótulo do link |
+|---|---|
+| **Desvios do responsável principal** | **Abrir esteira** |
+| **Histórico da semana** | **Ver esteira** |
+| **Execução fora do plano** | **Abrir esteira** |
+
+Os demais caminhos para a esteira funcionam normalmente — Painel operacional, Dashboard, Minha fila, as duas jornadas, a tela de Apontamento, o agrupamento por esteira e o painel de divergências de sincronização do próprio Planejamento.
+
+**Orientação até a correção:** chegar à esteira pelo **Painel operacional**. Pendência de produto registrada.
 
 ### Agenda da semana descarta alterações não salvas sem avisar
 
