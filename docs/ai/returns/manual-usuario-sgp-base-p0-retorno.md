@@ -5,7 +5,7 @@
 - **Status final:** concluída
 - **Branch:** `docs/manual-usuario-sgp-base-p0`
 - **SHA base:** `1a951e4e5f65a958bbf22fec64c79e915164c4ed` (tip de `origin/docs/auditoria-cobertura-funcional-manual-sgp`, conferido)
-- **SHA final:** ver seção "Commit e push"
+- **SHA final:** `9f665d255…` (commit documental) + commit de registro deste SHA
 - **Working tree ao encerrar:** limpo
 
 ## Objetivo
@@ -149,7 +149,8 @@ Verificado por `git diff --name-only` contra a base: **não** foram alterados `s
 - Commit: `docs(manual): separa matriz técnica e base do manual de usuário`
 - Branch remota: `origin/docs/manual-usuario-sgp-base-p0`
 - PR: não criado. Merge: não realizado. Force-push: não realizado.
-- SHA final: `<preenchido no commit de registro>`
+- SHA do commit documental: `9f665d25` (completo: ver `git log`)
+- Um segundo commit registra este SHA neste retorno, mesmo padrão já usado em `docs/ai/returns/`; sem amend e sem force-push.
 
 ## Uso de contexto / sessão
 
