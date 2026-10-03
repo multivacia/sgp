@@ -1492,14 +1492,341 @@ Quando uma tentativa é recusada pelo sistema no momento de salvar, as mensagens
 
 # 10. Minha Fila
 
-> [PENDENTE DE ENRIQUECIMENTO — não publicar como capítulo final]
+## Para que serve
 
-- de onde vem a fila e por que ela pode estar vazia
-- agrupamento em atrasados, hoje e concluídos
-- próxima atividade recomendada e ordem de apresentação
-- aviso de planejamento acima da capacidade do dia
-- navegar por data de trabalho
-- mensagens de indisponibilidade e o que fazer
+A **Minha fila** é a sua lista de trabalho do dia. É o ponto em que o planejamento da semana deixa de ser intenção da gestão e vira tarefa sua: cada cartão é uma atividade que alguém reservou para o seu nome, em uma data, com um tempo previsto.
+
+Ela responde a quatro perguntas:
+
+- o que eu tenho para fazer hoje;
+- o que ficou para trás e continua pendente;
+- o que eu já encerrei;
+- por onde começar.
+
+Minha fila **não é planejamento**. Você não acrescenta, não remove e não muda a data de uma atividade por aqui — quem faz isso é a gestão, no Planejamento semanal (capítulo 8) ou na Agenda da semana (capítulo 9). O que você faz aqui é **apontar o tempo trabalhado** e **concluir** a atividade.
+
+Na área autenticada ela é a tela equivalente à fila do **Modo Fábrica** (capítulo 13). As duas nascem do mesmo planejamento publicado, mas **não mostram as mesmas informações nem oferecem as mesmas ações**. A comparação está no final do capítulo.
+
+## Onde fica
+
+Menu lateral, agrupamento **Colaborador** → **Minha fila**.
+
+O título na tela é **Minha fila**, com a frase *"Atividades planejadas para hoje, em ordem de execução."*. Logo abaixo aparece a origem do que está sendo exibido:
+
+| Aviso de origem | O que significa |
+|---|---|
+| *"Exibindo plano publicado."* | existe planejamento publicado para a semana da data escolhida |
+| *"A fila mostra apenas planos publicados."* | não existe planejamento publicado para aquela semana — ou sua conta não está vinculada a um colaborador |
+
+Para quem entra no sistema como colaborador, é a primeira tela da área **Colaborador**.
+
+[IMAGEM SUGERIDA: tela Minha fila com o painel de números, o seletor de data e os grupos Atrasadas, Hoje e Concluídas]
+
+## Quem costuma ter acesso
+
+**Todos os usuários autenticados.** Não há permissão específica: o item aparece no menu para qualquer conta ativa, e a tela abre para todas elas.
+
+O que decide se a tela tem conteúdo é outra coisa — **sua conta precisa estar ligada ao seu cadastro de colaborador**. Sem esse vínculo a fila abre vazia e mostra o aviso *"Sua conta não está vinculada a um colaborador operacional. Peça ao administrador para associar seu acesso."*. É um caso de administração de usuários (capítulo 16), não de permissão.
+
+A fila é sempre **a sua**: mostra apenas as atividades reservadas ao seu nome. Não existe aqui a opção de consultar a fila de outra pessoa; para isso a gestão usa a Agenda da semana e a Jornada gerencial (capítulos 9 e 12).
+
+## Como fazer
+
+### Entender de onde vem a fila
+
+A fila é montada em três passos, nesta ordem:
+
+1. o sistema identifica **a semana** da data escolhida — a semana operacional vai de **segunda a sexta**;
+2. procura o **planejamento publicado** daquela semana;
+3. recolhe desse planejamento as atividades **reservadas ao seu nome** naquela data.
+
+Disso nascem as regras que explicam quase tudo o que você vai ver:
+
+- **Sem planejamento publicado não há fila.** Rascunho não conta. Revisão salva e não publicada não conta.
+- **Vale sempre a última versão publicada.** Quando a gestão publica de novo, a fila passa a mostrar a nova versão inteira: o que saiu desaparece, o que entrou aparece.
+- **A fila só olha uma semana por vez.** A semana é a da data que você está vendo. Pendência de outra semana não aparece aqui.
+- **A fila é nominal.** Uma atividade entra porque o planejamento escreveu o seu nome nela — não porque você está alocado na esteira. Os dois não são a mesma coisa, e a diferença aparece no cartão (veja *Fora da sua alocação*, mais adiante).
+
+### Saber por que uma atividade ainda não apareceu
+
+Esta é a dúvida mais comum, e quase sempre a resposta é uma destas:
+
+| Situação | Por que a atividade não está na fila | O que fazer |
+|---|---|---|
+| a gestão distribuiu, mas só **salvou** | enquanto o planejamento não é publicado, nada chega à fila | pedir a publicação da semana |
+| a gestão está **revisando** uma semana já publicada | a revisão só vale depois de publicada de novo; até lá a fila continua mostrando a versão anterior | aguardar a republicação |
+| a atividade foi planejada para **outra data** | a fila mostra a data escolhida, não a semana inteira | navegar até a data certa |
+| a atividade foi planejada para **outra pessoa** | a fila é nominal | falar com a gestão |
+| a atividade foi **concluída** ou **dispensada** | deixa de ser trabalho executável | nada a fazer |
+
+O caminho inverso também é verdadeiro: **enquanto a gestão não publicar a revisão, uma atividade que ela já removeu do plano continua na sua fila** — e continua apontável. Se você estranhar um item que lhe disseram ter sido retirado, confirme com a gestão antes de trabalhar nele.
+
+### Escolher a data de trabalho
+
+A faixa acima dos grupos controla a data. Ela traz, nesta ordem, **Dia anterior**, um campo de calendário, **Próximo dia**, **Hoje** e, à direita, a data escolhida escrita por extenso — por exemplo *"segunda-feira, 06 de out."*.
+
+| O que você quer | Como fazer |
+|---|---|
+| ver o dia de hoje | a fila **já abre em hoje**; o botão **Hoje** volta para ele a qualquer momento |
+| andar um dia para trás ou para frente | **Dia anterior** / **Próximo dia** |
+| ir direto a uma data | o campo de calendário |
+
+Pontos de atenção reais:
+
+- **Você pode olhar para frente.** Datas futuras são aceitas na navegação. Serve para se preparar; não serve para apontar, porque o apontamento não aceita data futura (capítulo 7).
+- **Você pode olhar para trás sem limite.** E pode apontar retroativamente a partir do cartão — a data do apontamento é escolhida na gaveta, não herdada da fila. Isso está explicado em *Apontar pela fila*.
+- **Sábado e domingo não têm planejamento.** A semana planejada é de segunda a sexta. Em um fim de semana a fila não traz atividades daquele dia; traz apenas o que ficou pendente na semana correspondente, no grupo **Atrasadas**.
+- **Trocar para uma data de outra semana troca o planejamento consultado.** Se aquela semana não tiver planejamento publicado, a fila aparece vazia mesmo que a semana atual esteja cheia.
+
+### Ler o painel de números do dia
+
+Acima dos grupos ficam quatro números, referentes **à data que está sendo exibida**:
+
+| Número | O que conta |
+|---|---|
+| **Atividades de hoje** | quantas atividades foram planejadas para você naquela data — incluindo as já concluídas e as dispensadas |
+| **Minutos planejados** | a soma do tempo previsto dessas atividades, pelo mesmo critério |
+| **Atenção à sequência** | quantas atividades têm alguma atividade anterior da esteira ainda aberta |
+| **Atrasadas** | quantas atividades vencidas continuam pendentes |
+
+Dois cuidados de leitura:
+
+- os rótulos dizem **hoje**, mas os números são sempre **da data escolhida**. Ao navegar para outro dia, leia-os como "deste dia";
+- **Atividades de hoje** e **Minutos planejados** contam o que foi planejado, não o que falta. Uma atividade já concluída continua somando nos dois.
+
+### Entender os três grupos
+
+A fila é dividida em até três blocos, que aparecem nesta ordem e **só aparecem quando têm conteúdo**:
+
+| Grupo | Entra aqui | Observações |
+|---|---|---|
+| **Atrasadas** | atividade planejada para um **dia anterior** à data exibida, ainda não encerrada | limitado à mesma semana; o cartão ganha o selo vermelho **Atrasada** |
+| **Hoje** | atividade planejada para **a data exibida** e ainda aberta | é o grupo de trabalho normal |
+| **Concluídas** | atividade **já concluída** — e também a atividade **dispensada** | fica visível; não desaparece da tela |
+
+Como um cartão muda de grupo:
+
+- ao ser concluída, a atividade passa para **Concluídas** — na próxima atualização da tela;
+- no dia seguinte, o que ficou aberto passa para **Atrasadas**;
+- se a gestão **reabrir** uma atividade concluída, ela volta a ser trabalho pendente e reaparece em **Hoje** ou em **Atrasadas**, conforme a data planejada. **Não é preciso republicar o planejamento** para isso: a fila lê a situação atual da atividade, não uma fotografia do dia da publicação.
+
+### Reconhecer a próxima atividade recomendada
+
+O selo **Próxima atividade recomendada** marca as atividades que estão **livres para começar agora**. Uma atividade recebe o selo quando:
+
+- não está concluída nem dispensada;
+- **não tem nenhuma atividade anterior da esteira em aberto**;
+- a esteira dela está liberada para apontamento.
+
+Três coisas importantes:
+
+1. **O selo é orientação, não trava.** Ele não bloqueia as outras atividades: você continua podendo apontar em qualquer cartão da fila.
+2. **Mais de um cartão pode trazer o selo.** Se três atividades estiverem livres, as três são recomendadas. Não é um "próximo item" único.
+3. **Quando o selo não aparece, aparece o motivo** — a mensagem de sequência descrita a seguir.
+
+[IMAGEM SUGERIDA: cartão da fila com o selo Próxima atividade recomendada, o tempo previsto e os botões Apontar horas e Abrir Esteira]
+
+### Ler o cartão da atividade
+
+Cada cartão traz, na faixa de cima, um número e os selos; no corpo, a identificação do trabalho; e, à direita, as ações.
+
+| Elemento | O que é |
+|---|---|
+| número no quadrado azul | a posição que **o planejamento** deu à atividade dentro daquele dia |
+| selo cinza com o tempo | o **tempo previsto** da atividade, vindo do planejamento publicado (por exemplo *"1 h 30 min"*, ou *"—"* quando não há tempo gravado) |
+| **Atrasada** | a data planejada já passou e a atividade continua aberta |
+| **Concluída** | a atividade foi concluída |
+| **Próxima atividade recomendada** | nada impede começar agora |
+| *"Etapa anterior pendente: …"* / **Atenção à sequência** | há atividade anterior da esteira ainda aberta — "etapa" aqui é **atividade** |
+| *"Aguardando etapa …"* / *"Aguardando N etapas anteriores"* | a atividade anterior aberta é de **outra pessoa** |
+| **Fora da sua alocação** | você foi planejado para esta atividade, mas não consta como alocado nela na estrutura da esteira |
+| **Atividade** / **Tarefa ·** / **Setor ·** / **Esteira** / **Data planejada** | identificação do trabalho e onde ele fica |
+| linha discreta no pé | cliente, veículo e placa, quando a esteira tem esses dados |
+
+Quando o selo **Fora da sua alocação** aparece, o cartão também explica o efeito: *"Você foi planejado para esta Atividade, mas não está alocado nela. O apontamento exigirá justificativa."*
+
+**O número do cartão não é a ordem da tela.** A tela ordena por grupo, depois pelas atividades livres antes das que têm pendência anterior, depois por data e pela sequência da própria esteira. O número continua sendo o do planejamento. É normal os números não ficarem em ordem crescente — use a posição dos cartões e o selo de recomendação para decidir, não o número.
+
+### O que o cartão não mostra
+
+Vale saber desde já, para não procurar o que não existe nesta tela:
+
+- **não há tempo realizado, tempo pendente nem percentual de avanço** — o cartão mostra apenas o previsto. O quanto já foi apontado você vê em **Minha jornada** (capítulo 11), na esteira (capítulo 6) ou no Modo Fábrica;
+- **não há quantidade** no cartão. A quantidade é informada no momento do apontamento;
+- **não há impressão de ticket** e **não há reabrir** por aqui.
+
+### Interpretar o aviso de capacidade
+
+Quando o tempo planejado para você naquele dia passa da sua capacidade diária, aparece uma faixa amarela:
+
+> *"Planejamento acima da capacidade do dia: 9 h 30 min planejados para 8 h de capacidade."*
+
+Como ler:
+
+- **planejados** é a soma do tempo previsto das atividades daquele dia — incluindo as já concluídas e as dispensadas;
+- **capacidade** é a sua capacidade diária registrada pela gestão. Se houver um ajuste individual válido para aquele dia, vale o ajuste; se não houver nada registrado, o sistema considera **8 h**;
+- tempo **Extra Esteira** e tempo já apontado **não entram nessa conta** — ela compara planejamento com capacidade, não execução com capacidade.
+
+**O aviso não bloqueia nada.** Você continua podendo apontar e concluir normalmente. Ele é um sinal de que o dia foi planejado acima do que cabe.
+
+O que fazer ao vê-lo: **avisar a gestão**. Redistribuir o dia e alterar capacidade são decisões do planejamento (capítulos 8 e 9) e da administração de colaboradores (capítulo 16) — não há nada a ajustar nesta tela.
+
+[IMAGEM SUGERIDA: faixa amarela de planejamento acima da capacidade do dia, acima do grupo Atrasadas]
+
+### Apontar pela fila
+
+1. No cartão, clique em **Apontar horas**. Abre a gaveta de **Execução rápida**, já no formulário da atividade — com o título **Registrar tempo** e, no alto, **Esteira**, **Atividade** e setor.
+2. Confirme **Data em que o trabalho foi realizado**. Ela **começa sempre em hoje**, mesmo que você esteja vendo um dia anterior na fila. Use os atalhos **Hoje** e **Ontem** ou o calendário. Data futura não é aceita.
+3. Informe **Tempo (minutos)**. O campo começa em **0** e exige no mínimo **1**.
+4. Informe **Quantidade executada**. Começa em **1**; use **0** quando trabalhou sem concluir nenhuma unidade. O campo não pode ficar vazio.
+5. Preencha a **justificativa operacional**, se a tela pedir (veja abaixo).
+6. **Descrição** é opcional.
+7. Clique em **Salvar apontamento**. A confirmação é *"Apontamento registrado com sucesso."*; em data retroativa, a mensagem acrescenta a data de realização.
+
+São os mesmos campos e as mesmas regras do capítulo 7 — a fila apenas abre o formulário já apontando para a atividade certa. Se quiser trocar de atividade sem fechar a gaveta, use **← Voltar à lista**.
+
+### Quando a fila pede justificativa
+
+Dois casos, e somente estes dois:
+
+**1. Atividade fora da sua alocação.** O cartão já avisa com o selo **Fora da sua alocação**, e no formulário aparece *"Você não está alocado nesta atividade. Para apontar horas, informe uma justificativa (apontamento por exceção)."*
+
+**2. Atividade anterior ainda aberta.** Aparece a faixa **Fora de sequência — confirme o apontamento**, com a contagem — *"Existem atividades anteriores ainda pendentes nesta esteira — antes dela ainda existem 2 atividades pendentes."* — e a lista das atividades em aberto.
+
+Nos dois casos **nada é bloqueado**: você continua, escolhendo um motivo na lista de **justificativa operacional**. Algumas opções pedem um **Complemento**.
+
+Quando existe atividade anterior aberta **de outra pessoa** e o sistema não exige justificativa, aparece apenas um aviso discreto — *"Aguardando etapa …"* ou *"Aguardando N etapas anteriores"*. Nesse caso é só informação.
+
+**Na Minha fila não existe justificativa por passar do tempo previsto.** Você pode apontar mais minutos do que o previsto da atividade sem nenhuma exigência adicional. Essa exigência é só do Modo Fábrica (capítulo 13).
+
+### Concluir pela fila
+
+Não existe botão **Concluir** no cartão. A conclusão é feita dentro da gaveta de apontamento, pelo botão **Salvar apontamento e concluir atividade**.
+
+Isso significa que **concluir pela fila sempre registra tempo**: é preciso informar no mínimo 1 minuto. Se o trabalho já estava todo apontado e você só quer encerrar a atividade sem acrescentar tempo, o caminho é a esteira (capítulo 6) ou a lista de atividades da própria gaveta, por **← Voltar à lista**, onde as atividades alocadas a você trazem o botão **Concluir atividade** com a confirmação *"Concluir esta atividade?"*.
+
+Pré-condições e efeitos:
+
+- a atividade não pode estar concluída nem dispensada, e a esteira precisa estar liberada para apontamento;
+- se houver atividade anterior aberta, a justificativa é exigida também para concluir;
+- a confirmação é *"Apontamento salvo e atividade concluída."* (ou *"Atividade concluída."*, pela lista);
+- concluir **pode liberar a próxima atividade da sequência** — é o que a tela informa: *"Esta ação marca a atividade como concluída e pode liberar a próxima atividade da sequência."*
+
+### Abrir a esteira a partir do cartão
+
+**Abrir Esteira** leva à tela da esteira (capítulo 6), já posicionada na atividade do cartão. É o caminho para ver a estrutura completa, o histórico de apontamentos e as ações de gestão da atividade.
+
+## O que esperar
+
+### Quando a tela se atualiza
+
+| Ação | A fila se atualiza? |
+|---|---|
+| trocar a data | **sim**, imediatamente |
+| botão **Atualizar** (passa a **Atualizando...** enquanto carrega) | **sim** |
+| **fechar a gaveta** depois de apontar ou concluir | **sim** |
+| **salvar um apontamento** com a gaveta aberta | **não** — a gaveta confirma com o aviso de sucesso e volta para a lista, mas os cartões atrás continuam como estavam |
+| voltar à aba do navegador depois de um tempo | **não** — a fila não recarrega sozinha |
+
+A consequência prática é simples: **feche a gaveta ao terminar**, ou use **Atualizar**. Enquanto a gaveta estiver aberta, o número de **Atividades de hoje** e os grupos não refletem o que você acabou de registrar.
+
+### O que a fila mostra e o que ela ignora
+
+| Evento | Efeito na Minha fila |
+|---|---|
+| planejamento **publicado** | as atividades aparecem |
+| planejamento **salvo** como rascunho ou revisão | nada muda |
+| **republicação** da semana | a fila passa a mostrar a nova versão por inteiro |
+| atividade **concluída** | vai para **Concluídas** e deixa de ser apontável |
+| atividade **reaberta** | volta a ser pendente, sem precisar republicar |
+| atividade **dispensada** | passa a constar em **Concluídas** e deixa de ser apontável |
+| dispensa **desfeita** na esteira | volta a ser pendente, sem precisar republicar |
+| **apontamento em atividade fora do seu planejamento** | **nenhum**: não cria cartão, não muda ordem, não muda os números. O registro existe e aparece em **Minha jornada** e para a gestão |
+| **Extra Esteira** | **nenhum**: nunca aparece na fila nem entra na conta de capacidade |
+
+Um detalhe que costuma confundir: se você apontar **e concluir** uma atividade que *está* no seu planejamento do dia, o cartão muda de grupo. Se a atividade **não** estiver no seu planejamento, o apontamento é válido, mas a fila continua idêntica.
+
+### Atividade dispensada: o que você vai ver
+
+A dispensa é feita na estrutura da esteira (capítulo 6) e encerra a atividade. Na Minha fila o efeito é parcialmente visível:
+
+- a atividade **aparece** no grupo **Concluídas**, no dia para o qual foi planejada;
+- **não** recebe o selo **Concluída** — fica no grupo sem nenhum selo que explique por quê;
+- **continua contando** em **Atividades de hoje**, em **Minutos planejados** e no aviso de capacidade do dia;
+- o botão **Apontar horas** continua **clicável**, mas o registro é recusado ao salvar, com a mensagem *"Esta atividade foi dispensada; não é possível novo apontamento."*;
+- em dias anteriores ela não aparece: o grupo **Atrasadas** só traz o que continua pendente.
+
+**Na prática:** um cartão em **Concluídas** sem o selo **Concluída** é, quase sempre, uma atividade dispensada. Não tente apontar nela; confirme com a gestão se o trabalho realmente não é mais necessário. Essa divergência está registrada no capítulo 21.
+
+### Estados vazios
+
+| O que aparece | Quando | O que fazer |
+|---|---|---|
+| *"Carregando Minha fila..."* | enquanto a tela busca os dados | aguardar |
+| *"Você ainda não possui atividades planejadas para este dia."* + *"Quando um plano semanal for publicado, suas atividades aparecerão aqui."* | não existe planejamento publicado para aquela semana — ou sua conta não está vinculada a um colaborador | pedir a publicação da semana; se houver o aviso de vínculo, falar com o administrador |
+| *"Não há atividades planejadas para você neste dia."* + a mesma segunda linha | existe planejamento publicado, mas nada foi reservado para você naquela data | conferir a data; depois, falar com a gestão |
+| nenhum grupo na tela, sem mensagem de vazio | não acontece: sem itens, a fila sempre mostra o bloco de estado vazio | — |
+
+Quando **todas** as atividades do dia já foram concluídas, a fila **não** fica vazia: o grupo **Concluídas** continua na tela com os cartões. É o sinal de dia encerrado.
+
+## Quando algo é bloqueado
+
+### Antes de abrir a fila
+
+| O que aparece | Por que | O que fazer |
+|---|---|---|
+| *"Sua conta não está vinculada a um colaborador operacional. Peça ao administrador para associar seu acesso."* | sua conta de acesso não está ligada ao seu cadastro de colaborador | pedir o vínculo a quem administra usuários e colaboradores (capítulo 16). Até lá a fila fica vazia e o apontamento por atividade não funciona |
+
+### Falha ao carregar a fila
+
+| O que aparece | Por que | O que fazer |
+|---|---|---|
+| janela **Não foi possível continuar**, com *"Não foi possível comunicar com o sistema agora. Tente novamente em instantes. Se o problema continuar, abra um chamado."* | a tela não conseguiu falar com o sistema | tentar de novo em instantes; persistindo, abrir chamado |
+| janela **Sessão inválida**, com *"Sessão expirada ou não autenticado. Faça login novamente para continuar."* | a sessão caiu por inatividade ou foi encerrada | entrar de novo |
+| janela **Operação não concluída**, com *"O serviço está temporariamente indisponível ou em manutenção. Tente novamente dentro de instantes."* | indisponibilidade momentânea | aguardar e usar **Atualizar** |
+| faixa vermelha na própria tela | falhas menos graves | usar **Atualizar**; não há botão de nova tentativa na faixa |
+
+### Bloqueios ao apontar ou concluir
+
+Todos aparecem **ao salvar**, não antes: o botão do cartão não antecipa o bloqueio.
+
+| Mensagem | Por que | O que fazer |
+|---|---|---|
+| *"Esta atividade foi dispensada; não é possível novo apontamento."* | a atividade foi dispensada na esteira | não é mais trabalho seu; confirmar com a gestão |
+| *"Esta atividade já está concluída operacionalmente; não é possível novo apontamento."* | alguém concluiu a atividade enquanto a sua tela estava aberta | usar **Atualizar**; se faltou tempo a registrar, a gestão pode reabrir a atividade |
+| *"Esta esteira está finalizada e não permite novos apontamentos."* | a esteira foi encerrada | falar com a gestão antes de qualquer registro |
+| *"Esta esteira está cancelada e não permite novos apontamentos."* | a esteira foi cancelada | idem |
+| *"Esta esteira ainda não foi liberada para produção."* / *"Esta esteira está em planejamento e ainda não permite apontamento."* | a esteira ainda não chegou à fase de execução | aguardar a liberação |
+| *"Colaborador inexistente, inativo ou indisponível."* | seu cadastro de colaborador está inativo | falar com quem administra colaboradores |
+| *"Selecione uma justificativa operacional para este apontamento."* | a justificativa é obrigatória neste caso | escolher um motivo da lista |
+| *"Esta justificativa exige complemento."* | a opção escolhida pede detalhe | escrever o **Complemento** |
+| *"A data de realização não pode ser futura."* | a data escolhida é posterior a hoje | usar **Hoje**, **Ontem** ou uma data passada |
+| botão **Salvar apontamento** apagado | falta o tempo (mínimo 1 minuto), a quantidade está vazia, a data é inválida, ou falta a justificativa exigida | completar os campos |
+
+Um bloqueio que **não** existe aqui: atividade com atividade anterior pendente **não** é recusada. Ela pede justificativa e segue.
+
+### Diferenças em relação ao Modo Fábrica
+
+As duas filas leem o **mesmo planejamento publicado** e aplicam a **mesma regra de sequência**. O que muda é o resto:
+
+| | Minha fila | Modo Fábrica (capítulo 13) |
+|---|---|---|
+| como você entra | e-mail e senha | colaborador e PIN |
+| data | navegação livre, inclusive datas futuras | sempre o dia corrente |
+| organização | grupos **Atrasadas**, **Hoje** e **Concluídas** | filtros **Todas**, **Pendentes** e **Concluídas** no navegador da fábrica |
+| tempo no cartão | só o **previsto** | **previsto**, **realizado** e **pendente** |
+| capacidade do dia | mostra o aviso de planejamento acima da capacidade | não mostra |
+| quantidade executada | sim, no apontamento | não existe no totem; existe no navegador da fábrica |
+| conclusão | junto com o apontamento, ou pela lista da gaveta | ação própria no totem |
+| justificativa por passar do previsto | **não exige** | **exige** |
+| atividade dispensada | aparece em **Concluídas**, com o botão de apontar ainda clicável | aparece bloqueada, com *"Apontamento bloqueado para esta atividade"* |
+| **Extra Esteira** | pela aba **Extra esteira** da mesma gaveta | ação própria no totem |
+| apontar em atividade fora do seu planejamento | marcando **Buscar outras atividades** na gaveta | ação **Outra atividade**, no totem |
+| atualização | manual, por **Atualizar** ou ao fechar a gaveta | fluxo próprio do totem |
+
+**Não tente usar uma como espelho da outra.** Para conferir tempo realizado e avanço, o Modo Fábrica e a **Minha jornada** (capítulo 11) são mais completos. Para enxergar atraso da semana, capacidade do dia e datas passadas, a Minha fila é a tela certa.
+
+[IMAGEM SUGERIDA: gaveta Execução rápida aberta a partir do cartão, com data, tempo, quantidade e o botão Salvar apontamento e concluir atividade]
 
 ---
 
@@ -2023,6 +2350,15 @@ Os termos técnicos abaixo são reproduzidos **apenas** para você reconhecê-lo
 | **"Voltando ao Kiosk…"**, após registrar por Outra atividade ou Extra Esteira no totem | voltando ao **Modo Fábrica** | "Kiosk" é o nome interno do totem |
 | **"SGP+ Produção"**, no cabeçalho do navegador da fábrica | **Modo Fábrica** | o totem exibe "SGP · Modo Fábrica"; os dois cabeçalhos deveriam usar o mesmo nome |
 | **"Daily"**, no seletor de Visualização do Planejamento semanal | **visão por dia** | rótulo em inglês em uma interface em português; a opção ao lado, "Semana", está traduzida |
+| **"Atividades de hoje"**, **"Minutos planejados"** e a frase *"Atividades planejadas para hoje, em ordem de execução."*, na Minha fila | os mesmos dados **da data exibida** | os rótulos continuam dizendo "hoje" quando você navega para outro dia; os números sempre acompanham a data escolhida |
+
+### Numeração dos cartões da Minha fila não segue a ordem da tela
+
+Divergência confirmada em 2026-10-03, de impacto apenas na leitura.
+
+O número no quadrado azul de cada cartão da **Minha fila** é a posição que o **planejamento** deu à atividade dentro do dia. A ordem em que os cartões são exibidos obedece a outro critério — grupo, atividades livres antes das que têm atividade anterior pendente, data e sequência da própria esteira. Resultado: é comum a coluna de números não ficar em ordem crescente.
+
+**Orientação:** não usar o número do cartão como ordem de execução. A ordem a seguir é a dos cartões na tela, junto com o selo **Próxima atividade recomendada**. Pendência de produto registrada.
 
 ### Página Apontamento sem campo de justificativa
 
@@ -2073,7 +2409,7 @@ Em resumo: o selo só é confiável quando o prazo foi registrado como data no f
 
 ### Atividade dispensada volta a aparecer como planejável
 
-Divergência confirmada em 2026-10-03 no Planejamento semanal; alcance ampliado em 2026-10-03 após verificação independente na Agenda da semana.
+Divergência confirmada em 2026-10-03 no Planejamento semanal; alcance ampliado em 2026-10-03 após verificação independente na Agenda da semana e, na mesma data, na **Minha fila** e no **Modo Fábrica**.
 
 Uma atividade **dispensada** continua aparecendo na lista de atividades disponíveis para planejar e o sistema **permite distribuí-la e publicá-la**. Não há recusa nem aviso.
 
@@ -2086,13 +2422,19 @@ O efeito é um item que ocupa a semana sem nunca ser executável:
 | Backlog operacional, nas duas telas | a atividade dispensada aparece como disponível |
 | quadro do planejamento e grade da agenda | aceita ser distribuída; soma minutos na capacidade do colaborador |
 | exportações em Excel | sai nas planilhas como item planejado |
-| fila do colaborador e Modo Fábrica | **não aparece** — é tratada como encerrada |
+| **Minha fila** (capítulo 10) | **aparece** no grupo **Concluídas**, no dia planejado, **sem o selo Concluída**; continua somando em **Atividades de hoje**, em **Minutos planejados** e no aviso de capacidade do dia; o botão **Apontar horas** continua clicável e o registro só é recusado ao salvar |
+| **Modo Fábrica** (capítulo 13) | **aparece** como cartão bloqueado, com *"Apontamento bloqueado para esta atividade"* e, no lugar do botão, *"Apontamento não disponível para esta atividade no momento."* |
+| em datas anteriores, nas duas filas | **não aparece** — o grupo de atrasadas só traz o que continua pendente |
 
-Na prática, o planejamento mostra trabalho que o colaborador nunca receberá, e a capacidade do dia fica comprometida por um item inexistente.
+Na prática, o planejamento mostra trabalho que o colaborador nunca executará, e a capacidade do dia fica comprometida por um item inexistente — tanto no planejamento quanto na própria fila do colaborador.
+
+A correção de 2026-10-03 nesta tabela é relevante: até então este anexo afirmava que a atividade dispensada **não aparecia** na fila do colaborador nem no Modo Fábrica. A verificação no código mostrou o contrário — ela aparece nos dois, encerrada, e no caso da **Minha fila** sem nenhum selo que explique o motivo.
 
 **Como reconhecer na Agenda da semana:** o cartão na grade exibe o selo **Dispensada** e o menu dele **não** oferece **Apontar tempo** nem **Concluir** — só **Imprimir ticket** e **Remover do plano**. É o sintoma visível mais confiável.
 
-**Orientação até a correção:** ao planejar, não distribuir atividades dispensadas. Se a atividade precisar voltar ao trabalho, usar antes **Restaurar dispensada** na estrutura da esteira (capítulo 6) e só então planejá-la. Se uma atividade dispensada já estiver no plano, removê-la, salvar e publicar de novo. Pendência de produto registrada.
+**Como reconhecer na Minha fila:** um cartão no grupo **Concluídas** **sem** o selo **Concluída** é, quase sempre, uma atividade dispensada. Não apontar nela: o registro é recusado ao salvar, com *"Esta atividade foi dispensada; não é possível novo apontamento."*
+
+**Orientação até a correção:** ao planejar, não distribuir atividades dispensadas. Se a atividade precisar voltar ao trabalho, usar antes **Restaurar dispensada** na estrutura da esteira (capítulo 6) e só então planejá-la. Se uma atividade dispensada já estiver no plano, removê-la, salvar e publicar de novo. Para o colaborador, a orientação é não trabalhar em cartão de **Concluídas** sem selo e confirmar com a gestão. Pendência de produto registrada.
 
 ### Agenda da semana descarta alterações não salvas sem avisar
 
