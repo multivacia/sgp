@@ -3,7 +3,7 @@
 **Produto:** SGP+ · Multivacia / ARGOS
 **Versão da aplicação nesta revisão:** 1.9.8
 **Revisão deste manual:** 2026-10-03
-**Situação:** base editorial criada; capítulos 1 a 3, 5, 7, 13, 20 e 21 com conteúdo final. Os capítulos 4, 6, 8 a 12 e 14 a 19 seguem marcados como pendentes e **não devem ser publicados** como versão final.
+**Situação:** base editorial criada; capítulos 1 a 3, 5, 7, 8, 13, 20 e 21 com conteúdo final. Os capítulos 4, 6, 9 a 12 e 14 a 19 seguem marcados como pendentes e **não devem ser publicados** como versão final.
 
 > **Este é o documento canônico do manual do usuário.** Versões em HTML ou PDF devem ser geradas a partir daqui.
 >
@@ -756,15 +756,360 @@ A página **Apontamento** aberta a partir de **Minha jornada** tem data, minutos
 
 # 8. Planejamento semanal
 
-> [PENDENTE DE ENRIQUECIMENTO — não publicar como capítulo final]
+## Para que serve
 
-- semana de trabalho, rascunho, revisão e publicação
-- por que a fila do colaborador só muda depois de publicar
-- capacidade do colaborador por dia e aviso de sobrecarga
-- atividades disponíveis para planejar e por que algumas não aparecem
-- divergências de sincronização e execução fora do plano
-- as duas exportações em Excel e o que cada uma entrega
-- impressão dos tickets da semana
+O Planejamento semanal é onde a demanda vira uma semana executável. Você escolhe a semana, pega as atividades que estão prontas para serem feitas e distribui cada uma para **um colaborador em um dia**, com um tempo planejado.
+
+Enquanto você monta, nada chega à fábrica. O trabalho só passa a valer quando você **publica** — é a publicação que alimenta a fila do colaborador e o Modo Fábrica.
+
+A tela também mostra como a semana está se comportando: capacidade de cada pessoa por dia, o que foi executado dentro e fora do plano, divergências em relação ao plano da esteira e o histórico do que aconteceu.
+
+## Onde fica
+
+Menu lateral, agrupamento **Gestão** → **Planejamento**.
+
+O título na tela é **Planejamento da Semana**, com a frase *"Distribua atividades por colaborador e acompanhe a execução diária."*
+
+## Quem costuma ter acesso
+
+Quem pode criar e alterar esteiras. É a mesma capacidade que libera **Nova esteira**, **Agenda da semana** e **Evolução das Esteiras**.
+
+Sem ela, o item não aparece no menu. Dentro da tela não há recortes por perfil: quem entra pode montar, salvar e publicar.
+
+As ações rápidas do cartão seguem as regras dos capítulos 6 e 7: **Apontar** abre o registro de horas, **Concluir** encerra a atividade e **Reabrir** exige a mesma permissão de gestão de esteiras.
+
+## Como fazer
+
+### Escolher a semana
+
+A semana vai sempre de **segunda a sexta** — cinco dias, nunca sábado ou domingo.
+
+No alto da tela, as setas **‹** e **›** andam uma semana para trás e para frente. Entre elas aparece o intervalo da semana carregada, no formato `dd/mm/aaaa → dd/mm/aaaa`. Ao abrir, a tela carrega a semana que contém o dia de hoje.
+
+Ao lado do intervalo há o selo do estado do plano daquela semana:
+
+| Selo | O que significa |
+|---|---|
+| **Rascunho** | a semana nunca foi publicada; nada disso chegou à fábrica |
+| **Publicado vigente** | existe uma versão publicada, e é ela que a fábrica está usando |
+| **Revisão em planejamento** | existe uma versão publicada **e** você está mexendo em uma nova versão, ainda não publicada |
+
+Quando há uma revisão em andamento, aparece também o selo **Alterações não publicadas**.
+
+### Entender rascunho, publicado e revisão
+
+É a distinção mais importante da tela.
+
+- **Rascunho:** sua área de montagem. Salvar um rascunho não muda nada para ninguém.
+- **Publicado vigente:** a versão que vale. É dela que sai a fila do colaborador e do Modo Fábrica.
+- **Revisão:** quando a semana já tem versão publicada e você altera algo, o sistema **não** mexe na versão publicada. Ele cria uma nova versão a partir dela e guarda suas mudanças ali. A fábrica continua com a versão antiga até você publicar de novo.
+
+A própria tela avisa: *"Este plano possui uma versão publicada ativa. Alterações salvas ficam em revisão e só entram na fila dos colaboradores após nova publicação."*
+
+Publicar a revisão **substitui** a versão anterior. Não existem duas versões valendo ao mesmo tempo, e não há como voltar de publicado para rascunho: para desfazer, você altera e publica de novo.
+
+### Encontrar as atividades disponíveis
+
+A coluna **Backlog operacional** lista o que está pronto para ser planejado. Use **Buscar esteira / atividade** para filtrar.
+
+Entram nessa lista as atividades de esteiras em **Em planejamento**, **A iniciar** e **Em andamento**.
+
+Ficam de fora:
+
+| Situação | Por que não aparece |
+|---|---|
+| esteira em rascunho ou aguardando planejamento | ainda não entrou no fluxo de planejamento |
+| esteira finalizada ou cancelada | não há mais o que planejar |
+| atividade já concluída | o trabalho acabou |
+| atividade inativa ou removida da estrutura | não existe mais como trabalho |
+| atividade **já planejada** em qualquer semana, em rascunho ou publicada | para não planejar duas vezes |
+| atividade de esteira **Em andamento que tem plano próprio da esteira** | essa segue pelo painel **Esteiras aguardando encaixe**, não por aqui |
+
+A exceção da última linha são as atividades **incluídas tardiamente** e marcadas para entrar no planejamento da semana (capítulo 6): essas aparecem no Backlog operacional mesmo com plano próprio da esteira.
+
+Quando tudo já foi distribuído, a lista mostra **"Todas as atividades carregadas no backlog já foram planejadas nesta semana."**. Se a busca não encontrar nada: **"Nenhuma atividade encontrada para a busca."**
+
+> **Atenção.** Uma atividade **dispensada** pode reaparecer nessa lista. O sistema não a bloqueia aqui. Não a planeje: ela consome capacidade e aparece na exportação, mas nunca chega à fila do colaborador. Pendência registrada no capítulo 21.
+
+### Distribuir uma atividade
+
+Clique na atividade no Backlog operacional. Abre a janela **Adicionar ao plano** com três campos:
+
+1. **Colaborador** — a lista traz os colaboradores operacionais. Quando a atividade já tem gente alocada na esteira, aparecem atalhos sob **"Cadastrados na atividade:"** — clicar em um deles já preenche o campo. São atalhos de conveniência, não uma recomendação do sistema: você pode escolher qualquer colaborador.
+2. **Dia** — um dos cinco dias da semana. Começa no dia de hoje, se hoje estiver na semana carregada; senão, na segunda.
+3. **Minutos planejados** — vem preenchido com o tempo que **ainda falta** naquela atividade (o previsto total menos o que já foi apontado). **Você pode mudar esse valor**, e ele é importante: veja "De onde vem o tempo previsto da produção".
+
+Confirmada, a atividade vira um cartão no quadro, na célula daquele colaborador naquele dia.
+
+Itens que vêm do painel **Esteiras aguardando encaixe** usam a mesma janela, com o selo **Plano da Esteira**.
+
+### Mover, reordenar e remover
+
+- **Mover:** arraste o cartão para outra célula — outro colaborador, outro dia, ou os dois.
+- **Reordenar:** dentro de uma célula, as setas **↑** e **↓** mudam a ordem de execução.
+- **Remover:** o **✕** tira o cartão do plano (*"Remover do plano"*). A atividade volta na hora para o Backlog operacional, pronta para ser redistribuída. Não há confirmação.
+
+**Nada disso é gravado até você salvar.** Mover, reordenar e remover são alterações locais. Se sair da tela sem salvar, o plano volta ao que estava.
+
+### Uma atividade, um colaborador, um dia
+
+Cada atividade entra **no máximo uma vez** no plano da semana. Não é possível dividi-la entre dois colaboradores, nem repeti-la em dois dias, nem planejá-la em duas semanas ao mesmo tempo.
+
+Se tentar, o sistema recusa com **"Cada Atividade só pode aparecer uma vez no plano."** ou **"Atividade já está planejada em outro plano semanal."**
+
+Para dividir trabalho entre pessoas, a divisão é feita na **estrutura da esteira** — em atividades separadas (capítulo 6), não aqui.
+
+### Ler capacidade e sobrecarga
+
+Cada célula do quadro soma os minutos planejados dos cartões que estão nela, e compara com a **capacidade diária** daquele colaborador naquele dia.
+
+A capacidade vem de **Configurações operacionais**: existe um valor padrão para todos e é possível definir ajuste individual com período de vigência (capítulo 16). O sistema usa o ajuste que estiver válido na data; sem ajuste, usa o padrão.
+
+**Sobrecarga é só quando o planejado passa da capacidade.** Não há faixa de alerta antes disso — 100% exatos ainda é normal.
+
+Quando uma ação sua faz uma célula passar da capacidade, abre o aviso **Capacidade diária ultrapassada**, com Colaborador, Data, **Capacidade diária**, **Tempo planejado** e **Excedente**. Se mais de uma célula estourou na mesma ação, o aviso diz quantas.
+
+O aviso é explícito: **"Você pode continuar o planejamento normalmente."** Sobrecarga **não bloqueia** nada — nem salvar, nem publicar. É informação para você decidir.
+
+O aviso só aparece quando a carga da célula **aumentou** e cruzou o limite. Remover trabalho, reduzir minutos ou reordenar não dispara nada.
+
+### Filtrar o quadro
+
+Em **Filtros do quadro**:
+
+| Filtro | Opções |
+|---|---|
+| **Colaborador** | Todos · Sem responsável · cada colaborador com itens no plano |
+| (esteira) | Todas as esteiras · cada esteira com itens no plano |
+| **Situação** | Todos · Sem responsável · **Com capacidade excedida** |
+| **Busca no plano** | texto livre — esteira, atividade, setor |
+
+Abaixo aparece **"Exibindo N de M itens planejados"**, com **"(visão filtrada)"** quando há filtro ativo.
+
+Em **Visualização** você alterna entre **Semana** (as cinco colunas de dias) e **Daily** (um dia por vez, em colunas por colaborador).
+
+Os filtros são só de leitura: **não alteram o que é salvo, publicado ou exportado.**
+
+### Salvar
+
+O botão de salvar muda de nome conforme o estado:
+
+- **Salvar rascunho** — quando a semana ainda não tem versão publicada. Confirmação: **"Rascunho salvo."**
+- **Salvar alterações** — quando já existe versão publicada. Confirmação: **"Revisão salva. A fila dos colaboradores continua usando a última versão publicada."**
+
+O botão só fica ativo quando há alterações pendentes.
+
+### Publicar
+
+**Publicar plano** é o que leva a semana para a fábrica. Confirmação: **"Plano publicado. A fila dos colaboradores foi atualizada."**
+
+O botão fica desativado quando:
+
+| Situação | O que o botão informa | O que fazer |
+|---|---|---|
+| há alterações não salvas | — | salve primeiro; só se publica o que está gravado |
+| o plano está vazio | **"Adicione ao menos uma atividade antes de publicar o plano."** | distribua ao menos uma atividade |
+| a versão já está publicada e não há revisão | **"Este plano já está publicado."** | nada a publicar; para mudar, altere, salve e publique a revisão |
+
+## O que esperar
+
+### O que a publicação muda
+
+| Antes de publicar | Depois de publicar |
+|---|---|
+| o colaborador não vê nada em **Minha fila** daquela semana | a fila passa a mostrar as atividades planejadas para ele |
+| o **Modo Fábrica** não oferece as atividades | a fila do totem e do navegador da fábrica passa a listá-las |
+| os tickets da semana não têm o que imprimir | os tickets ficam disponíveis |
+
+A fila do colaborador — em **Minha fila** (capítulo 10) e no **Modo Fábrica** (capítulo 13) — **depende exclusivamente da versão publicada**. Rascunho e revisão não aparecem para ninguém.
+
+Sem versão publicada para a semana, a fila do colaborador fica vazia, e o Modo Fábrica mostra **"Nenhuma atividade planejada para você no momento."** com a orientação de confirmar com o gestor se o planejamento foi publicado.
+
+Publicar uma revisão **substitui** a versão anterior: o que você tirou do plano sai da fila, o que você acrescentou entra.
+
+### De onde vem o tempo previsto da produção
+
+Este ponto tem consequência direta no piso de fábrica.
+
+O campo **Minutos planejados** que você define ao distribuir a atividade é **o tempo previsto que o Modo Fábrica usa** para aquele colaborador naquela atividade.
+
+No Modo Fábrica (capítulo 13), quando o tempo já apontado mais o apontamento novo passam desse valor, o sistema **exige justificativa** do colaborador. Então:
+
+- um tempo planejado apertado faz o colaborador cair na justificativa por excesso mais cedo;
+- um tempo planejado folgado atrasa esse aviso;
+- publicar uma revisão com outro valor muda o limite a partir daquele momento.
+
+O valor sugerido pelo sistema é o tempo que ainda falta na atividade, calculado como **tempo por unidade × quantidade prevista, menos o que já foi apontado**. Se a quantidade prevista da atividade mudar na estrutura da esteira, o tempo sugerido muda junto — mas o valor que você já gravou no plano **não** é recalculado sozinho.
+
+Na área autenticada o comportamento é outro: lá o apontamento **não** exige justificativa por passar do previsto (capítulo 7). A exigência é só do Modo Fábrica.
+
+### Esteiras aguardando encaixe
+
+Painel de diagnóstico e ponto de entrada para o outro caminho de planejamento.
+
+Quando uma esteira tem **plano próprio** (capítulo 6) e esse plano foi enviado para a fábrica, as atividades dele não vão para o Backlog operacional: ficam aqui, agrupadas por esteira, esperando que você as encaixe na semana.
+
+Cada esteira mostra o estado do plano dela, o estado na fábrica, o responsável atual e o período sugerido. Cada atividade mostra tarefa, setor, nome, a **data sugerida** (ou *"Sem data sugerida"*), o tempo planejado, o responsável sugerido, quanto já foi realizado e, quando aplicável, **"Revisão necessária"**.
+
+Clicar na atividade abre a janela **Adicionar ao plano**, com o selo **Plano da Esteira** — as datas e tempos vêm sugeridos, e você pode mudar. **Encaixar é a ação; o painel em si é leitura.**
+
+Esses cartões ainda exibem a situação da atividade em código interno. É pendência conhecida — veja o capítulo 21.
+
+### Pendências de sincronização
+
+Mostra as atividades em que **o plano da esteira e o planejamento da semana discordam**. As diferenças são sempre em um destes quatro pontos:
+
+**Data** · **Minutos** · **Colaborador** · **Equipe**
+
+Cada linha mostra os dois lados — **Plano da esteira** e **Fábrica** — para você comparar. No cartão do quadro, a atividade recebe o selo **Pendência de sincronização**.
+
+Para resolver, você tem duas saídas:
+
+1. **Aplicar plano da esteira** — o botão traz os valores do plano da esteira para o planejamento da semana. Confirmação: **"Valores do plano da esteira aplicados ao planejamento da fábrica."**
+2. **Ajustar à mão** no quadro, se a decisão da fábrica é que vale.
+
+Não há sincronização automática: a divergência fica visível até você agir. E, como qualquer alteração, só chega à fábrica depois de salvar e publicar.
+
+Sem divergências: **"Nenhuma pendência nesta semana."**
+
+### Fora do planejado
+
+Lista os apontamentos da semana em atividades que **não estão no plano daquela semana**.
+
+A regra é por **atividade**: se a atividade está no plano, nenhum apontamento dela aparece aqui — mesmo que tenha sido feito por outro colaborador ou em outro dia. Se não está, todo apontamento dela na semana aparece.
+
+É **informativo**. O painel não tem ação: não há como incorporar o apontamento ao plano a partir dele. O que você faz com a informação é decidir se aquele trabalho deveria estar planejado — e, se sim, distribuí-lo no quadro.
+
+O painel considera a semana carregada e **ignora os filtros de situação** do quadro; respeita os filtros de esteira, colaborador e busca. A própria tela explica isso quando o painel está visível.
+
+Sem nada fora do plano: **"Nenhum apontamento fora do plano nesta semana."**
+
+### Resumo operacional e desvios
+
+Acima do quadro, a faixa **Resumo operacional** traz: **Planejado**, **Realizado**, **Concluídas**, **Em andamento**, **Sem apontamento**, **Atenção** e **Fora do planejado**.
+
+**Desvios da semana** mostra os indicadores da visão filtrada. **Principais desvios** lista os casos concretos, em quatro tipos:
+
+| Tipo | O que indica |
+|---|---|
+| **Fora do planejado** | houve apontamento em atividade que não está no plano |
+| **Planejado sem execução** | a atividade está no plano e ninguém apontou nada |
+| **Acima do planejado** | o realizado passou do tempo planejado |
+| **Atingiu planejado sem concluir** | o tempo acabou e a atividade continua aberta |
+
+Não existe gaveta **Atenção** nesta tela — "Atenção" aqui é uma coluna do resumo. A gaveta de atenção pertence à **Agenda da semana** (capítulo 9).
+
+### Histórico da semana
+
+Registra o que de fato aconteceu na semana, com filtro por **Todos os tipos**, **Apontamentos**, **Conclusões** e **Reaberturas**.
+
+Serve para explicar divergências: por que uma atividade está fora do plano, quem concluiu o quê, quando algo foi reaberto.
+
+Mensagens: **"Carregando histórico…"**, **"Histórico indisponível nesta semana."**, **"Nenhum fato operacional registrado nesta semana."**
+
+### As duas exportações
+
+Os dois botões ficam no alto da tela e entregam coisas diferentes:
+
+| | **Exportar Excel** | **Exportar visão semanal** |
+|---|---|---|
+| formato | duas planilhas: **Planejamento** e **Capacidade** | uma planilha, em matriz |
+| organização | uma linha por atividade planejada; a segunda planilha traz capacidade por colaborador e dia | colaborador nas linhas, dias (segunda a sexta) nas colunas |
+| para que serve | conferência detalhada e análise de capacidade | visão de quadro para imprimir ou compartilhar |
+
+As duas exportam **a semana salva inteira** — os filtros do quadro **não** entram na conta. O recorte é sempre a semana, não a visão filtrada.
+
+A planilha **Planejamento** identifica a situação da semana como **PUBLICADO**, **RASCUNHO** ou **REVISAO_NAO_PUBLICADA**. A planilha **Capacidade** classifica cada colaborador/dia em:
+
+**Capacidade não cadastrada** · **Sobrecarregado** · **No limite** · **Disponível**
+
+Aqui também não há faixa intermediária: só é **Sobrecarregado** quando o planejado passa da capacidade.
+
+**Com alterações não salvas, o botão muda de nome** para **Salvar e exportar** (ou **Salvar e exportar visão semanal**). Ele salva primeiro e exporta depois. **Se o salvamento falhar, nada é baixado** — você vê o erro e o arquivo não sai.
+
+Ambos ficam desativados com o plano vazio, e um bloqueia o outro enquanto está gerando. Durante o processo o rótulo vira **Exportando...**.
+
+### Imprimir tickets
+
+Dois caminhos, com recortes diferentes:
+
+| Botão | O que imprime |
+|---|---|
+| **Imprimir tickets da semana (N)** | todas as atividades planejadas na semana |
+| **Imprimir tickets visíveis (N)** | só as atividades que estão aparecendo no quadro com os filtros atuais |
+
+Este é o único lugar da tela em que os filtros **mudam** o resultado.
+
+A janela **Imprimir tickets da semana** oferece **Agrupar por** — **Responsável** ou **Tarefa / esteira** — e a opção **Incluir atividades concluídas**, desligada por padrão.
+
+Sobre a impressora, a janela mostra o estado do agente local: **"Verificando agente local..."**, **"Impressão direta disponível"** ou **"Agente local indisponível"**, com **Testar impressora térmica** quando disponível. Sem o agente, o sistema usa a impressão do navegador e avisa: **"Agente de impressão local não encontrado. Usando impressão pelo navegador."**
+
+A janela lembra o que o ticket é: *"Use os tickets como apoio físico na operação. O status oficial da atividade continua sendo controlado no SGP+."* O papel não é a fonte da verdade.
+
+Sem nada planejado: **"Nenhuma atividade planejada nesta semana."**
+
+## Quando algo é bloqueado
+
+### A semana não carrega
+
+| O que você vê | Por que | O que fazer |
+|---|---|---|
+| **"Não foi possível carregar o plano da semana."** | falha ao buscar a semana | troque de semana e volte, ou recarregue; se persistir, abra chamado |
+| **"Não foi possível carregar o histórico desta semana."** | só o histórico falhou | o restante da tela continua utilizável |
+| aviso de que a data de fim do plano está inconsistente | dado antigo com fim de semana fora da sexta | nada a fazer: a tela já mostra segunda a sexta e a data é corrigida ao salvar |
+
+### Não consigo distribuir a atividade
+
+| O que você vê | Por que | O que fazer |
+|---|---|---|
+| a atividade não está no Backlog operacional | ver a tabela de exclusões acima | confira a situação da esteira e se ela já não está planejada |
+| **"Todas as atividades carregadas no backlog já foram planejadas nesta semana."** | não há mais nada a distribuir | nada a fazer |
+| **"Cada Atividade só pode aparecer uma vez no plano."** | a mesma atividade foi colocada duas vezes | remova a duplicata |
+| **"Atividade já está planejada em outro plano semanal."** | ela está em outra semana | retire-a da outra semana primeiro |
+| **"Atividade já concluída não pode ser planejada."** | o trabalho já terminou | nada a planejar |
+| **"Atividade inativa não pode ser planejada."** | saiu da estrutura da esteira | confira a estrutura com quem alterou a esteira |
+| **"Cada item do plano da esteira só pode ser encaixado uma vez na semana."** | o mesmo item de encaixe foi usado duas vezes | remova a duplicata |
+| **"Item do plano da esteira já está encaixado em outro plano semanal."** | ele está em outra semana | retire-o da outra semana |
+| **"Plano da esteira não está aguardando encaixe na fábrica."** | o plano da esteira mudou de estado desde que a tela carregou | recarregue a semana |
+
+### Não consigo salvar
+
+| O que você vê | Por que | O que fazer |
+|---|---|---|
+| **"Não foi possível salvar o rascunho."** | falha ao gravar | tente de novo; se persistir, abra chamado |
+| **"Não foi possível salvar as alterações no plano ativo."** | falha ao gravar a revisão | o mesmo |
+| **"As datas deste plano estão inconsistentes. Recarregue a semana e tente novamente. Se o problema continuar, acione o suporte."** | as datas da tela e do plano gravado não coincidem | recarregue a semana e repita |
+| **"Plano não encontrado."** | o plano foi alterado ou removido por outra pessoa | recarregue a semana |
+
+### Não consigo publicar
+
+| O que você vê | Por que | O que fazer |
+|---|---|---|
+| botão desativado sem aviso | há alterações não salvas | salve primeiro |
+| **"Adicione ao menos uma atividade antes de publicar o plano."** | o plano está vazio | distribua ao menos uma atividade |
+| **"Este plano já está publicado."** | não há revisão a publicar | para mudar, altere, salve e publique |
+| **"Não foi possível publicar o plano."** | falha ao publicar | tente de novo; se persistir, abra chamado |
+
+### Exportação e impressão
+
+| O que você vê | Por que | O que fazer |
+|---|---|---|
+| botão de exportar desativado | o plano está vazio, ou a outra exportação está em andamento | distribua atividades, ou aguarde |
+| **"Não foi possível exportar o Excel do planejamento."** | falha ao gerar | tente de novo |
+| **"Não foi possível exportar a visão semanal do planejamento."** | falha ao gerar a outra planilha | o mesmo |
+| nenhum arquivo baixou depois de **Salvar e exportar** | o salvamento falhou e a exportação foi cancelada | corrija o erro de salvamento e repita |
+| **"Nenhuma atividade planejada nesta semana"** no botão de tickets | não há o que imprimir | distribua atividades |
+| **"Agente local indisponível"** | o agente de impressão não respondeu | a impressão sai pelo navegador; para impressão direta, acione quem cuida da estação |
+
+[IMAGEM SUGERIDA: Planejamento da Semana — cabeçalho com a navegação de semana, o selo "Revisão em planejamento" e o selo "Alterações não publicadas", seguido do quadro colaborador × dia com cartões distribuídos]
+
+[IMAGEM SUGERIDA: Aviso "Capacidade diária ultrapassada" com Colaborador, Data, Capacidade diária, Tempo planejado e Excedente, e a frase de que o planejamento pode continuar]
+
+[IMAGEM SUGERIDA: Janela "Adicionar ao plano" com os atalhos "Cadastrados na atividade", o campo Dia e o campo Minutos planejados preenchido com o tempo restante]
+
+[IMAGEM SUGERIDA: Os três painéis de diagnóstico lado a lado — Esteiras aguardando encaixe, Pendências de sincronização com o botão Aplicar plano da esteira, e Fora do planejado]
+
+[IMAGEM SUGERIDA: As duas exportações comparadas — a planilha Planejamento com uma linha por atividade e a visão semanal em matriz colaborador × dia]
 
 ---
 
@@ -1313,6 +1658,7 @@ Os termos técnicos abaixo são reproduzidos **apenas** para você reconhecê-lo
 | **"passo"**, nas telas de Apontamento gerencial ("Lançamentos no passo", "Apontamento gerencial neste passo") | **atividade** | mesmo conceito, nome diferente |
 | **"Voltando ao Kiosk…"**, após registrar por Outra atividade ou Extra Esteira no totem | voltando ao **Modo Fábrica** | "Kiosk" é o nome interno do totem |
 | **"SGP+ Produção"**, no cabeçalho do navegador da fábrica | **Modo Fábrica** | o totem exibe "SGP · Modo Fábrica"; os dois cabeçalhos deveriam usar o mesmo nome |
+| **"Daily"**, no seletor de Visualização do Planejamento semanal | **visão por dia** | rótulo em inglês em uma interface em português; a opção ao lado, "Semana", está traduzida |
 
 ### Página Apontamento sem campo de justificativa
 
@@ -1341,6 +1687,25 @@ Efeitos observados:
 | data com dia até 12 (ex.: 01/02/2026) | dia e mês podem ser invertidos, deslocando o atraso |
 
 **Orientação até a correção:** não usar o cartão **Em atraso** como fonte única de prioridade; conferir o prazo na própria esteira. Pendência de produto registrada.
+
+### Atividade dispensada volta a aparecer como planejável
+
+Divergência confirmada em 2026-10-03, com impacto no planejamento da semana.
+
+Uma atividade **dispensada** continua aparecendo na lista de atividades disponíveis para planejar, no **Backlog operacional** do Planejamento semanal, e o sistema **permite distribuí-la e publicá-la**. Não há recusa nem aviso.
+
+O efeito é um item que ocupa a semana sem nunca ser executável:
+
+| Onde | O que acontece |
+|---|---|
+| Backlog operacional | a atividade dispensada aparece como disponível |
+| quadro do planejamento | aceita ser distribuída; soma minutos na capacidade do colaborador |
+| exportações em Excel | sai nas planilhas como item planejado |
+| fila do colaborador e Modo Fábrica | **não aparece** — é tratada como encerrada |
+
+Na prática, o planejamento mostra trabalho que o colaborador nunca receberá, e a capacidade do dia fica comprometida por um item inexistente.
+
+**Orientação até a correção:** ao planejar, não distribuir atividades dispensadas. Se a atividade precisar voltar ao trabalho, usar antes **Restaurar dispensada** na estrutura da esteira (capítulo 6) e só então planejá-la. Se uma atividade dispensada já estiver no plano, removê-la do quadro, salvar e publicar de novo. Pendência de produto registrada.
 
 ## 21.4 Diferença de PIN entre as formas de acesso
 
