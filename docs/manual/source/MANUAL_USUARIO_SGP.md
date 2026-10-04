@@ -756,7 +756,7 @@ Em resumo, o caminho é:
 
 A partir daí, a esteira é uma esteira como qualquer outra: vale tudo o que este capítulo descreve.
 
-Nesta tela, diferente da **Nova esteira**, o prazo é um campo único de texto chamado **Prazo estimado**, geralmente já preenchido pela leitura do documento.
+Nesta tela, diferente da **Nova esteira**, o prazo aparece como um campo único de texto chamado **Prazo estimado**. Ele serve apenas de conferência: o que o sistema reconhece no documento durante a leitura **não é gravado automaticamente** na esteira, e o prazo da esteira criada fica em branco. Detalhes no capítulo 17.
 
 **O passo a passo completo — envio, leitura, revisão de itens e aceite — está no capítulo 17, Importação por documento.** Este capítulo não o repete.
 
@@ -4376,11 +4376,11 @@ O cartão e o filtro **Em atraso** só reconhecem o prazo da esteira quando ele 
 | Tela | Como pede o prazo | O que grava |
 |---|---|---|
 | **Nova esteira** e **Alterar Esteira** | dois seletores de data, **Início previsto** e **Fim previsto** | uma linha de texto no formato "Início previsto … · Fim previsto …" |
-| **Nova esteira por documento** | um campo único de texto, **Prazo estimado**, sem validação de formato | o texto como veio do documento ou como foi digitado |
+| **Nova esteira por documento** | mostra um campo de texto, **Prazo estimado**, que não é gravado no funcionamento padrão (capítulo 17) | nada: a esteira criada fica sem prazo |
 
-Consequência prática: **esteira cadastrada pela tela atual de Nova esteira tende a nunca ser contada como atrasada**, porque o par Início/Fim previsto não é reconhecido como data. Os demais formatos da tabela abaixo ocorrem em esteiras antigas e nas criadas por documento.
+Consequência prática: **esteira cadastrada pela tela atual de Nova esteira tende a nunca ser contada como atrasada**, porque o par Início/Fim previsto não é reconhecido como data. Os demais formatos da tabela abaixo ocorrem em esteiras antigas. Esteira criada por documento, no funcionamento padrão, nasce sem prazo e também não é contada como atrasada.
 
-> **Correção de 2026-10-03.** Até esta revisão, este anexo e o capítulo 5 afirmavam que o campo **Prazo estimado** do cadastro de Nova esteira "pede um número de dias". A verificação no código mostrou que essa tela **não tem mais** esse campo: ela pede duas datas. O campo de texto livre **Prazo estimado** sobrevive apenas na criação **Por documento** e na exibição de prazos antigos. A falha de leitura do atraso permanece; o que estava errado era a causa descrita. O texto equivalente no capítulo 5 foi corrigido na mesma data, em rodada própria.
+> **Correção de 2026-10-03.** Até esta revisão, este anexo e o capítulo 5 afirmavam que o campo **Prazo estimado** do cadastro de Nova esteira "pede um número de dias". A verificação no código mostrou que essa tela **não tem mais** esse campo: ela pede duas datas. O campo de texto livre **Prazo estimado** sobrevive apenas na tela **Por documento** — que o exibe, mas não grava o valor (capítulo 17) — e na exibição de prazos antigos. A falha de leitura do atraso permanece; o que estava errado era a causa descrita. O texto equivalente no capítulo 5 foi corrigido na mesma data, em rodada própria.
 
 Efeitos observados:
 
