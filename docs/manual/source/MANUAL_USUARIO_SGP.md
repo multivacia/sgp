@@ -3,7 +3,7 @@
 **Produto:** SGP+ · Multivacia / ARGOS
 **Versão da aplicação nesta revisão:** 1.9.8
 **Revisão deste manual:** 2026-10-03
-**Situação:** base editorial criada; capítulos 1 a 14, 16, 17, 20 e 21 com conteúdo final. Os capítulos 15, 18 e 19 seguem marcados como pendentes e **não devem ser publicados** como versão final.
+**Situação:** base editorial criada; capítulos 1 a 17, 20 e 21 com conteúdo final. Os capítulos 18 e 19 seguem marcados como pendentes e **não devem ser publicados** como versão final.
 
 > **Este é o documento canônico do manual do usuário.** Versões em HTML ou PDF devem ser geradas a partir daqui.
 >
@@ -4207,12 +4207,311 @@ Com esteiras marcadas, sair pelo menu lateral abre a confirmação **"Sair desta
 
 # 15. Dashboard e indicadores
 
-> [PENDENTE DE ENRIQUECIMENTO — não publicar como capítulo final]
+## Para que serve
 
-- os dois recortes de indicadores e quem vê cada um
-- o que cada indicador significa
-- o período usado por cada indicador, que não é necessariamente o mesmo
-- como chegar da visão geral ao detalhe
+O Dashboard reúne, em uma tela, os **números consolidados da operação inteira**: quantas esteiras há em cada situação, quantas estão atrasadas, quanto tempo está previsto, quanto já foi apontado, como as alocações se distribuem entre as pessoas e quais foram os últimos apontamentos.
+
+Ele tem duas visões:
+
+| Visão | Pergunta que responde |
+|---|---|
+| **Operacional** | "como está a produção agora, e quem está com mais trabalho?" |
+| **Gerencial** | "quantas esteiras estão abertas, quantas fechamos no período e quanto do que está aberto já atrasou?" |
+
+É uma tela **só de leitura**: nada é alterado a partir dela. Dos números você chega à lista de esteiras do **Painel operacional** (capítulo 5) ou ao detalhe de uma esteira (capítulo 6).
+
+O Dashboard **não tem filtros**: os números valem sempre para todas as esteiras e todas as pessoas. Para outras perguntas, use a tela própria:
+
+| Você quer… | Use |
+|---|---|
+| analisar uma pessoa ou um grupo em um período | **Jornada por colaborador** (capítulo 12) |
+| ver o desvio de tempo atividade por atividade | **Evolução das Esteiras** (capítulo 14) |
+| ver a carga do dia de cada pessoa frente à capacidade | **Planejamento** e **Agenda da semana** (capítulos 8 e 9) |
+| encontrar e abrir uma esteira específica | **Painel operacional** (capítulo 5) |
+
+## Onde fica
+
+Menu lateral, agrupamento **Gestão** → **Dashboard**.
+
+O título exibido na tela é **Dashboards**, com a etiqueta **Painel** acima.
+
+Na faixa abaixo do título ficam os controles da tela:
+
+| Controle | O que faz |
+|---|---|
+| **Operacional** · **Gerencial** | alterna entre as duas visões. Só aparece para quem tem acesso às duas |
+| **Janela (conclusões)** | período das esteiras concluídas, com **7d**, **15d**, **30d**, **60d** e **90d**. Só aparece na visão **Gerencial** |
+| **Cards** · **Gráficos** | alterna entre números em cartões e a mesma informação em gráficos |
+| **Atualizar** | busca os números de novo |
+
+[IMAGEM SUGERIDA: Tela Dashboards na visão Operacional, modo Cards — faixa com Operacional/Gerencial, Cards/Gráficos e Atualizar; abaixo, o bloco Resumo com os quatro cartões]
+
+## Quem costuma ter acesso
+
+Cada visão tem a sua própria permissão (capítulo 4, seção 4.3):
+
+| Visão | Permissão | Na configuração padrão |
+|---|---|---|
+| **Operacional** | **Dashboard operacional** | Administrador, Gestor |
+| **Gerencial** | **Dashboard gerencial** | Administrador |
+
+O que você vê depende da combinação:
+
+| Você tem | O que acontece |
+|---|---|
+| as duas permissões | aparecem as abas **Operacional** e **Gerencial**; a tela abre em **Operacional** |
+| só uma | não há abas: o nome da visão aparece sozinho na faixa, e só ela é exibida |
+| nenhuma | o item **Dashboard** não aparece no menu; o endereço direto mostra **"Sem permissão para esta área"** |
+
+Contas com o perfil **Colaborador** não têm acesso.
+
+Dentro da visão Operacional, duas partes dependem de outras permissões:
+
+- a coluna **Previsto vs capacidade diária**, na tabela de carga por colaborador, só aparece para quem tem acesso a **Configurações operacionais** (capítulo 16);
+- o atalho **Colaboradores** leva a uma tela que exige a permissão de consultar colaboradores. Sem ela, a tela abre com **"Sem permissão para esta área"**.
+
+## Como fazer
+
+### 15.1 Escolher a visão e a forma de exibição
+
+1. Abra **Gestão → Dashboard**. Enquanto os números são buscados, aparece **"Carregando indicadores…"**. No modo **Gráficos**, os gráficos podem levar mais um instante para aparecer.
+2. Se tiver acesso às duas visões, escolha **Operacional** ou **Gerencial**.
+3. Escolha **Cards** ou **Gráficos**. Os dois modos mostram **os mesmos dados**; mudam a forma e alguns detalhes, descritos em 15.8.
+
+O modo de exibição, o período adicional da visão Operacional (15.2) e a janela da visão Gerencial (15.7) ficam **guardados neste navegador**: na próxima vez, a tela abre com as mesmas escolhas.
+
+Os números são uma **fotografia do momento em que foram buscados**. A tela não se atualiza sozinha. No rodapé de cada visão, a linha **"Gerado em …"** mostra a data e a hora da busca. Para trazer números novos, clique em **Atualizar** — o botão mostra **Atualizando…** e busca as duas visões de uma vez.
+
+### 15.2 Visão Operacional — Resumo
+
+O bloco **Resumo** traz quatro cartões:
+
+| Cartão | O que conta | Ao clicar |
+|---|---|---|
+| **Esteiras (total)** | todas as esteiras existentes, em **qualquer situação** — inclusive finalizadas e canceladas | abre o **Painel operacional** sem filtro, em nova aba |
+| **Pressão de atraso (esteiras)** | as esteiras contadas como **em atraso**, pela mesma regra do Painel operacional (capítulo 5) | abre o **Painel operacional** já filtrado em **Em atraso**, em nova aba |
+| **Alocações em STEPs** — leia "alocações em atividades" | o total de alocações de pessoas e equipes em atividades, em esteiras de qualquer situação. Abaixo, a divisão **Principal** · **Apoio**. Alocações de equipe contam sempre como **apoio** | nada |
+| **Minutos apontados (acumulado)** | a soma de **todos** os apontamentos em atividades de esteira já registrados, de qualquer data. Apontamentos removidos não contam. **Extra Esteira não entra** | nada |
+
+Acima dos cartões, o seletor *"Opcional: soma de apontamentos num recorte temporal (não altera o acumulado global)."* permite somar os apontamentos de um período:
+
+| Opção | Período somado |
+|---|---|
+| **Sem período adicional** | nenhum (padrão) |
+| **Últimos 7 dias** · **Últimos 15 dias** · **Últimos 30 dias** | conta para trás 7, 15 ou 30 vezes 24 horas **a partir do momento da consulta**. Não são dias de calendário fechados: o dia mais antigo da janela pode entrar só em parte |
+| **Mês atual (UTC)** | do dia 1 do mês, à meia-noite, até o momento da consulta. O cálculo usa o fuso de São Paulo; o "UTC" do rótulo está incorreto (capítulo 21) |
+
+Com um período escolhido, aparece um quinto cartão, **Minutos apontados (período)**. O período considera a **data do trabalho** informada no apontamento, não o dia em que ele foi digitado (capítulo 7). O cartão **Minutos apontados (acumulado)** não muda.
+
+O seletor de período só aparece no modo **Cards**, mas a escolha vale também para o modo **Gráficos**.
+
+### 15.3 Visão Operacional — esteiras por situação e atrasadas
+
+**Esteiras por bucket operacional** — leia "esteiras por situação". Uma barra para cada recorte, nesta ordem: **Em atraso**, **Aguardando planejamento**, **Em planejamento**, **Em execução**, **Rascunho / Em elaboração**, **Finalizadas** e **Canceladas**. O número de cada barra é a quantidade de esteiras.
+
+- Os recortes seguem **exatamente as regras do Painel operacional** (capítulo 5): cada esteira está em um recorte só, o atraso tem prioridade sobre a situação, e **Em execução** reúne as esteiras **A iniciar** e **Em andamento**.
+- Diferente dos cartões do Painel, aqui **há** uma barra para **Canceladas**.
+- Clicar em uma barra abre o **Painel operacional** filtrado por aquele recorte, em nova aba.
+
+**Destaque — Pressão de atraso** lista até **12** esteiras em atraso, em **ordem alfabética de nome** — não da mais atrasada para a menos atrasada. O link **Abrir** abre o detalhe da esteira em nova aba. Sem nenhuma esteira em atraso, aparece *"Nenhuma esteira neste bucket."*.
+
+> **A limitação do prazo vale também aqui.** A contagem de atraso usa a mesma leitura de prazo do Painel operacional e tem a mesma limitação descrita no capítulo 5: esteiras cadastradas pela tela atual tendem a nunca ser contadas como atrasadas. O cartão **Pressão de atraso**, a barra **Em atraso**, a lista de destaque e a **Participação de atraso** da visão Gerencial podem mostrar menos atraso do que existe. Confira o prazo na própria esteira.
+
+### 15.4 Visão Operacional — previsto e apontado
+
+O bloco **Previsto estrutural vs minutos apontados** mostra três totais, de toda a operação:
+
+| Linha | O que soma |
+|---|---|
+| **Previsto estrutural (referência — STEPs)** | o tempo previsto de **todas as atividades ativas de todas as esteiras**: tempo por unidade × quantidade prevista. Inclui esteiras de qualquer situação — rascunhos, finalizadas e canceladas também |
+| **Total por esteira (OS) — apoio** | a soma do tempo total registrado em cada esteira. Serve de conferência e **pode divergir** do previsto estrutural quando o total de alguma esteira não foi recalculado depois de mudanças na estrutura |
+| **Minutos apontados (acumulado)** | o mesmo número do cartão do Resumo |
+
+Com um período escolhido em 15.2, aparece também a linha **Minutos apontados (período)**.
+
+O texto explicativo logo abaixo do título repete essas definições citando nomes internos do sistema. Eles não têm significado para o uso.
+
+**Não divida um número pelo outro para medir andamento.** O previsto inclui esteiras que ainda nem começaram e esteiras canceladas; o apontado inclui todo o histórico. A razão entre os dois não diz quanto da produção está pronta. Para comparar previsto e realizado de forma útil, use a **Evolução das Esteiras** (capítulo 14) ou a **Jornada por colaborador** (capítulo 12).
+
+### 15.5 Visão Operacional — carga por colaborador
+
+O bloco **Carga por colaborador** traz dois gráficos de barras e uma tabela. O texto de apoio resume: *"Atividades = alocações por colaborador; minutos = soma dos apontamentos de cada um."*
+
+**A tabela** lista os colaboradores com pelo menos **uma alocação direta** em atividade, do que tem mais alocações para o que tem menos (empate em ordem alfabética):
+
+| Coluna | Conteúdo |
+|---|---|
+| **Colaborador** | nome |
+| **Alocações** | quantidade de atividades em que a pessoa está alocada |
+| **Principal / apoio** | quantas dessas alocações são como responsável principal e quantas como apoio |
+| **Previsto estrutural (STEPS)** | a soma do tempo previsto das atividades em que a pessoa está alocada |
+| **Previsto vs capacidade diária** | só para quem tem acesso a Configurações operacionais; veja abaixo |
+| **Minutos apontados (acumulado)** | todos os apontamentos da pessoa em atividades de esteira, de qualquer data — **inclusive** em atividades em que ela não está alocada |
+
+O que entra e o que fica de fora:
+
+- contam as alocações em esteiras de **qualquer situação**, inclusive finalizadas e canceladas. A tabela não é a carga atual: é o acumulado de alocações registradas;
+- **alocações de equipe não aparecem** para os membros da equipe. Só contam as alocações feitas diretamente na pessoa;
+- quem **apontou, mas não tem nenhuma alocação direta**, não aparece na tabela — nem os seus minutos;
+- colaboradores **inativos** continuam aparecendo enquanto tiverem alocações; colaboradores removidos não aparecem.
+
+**A coluna Previsto vs capacidade diária** mostra *previsto / capacidade por dia · percentual*, seguido de uma classificação:
+
+| Classificação | Quando |
+|---|---|
+| **Dentro da capacidade** | o previsto é até 80% da capacidade de um dia |
+| **Próximo do limite** | acima de 80% e até 100% |
+| **Acima da capacidade** | acima de 100% |
+
+A capacidade usada é a **efetiva hoje** de cada pessoa (capítulo 16, seção 16.13). Enquanto ela é buscada, a célula mostra **…**.
+
+> **Leia esta coluna com cuidado.** Ela compara o previsto de **todas** as alocações da pessoa — de todas as esteiras e de qualquer data — com a capacidade de **um único dia**. Basta a pessoa ter mais de um dia de trabalho alocado para o resultado passar de 100% e aparecer **Acima da capacidade**, sem que isso indique sobrecarga real. A própria tela avisa que a comparação é indicativa quando o previsto passa de um dia. Para saber se alguém está sobrecarregado em um dia, use o **Planejamento** ou a **Agenda da semana** (capítulos 8 e 9).
+
+**Os gráficos** acima da tabela:
+
+| Gráfico | O que mostra |
+|---|---|
+| **Atividades alocadas** | as 12 primeiras pessoas da tabela, com a quantidade de alocações |
+| **Minutos apontados** | entre as pessoas da tabela, na mesma ordem, as 12 primeiras que têm algum apontamento, com o total **em minutos** — o número da barra é a quantidade de minutos, sem conversão para horas |
+
+O gráfico de minutos **não** traz quem mais apontou: ele segue a ordem por número de alocações.
+
+O link **Colaboradores**, ao lado do título, abre a tela **Colaboradores** (capítulo 16).
+
+Sem nenhuma alocação direta na operação, aparece *"Sem dados de colaboradores."*, e os gráficos mostram *"Sem alocações."* e *"Sem apontamentos registados."*.
+
+### 15.6 Visão Operacional — últimos apontamentos
+
+O bloco **Últimos apontamentos** lista os **12 apontamentos mais recentes** em atividades de esteira. Cada linha mostra o nome da esteira, a **data do trabalho** e, abaixo, a atividade, o colaborador e o tempo. Clicar na linha abre o detalhe da esteira em nova aba.
+
+- A ordem é pela **data do trabalho**, da mais recente para a mais antiga. Um apontamento lançado hoje para um dia passado aparece abaixo dos apontamentos dos dias seguintes — ou nem aparece, se houver 12 mais recentes.
+- **Extra Esteira não aparece** nesta lista.
+- Apontamentos removidos e apontamentos de esteiras excluídas não aparecem.
+
+Sem nenhum apontamento, aparece *"Nenhum apontamento registrado."*.
+
+### 15.7 Visão Gerencial
+
+No alto, a frase **"Visão executiva (agregados operacionais)"**, abaixo do título, e uma linha que explica: a janela vale **só para as concluídas**; as ativas são o estado atual.
+
+**Escolher a janela:**
+
+1. Na faixa de controles, em **Janela (conclusões)**, clique em **7d**, **15d**, **30d**, **60d** ou **90d**. O padrão é **30d**.
+2. Os números são buscados de novo. Enquanto isso, aparece **"Atualizando painel gerencial…"** e os botões da janela ficam desativados.
+
+**Os cartões:**
+
+| Cartão | O que conta | Ao clicar |
+|---|---|---|
+| **Esteiras ativas** | todas as esteiras **não finalizadas e não canceladas**, em qualquer outra situação — rascunhos e atrasadas inclusive. Não depende da janela | abre o **Painel operacional** no recorte **Ativas**, em nova aba |
+| **Concluídas (Nd)** | esteiras **finalizadas** com data de conclusão nos últimos N dias, contados para trás a partir do momento da consulta | abre o **Painel operacional** em **Finalizadas**, com a etiqueta **Janela: N dias**, em nova aba |
+| **Participação de atraso (ativas)** | a proporção de esteiras **em atraso** entre as **ativas**, em percentual arredondado. Mostra **—** quando não há esteira ativa | nada |
+
+O bloco **Previsto estrutural e minutos apontados** traz os mesmos três totais da visão Operacional (15.4). A janela não os altera.
+
+O bloco **Esteiras em atraso (amostra)** lista até **8** esteiras em atraso, em **ordem alfabética de nome**, com o **Prazo** como está registrado na esteira e o link **Abrir**, que abre o detalhe em nova aba. Sem nenhuma, aparece *"Nenhuma esteira em atraso no momento."*. A limitação do prazo descrita em 15.3 vale também aqui.
+
+### 15.8 O modo Gráficos
+
+O modo **Gráficos** desenha os mesmos dados. Passe o ponteiro do mouse sobre um gráfico para ver os valores.
+
+**Visão Operacional:**
+
+| Bloco | O que muda em relação ao modo Cards |
+|---|---|
+| **Esteiras por bucket operacional** | um gráfico em anel com as sete situações e o **Total: N esteiras**. Clicar em um segmento ou em um item da legenda abre o Painel operacional filtrado, em nova aba. Sem nenhuma esteira, aparece *"Sem esteiras no recorte."* |
+| **Destaque — em atraso** | a mesma lista de 15.3 |
+| **Previsto estrutural vs minutos apontados** | um gráfico de barras com os mesmos totais; com período escolhido, uma barra a mais |
+| **Carga por colaborador** | as **10** pessoas com mais alocações, com duas barras cada: o previsto das atividades alocadas e os minutos apontados. Não há a tabela nem a coluna de capacidade. O link **Colaboradores** abre em nova aba |
+| **Últimos apontamentos** | a mesma lista de 15.6 |
+
+**Visão Gerencial:**
+
+| Bloco | O que muda em relação ao modo Cards |
+|---|---|
+| **Ativas · Concluídas · Em atraso (esteiras)** | um gráfico em anel com três segmentos. Clicar em um segmento ou na legenda abre o Painel operacional no recorte correspondente, em nova aba. Sem dados, aparece *"Sem dados agregados."* |
+| **Participação de atraso (ativas)** | o percentual com **uma casa decimal** e uma barra proporcional. No modo Cards, o mesmo número aparece arredondado para inteiro |
+| **Previsto estrutural e minutos apontados** | gráfico de barras com os três totais |
+| **Esteiras em atraso (amostra)** | a mesma lista |
+
+> **O anel da visão Gerencial não é uma divisão do todo.** As esteiras **em atraso** também estão contadas em **Ativas**, e o mesmo número aparece em dois segmentos. Leia cada segmento pelo seu valor, não pelo tamanho da fatia.
+
+### 15.9 Do número ao detalhe
+
+| Onde você clica | Para onde vai |
+|---|---|
+| cartão **Esteiras (total)** | Painel operacional, sem filtro |
+| cartão **Pressão de atraso**, barra ou segmento **Em atraso** | Painel operacional, recorte **Em atraso** |
+| qualquer outra barra ou segmento de situação | Painel operacional, recorte daquela situação |
+| cartão ou segmento **Esteiras ativas** / **Ativas** | Painel operacional, recorte **Ativas** |
+| cartão ou segmento **Concluídas** | Painel operacional, recorte **Finalizadas** limitado à janela, com a etiqueta **Janela: N dias** |
+| **Abrir**, nas listas de esteiras em atraso | detalhe da esteira |
+| uma linha de **Últimos apontamentos** | detalhe da esteira do apontamento |
+| **Colaboradores** | tela **Colaboradores** |
+
+Todos os destinos abrem em **nova aba**, para você não perder o Dashboard — exceto o link **Colaboradores** no modo **Cards**, que abre na mesma aba.
+
+No Painel operacional, o recorte chega aplicado no filtro **Situação**, com a etiqueta correspondente acima da lista. A etiqueta **Janela: N dias** vem com uma linha explicativa que cita nomes internos do sistema; ela pode ser ignorada. Ao trocar o filtro **Situação** no Painel, a janela de dias é descartada. Lembre também que os **cartões** do Painel sempre contam todas as esteiras; só a lista respeita o recorte (capítulo 5).
+
+## O que esperar
+
+### Cada indicador tem o seu período
+
+| Indicador | Período |
+|---|---|
+| esteiras por situação, ativas, em atraso, participação de atraso | **agora** — a situação de cada esteira no momento da busca |
+| **Concluídas (Nd)** | os últimos N dias, pela janela da visão Gerencial |
+| **Minutos apontados (acumulado)**, inclusive por colaborador | **todo o histórico** |
+| **Minutos apontados (período)** | o período escolhido na visão Operacional |
+| previsto estrutural, total por esteira, alocações e previsto por colaborador | **toda a estrutura existente**, sem data — inclui esteiras encerradas |
+| **Últimos apontamentos** | os 12 mais recentes, pela data do trabalho |
+
+A janela da visão Gerencial e o período da visão Operacional são independentes: um não altera o outro.
+
+### Os números conferem com o Painel operacional
+
+As contagens por situação usam a mesma regra do Painel operacional. Buscados no mesmo momento, os números das barras do Dashboard e os cartões do Painel tendem a coincidir. A diferença é que o Dashboard mostra também as **canceladas** — e por isso **Esteiras (total)** pode ser maior que a soma dos cartões do Painel.
+
+### Ninguém altera nada pelo Dashboard
+
+Nenhum clique na tela muda dados. As listas e os cartões levam a outras telas, onde valem as permissões e as regras de cada uma.
+
+### Rótulos técnicos que aparecem na tela
+
+Alguns rótulos ainda usam termos internos. Leia assim:
+
+| Na tela | Leia como |
+|---|---|
+| **"STEPs"**, **"STEPS"**, **"etapas"** | atividades |
+| **"bucket"**, **"bucket operacional"** | situação da esteira, no sentido dos recortes do Painel operacional |
+| **"OS"**, em **Total por esteira (OS)** | o total registrado em cada esteira |
+| **"snapshot_atual"** e **"snapshot"**, no rodapé e no texto do modo Gráficos | fotografia do momento da busca |
+| **"Janela 7d (UTC)."**, **"(7d)"**, **"(query)"** e similares | o período escolhido |
+| **"backlog"**, nas dicas dos cartões | o **Painel operacional** |
+
+## Quando algo é bloqueado
+
+| O que aparece | Causa | O que fazer |
+|---|---|---|
+| **Dashboard** não aparece no menu, ou o endereço direto mostra **"Sem permissão para esta área"** | a conta não tem nenhuma das duas permissões | pedir a quem administra os acessos (capítulo 4, seção 4.6) |
+| só uma visão, sem abas | a conta tem apenas uma das permissões | idem, se precisar da outra visão |
+| a tabela de carga não tem a coluna **Previsto vs capacidade diária** | falta acesso a **Configurações operacionais** | idem |
+| o link **Colaboradores** abre **"Sem permissão para esta área"** | falta a permissão de consultar colaboradores | idem |
+| faixa vermelha com uma mensagem, no lugar dos números | os números não puderam ser buscados | clicar em **Atualizar**; se persistir, abrir chamado com o texto exibido |
+| janela de aviso, como **Sem permissão**, **Sessão inválida** ou **Não foi possível continuar** | falha de permissão, de sessão ou de comunicação ao buscar os números. A permissão pode ter sido retirada com a tela aberta (capítulo 4, seção 4.5) | fechar a janela e seguir a orientação dela; recarregar a página |
+
+Quando a busca falha, **as duas visões ficam vazias** ao mesmo tempo, mesmo que o problema seja de uma só. **Atualizar** tenta as duas de novo.
+
+### Ações que não existem nesta tela
+
+| Limitação | Como proceder |
+|---|---|
+| filtrar por esteira, colaborador, setor, cliente ou data | não há filtros. Use o **Painel operacional**, a **Jornada por colaborador** ou a **Evolução das Esteiras** |
+| escolher um período personalizado | só os períodos fixos de 15.2 e 15.7 |
+| exportar ou imprimir os números | não há exportação. A **Jornada por colaborador** exporta em Excel (capítulo 12) |
+| ordenar a tabela de carga por outra coluna | a ordem é fixa, por número de alocações |
+| ver a lista completa de esteiras em atraso | as listas são amostras de até 12 e 8. Use o cartão ou a barra **Em atraso** para abrir a lista completa no Painel operacional |
+| ver os apontamentos de Extra Esteira | não entram no Dashboard. Use a **Jornada por colaborador** ou a **Minha jornada** (capítulos 11 e 12) |
 
 ---
 
