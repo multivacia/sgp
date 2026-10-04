@@ -3,7 +3,7 @@
 **Produto:** SGP+ · Multivacia / ARGOS
 **Versão da aplicação nesta revisão:** 1.9.8
 **Revisão deste manual:** 2026-10-03
-**Situação:** base editorial criada; capítulos 1 a 3, 5 a 14, 16, 17, 20 e 21 com conteúdo final. Os capítulos 4, 15, 18 e 19 seguem marcados como pendentes e **não devem ser publicados** como versão final.
+**Situação:** base editorial criada; capítulos 1 a 14, 16, 17, 20 e 21 com conteúdo final. Os capítulos 15, 18 e 19 seguem marcados como pendentes e **não devem ser publicados** como versão final.
 
 > **Este é o documento canônico do manual do usuário.** Versões em HTML ou PDF devem ser geradas a partir daqui.
 >
@@ -203,13 +203,313 @@ Há também um tempo máximo total de sessão: ao atingi-lo, é necessário entr
 
 # 4. Perfis e permissões — visão para o usuário
 
-> [PENDENTE DE ENRIQUECIMENTO — não publicar como capítulo final]
+## Para que serve
 
-- diferença entre **conta de acesso** e **colaborador operacional**, e por que algumas ações exigem o vínculo entre os dois
-- como ler "quem costuma ter acesso" neste manual: permissão efetiva, não cargo
-- o que acontece quando falta permissão: item ausente do menu ou mensagem de bloqueio
-- diferença entre **função operacional** do colaborador e **permissão** de acesso
-- com quem falar para pedir liberação
+Este capítulo explica **por que duas pessoas veem o SGP+ de formas diferentes**: o que aparece no seu menu e o que o sistema aceita que você faça dependem das **permissões** do **perfil de acesso** da sua conta.
+
+Ele serve a dois públicos:
+
+- a **qualquer usuário**, para entender o que é perfil e permissão, reconhecer quando algo foi bloqueado por falta de permissão — e quando o bloqueio tem outra causa — e saber o que pedir e a quem;
+- a **quem administra os acessos**, para consultar e alterar as permissões de cada perfil na tela **Permissões por papel** e conferir essas alterações na **Trilha administrativa**.
+
+A criação de contas, a escolha do perfil de cada conta e o vínculo com o colaborador estão no **capítulo 16**. Aqui só se faz referência a eles.
+
+## Onde fica
+
+| O que você procura | Caminho no menu | Título da tela |
+|---|---|---|
+| ver e alterar as permissões de um perfil | **Estrutura e administração → Permissões por papel** | **Permissões por papel** |
+| conferir quem alterou as permissões e quando | **Estrutura e administração → Trilha administrativa**, ou o atalho **Ver trilha administrativa** no topo de **Usuários** | **Trilha administrativa** |
+| ver ou trocar o perfil de uma conta | **Cadastros operacionais → Usuários**, coluna **Papel** (capítulo 16, seções 16.7 e 16.9) | **Usuários de acesso** |
+
+As duas telas deste capítulo trazem a etiqueta **Governança** acima do título.
+
+**Não há tela que mostre a você o seu próprio perfil.** O botão com o seu nome, na barra superior, mostra o nome de exibição e o e-mail da conta, mas não o perfil. Na prática, o retrato das suas permissões é o próprio menu lateral: ele mostra exatamente os itens que seu perfil libera (capítulo 3, seção 3.4). Para saber o nome do seu perfil, pergunte a quem administra os acessos.
+
+## Quem costuma ter acesso
+
+Os conceitos deste capítulo valem para todos. As duas telas são restritas:
+
+| Tela | Permissão necessária | Na configuração padrão |
+|---|---|---|
+| **Permissões por papel** | a de **gerir as permissões por papel** | a instalação padrão **não atribui** esta permissão a nenhum perfil. Ela depende de liberação feita no seu ambiente; por isso, em algumas instalações ninguém vê este item no menu |
+| **Trilha administrativa** | **Trilha administrativa: consultar** | **Administrador** |
+
+Sem a permissão, o item não aparece no menu e o endereço direto mostra **"Sem permissão para esta área"**.
+
+## Como fazer
+
+### 4.1 Conta, perfil e permissão
+
+| Conceito | O que é | Onde aparece |
+|---|---|---|
+| **Conta de acesso** (usuário) | o que você usa para entrar, com e-mail e senha | **Usuários** (capítulo 16) |
+| **Perfil de acesso** | o conjunto de permissões atribuído à conta. Cada conta tem **um único** perfil | na tela **Usuários**, campo **Papel operacional** e coluna **Papel**; na tela **Permissões por papel**, campo **Papel** |
+| **Permissão** | uma autorização específica: consultar uma tela ou executar uma ação | marcada ou desmarcada para cada perfil em **Permissões por papel** |
+
+Três consequências práticas:
+
+- **as permissões pertencem ao perfil, não à pessoa.** Todas as contas com o mesmo perfil têm exatamente as mesmas permissões. Não existe permissão concedida a uma conta isolada;
+- **alterar as permissões de um perfil afeta todas as contas que o usam** — inclusive a de quem está fazendo a alteração;
+- para mudar o que **uma** pessoa pode fazer, há dois caminhos: trocar o perfil da conta dela (capítulo 16, seção 16.9) ou alterar o perfil inteiro (seção 4.7), sabendo que isso vale para todos que o usam.
+
+O SGP+ vem instalado com quatro perfis:
+
+| Perfil | Para quem se destina, na configuração padrão |
+|---|---|
+| **Administrador** | administração de contas, cadastros e acessos; tem a maior parte das permissões |
+| **Gestor** | condução da produção: esteiras, planejamento, matrizes, equipes, colaboradores e correção de apontamentos |
+| **Colaborador** | quem executa e aponta. **Não tem permissão específica**: usa só o que está liberado para todo usuário (seção 4.2). Este perfil não pode ser alterado (seção 4.7) |
+| **Super administrador** | parâmetros sensíveis do sistema, em **Configurações do sistema**. Na configuração padrão, consultar e alterar essa tela são as únicas permissões dele |
+
+Além desses, **cada função operacional criada em Configurações operacionais aparece também como perfil**, sem nenhuma permissão até que alguém as marque (capítulo 16, seção 16.1).
+
+Dois conceitos vizinhos **não são permissão**:
+
+- **função operacional** — o que a pessoa faz na fábrica. É um dado do cadastro do colaborador e não libera nem bloqueia nada no sistema;
+- **vínculo da conta com um colaborador** — é ele, e não uma permissão, que faz **Apontar horas**, **Minha fila** e **Minha jornada** funcionarem para você (capítulos 7, 10 e 11). Uma conta com todas as permissões, mas sem vínculo, não aponta horas próprias.
+
+E o **Modo Fábrica** fica totalmente fora deste capítulo: ele não usa conta de acesso nem perfil, e sim o cadastro do colaborador e o PIN (capítulo 13).
+
+### 4.2 O que toda conta ativa já tem
+
+Sem nenhuma permissão específica — como no perfil **Colaborador** —, a conta tem acesso a:
+
+| Item | Observação |
+|---|---|
+| **Painel operacional** e o **detalhe de qualquer esteira**, para consulta | os botões de alteração dependem de permissão (capítulos 5 e 6) |
+| **Apontar horas**, na barra superior | funciona somente se a conta estiver vinculada a um colaborador (capítulo 7) |
+| **Minha fila** e **Minha jornada** | idem (capítulos 10 e 11) |
+| **Chamados** | somente quando o módulo de chamados está ativo no ambiente |
+| **Alterar senha** | sempre |
+
+Todo o restante do menu depende de permissão.
+
+### 4.3 Como ler "Quem costuma ter acesso" neste manual
+
+Cada capítulo traz um bloco **Quem costuma ter acesso**. Leia-o assim:
+
+- o que manda é a **permissão**, não o nome do perfil nem o cargo da pessoa. Quando o manual diz "a gestão" ou "a administração", está se referindo ao que os perfis **Gestor** e **Administrador** recebem **na configuração padrão**;
+- a sua operação pode ter mudado essa configuração em **Permissões por papel**. Se o manual diz que um recurso costuma estar disponível para o seu perfil e ele não aparece para você, a causa mais provável é uma diferença de configuração — não uma falha;
+- o manual descreve as permissões pelo que elas liberam — "permissão de criar esteiras", "permissão de mudar situação". A tabela abaixo liga esses termos ao **nome que aparece na tela Permissões por papel** e mostra quem as recebe na configuração padrão.
+
+**Esteiras, planejamento e acompanhamento**
+
+| Nome na tela | O que libera | Configuração padrão |
+|---|---|---|
+| **Esteiras: criar** | é a "permissão de criar esteiras" deste manual: **Nova esteira**, **Por documento**, **Planejamento**, **Agenda da semana** e **Evolução das Esteiras**; alterar dados e estrutura; concluir, reabrir, dispensar e restaurar atividades pela esteira; incluir novo item; excluir esteira (capítulos 6, 8, 9, 14 e 17) | Administrador, Gestor |
+| **Esteiras: alterar estado operacional** | é a "permissão de mudar situação": avançar, voltar e cancelar a situação da esteira (capítulo 6) | Administrador, Gestor |
+| **Esteiras: gerir alocações por etapa** | **nenhum efeito visível nas telas atuais.** Alocar e retirar pessoas e equipes de uma atividade é feito na edição da esteira e depende de **Esteiras: criar** (capítulo 6) | Administrador, Gestor |
+| **Matriz de operação: consultar** | o item **Matrizes de operação** e a pré-visualização das matrizes | Administrador, Gestor |
+| **Matriz de operação: alterar** | criar e editar matrizes | Administrador, Gestor |
+| **Dashboard operacional** | o item **Dashboard** e a visão operacional dos indicadores (capítulo 15) | Administrador, Gestor |
+| **Dashboard gerencial** | o item **Dashboard** e a visão gerencial dos indicadores (capítulo 15) | Administrador |
+
+**Apontamentos**
+
+| Nome na tela | O que libera | Configuração padrão |
+|---|---|---|
+| **Apontamentos: editar qualquer lançamento (correção gerencial)** | corrigir apontamentos, inclusive o seu próprio (capítulo 7) | Administrador, Gestor |
+| **Apontamentos: remover qualquer lançamento (correção gerencial)** | remover apontamento de outra pessoa (capítulo 7) | Administrador, Gestor |
+| permissão de **lançar horas em nome de outro colaborador** | o lançamento em nome de outra pessoa (capítulo 7) | **não atribuída** pela instalação padrão; depende de liberação no seu ambiente |
+
+Qualquer uma dessas três libera o botão **Apontamento gerencial** e a tela de correção; dentro dela, cada ação segue a sua própria permissão (capítulos 7 e 12).
+
+**Cadastros**
+
+| Nome na tela | O que libera | Configuração padrão |
+|---|---|---|
+| **Colaboradores admin: consultar** | os itens **Colaboradores**, **Saúde operacional** e **Jornada por colaborador** | Administrador, Gestor |
+| **Colaboradores admin: criar**, **editar**, **ativar**, **inativar** | as ações correspondentes em **Colaboradores**; **editar** inclui **Redefinir PIN** (capítulo 16) | Administrador, Gestor |
+| **Colaboradores admin: eliminação lógica** · **restaurar** | remover e restaurar colaboradores (capítulo 16) | Administrador |
+| **Utilizadores: consultar** | o item **Usuários** | Administrador |
+| **Utilizadores: criar**, **editar**, **ativar**, **inativar**, **eliminação lógica**, **restaurar**, **repor senha**, **forçar troca de senha** | as ações correspondentes em **Usuários**; **editar** inclui trocar o perfil da conta e vincular ou desvincular colaborador (capítulo 16) | Administrador |
+| **Equipes: consultar**, **criar**, **editar**, **gerir membros** | o item **Equipes** e as ações correspondentes (capítulo 16) | Administrador, Gestor |
+| **Configurações operacionais: gerir catálogo (setores e funções)** | o item **Configurações operacionais**, com as seis abas (capítulo 16) | Administrador, Gestor |
+
+**Administração do sistema**
+
+| Nome na tela | O que libera | Configuração padrão |
+|---|---|---|
+| **Configurações do sistema: consultar** · **alterar** | o item **Configurações do sistema** e a alteração dos parâmetros, como os tempos de sessão (capítulo 3, seção 3.6) | Super administrador |
+| **Trilha administrativa: consultar** | o item **Trilha administrativa** (seção 4.8) | Administrador |
+| permissão de **gerir as permissões por papel** | o item **Permissões por papel** (seção 4.7) | **não atribuída** pela instalação padrão |
+| **Health DB (produção)** | verificação técnica de funcionamento, usada pela equipe de infraestrutura. Não abre nenhuma tela | Administrador, Gestor |
+
+Na tela **Permissões por papel**, os nomes aparecem exatamente como na primeira coluna, inclusive com a grafia **Utilizadores** e os verbos **gerir** e **repor**.
+
+### 4.4 Como você percebe que falta uma permissão
+
+A falta de permissão aparece de quatro formas. Nenhuma delas altera dados: quando o sistema recusa, nada foi gravado.
+
+| O que você vê | O que significa | Exemplos |
+|---|---|---|
+| o **item não aparece no menu** | falta a permissão de consultar aquela tela. Um agrupamento do menu sem nenhum item liberado também some | **Usuários** para quem tem o perfil Gestor na configuração padrão |
+| a tela abre com **"Sem permissão para esta área"** e *"Não tem permissão para acessar este conteúdo. Contate um administrador se precisar de acesso."* | você chegou à tela por um botão ou pelo endereço direto, sem a permissão de abri-la | **Nova Esteira Manual** no Painel operacional (capítulo 5) |
+| um **botão ou item de menu da tela não aparece** | a tela esconde o que você não pode fazer | botões de situação da esteira (capítulo 6); **Apontamento gerencial** (capítulo 12); **Nova equipe** (capítulo 16) |
+| a ação é **recusada ao confirmar** | a tela mostrou o botão, mas o sistema conferiu a permissão na hora de gravar. Em várias telas abre a janela **Sem permissão**, com *"Você não tem permissão para esta operação. Peça acesso ao administrador se necessário."*; algumas telas mostram uma mensagem própria | **Remover** colaborador sem a permissão (capítulo 16); *"Sem permissão para reabrir esta atividade."* (capítulo 6) |
+
+O comportamento depende da tela: algumas escondem os botões, outras mostram todos e só recusam ao confirmar. Os capítulos de cada recurso dizem qual é o caso.
+
+**Nem todo bloqueio é falta de permissão.** Antes de pedir liberação, confira se não é um destes casos:
+
+| Situação | Causa real | Onde resolver |
+|---|---|---|
+| *"Sua conta não está associada a um colaborador operacional…"*, ou fila e jornada vazias com aviso de vínculo | a conta não está vinculada a um colaborador | **Usuários**, pela administração (capítulo 16, seção 16.9) |
+| *"Sua conta está inativa. Contacte o administrador."* ao entrar | a conta foi inativada | **Usuários**, com **Ativar** (capítulo 16) |
+| o sistema pede nova senha antes de liberar o uso | troca de senha obrigatória | criar a nova senha (capítulo 3) |
+| ação recusada pela **situação** da esteira, pela **sequência** das atividades ou pelo tempo previsto | regra de operação, não de acesso | capítulos 6 e 7 |
+| não consegue entrar no **Modo Fábrica** | credencial de produção (PIN) do colaborador | capítulo 13 |
+
+### 4.5 Quando a permissão muda
+
+Quando a administração troca o perfil da sua conta ou altera as permissões do seu perfil:
+
+- **o sistema passa a conferir as novas permissões na hora.** A próxima ação que você fizer já é aceita ou recusada de acordo com elas;
+- **o menu e os botões da sua tela não mudam sozinhos.** Eles são atualizados quando a página é recarregada ou quando você entra de novo no sistema.
+
+Até essa atualização, duas coisas podem acontecer:
+
+- uma permissão **recebida** ainda não aparece no menu — recarregue a página;
+- uma permissão **retirada** ainda deixa o item ou o botão visível, mas o uso é recusado com a janela **Sem permissão**.
+
+A troca de perfil ou de permissões **não encerra** a sessão de quem já está usando o sistema.
+
+### 4.6 Pedir uma liberação
+
+1. Confirme, pela seção 4.4, que o bloqueio é mesmo de permissão.
+2. Anote **qual tela** você estava usando, **qual ação** tentou e o **texto da mensagem** que apareceu.
+3. Procure **quem administra os acessos** na sua operação.
+
+Quem administra pode atender de duas formas:
+
+- **trocar o perfil da sua conta** por outro que já tenha a permissão (capítulo 16, seção 16.9);
+- **acrescentar a permissão ao seu perfil** (seção 4.7) — lembrando que ela passa a valer para todas as contas com aquele perfil.
+
+Depois da liberação, recarregue a página para o menu se atualizar (seção 4.5).
+
+### 4.7 Consultar e alterar as permissões de um perfil
+
+Esta seção é para quem administra os acessos e tem a permissão de gerir as permissões por papel.
+
+1. Abra **Estrutura e administração → Permissões por papel**. Enquanto os dados são buscados, aparece **Carregando…**.
+2. No campo **Papel**, escolha o perfil. A lista traz **todos** os perfis cadastrados — os quatro da instalação e as funções operacionais, inclusive as inativas —, cada um com o nome seguido do código entre parênteses. A tela abre com o primeiro da lista já selecionado.
+3. Abaixo, aparecem **todas as permissões do sistema**, separadas em grupos por assunto. As permissões que o perfil já tem estão marcadas.
+4. Marque o que o perfil deve passar a ter e desmarque o que deve perder.
+5. Clique em **Salvar alterações**. Durante a gravação, o botão mostra **Salvando…**.
+6. Aparece **"Permissões do papel atualizadas."** e a lista é recarregada com o que ficou gravado.
+
+Como ler a lista:
+
+- cada permissão mostra o **nome**, em destaque, e logo abaixo um **identificador técnico**. Oriente-se pelo nome; a tabela da seção 4.3 explica o que cada um libera;
+- os **títulos dos grupos** também são identificadores técnicos, em inglês, e servem só para agrupar;
+- o texto de apoio no topo da tela cita uma sigla técnica para o controle de acesso. Ela não tem significado para o uso.
+
+Regras da tela:
+
+| Situação | O que acontece |
+|---|---|
+| perfil **Colaborador** selecionado | as caixas e o botão **Salvar alterações** ficam desativados, e um aviso informa que este perfil não tem permissões explícitas nesta versão e que a edição está desativada |
+| perfil **Administrador** sem alguma das permissões obrigatórias | a gravação é recusada (veja abaixo) e nada muda |
+| o perfil selecionado é **o da sua própria conta** | aparece no rodapé *"Você está editando o papel da sua sessão atual. Após salvar, suas permissões serão atualizadas automaticamente."*. Depois de salvar, o seu menu se atualiza sem recarregar a página |
+| você retirou do **seu próprio perfil** a permissão de gerir as permissões por papel | depois de salvar, você é levado ao **Painel operacional**, com o aviso *"Deixou de ter acesso à gestão de permissões. Foi redirecionado para o painel operacional."* |
+| você trocou o perfil no campo **Papel** sem salvar | as marcações feitas são **descartadas sem aviso** e a tela mostra as permissões gravadas do novo perfil |
+| você sai pelo menu lateral com alterações não salvas | aparece **"Sair desta página?"**; **Sair e continuar** descarta as alterações, **Cancelar** volta à tela |
+
+**Permissões obrigatórias do Administrador.** O perfil **Administrador** precisa manter sempre estas seis permissões, para que nunca se perca a capacidade de administrar contas e acessos:
+
+- **Utilizadores: consultar**;
+- **Utilizadores: editar**;
+- **Utilizadores: repor senha**;
+- **Utilizadores: forçar troca de senha**;
+- **Trilha administrativa: consultar**;
+- a permissão de **gerir as permissões por papel**.
+
+> **Atenção às atualizações do sistema.** As permissões que a instalação atribui ao **Administrador** e ao **Gestor** podem ser **reatribuídas** quando o sistema passa por atualização da sua base de dados. Se você retirou de um desses perfis alguma permissão da configuração padrão, confira o perfil depois de cada atualização. Pelo mesmo motivo, **Configurações do sistema** pode deixar de constar no Administrador e no Gestor mesmo que alguém a tenha marcado.
+
+[IMAGEM SUGERIDA: Tela Permissões por papel com o perfil Gestor selecionado no campo Papel, os grupos de permissões com caixas marcadas e desmarcadas e o botão Salvar alterações]
+
+### 4.8 Conferir alterações de permissão na Trilha administrativa
+
+Toda gravação feita em **Permissões por papel** fica registrada na **Trilha administrativa**.
+
+1. Abra **Estrutura e administração → Trilha administrativa**.
+2. No campo **Tipo de evento**, escolha **Permissões do papel atualizadas**. A lista se atualiza ao escolher; o botão **Aplicar filtros** também recarrega.
+3. Leia as colunas:
+
+| Coluna | Conteúdo, para este tipo de evento |
+|---|---|
+| **Quando** | data e hora da gravação |
+| **Evento** | **Permissões do papel atualizadas** |
+| **Actor** | o e-mail de quem gravou |
+| **Alvo** e **Colab.** | um traço — a alteração é do perfil, não de uma conta |
+| **Metadados** | um resumo em formato técnico com o código do perfil e os identificadores das permissões **acrescentadas** e **retiradas**. Passe o ponteiro do mouse sobre a célula para ver o texto inteiro |
+
+A linha acima da tabela informa *"N evento(s) encontrado(s) (limite 100 mais recentes)."*: a tabela mostra no máximo os **100 eventos mais recentes**. Sem resultados, aparece *"Sem eventos para os filtros atuais."*.
+
+Observações:
+
+- **cada clique em Salvar alterações gera um registro**, mesmo que nada tenha mudado. Nesse caso, as listas de acrescentadas e retiradas aparecem vazias;
+- a **troca do perfil de uma conta**, feita em **Usuários**, é registrada como **Usuário atualizado**, com o e-mail da conta na coluna **Alvo**. Os **Metadados** indicam quais dados mudaram, mas não qual era o perfil anterior nem o novo;
+- o campo **ID do usuário alvo** pede um identificador interno que a interface não exibe nas outras telas. Na prática, filtre pelo **Tipo de evento**;
+- o link **← Usuários**, no topo, leva à tela **Usuários**.
+
+[IMAGEM SUGERIDA: Trilha administrativa filtrada por Permissões do papel atualizadas, com as colunas Quando, Evento, Actor, Alvo, Colab. e Metadados]
+
+## O que esperar
+
+### As alterações valem para o perfil inteiro
+
+Marcar ou desmarcar uma permissão muda o que **todas** as contas daquele perfil podem fazer. Antes de alterar um perfil compartilhado por muitas pessoas, avalie se não é melhor trocar o perfil de uma conta só.
+
+### Valem na hora, mas o menu só muda na recarga
+
+O sistema confere as permissões a cada ação, de modo que uma alteração já vale na ação seguinte de cada pessoa. O menu e os botões de quem está com o sistema aberto só se atualizam quando a página é recarregada ou a pessoa entra de novo (seção 4.5). A única exceção é você mesmo, ao salvar o seu próprio perfil em **Permissões por papel**.
+
+### O histórico não é desfeito
+
+Retirar uma permissão impede **novas** ações. Nada do que já foi feito com ela — apontamentos, cadastros, alterações de esteira — é apagado ou revertido.
+
+### Inativar uma função não retira as permissões
+
+Uma função operacional inativada em **Configurações operacionais** continua aparecendo em **Permissões por papel**, e as contas que a usam como perfil **mantêm** as permissões marcadas nela. Para cortar o acesso, desmarque as permissões ou troque o perfil das contas.
+
+## Quando algo é bloqueado
+
+### Acesso às telas deste capítulo
+
+| O que aparece | Causa | O que fazer |
+|---|---|---|
+| **Permissões por papel** ou **Trilha administrativa** não aparece no menu, ou o endereço direto mostra **"Sem permissão para esta área"** | falta a permissão correspondente | pedir a quem administra os acessos. Se ninguém na operação vê **Permissões por papel**, a permissão não foi liberada no ambiente — trate com o suporte técnico |
+
+### Ao salvar permissões
+
+| Mensagem | Causa | O que fazer |
+|---|---|---|
+| mensagem iniciada por *"O papel Administrador deve manter as permissões:"*, seguida de identificadores técnicos | você desmarcou alguma das seis permissões obrigatórias do Administrador | marque de novo as permissões listadas em 4.7 e salve |
+| *"Deixou de ter acesso à gestão de permissões. Foi redirecionado para o painel operacional."* | você retirou do seu próprio perfil a permissão de gerir permissões. **A gravação foi feita** | se foi engano, peça a outra pessoa com essa permissão que a devolva ao seu perfil |
+| janela **Sem permissão** | a sua permissão de gerir permissões foi retirada enquanto a tela estava aberta | recarregue a página; se o item sumir do menu, peça a liberação |
+| janela de aviso com *"O recurso solicitado não foi encontrado ou não existe mais."* | o perfil foi excluído — por exemplo, uma função operacional apagada em Configurações operacionais — enquanto a tela estava aberta | recarregue a página e escolha outro perfil |
+
+Quando a lista de perfis ou de permissões não carrega, a tela mostra o motivo em uma faixa no alto ou, em falhas de sessão e de comunicação, em uma janela de aviso. Recarregue a página e tente de novo.
+
+### Na Trilha administrativa
+
+| O que aparece | Causa | O que fazer |
+|---|---|---|
+| *"Sem eventos para os filtros atuais."* | nenhum registro do tipo escolhido, ou o campo **ID do usuário alvo** preenchido com um valor que não corresponde a nenhuma conta | voltar o **Tipo de evento** para **Todos os tipos** e esvaziar o campo de identificador |
+| mensagem de erro no lugar da tabela | falha ao buscar os registros, inclusive quando o campo **ID do usuário alvo** tem um valor fora do formato esperado | esvaziar o campo e clicar em **Aplicar filtros** |
+
+### Ações que não existem
+
+| Limitação | Como proceder |
+|---|---|
+| dar uma permissão a **uma única conta** | trocar o perfil da conta ou alterar o perfil inteiro (seção 4.1) |
+| dar a uma conta **mais de um perfil** | não existe; cada conta tem um perfil só |
+| ver o seu próprio perfil na tela | perguntar a quem administra os acessos |
+| alterar as permissões do perfil **Colaborador** | não é possível nesta versão |
+| criar um perfil novo com outro nome nesta tela | não existe nesta tela. Toda função criada em **Configurações operacionais** aparece também como perfil, mas a lista é compartilhada com as funções da fábrica (capítulo 16, seção 16.1) |
+| desfazer uma alteração de permissões | não há botão de desfazer. Consulte o registro na **Trilha administrativa** (seção 4.8) e remarque as permissões manualmente |
 
 ---
 
