@@ -787,7 +787,7 @@ Duas ausências que surpreendem:
 
 A tela **Nova esteira** pede o prazo como **duas datas**: **Início previsto** e **Fim previsto**. Preencha pelos seletores de data, como a tela pede — não há formato a decorar.
 
-No detalhe, as duas voltam nos campos **Início previsto** e **Fim previsto**. Em esteiras antigas, ou nas criadas **Por documento**, o prazo pode ter sido gravado como um texto único; nesse caso o detalhe mostra uma linha extra chamada **Prazo estimado** com aquele texto como está.
+No detalhe, as duas voltam nos campos **Início previsto** e **Fim previsto**. Em esteiras antigas, o prazo pode ter sido gravado como um texto único; nesse caso o detalhe mostra uma linha extra chamada **Prazo estimado** com aquele texto como está.
 
 > **Limitação que afeta a leitura de atraso.** O cartão e o filtro **Em atraso** do Painel operacional, e o selo **Atrasada** dos cartões de backlog do Planejamento e da Agenda, só reconhecem o prazo em formatos específicos — e **não** reconhecem o par Início/Fim previsto que a tela de criação produz. Consequência prática: uma esteira cadastrada pela tela atual tende a **nunca** ser contada como atrasada. Não use esses indicadores como fonte única de prioridade; confira o prazo na própria esteira. Registrado no capítulo 21.
 
