@@ -3,7 +3,7 @@
 **Produto:** SGP+ · Multivacia / ARGOS
 **Versão da aplicação nesta revisão:** 1.9.8
 **Revisão deste manual:** 2026-10-03
-**Situação:** base editorial criada; capítulos 1 a 3, 5 a 14, 17, 20 e 21 com conteúdo final. Os capítulos 4, 15, 16, 18 e 19 seguem marcados como pendentes e **não devem ser publicados** como versão final.
+**Situação:** base editorial criada; capítulos 1 a 3, 5 a 14, 16, 17, 20 e 21 com conteúdo final. Os capítulos 4, 15, 18 e 19 seguem marcados como pendentes e **não devem ser publicados** como versão final.
 
 > **Este é o documento canônico do manual do usuário.** Versões em HTML ou PDF devem ser geradas a partir daqui.
 >
@@ -3918,13 +3918,622 @@ Com esteiras marcadas, sair pelo menu lateral abre a confirmação **"Sair desta
 
 # 16. Cadastros e administração
 
-> [PENDENTE DE ENRIQUECIMENTO — não publicar como capítulo final]
+## Para que serve
 
-- **colaboradores**: cadastro, setor, função, acesso ao Modo Fábrica, redefinir PIN, inativar e restaurar
-- **usuários**: criar conta, vincular ao colaborador, exigir troca de senha, redefinir senha, inativar e restaurar
-- **equipes**: criar, incluir membros, definir referência e alocar em atividade
-- **capacidade**: capacidade diária padrão, ajuste individual com vigência e onde isso se reflete
-- **configurações operacionais**: setores, funções, capacidade, descrições de apontamentos, justificativas e motivos de dispensa
+Este capítulo reúne os cadastros que sustentam a operação: **quem** trabalha, **com que conta** cada pessoa entra no sistema, **como** as pessoas se agrupam e **quais listas e parâmetros** as outras telas usam.
+
+São cinco frentes:
+
+| Frente | O que você mantém | Onde isso aparece depois |
+|---|---|---|
+| **Colaboradores** | as pessoas que executam o trabalho, com setor, função e acesso ao Modo Fábrica | alocação nas esteiras, planejamento, Minha fila, Modo Fábrica, jornadas |
+| **Usuários** | as contas de acesso por e-mail e senha, com perfil de acesso e vínculo com o colaborador | entrada no sistema, menus liberados, Apontar horas, Minha fila, Minha jornada |
+| **Equipes** | grupos de colaboradores que podem ser alocados de uma vez | alocação nas esteiras e nas matrizes |
+| **Capacidade** | quantas horas por dia cada colaborador tem disponível | aviso de sobrecarga no planejamento, na agenda e na Minha fila; saúde operacional |
+| **Configurações operacionais** | setores, funções, capacidade e os catálogos usados nos apontamentos e na dispensa de atividades | cadastro de colaboradores, Apontar horas, Extra Esteira, Modo Fábrica, dispensa de atividade |
+
+Três distinções atravessam o capítulo inteiro:
+
+- **colaborador não é usuário.** O colaborador é a pessoa da fábrica; o usuário é a conta de acesso. Uma pessoa pode ter os dois, ligados entre si, ou só um deles;
+- **função não é permissão.** A função diz o que a pessoa faz na operação; a permissão diz o que a conta pode fazer no sistema;
+- **equipe não é pessoa.** Uma equipe reúne colaboradores reais. Para nomes como "Ajudante" ou "Costura", a própria tela de colaboradores orienta a usar equipe, e não um colaborador fictício.
+
+## Onde fica
+
+| Frente | Caminho no menu | Título da tela |
+|---|---|---|
+| Colaboradores | **Cadastros operacionais → Colaboradores** | **Colaboradores operacionais** |
+| Usuários | **Cadastros operacionais → Usuários** | **Usuários de acesso** |
+| Capacidade, setores, funções e catálogos | **Cadastros operacionais → Configurações operacionais** | **Configurações operacionais** |
+| Equipes | **Gestão → Equipes** | **Equipes** |
+
+A tela **Configurações operacionais** é dividida em seis abas: **Setores**, **Funções operacionais**, **Capacidade operacional**, **Descrições de apontamentos**, **Justificativas operacionais** e **Motivos de dispensa**. Ela sempre abre em **Setores**.
+
+Há também atalhos entre as telas:
+
+| Atalho | Onde está | Para onde leva |
+|---|---|---|
+| **Saúde operacional** | topo de **Colaboradores** | diagnóstico de carga por colaborador (capítulo 18) |
+| **Abrir usuário** | coluna **Usuário (acesso)** de **Colaboradores** | a conta vinculada, em **Usuários**, em uma **nova aba** |
+| **Abrir colaborador** | coluna **Colaborador** de **Usuários** | o cadastro vinculado, em **Colaboradores**, em uma **nova aba** |
+| **Ver trilha administrativa** | topo de **Usuários** | o histórico das alterações em contas de acesso |
+| **Gerir em Configurações operacionais — Capacidade operacional** | janela **Editar colaborador** | a aba de capacidade |
+| link **Equipes**, no texto de apoio | topo de **Colaboradores** | a lista de equipes |
+
+As telas **Colaboradores**, **Usuários** e **Configurações operacionais** trazem a etiqueta **Governança** acima do título; **Equipes** traz **Gestão**. Os textos de apoio de **Colaboradores** e de **Usuários** citam nomes internos do sistema entre parênteses — eles não têm significado para o uso e podem ser ignorados.
+
+[IMAGEM SUGERIDA: Tela Colaboradores operacionais — filtros Buscar, Setor, Papel operacional e Situação, a tabela com as colunas Colaborador, Setor, Usuário (acesso), Atualizado e Situação, e o menu de ações de uma linha aberto]
+
+## Quem costuma ter acesso
+
+Cada frente tem as **suas próprias permissões**, e dentro de cada uma as ações são liberadas separadamente. O item de menu só aparece para quem pode **consultar** aquela frente; sem essa permissão, o endereço direto mostra **"Sem permissão para esta área"**.
+
+| Frente | Ações controladas separadamente | Na configuração padrão |
+|---|---|---|
+| **Colaboradores** | consultar · cadastrar · alterar (inclui **Redefinir PIN**) · ativar · inativar · remover · restaurar | a **administração** tem todas; a **gestão** consulta, cadastra, altera, ativa e inativa, mas **não remove nem restaura** |
+| **Usuários** | consultar · criar · alterar (inclui vincular e desvincular colaborador) · ativar · inativar · remover · restaurar · forçar troca de senha · redefinir senha | somente a **administração** |
+| **Configurações operacionais** | uma única permissão libera as seis abas, inclusive capacidade | **administração** e **gestão** |
+| **Equipes** | consultar · criar · alterar a equipe (inclui ativar, inativar e remover) · gerenciar membros | **administração** e **gestão** |
+
+A permissão efetiva pode ter sido ajustada na sua operação. Na dúvida, fale com quem administra os acessos.
+
+**As telas não se comportam da mesma forma quando falta uma permissão:**
+
+- em **Colaboradores** e em **Usuários**, todos os botões e itens de menu aparecem para quem consegue abrir a tela. A verificação acontece **ao confirmar**: sem a permissão daquela ação, abre a janela **Sem permissão**, com *"Você não tem permissão para esta operação. Peça acesso ao administrador se necessário."*, e nada é alterado. É o caso típico do gestor que tenta **Remover** um colaborador;
+- em **Equipes**, o que você não pode fazer **não aparece**: sem permissão de criar, não há **Nova equipe**; sem permissão de alterar, os itens **Inativar**, **Ativar** e **Remover** somem do menu e o bloco **Dados da equipe** mostra um aviso de falta de permissão em lugar dos campos; sem permissão de gerenciar membros, não há **Adicionar colaborador** nem a coluna **Ações** dos membros;
+- em **Colaboradores**, a linha **Capacidade** de cada pessoa e o quadro **Capacidade operacional** da janela de edição só aparecem para quem também tem acesso a **Configurações operacionais**.
+
+## Como fazer
+
+### 16.1 Colaborador, usuário, função e permissão
+
+| Conceito | O que é | Onde se mantém |
+|---|---|---|
+| **Colaborador** | a pessoa real que executa e aponta o trabalho | **Colaboradores** |
+| **Usuário** | a conta que entra no sistema por e-mail e senha | **Usuários** |
+| **Função operacional** | o que a pessoa faz na operação; é um dado do cadastro do colaborador | lista mantida em **Configurações operacionais → Funções operacionais** |
+| **Perfil de acesso** | o conjunto de permissões da conta; a tela de usuários o chama de **Papel operacional** | escolhido em **Usuários**; as permissões de cada perfil são definidas em **Permissões por papel** |
+
+O que depende de cada um:
+
+- o **Modo Fábrica** pertence ao **colaborador**: entra-se com colaborador e PIN, sem conta de acesso (capítulo 13);
+- **Apontar horas**, **Minha fila** e **Minha jornada** dependem da **conta vinculada a um colaborador**. Sem o vínculo, essas telas avisam que a conta não está associada a um colaborador operacional (capítulos 7, 10 e 11);
+- o que aparece no menu depende do **perfil de acesso** da conta (capítulo 3).
+
+> **Funções e perfis de acesso compartilham a mesma lista.** Cada função criada em **Configurações operacionais** também aparece na lista **Papel operacional** de **Usuários** — mas sem permissão nenhuma, até que alguém as defina em **Permissões por papel**. No sentido inverso, a lista **Função / papel operacional** do cadastro de colaboradores mostra **todos** os perfis ativos, inclusive perfis de acesso como **Administrador**. Ao cadastrar um colaborador, escolha a função que corresponde ao trabalho da pessoa; ao criar uma conta, escolha o perfil de acesso que corresponde ao que ela pode fazer no sistema.
+
+### 16.2 Consultar colaboradores
+
+1. Abra **Cadastros operacionais → Colaboradores**.
+2. Use os filtros, que se aplicam sozinhos:
+
+| Filtro | Como funciona |
+|---|---|
+| **Buscar** | procura enquanto você digita, em nome, e-mail, código, apelido, matrícula, cargo, setor e função |
+| **Setor** | **Todos** ou um setor ativo |
+| **Papel operacional** | **Todos** ou uma função |
+| **Situação** | **Todos**, **Ativos** ou **Inativos** |
+| **Por página** | 25, 50 ou 100 linhas |
+
+A linha abaixo dos filtros informa *"N registro(s) · página X de Y"*. No fim da tabela, **Anterior** e **Seguinte** mudam de página. A lista vem em ordem alfabética de nome.
+
+O que cada coluna mostra:
+
+| Coluna | Conteúdo |
+|---|---|
+| **Colaborador** | foto (ou as iniciais), nome, e-mail e, para quem tem acesso a Configurações operacionais, a linha **Capacidade: 8h/dia** — com **(ajuste)** quando vale um ajuste individual |
+| **Setor** | o setor do cadastro |
+| **Usuário (acesso)** | o e-mail da conta vinculada, com o atalho **Abrir usuário**; ou **Sem vínculo** |
+| **Atualizado** | data e hora da última alteração do cadastro |
+| **Situação** | **Ativo** ou **Inativo**; e o selo **Com usuário** quando há conta vinculada |
+| **Ações** | o menu com as ações da linha |
+
+Quando nada corresponde aos filtros, a tabela mostra *"Nenhum colaborador neste filtro."*, com o lembrete de que colaborador é pessoa real e que funções como Ajudante ou Costura devem ser cadastradas como equipe.
+
+Quando você chega a esta tela pelo atalho **Abrir colaborador**, a linha da pessoa fica destacada. Se ela estiver fora dos filtros atuais, aparece *"Este registro está fora dos filtros atuais."*, com **Limpar filtros e mostrar** e **Manter filtros**.
+
+### 16.3 Cadastrar um colaborador
+
+1. Em **Colaboradores**, clique em **Novo colaborador**.
+2. Preencha a janela **Novo colaborador**. Os campos com **\*** são obrigatórios:
+
+| Campo | Observação |
+|---|---|
+| **Nome \*** | o nome da pessoa. Não pode repetir o de outro colaborador, sem diferença entre maiúsculas e minúsculas |
+| **Status \*** | **Ativo** (padrão) ou **Inativo** |
+| **Setor \*** | lista dos setores ativos |
+| **Função / papel operacional \*** | lista das funções e perfis ativos — veja o aviso em 16.1 |
+| **URL do avatar** | opcional; endereço de uma foto, começando por `http://` ou `https://` |
+| **Observações** | opcional, texto livre |
+
+3. Clique em **Salvar**. Aparece **"Colaborador criado."** e a lista é recarregada.
+
+**Cancelar**, ou um clique fora da janela, fecha sem salvar.
+
+O cadastro **não cria conta de acesso** nem **libera o Modo Fábrica**. São passos separados: a conta, em **Usuários** (16.7); o acesso à fábrica, com **Redefinir PIN** (16.5).
+
+### 16.4 Alterar um colaborador
+
+1. No menu da linha, clique em **Editar…**.
+2. A janela **Editar colaborador** traz os mesmos campos do cadastro, já preenchidos.
+3. Altere o que precisar e clique em **Salvar**. Aparece **"Dados atualizados."**.
+
+Abaixo dos campos, a janela mostra dois quadros:
+
+| Quadro | O que traz |
+|---|---|
+| **Capacidade operacional** | **Padrão global**, **Ajuste individual**, **Efetiva (hoje)** e a **Origem** do valor. É só consulta: o atalho **Gerir em Configurações operacionais — Capacidade operacional** leva aonde se altera (16.13). Só aparece para quem tem acesso a Configurações operacionais |
+| **PIN do Modo Fábrica** | a situação do acesso à fábrica e o botão **Redefinir PIN** (16.5) |
+
+Pontos de atenção:
+
+- se o setor ou a função atual do colaborador tiver sido **inativado** em Configurações operacionais, ele continua aparecendo na lista daquele cadastro, para não se perder ao salvar;
+- se o setor tiver sido **excluído**, o campo **Setor** aparece vazio e precisa ser preenchido de novo para salvar;
+- **apagar todo o texto de Observações não limpa o campo**: o texto anterior é mantido ao salvar. Para trocar a observação, escreva o novo texto no lugar;
+- um colaborador removido não oferece **Editar…**.
+
+### 16.5 Liberar e redefinir o acesso ao Modo Fábrica
+
+O quadro **PIN do Modo Fábrica**, na janela **Editar colaborador**, mostra a situação do acesso:
+
+| Selo | Texto ao lado | Significa |
+|---|---|---|
+| **Sem credencial** | *"Nenhuma credencial provisionada para este colaborador"* | o acesso à fábrica nunca foi liberado |
+| **Ativo** | *"Acesso ao Modo Fábrica habilitado"* | a pessoa entra com o próprio PIN |
+| **Aguardando troca** | *"Será solicitado um novo PIN no próximo acesso"* | o PIN provisório ainda não foi trocado |
+| **Bloqueado** | *"Conta bloqueada por excesso de tentativas"* | erros de PIN em excesso; o bloqueio é temporário |
+| **Desabilitado** | *"Acesso ao Modo Fábrica desabilitado"* | o acesso foi desligado |
+
+Um único botão cobre liberar, desbloquear e redefinir:
+
+1. Abra **Editar…** do colaborador.
+2. No quadro **PIN do Modo Fábrica**, clique em **Redefinir PIN**.
+3. Confirme a pergunta *"Redefinir o PIN do Modo Fábrica? O colaborador receberá PIN 1234 e deverá criar um novo PIN no próximo acesso ao Modo Fábrica."*.
+4. O botão mostra **Redefinindo…** e, ao terminar, o selo passa a **Aguardando troca**.
+
+O efeito é o mesmo em qualquer situação: o acesso fica **habilitado**, o PIN volta a ser o provisório **1234**, o contador de erros é zerado e um eventual **bloqueio é retirado na hora**. Informe o PIN provisório à pessoa. No primeiro acesso, o Modo Fábrica obriga a criar um PIN próprio e não aceita manter o provisório (capítulo 13). Oriente o uso de **4 dígitos**, o único tamanho que funciona tanto no totem quanto no navegador da fábrica (capítulo 21).
+
+A redefinição vale na hora; **não é preciso clicar em Salvar** na janela. Se você fechar com **Cancelar**, o PIN continua redefinido.
+
+> **Não há botão para desligar o acesso ao Modo Fábrica.** Para cortar o acesso de alguém à fábrica, **inative o colaborador** (16.6). O selo **Desabilitado** não pode ser produzido por esta tela.
+
+A mensagem exibida logo após a redefinição — *"PIN redefinido. Próximo acesso exigirá nova senha."* — fala em senha, mas se refere ao **PIN** (capítulo 21). Se a redefinição falhar, aparece *"Erro ao redefinir o PIN. Tente novamente."*.
+
+[IMAGEM SUGERIDA: Janela Editar colaborador com os quadros Capacidade operacional e PIN do Modo Fábrica, o selo Aguardando troca e o botão Redefinir PIN]
+
+### 16.6 Inativar, ativar e remover um colaborador
+
+No menu da linha:
+
+| Item | Aparece quando | Confirmação | Resultado |
+|---|---|---|---|
+| **Inativar** | o colaborador está ativo | *"Inativar este colaborador? Continua no cadastro e no histórico."* | **"Colaborador inativado."** |
+| **Ativar** | o colaborador está inativo | **nenhuma** — acontece no clique | **"Colaborador ativado."** |
+| **Remover** | o colaborador não foi removido | *"Remover logicamente este colaborador? O registro deixa de aparecer nas listagens normais; o histórico operacional é mantido."* | **"Colaborador removido logicamente."** |
+
+O rótulo de **Remover** na tela traz um complemento técnico entre parênteses (capítulo 21).
+
+O mesmo efeito de **Inativar** e **Ativar** se obtém mudando o campo **Status** na edição.
+
+**O que muda ao inativar:**
+
+- a pessoa **não entra mais no Modo Fábrica** e deixa de aparecer na seleção do totem e do navegador da fábrica. Se estiver com uma sessão aberta, ela é encerrada na ação seguinte, com *"Acesso de produção indisponível para este colaborador."*;
+- não pode mais ser **alocada** em atividades (capítulo 6, seção 6.6), **incluída em equipes** nem **vinculada a uma conta de acesso**;
+- deixa de aparecer na aba **Capacidade operacional**;
+- continua na lista de **Colaboradores** (filtro **Inativos**), nas equipes de que já fazia parte, com o selo **Colaborador inativo**, e em todo o histórico de apontamentos.
+
+**O que muda ao remover:**
+
+- o colaborador **sai de todas as listas**, inclusive da própria tela de Colaboradores, e também não entra no Modo Fábrica;
+- o histórico operacional é preservado;
+- o nome fica livre para um novo cadastro.
+
+> **Pela interface, remover é, na prática, definitivo.** O menu tem um item **Restaurar** para colaboradores removidos, mas a lista **nunca exibe** removidos — nem com o filtro **Todos** —, então esse item não fica ao seu alcance. Para afastar alguém da operação, **prefira Inativar**, que pode ser desfeito a qualquer momento com **Ativar**.
+
+Remover o colaborador **não mexe na conta de acesso** vinculada a ele. Se a pessoa também deixa de usar o sistema, trate a conta em **Usuários** (16.10).
+
+### 16.7 Consultar usuários
+
+1. Abra **Cadastros operacionais → Usuários**.
+2. Use os filtros:
+
+| Filtro | Como funciona |
+|---|---|
+| **Busca** | procura enquanto você digita, no e-mail e no nome do colaborador vinculado |
+| **Papel** | **Todos** ou um perfil, mostrado como código e nome (por exemplo, **ADMIN — Administrador**) |
+| **Por página** | 25, 50 ou 100 linhas |
+
+Não há filtro por situação: ativos e inativos aparecem juntos, em ordem de e-mail.
+
+| Coluna | Conteúdo |
+|---|---|
+| **Usuário** | foto (ou as iniciais), nome de exibição e e-mail |
+| **Papel** | o código do perfil, com o nome entre parênteses |
+| **Colaborador** | o colaborador vinculado, com o atalho **Abrir colaborador**; ou um traço |
+| **Situação** | **Ativo** ou **Inativo**; e o selo **Trocar senha** quando a próxima entrada exigirá nova senha |
+| **Último login** | data e hora da última entrada |
+| **Ações** | o menu com as ações da linha |
+
+Sem resultados, a tabela mostra *"Nenhum usuário encontrado com os filtros atuais."*.
+
+Quando existem contas ativas sem colaborador, aparece no alto o aviso **Pendências de vínculo operacional**, com a quantidade. O sistema não faz o vínculo sozinho, nem pelo e-mail: ele precisa ser feito na edição de cada conta.
+
+O atalho **Abrir usuário**, vindo de **Colaboradores**, destaca a linha da conta e, se ela estiver fora dos filtros, oferece **Limpar filtros e mostrar** e **Manter filtros**, como em 16.2.
+
+### 16.8 Criar uma conta de acesso
+
+1. Em **Usuários**, clique em **Novo usuário**.
+2. Preencha a janela:
+
+| Campo | Observação |
+|---|---|
+| **E-mail \*** | o login da pessoa. Não pode repetir o de outra conta — **inclusive de contas removidas** |
+| **Senha inicial \*** | no mínimo 8 caracteres. *"Não será mostrada novamente."* |
+| **Papel operacional \*** | o perfil de acesso da conta — veja 16.1 |
+| **Colaborador** | opcional. A lista só traz colaboradores **ativos** e **ainda sem conta**, com o código entre parênteses quando houver |
+| **URL do avatar** | opcional; endereço começando por `http://` ou `https://` |
+
+3. Clique em **Salvar**. Aparece **"Usuário criado."**.
+
+Toda conta nova nasce **ativa** e com **troca de senha obrigatória**: na primeira entrada, a pessoa usa a senha inicial e o sistema pede uma senha nova (capítulo 3). A linha mostra o selo **Trocar senha** até lá. Entregue a senha inicial por um canal seguro.
+
+Se a conta for de quem aponta produção, **vincule o colaborador** já na criação. Sem o vínculo, a pessoa entra no sistema, mas não aponta horas nem vê a própria fila e a própria jornada.
+
+### 16.9 Alterar uma conta, vincular e desvincular colaborador
+
+1. No menu da linha, clique em **Editar**.
+2. Na janela **Editar usuário**, altere **E-mail**, **Papel operacional**, **Colaborador** ou **URL do avatar**.
+3. O campo **Senha inicial** fica vazio e é opcional: deixe em branco para manter a senha atual.
+4. Clique em **Salvar**. Aparece **"Usuário atualizado."**.
+
+**Se você preencher uma senha na edição**, ela passa a valer imediatamente, **sem** exigir troca na próxima entrada, e qualquer sessão aberta daquela conta é encerrada. Para entregar uma senha que a pessoa precise trocar, use **Redefinir senha** (16.10).
+
+Para **vincular** ou **trocar** o colaborador, escolha-o no campo **Colaborador** e salve. Para **desvincular**, use o item **Desvincular colaborador** do menu da linha, que pede confirmação (*"Desvincular o colaborador deste usuário?"*) e mostra **"Colaborador desvinculado."**. Esse item só aparece quando há colaborador vinculado.
+
+> **Conta vinculada a colaborador inativo ou removido.** Nesse caso, o campo **Colaborador** da janela de edição aparece **vazio**, mas o vínculo continua existindo — e qualquer **Salvar** é recusado com *"Colaborador inválido, inativo ou já vinculado a outro usuário."*, mesmo que você só quisesse trocar o perfil. Para seguir: reative o colaborador em **Colaboradores** ou use antes **Desvincular colaborador**.
+
+### 16.10 Senha, inativação e remoção de contas
+
+Itens do menu da linha:
+
+| Item | Confirmação | Resultado |
+|---|---|---|
+| **Forçar troca de senha** | janela **Forçar troca de senha**: *"O usuário precisará definir uma nova senha no próximo acesso. A senha atual se mantém até lá."* | **"Troca de senha obrigatória aplicada."**; selo **Trocar senha** |
+| **Redefinir senha** | janela **Redefinir senha**: uma senha temporária será gerada, mostrada **uma única vez**, e deve ser transmitida por canal seguro | abre a janela **Senha temporária** |
+| **Inativar** | *"Inativar este usuário? Não poderá autenticar-se."* | **"Usuário inativado."** |
+| **Ativar** | **nenhuma** | **"Usuário ativado."** |
+| **Desvincular colaborador** | ver 16.9 | **"Colaborador desvinculado."** |
+| **Remover** | *"Remover logicamente este usuário? O registro permanece na base."* | **"Usuário removido logicamente."** |
+
+As janelas de senha têm **Cancelar** e **Confirmar**; durante a ação, o botão mostra **Aplicando…**.
+
+**Redefinir senha, passo a passo:**
+
+1. No menu da linha, clique em **Redefinir senha** e depois em **Confirmar**.
+2. A janela **Senha temporária** mostra a **Conta** e a senha gerada, com o aviso *"Guarde agora — não será possível recuperar esta senha depois."*.
+3. Clique em **Copiar** (aparece **"Copiado para a área de transferência."**) e transmita a senha à pessoa.
+4. Clique em **Fechar**.
+
+Ao redefinir, a senha anterior deixa de valer, **qualquer sessão aberta daquela conta é encerrada**, um eventual **bloqueio por tentativas é retirado** e a próxima entrada exige troca de senha. É o caminho para quem esqueceu a senha ou foi bloqueado.
+
+**Inativar** impede novas entradas: quem tentar entrar vê *"Sua conta está inativa. Contacte o administrador."*. A inativação **não garante** a desconexão imediata de quem já está com o sistema aberto; se precisar cortar o acesso na hora, use também **Redefinir senha**.
+
+**Remover** impede a entrada e encerra a sessão aberta na ação seguinte. Mas tenha em conta, antes de remover:
+
+- o **e-mail** da conta removida **continua reservado**: não pode ser usado para criar outra conta;
+- o **colaborador** vinculado **continua preso** à conta removida: ele não aparece mais na lista de vínculo de nenhuma outra conta — embora a tela de Colaboradores passe a mostrá-lo como **Sem vínculo**. **Desvincule o colaborador antes de remover**;
+- assim como em Colaboradores, removidos **não aparecem na lista**, e o item **Restaurar** não fica ao seu alcance. Para afastar alguém do sistema, **prefira Inativar**.
+
+As ações sobre contas de acesso ficam registradas na **Trilha administrativa**, aberta pelo atalho **Ver trilha administrativa**.
+
+**Ações sobre a sua própria conta.** Você não consegue inativar, remover nem redefinir a senha da sua própria conta por esta tela. Para trocar a sua senha, use **Alterar senha**, no menu do seu nome.
+
+### 16.11 Setores
+
+Aba **Setores** de **Configurações operacionais**. A linha de apoio mostra *"N setor(es) · visível nas listagens quando ativo."*.
+
+| Ação | Como | Resultado |
+|---|---|---|
+| criar | **Novo setor** → **Nome \*** → **Salvar** | **"Setor criado."** |
+| renomear | menu da linha → **Editar nome** → **Salvar** | **"Setor atualizado."** |
+| ativar ou inativar | marque ou desmarque a caixa da coluna **Ativo** — vale no clique, sem confirmação | **"Setor ativado."** / **"Setor inativado."** |
+| excluir | menu da linha → **Excluir** → confirme *"Excluir este setor? Referências em colaboradores ficarão sem setor."* | **"Setor excluído."** |
+
+O nome não pode repetir o de outro setor, sem diferença entre maiúsculas e minúsculas: *"Já existe um setor com este nome."*.
+
+Um setor **inativo** some das listas de escolha (cadastro de colaborador e filtros), mas continua nos colaboradores que já o tinham. A **exclusão** é permitida mesmo com colaboradores no setor, e **todos eles ficam sem setor**; ao editar qualquer um deles depois, será preciso escolher outro. Prefira **inativar**.
+
+O setor desta lista é o **setor do colaborador**. Ele **não é** o setor da estrutura de uma esteira: aquele é digitado na própria esteira ou vem da matriz (capítulo 6), e não depende deste cadastro.
+
+### 16.12 Funções operacionais
+
+Aba **Funções operacionais**. A lista mostra **Código**, **Nome** e **Ativo**, e inclui as funções **Colaborador** e **Gestor**.
+
+| Ação | Como | Resultado |
+|---|---|---|
+| criar | **Nova função** → **Nome \*** e **Código (opcional)** → **Salvar** | **"Função criada."** |
+| alterar | menu da linha → **Editar** → **Nome \*** e **Código \*** → **Salvar** | **"Função atualizada."** |
+| ativar ou inativar | caixa da coluna **Ativo**, sem confirmação | **"Função ativada."** / **"Função inativada."** |
+| excluir | menu da linha → **Excluir** → confirme | **"Função excluída."** |
+
+Regras:
+
+- na criação, se o código ficar vazio, o sistema gera um automaticamente. Na edição, o código é obrigatório. Códigos não podem repetir: *"Já existe um papel com este código."*;
+- a exclusão só é aceita quando **nenhuma conta de acesso e nenhum colaborador** usam a função; caso contrário: *"Não é possível excluir: existem usuários ou colaboradores usando esta função. Inative-a em vez disso."*;
+- uma função **inativa** deixa de aparecer na lista **Função / papel operacional** de Colaboradores **e** na lista **Papel operacional** de Usuários.
+
+> **Cuidado com Colaborador e Gestor.** Essas duas funções são, ao mesmo tempo, **perfis de acesso** do sistema. Inativá-las as retira da lista de perfis em **Usuários**; renomeá-las muda o nome que aparece nas contas. **Não altere o código nem inative essas duas.**
+
+### 16.13 Capacidade operacional
+
+Aba **Capacidade operacional**. A capacidade é o número de horas por dia que o sistema compara com o tempo planejado para cada pessoa.
+
+**Como o sistema decide a capacidade de um dia:**
+
+1. se o colaborador tem um **ajuste individual** válido naquela data, vale o ajuste;
+2. senão, vale a **capacidade padrão**;
+3. se nem o padrão estiver disponível, o sistema assume **8 horas**.
+
+**Alterar a capacidade padrão:**
+
+1. No quadro **Capacidade padrão** — *"Este valor será usado para colaboradores sem ajuste individual."* —, informe **Horas por dia**. Aceita decimais com vírgula: **8** ou **7,5**.
+2. Clique em **Salvar padrão**. Aparece **"Capacidade atualizada com sucesso."**.
+
+O quadro mostra a **Última atualização**. O valor precisa estar entre 1 minuto e 24 horas; fora disso: *"A capacidade deve estar entre 1 minuto e 24 horas por dia."*. Valor vazio, zero ou negativo: *"Informe um número positivo de horas."*.
+
+**Consultar a capacidade de cada pessoa.** O bloco **Ajustes por colaborador** lista **somente colaboradores ativos**, com os filtros **Buscar nome**, **Setor** e **Por página**:
+
+| Coluna | Conteúdo |
+|---|---|
+| **Colaborador** · **Setor** | identificação |
+| **Padrão (org.)** | a capacidade padrão |
+| **Ajuste individual** | o ajuste **válido hoje**, ou um traço |
+| **Capacidade efetiva** | o que vale hoje, por dia |
+| **Origem** | **Ajuste individual**, **Padrão global** ou **Padrão (fallback)** — este último quando o sistema usou as 8 horas |
+| ações | **Editar** e, quando há ajuste válido hoje, **Remover** |
+
+**Definir um ajuste individual:**
+
+1. Na linha do colaborador, clique em **Editar**.
+2. A janela **Ajuste de capacidade** mostra o nome e o **Padrão atual da organização**.
+3. Informe a **Capacidade individual (horas/dia)**.
+4. Se o ajuste vale só por um período, abra **Vigência opcional (datas)** e preencha **De** e/ou **Até**. As duas datas entram no período. Com as duas vazias, o ajuste vale sem prazo.
+5. Clique em **Salvar ajuste**. Aparece **"Capacidade atualizada com sucesso."**.
+
+Cada colaborador tem **um ajuste por vez**: salvar de novo **substitui** o anterior, inclusive as datas.
+
+**Voltar ao padrão:** clique em **Remover** na linha — confirmação *"Remover o ajuste de capacidade de {nome}? Voltará ao padrão global."* e aviso **"Ajuste removido; volta ao padrão global."** — ou em **Restaurar padrão**, dentro da janela, que mostra **"Capacidade restaurada ao padrão global."**.
+
+> **Ajuste com início no futuro não aparece na tabela.** Enquanto a data **De** não chega, a linha mostra **Padrão global**, sem valor de ajuste e sem **Remover**. O ajuste existe: abra **Editar** para ver as datas. Para descartá-lo antes de começar, altere-o para um período que inclua hoje e então use **Remover**.
+
+Se **Até** for anterior a **De**, o ajuste é recusado com uma mensagem que cita os nomes internos das duas datas.
+
+**Onde a capacidade aparece:** no aviso **Capacidade diária ultrapassada** e nas células do **Planejamento** (capítulo 8) e da **Agenda da semana** (capítulo 9), na faixa de capacidade da **Minha fila** (capítulo 10), na exportação do planejamento, na **Saúde operacional** (capítulo 18) e na linha **Capacidade** da lista de **Colaboradores**. O planejamento usa a capacidade de **cada dia**: um ajuste com vigência vale só nos dias do período.
+
+[IMAGEM SUGERIDA: Aba Capacidade operacional — quadro Capacidade padrão com Horas por dia e Salvar padrão, e a tabela Ajustes por colaborador com as colunas Padrão (org.), Ajuste individual, Capacidade efetiva e Origem]
+
+### 16.14 Descrições de apontamentos
+
+Aba **Descrições de apontamentos**: a lista de descrições que o colaborador escolhe ao registrar tempo **Extra Esteira** — apoio, limpeza, deslocamento e semelhantes (capítulo 7). O texto de apoio da aba usa o termo técnico `STEP`; leia como **atividade**.
+
+Filtros: **Busca** e **Status** (**Todos**, **Ativos**, **Inativos**). Colunas: **Descrição**, **Status**, **Ordem**, **Atualizado em**.
+
+Para criar, clique em **Nova descrição**; para alterar, use **Editar** no menu da linha. Campos:
+
+| Campo | Observação |
+|---|---|
+| **Descrição \*** | de 3 a 120 caracteres; é o texto que o colaborador vê. Não pode repetir outra descrição — a comparação ignora acentos, maiúsculas e espaços extras: *"Já existe uma descrição com este conteúdo."* |
+| **Ordem de exibição** | número, 0 ou maior; padrão 100. Menor aparece primeiro |
+| **Observação interna (opcional)** | nota para a gestão; não aparece para o colaborador |
+| **Ativo** | marcado por padrão |
+
+Mensagens: **"Descrição criada."**, **"Descrição atualizada."**; no menu, **Inativar** / **Ativar** (**"Descrição inativada."** / **"Descrição ativada."**) e **Excluir**, com *"Excluir esta descrição? A ação é irreversível."* e **"Descrição excluída."**.
+
+Só descrições **ativas** são oferecidas no apontamento, na ordem definida. Inativar ou excluir **não altera** apontamentos já feitos com aquela descrição.
+
+### 16.15 Justificativas operacionais
+
+Aba **Justificativas operacionais** — *"Catálogo padronizado para apontamentos por exceção de alocação e fora de sequência."* É a lista do campo **Justificativa operacional** de **Apontar horas** e do Modo Fábrica (capítulos 7 e 13).
+
+Filtros: **Busca** e **Status**. Colunas: **Justificativa** (com a descrição, quando houver), **Categoria**, **Complemento** (**Obrigatório** ou **Opcional**), **Ordem**, **Ativo**.
+
+Campos da janela **Nova justificativa** / **Editar justificativa**:
+
+| Campo | Observação |
+|---|---|
+| **Justificativa \*** | o texto da opção, de 3 a 200 caracteres. Não pode repetir outra: *"Já existe uma justificativa com este rótulo."* |
+| **Descrição** | opcional, explica a opção |
+| **Categoria** | opcional: **Substituição**, **Sequência**, **Planejamento**, **Retrabalho**, **Prioridade**, **Emergência** ou **Outro** |
+| **Ordem** | 0 ou maior; padrão 100 |
+| **Exige complemento** | quando marcado, quem escolher esta opção precisa escrever o **Complemento** |
+| **Ativo** | marcado por padrão |
+
+No menu da linha: **Editar** e **Desativar** / **Ativar** (**"Justificativa desativada."** / **"Justificativa ativada."**). **Não existe exclusão**: para tirar uma opção de uso, desative-a. Só as ativas aparecem para escolha.
+
+### 16.16 Motivos de dispensa
+
+Aba **Motivos de dispensa**: a lista do campo **Motivo** ao **dispensar** uma atividade (capítulo 6, seção 6.18). O texto de apoio da aba usa o termo técnico `STEP`; leia como **atividade**.
+
+Filtros: **Busca** (por código ou motivo) e **Status**. Colunas: **Código**, **Motivo**, **Complemento**, **Ordem**, **Ativo**.
+
+| Campo | Observação |
+|---|---|
+| **Código \*** | identificador curto. O sistema converte para maiúsculas e só aceita letras sem acento, números e sublinhado. **Não pode ser alterado depois de criado**. Não pode repetir: *"Já existe um motivo de dispensa com este código."* |
+| **Motivo \*** | o texto que aparece na lista, até 200 caracteres |
+| **Descrição** | opcional |
+| **Ordem** | 0 ou maior |
+| **Exige complemento** | quando marcado, a dispensa com este motivo exige o **Complemento obrigatório** — como no motivo **Outro** do catálogo padrão |
+| **Ativo** | marcado por padrão |
+
+No menu da linha: **Editar** e **Desativar** / **Ativar** (**"Motivo desativado."** / **"Motivo ativado."**). Mensagens de gravação: **"Motivo criado."** e **"Motivo atualizado."**. **Não existe exclusão**: desative o que não deve mais ser usado.
+
+Se um motivo for desativado enquanto alguém está com a janela de dispensa aberta, a dispensa é recusada e a pessoa precisa escolher de novo (capítulo 6).
+
+### 16.17 Equipes: consultar, criar e alterar
+
+1. Abra **Gestão → Equipes**. A tela explica que equipes servem para grupos ou funções operacionais — Ajudante, Costura, Montagem, Acabamento —, inclusive como **padrão na matriz de operação**.
+2. Filtros: **Buscar** (pelo nome), **Situação** (**Todas**, **Ativas**, **Inativas**) e **Por página**.
+3. A tabela mostra **Nome**, **Membros** (quantos estão na equipe), **Situação** (**Ativa** ou **Inativa**) e **Atualizado**, em ordem de nome.
+
+Sem resultados: *"Nenhuma equipe encontrada."* — *"Crie uma equipe para agrupar colaboradores em operações futuras."*.
+
+**Criar:**
+
+1. Clique em **Nova equipe**.
+2. Informe **Nome** (obrigatório), **Descrição (opcional)** e deixe ou desmarque **Equipe ativa**.
+3. Clique em **Criar equipe**. Aparece **"Equipe criada."** e abre o detalhe da equipe, onde se incluem os membros.
+
+O sistema **não impede** duas equipes com o mesmo nome: confira a lista antes de criar.
+
+**Alterar:** no menu da linha, **Editar** abre o detalhe. No bloco **Dados da equipe**, altere **Nome**, **Descrição** e **Equipe ativa** e clique em **Salvar alterações** (**"Equipe atualizada."**). Nome vazio: *"Indique o nome da equipe."*.
+
+**Inativar, ativar e remover**, pelo menu da linha:
+
+| Item | Confirmação |
+|---|---|
+| **Inativar** | *"Deseja inativar esta equipe?"* |
+| **Ativar** | *"Deseja ativar esta equipe?"* |
+| **Remover** | *"Deseja remover esta equipe?"* |
+
+Uma equipe **inativa** ou **removida** não pode mais ser alocada em atividade: a tentativa é recusada com *"Time de alocação inexistente ou inativo."* (capítulo 6). A equipe removida sai da lista e **não há como restaurá-la pela tela**. As alocações já feitas não são desfeitas por essas ações.
+
+### 16.18 Equipes: membros e referência
+
+No detalhe da equipe, o bloco **Membros** lista quem está nela, com a referência primeiro e os demais em ordem de nome:
+
+| Coluna | Conteúdo |
+|---|---|
+| **Colaborador** | nome e e-mail |
+| **Papel na equipe** | texto livre, opcional |
+| **Referência** | o selo **Referência**, quando marcado |
+| **Situação** | **Na equipe**; e **Colaborador inativo** ou **Removido do cadastro** quando o cadastro da pessoa mudou depois |
+
+Equipe vazia: *"Nenhum colaborador nesta equipe."*.
+
+**Incluir um membro:**
+
+1. Clique em **Adicionar colaborador**.
+2. Em **Colaborador**, escolha a pessoa. A lista traz **só colaboradores ativos** que ainda não estão na equipe.
+3. Opcionalmente, informe o **Papel na equipe** (por exemplo, *"Líder de turno"*) e marque **Marcar como referência da equipe**.
+4. Clique em **Adicionar** (fica desativado até você escolher alguém). Aparece **"Membro adicionado."**.
+
+**Alterar um membro:** menu da linha → **Editar** → altere **Papel na equipe** ou **Marcar como referência da equipe** → **Salvar** (**"Membro da equipe atualizado."**).
+
+**Referência:** cada equipe tem **no máximo uma**. Ao marcar outra pessoa, a marcação anterior é retirada **automaticamente, sem aviso**. A referência é uma indicação para quem consulta a equipe; nenhuma outra tela do sistema a utiliza.
+
+**Retirar um membro:** menu da linha → **Remover** → confirme *"Remover {nome} desta equipe? O vínculo fica inativo (não apaga o histórico)."*. Aparece **"Membro removido da equipe."** e a pessoa sai da lista. Ela pode ser incluída de novo depois.
+
+Inativar ou remover um colaborador **não o tira** das equipes: ele continua listado, com o selo correspondente. Se ele não deve mais fazer parte, retire-o manualmente.
+
+**Alocar a equipe em uma atividade** é feito na esteira, não aqui: veja o capítulo 6, seção 6.6. Alocar uma equipe **não** cria alocações individuais para os membros, e a equipe nunca é responsável principal.
+
+## O que esperar
+
+### As alterações valem na hora
+
+Não há etapa de aprovação nem de publicação. Uma função inativada some das listas, um PIN redefinido já vale para o Modo Fábrica, uma capacidade nova já entra no cálculo de sobrecarga, uma justificativa desativada sai da lista de escolha. Outras pessoas veem o efeito na próxima vez que suas telas carregarem os dados.
+
+### O histórico é preservado
+
+Nenhuma das ações deste capítulo apaga apontamentos já feitos. Colaboradores, contas e equipes removidos deixam de aparecer, mas os registros ligados a eles continuam no histórico. Descrições e motivos já usados continuam aparecendo nos registros antigos.
+
+### Inativar e remover são coisas diferentes
+
+| | Inativar | Remover |
+|---|---|---|
+| continua na lista da tela | sim, como **Inativo** | **não** |
+| pode ser desfeito pela tela | sim, com **Ativar** | **não**, na prática |
+| libera o nome ou o e-mail | não | colaborador: libera o nome · conta: **não** libera o e-mail |
+| recomendado para afastamento | **sim** | só para cadastro feito por engano |
+
+### Cadastro não é acesso
+
+Criar o colaborador não libera a fábrica, e criar a conta não liga a conta à pessoa. Para alguém que vai **entrar no sistema e apontar produção**, o caminho completo é:
+
+1. cadastrar o colaborador (16.3);
+2. liberar o Modo Fábrica com **Redefinir PIN**, se a pessoa usar o totem ou o navegador da fábrica (16.5);
+3. criar a conta de acesso já com o colaborador vinculado, se a pessoa usar o sistema por e-mail e senha (16.8);
+4. incluí-la nas equipes pertinentes (16.18);
+5. conferir a capacidade, se for diferente do padrão (16.13).
+
+### Sair com uma janela aberta
+
+Em **Colaboradores** e em **Usuários**, sair pelo menu lateral com uma janela de cadastro, edição ou senha aberta pede confirmação em **"Sair desta página?"**. **Sair e continuar** descarta o que não foi salvo.
+
+## Quando algo é bloqueado
+
+### Falta de permissão
+
+| Situação | O que aparece | O que fazer |
+|---|---|---|
+| a tela não aparece no menu, ou o endereço direto mostra **"Sem permissão para esta área"** | falta a permissão de consultar aquela frente | pedir a liberação a quem administra os acessos |
+| em **Colaboradores** ou **Usuários**, a ação abre a janela **Sem permissão** | falta a permissão daquela ação específica | idem; nada foi alterado |
+| em **Equipes**, o botão ou item de menu não existe | falta a permissão de criar, alterar ou gerenciar membros | idem |
+
+### Colaboradores
+
+| Mensagem | Causa | O que fazer |
+|---|---|---|
+| *"Informe o nome."* · *"Escolha um setor."* · *"Escolha uma função / papel operacional."* | campo obrigatório vazio | preencher |
+| *"URL do avatar deve começar por http:// ou https://."* | endereço da foto fora do formato | corrigir ou deixar vazio |
+| *"Já existe um colaborador com este nome."* | outro colaborador não removido usa o mesmo nome | diferenciar o nome; confira se a pessoa já não está cadastrada, inclusive como **Inativo** |
+| *"Setor ou cargo informado não existe."* | o setor ou a função foi excluído enquanto a janela estava aberta | fechar, reabrir e escolher de novo |
+| *"Colaborador removido logicamente. Restaure antes de alterar."* | a ação foi feita sobre um colaborador removido por outra pessoa | não há como alterar pela tela |
+| *"Erro ao redefinir o PIN. Tente novamente."* | a redefinição do PIN falhou, inclusive por falta de permissão | tentar de novo; se persistir, confirmar a permissão |
+
+### Usuários
+
+| Mensagem | Causa | O que fazer |
+|---|---|---|
+| *"Indique o e-mail."* · *"E-mail inválido."* · *"Selecione um papel operacional."* | campo obrigatório vazio ou fora do formato | corrigir |
+| *"A senha inicial deve ter pelo menos 8 caracteres."* · *"A nova senha deve ter pelo menos 8 caracteres."* | senha curta | usar 8 ou mais caracteres |
+| *"URL do avatar deve usar http:// ou https://."* · *"URL do avatar inválida."* | endereço da foto fora do formato | corrigir ou deixar vazio |
+| *"Já existe um usuário com este e-mail."* | o e-mail já pertence a outra conta, **ativa, inativa ou removida** | usar outro e-mail; se a conta existente estiver inativa, reative-a em vez de criar outra |
+| *"Colaborador inválido, inativo ou já vinculado a outro usuário."* · *"Este colaborador já está vinculado a outro usuário."* | o colaborador escolhido está inativo, removido ou preso a outra conta — inclusive a uma conta removida | ver 16.9 e 16.10 |
+| *"Papel de acesso não encontrado."* · *"Papel ou colaborador informado não existe."* | o perfil ou o colaborador foi excluído enquanto a janela estava aberta | fechar, reabrir e escolher de novo |
+| *"Não pode inativar a sua própria conta."* · *"Não pode remover a sua própria conta."* | ação sobre a própria conta | pedir a outra pessoa com a permissão |
+| *"Não pode redefinir a sua própria senha por aqui. Utilize «Alterar senha» na sua conta."* | redefinição da própria senha | usar **Alterar senha** |
+| *"Sua conta está inativa. Contacte o administrador."* | mensagem que **a pessoa** vê ao tentar entrar com uma conta inativa | reativar com **Ativar** |
+
+### Configurações operacionais
+
+| Mensagem | Causa | O que fazer |
+|---|---|---|
+| *"Informe o nome."* · *"Informe o código."* · *"Informe a justificativa."* · *"Informe o motivo."* | campo obrigatório vazio | preencher |
+| *"Já existe um setor com este nome."* · *"Já existe um papel com este código."* · *"Já existe uma descrição com este conteúdo."* · *"Já existe uma justificativa com este rótulo."* · *"Já existe um motivo de dispensa com este código."* | o item já existe | usar o existente ou diferenciar |
+| *"Não é possível excluir: existem usuários ou colaboradores usando esta função. Inative-a em vez disso."* | função em uso | inativar |
+| *"Descrição deve ter no mínimo 3 caracteres."* · *"Informe uma ordem válida (0 ou maior)."* · *"Ordem inválida."* | texto curto ou ordem negativa ou não numérica | corrigir |
+| *"Informe um número positivo de horas."* · *"A capacidade deve estar entre 1 minuto e 24 horas por dia."* · *"Valor inválido para minutos diários."* | capacidade vazia ou fora do limite | informar um valor entre 1 minuto e 24 horas |
+| mensagem iniciada por *"Campo inválido:"* | um dado foi recusado pela validação do servidor, como datas de vigência invertidas | conferir o campo citado; nas datas, **Até** não pode ser anterior a **De** |
+
+### Equipes
+
+| Mensagem | Causa | O que fazer |
+|---|---|---|
+| *"Indique o nome da equipe."* | nome vazio | preencher |
+| *"Escolha um colaborador."* | nenhum colaborador selecionado | escolher |
+| *"Só é possível associar colaboradores ativos à equipe."* | a pessoa foi inativada ou removida enquanto a janela estava aberta | escolher outra pessoa ou reativar o cadastro |
+| *"Este colaborador já está nesta equipe."* | a pessoa foi incluída por outro caminho enquanto a janela estava aberta | fechar e conferir a lista |
+| **Não foi possível carregar as equipes** | falha ao buscar a lista | tentar de novo em instantes; quando o aviso aparece abaixo dos filtros, use **Tentar novamente** |
+| **Equipe não encontrada**, com **Voltar à listagem** | a equipe foi removida ou o endereço está incorreto | voltar à lista |
+
+### Erros de comunicação
+
+Quando o problema é de sessão, de comunicação ou de um registro que deixou de existir, o sistema mostra uma janela de aviso que precisa ser fechada — por exemplo, *"O recurso solicitado não foi encontrado ou não existe mais."*. As demais recusas aparecem em um aviso rápido, que some sozinho após alguns segundos. Em todos os casos a tela continua utilizável: corrija o que o aviso indicar e tente de novo.
+
+### Ações que não existem nestas telas
+
+| Limitação | Como proceder |
+|---|---|
+| ver ou **restaurar** colaboradores e contas removidos | não há como pela tela; prefira **Inativar** |
+| **desligar** o Modo Fábrica de um colaborador sem inativá-lo | inative o colaborador |
+| definir o PIN do colaborador diretamente | use **Redefinir PIN**; a pessoa cria o próprio PIN no primeiro acesso |
+| **limpar** o campo **Observações** do colaborador | substitua o texto |
+| excluir **justificativas** ou **motivos de dispensa** | desative-os |
+| alterar o **código** de um motivo de dispensa | crie outro motivo e desative o antigo |
+| restaurar uma **equipe removida** | não há como pela tela; prefira **Inativar** |
+| filtrar **Usuários** por situação | use a coluna **Situação** da tabela |
+| definir permissões de um perfil | é feito em **Permissões por papel**, fora deste capítulo |
 
 ---
 
