@@ -3,7 +3,7 @@
 **Produto:** SGP+ · Multivacia / ARGOS
 **Versão da aplicação nesta revisão:** 1.9.8
 **Revisão deste manual:** 2026-10-03
-**Situação:** base editorial criada; capítulos 1 a 3, 5 a 13, 20 e 21 com conteúdo final. Os capítulos 4 e 14 a 19 seguem marcados como pendentes e **não devem ser publicados** como versão final.
+**Situação:** base editorial criada; capítulos 1 a 3, 5 a 14, 20 e 21 com conteúdo final. Os capítulos 4 e 15 a 19 seguem marcados como pendentes e **não devem ser publicados** como versão final.
 
 > **Este é o documento canônico do manual do usuário.** Versões em HTML ou PDF devem ser geradas a partir daqui.
 >
