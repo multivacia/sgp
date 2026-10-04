@@ -3,7 +3,7 @@
 **Produto:** SGP+ · Multivacia / ARGOS
 **Versão da aplicação nesta revisão:** 1.9.8
 **Revisão deste manual:** 2026-10-03
-**Situação:** base editorial criada; capítulos 1 a 17, 20 e 21 com conteúdo final. Os capítulos 18 e 19 seguem marcados como pendentes e **não devem ser publicados** como versão final.
+**Situação:** base editorial criada; capítulos 1 a 18, 20 e 21 com conteúdo final. O capítulo 19 segue marcado como pendente e **não deve ser publicado** como versão final.
 
 > **Este é o documento canônico do manual do usuário.** Versões em HTML ou PDF devem ser geradas a partir daqui.
 >
@@ -5412,13 +5412,369 @@ Quando o problema é de comunicação, sessão ou serviço, o sistema mostra o e
 
 # 18. Saúde operacional
 
-> [PENDENTE DE ENRIQUECIMENTO — não publicar como capítulo final]
+## Para que serve
 
-- o que o diagnóstico considera
-- as situações possíveis e o que cada uma indica
-- sobrecarga e sobrecarga crítica
-- falta de apontamento recente e baixa ocupação
-- o que fazer diante de cada sinal
+**Saúde operacional** é a tela em que a gestão confere, pessoa por pessoa, se o trabalho em aberto cabe na capacidade de cada colaborador e se os apontamentos estão acontecendo. Ela ajuda a responder perguntas como:
+
+- quem tem mais trabalho em aberto do que consegue fazer no período?
+- quem tem atividades em aberto, mas não aponta nada há dias?
+- quem apontou muito pouco, apesar de ter trabalho em aberto?
+- para quem o cálculo depende de um dado incompleto, como a capacidade não configurada?
+
+Para cada colaborador, a tela compara três números — a **carga pendente** das atividades em aberto em que ele está alocado, a **capacidade** dele no período escolhido e o **tempo apontado** nesse período — e resume o resultado em um **estado**, um **risco** e uma lista de **sinais**.
+
+A classificação segue **regras fixas de cálculo**, iguais para todos. A própria tela avisa que não há julgamento de desempenho individual: os sinais servem para decidir onde olhar primeiro.
+
+É uma tela **só de consulta**. Nada é alterado a partir dela; as providências são tomadas nas telas de esteira, planejamento, apontamento e cadastro.
+
+Dois cuidados valem desde já e são detalhados adiante:
+
+- **a carga vem da alocação na estrutura das esteiras, não do planejamento publicado.** Ela soma todas as atividades em aberto em que a pessoa está alocada, sem olhar datas nem a semana planejada;
+- **"sobrecarga" aqui não é a mesma do planejamento.** No Planejamento e na Agenda da semana, sobrecarga é o planejado de **um dia** passar da capacidade daquele dia (capítulos 8 e 9). Aqui, é o total em aberto passar da capacidade de **todo o período** escolhido.
+
+| Você quer… | Use |
+|---|---|
+| ver quem tem trabalho em aberto acima da capacidade ou quem não está apontando | **Saúde operacional** (este capítulo) |
+| ver se o dia de alguém foi planejado acima da capacidade | **Planejamento** e **Agenda da semana** (capítulos 8 e 9) |
+| analisar previsto, realizado e cobertura de uma ou mais pessoas em um período | **Jornada por colaborador** (capítulo 12) |
+| ajustar a capacidade de alguém | **Configurações operacionais → Capacidade operacional** (capítulo 16, seção 16.13) |
+
+## Onde fica
+
+No menu lateral, agrupamento **Cadastros operacionais** → **Saúde operacional**. A mesma tela abre pelo botão **Saúde operacional**, no topo da tela **Colaboradores** (capítulo 16).
+
+O título exibido é **Saúde operacional dos colaboradores**, com a etiqueta **Gestão** acima. Logo abaixo, duas linhas de apoio dizem que a tela traz carga pendente, capacidade e apontamentos recentes, e uma faixa avisa: *"Regras determinísticas do SGP — sem julgamento de desempenho individual. Use os sinais para priorização operacional."*
+
+A tela é organizada de cima para baixo:
+
+1. o cabeçalho, com os botões **Voltar a colaboradores** e **Atualizar**;
+2. o quadro de filtros, com a linha que informa o limite de colaboradores;
+3. seis **cartões de resumo**;
+4. a **tabela**, com uma linha por colaborador e o link **Ver detalhe**;
+5. o **painel de detalhe**, que abre à direita quando você pede o detalhe de alguém.
+
+Os dados carregam sozinhos ao abrir a tela.
+
+[IMAGEM SUGERIDA: Tela Saúde operacional dos colaboradores — quadro de filtros com Janela (dias), Incluir colaboradores inativos, Busca local e Estado operacional; os seis cartões de resumo; as primeiras linhas da tabela com as colunas Estado, Risco, Carga pendente, Uso e Sinais]
+
+## Quem costuma ter acesso
+
+A tela exige a permissão **Colaboradores admin: consultar** — a mesma que libera **Colaboradores** e **Jornada por colaborador** (capítulo 4, seção 4.3). Na configuração padrão, ela está com os perfis **Administrador** e **Gestor**. Contas com o perfil **Colaborador** não têm acesso.
+
+| Situação | O que acontece |
+|---|---|
+| sem a permissão | o item **não aparece** no menu — nem o item **Colaboradores**, onde fica o atalho, porque as duas telas exigem a mesma permissão. Pelo endereço direto, a tela mostra **"Sem permissão para esta área"** e *"Não tem permissão para acessar este conteúdo. Contate um administrador se precisar de acesso."* |
+| com a permissão | a tela abre e o diagnóstico carrega |
+
+Nenhuma outra permissão muda a tela: quem a abre vê todos os números, e não há ação a liberar. Também não é preciso que a sua conta esteja vinculada a um colaborador.
+
+## Como fazer
+
+### 18.1 Abrir e atualizar o diagnóstico
+
+1. Abra **Cadastros operacionais → Saúde operacional**. Enquanto os dados são buscados, aparece **"Carregando saúde operacional…"**.
+2. Leia os cartões de resumo (18.3) para ter a visão do conjunto.
+3. Na tabela, localize quem está em **Crítico** e em **Atenção** (18.4 e 18.7). Para ver só essas pessoas, use o filtro **Estado operacional** (18.2).
+4. Para conferir os números de alguém, clique em **Ver detalhe** (18.5).
+
+Os números são uma **fotografia do momento da busca**. A tela não se atualiza sozinha: para buscar de novo, clique em **Atualizar**. Durante a busca, o botão fica desativado e a área dos cartões e da tabela volta a mostrar **"Carregando saúde operacional…"**.
+
+**Voltar a colaboradores** leva à tela **Colaboradores** (capítulo 16).
+
+### 18.2 Escolher a janela e filtrar a lista
+
+O quadro de filtros tem quatro campos:
+
+| Campo | O que faz | Busca os dados de novo? |
+|---|---|---|
+| **Janela (dias)** | o período analisado: **7 dias** (padrão), **15 dias** ou **30 dias**, terminando hoje. Muda a capacidade considerada e os apontamentos que contam (18.6) | sim |
+| **Incluir colaboradores inativos** | desmarcado (padrão), analisa só colaboradores ativos; marcado, inclui também os inativos. Colaboradores removidos nunca aparecem | sim |
+| **Busca local (nome ou código)** | filtra a lista já carregada pelo nome ou pelo código do colaborador, enquanto você digita. Maiúsculas e minúsculas não importam, mas os acentos sim: "joao" não encontra "João" | não |
+| **Estado operacional** | **Todos** (padrão), **Crítico**, **Atenção**, **Saudável** ou **Sem dados suficientes (estado)** | não |
+
+Os dois filtros que não buscam de novo só escondem linhas da tabela. **Os cartões de resumo não mudam com eles**: continuam contando todas as pessoas carregadas.
+
+Abaixo dos campos, a linha **"Limite atual: 50 colaboradores por pedido."** informa o teto da análise. Quando existem mais colaboradores do que isso, aparece também *"Existem mais colaboradores para além dos exibidos. Refine os filtros locais ou aguarde evoluções de listagem."*
+
+> **Atenção ao limite de 50.** A tela analisa somente os **50 primeiros colaboradores em ordem alfabética de nome**. Quem vem depois não entra na tabela nem nos cartões, e os filtros locais não o trazem de volta: eles só filtram o que já foi carregado, apesar do que sugere a mensagem. Marcar **Incluir colaboradores inativos** faz os inativos ocuparem parte dessas 50 vagas. Em operações com mais de 50 pessoas, deixe essa opção desmarcada e lembre-se de que o diagnóstico não cobre todo mundo.
+
+As escolhas não ficam guardadas: ao sair e voltar, a tela abre de novo com **7 dias**, sem inativos e sem filtros.
+
+### 18.3 Ler os cartões de resumo
+
+| Cartão | O que conta, entre as pessoas carregadas |
+|---|---|
+| **Colaboradores analisados** | quantas pessoas entraram na análise — no máximo 50 |
+| **Sobrecarga** | pessoas com carga pendente acima da capacidade da janela. **Quem está em sobrecarga crítica é contado duas vezes** — veja o aviso abaixo |
+| **Baixa ocupação** | pessoas com atividades em aberto e carga pendente que apontaram, na janela, menos de 15% da capacidade da janela |
+| **Sem apontamento recente** | pessoas sem nenhum apontamento na janela — **inclusive quem não tem nenhuma atividade em aberto** |
+| **Sem etapas abertas** | pessoas sem nenhuma atividade em aberto alocada |
+| **Carga via time** | pessoas com pelo menos uma atividade em aberto que chega a elas por meio de uma equipe |
+
+> **O cartão Sobrecarga conta em dobro quem está em sobrecarga crítica.** Ele soma as pessoas acima da capacidade com as pessoas acima do dobro da capacidade — e quem está acima do dobro também está acima da capacidade. Com três pessoas acima da capacidade, uma delas acima do dobro, o cartão mostra **4**. Para saber quantas pessoas estão de fato em sobrecarga, filtre **Estado operacional** em **Crítico** e conte as linhas: na prática, só a sobrecarga leva ao estado **Crítico** (18.7).
+
+Os cartões não são clicáveis.
+
+### 18.4 Ler a tabela
+
+A tabela traz uma linha por colaborador, em **ordem alfabética de nome**. Não é possível reordenar por outra coluna.
+
+| Coluna | O que mostra |
+|---|---|
+| **Colaborador** | o nome e, abaixo, o código (**Cód.**) e o setor, quando existem |
+| **Estado** | **Saudável**, **Atenção**, **Crítico** ou **Sem dados suficientes**, em selo verde, amarelo, vermelho ou cinza (18.7) |
+| **Risco** | **Baixo**, **Médio**, **Alto**, **Crítico** ou **Indefinido** (18.7) |
+| **Carga pendente** | o tempo que ainda falta nas atividades em aberto da pessoa (18.6) |
+| **Capacidade da janela** | a capacidade diária multiplicada pelos dias da janela |
+| **Uso** | a carga pendente dividida pela capacidade da janela, em percentual. A partir de 999%, aparece **999%+** |
+| **Etapas abertas** | quantas atividades em aberto a pessoa tem |
+| **Apontamentos recentes** | o tempo apontado na janela e a quantidade de registros, por exemplo **12h30 · 9 reg.** |
+| **Último apontamento** | **hoje**, **há 1 dia**, **há N dias** ou **sem registro na janela** |
+| **Sinais** | até **dois** sinais, os mais graves primeiro; os demais aparecem resumidos como **+N** (18.8 a 18.10). Sem nenhum sinal, aparece um traço |
+| **Detalhe** | o link **Ver detalhe** (18.5) |
+
+Os tempos aparecem em horas e minutos, como **8h**, **1h30** ou **0h**.
+
+Sobre a coluna **Sinais**:
+
+- a cor indica a gravidade: **vermelho** para crítico, **amarelo** para alerta e **cinza** para informação. Os vermelhos vêm primeiro, depois os amarelos e, por fim, os cinzas;
+- passar o mouse sobre um sinal mostra o texto completo do sistema, que usa alguns termos técnicos (veja "Rótulos técnicos que aparecem na tela");
+- o resumo **+N** não abre lista nem dica, e o painel de detalhe também não mostra os sinais. Um sinal importante pode ficar escondido atrás de outros do mesmo nível — por exemplo, **Pendência acima da capacidade da janela** atrás de **Capacidade por fallback** e **Sem apontamento recente com etapas abertas**. Por isso, **confira sempre as colunas Uso e Último apontamento**, que mostram a mesma informação em números.
+
+Quando nenhuma pessoa atende aos filtros, aparece *"Não há colaboradores para exibir com os filtros atuais."*.
+
+### 18.5 Abrir o detalhe de um colaborador
+
+1. Na linha da pessoa, clique em **Ver detalhe**.
+2. O painel **Saúde operacional** abre à direita, com o nome da pessoa e uma linha com o código, **Ativo** ou **Inativo**, a data de **Referência** — no formato ano-mês-dia — e a **Janela** em dias.
+3. Para fechar, clique em **Fechar** ou fora do painel.
+
+O painel tem quatro blocos:
+
+| Bloco | Linhas |
+|---|---|
+| **Capacidade** | **Capacidade diária**; **Capacidade da janela**; **Fonte** — **Capacidade específica** (ajuste individual), **Capacidade padrão** ou **Fallback operacional** (as 8 horas que o sistema assume) |
+| **Carga** | **Etapas abertas**; **Carga planejada (aberta)** — o tempo previsto total das atividades em aberto; **Pendência estimada (aberta)** — a carga pendente; **Realizado pelo colaborador (nessas etapas)** — o que a própria pessoa já apontou nessas atividades, em qualquer data |
+| **Apontamentos recentes** | **Quantidade** de registros na janela; **Total de minutos** — apesar do nome, mostrado em horas e minutos; **Último apontamento**, com a data no formato dia/mês/ano, ou um traço; **Recência face à data de referência** — o mesmo **hoje**, **há N dias** ou **sem registro na janela** da tabela |
+| **Qualidade dos dados** | os avisos que pedem cuidado na leitura (18.10), ou *"Sem avisos adicionais."* |
+
+No fim do painel aparece sempre *"Interpretação automática ainda não habilitada para saúde do colaborador."*. É um aviso fixo: não há nada a fazer.
+
+Observações:
+
+- o painel **não mostra o estado, o risco nem os sinais**. Leia-os na linha da tabela;
+- os números do painel são buscados de novo ao abrir. Se alguém apontou ou mudou alocações desde a última busca da tabela, os dois podem diferir — clique em **Atualizar** para alinhar;
+- a pendência de cada atividade nunca fica negativa. Se a pessoa já apontou mais do que o previsto em alguma atividade, aquela atividade conta zero — por isso **Carga planejada** menos **Realizado** pode não bater com **Pendência estimada**.
+
+[IMAGEM SUGERIDA: Painel de detalhe aberto à direita, com os blocos Capacidade, Carga, Apontamentos recentes e Qualidade dos dados e o aviso fixo no rodapé]
+
+### 18.6 O que o diagnóstico considera
+
+| Elemento | O que entra | O que fica de fora |
+|---|---|---|
+| **Pessoas** | colaboradores ativos, em ordem alfabética, até 50; com **Incluir colaboradores inativos**, também os inativos | colaboradores removidos; quem passa do limite de 50 |
+| **Atividades em aberto** — na tela, **etapas abertas** | as atividades em que a pessoa está **alocada na estrutura** da esteira — como responsável principal, como apoio ou por meio de uma equipe de que é membro ativo — e que **não estão concluídas**. Entram esteiras de **qualquer situação** | atividades **concluídas**, atividades removidas da estrutura e esteiras excluídas |
+| **Carga planejada** | o tempo por unidade × a quantidade prevista de cada atividade em aberto (capítulo 6, seção 6.7) | — |
+| **Realizado pelo colaborador** | os apontamentos **da própria pessoa** nessas atividades, de **qualquer data** | o que outras pessoas apontaram na mesma atividade |
+| **Carga pendente** | para cada atividade, o previsto menos o realizado pela pessoa, nunca abaixo de zero; depois, a soma de todas | — |
+| **Capacidade diária** | a capacidade válida **hoje**, pela regra do capítulo 16, seção 16.13: ajuste individual, capacidade padrão ou, sem os dois, 8 horas | a variação dentro da janela: um ajuste que começa ou termina no meio do período não é considerado dia a dia — vale, para todos os dias, a capacidade de hoje |
+| **Capacidade da janela** | a capacidade diária × os dias da janela, contando **todos os dias corridos** — sábados, domingos e feriados inclusive | — |
+| **Apontamentos recentes** | os apontamentos da pessoa em atividades de esteira cuja **data de realização** cai na janela — inclusive os feitos pelo Modo Fábrica e os de atividades em que ela não está alocada | **Extra Esteira** e apontamentos removidos |
+
+Três consequências práticas:
+
+- **a janela não muda a carga pendente.** Ela é sempre o total em aberto. O que muda com a janela é a capacidade e o tempo apontado considerados. Por isso, ao passar de 7 para 30 dias, o **Uso** cai e menos pessoas aparecem em sobrecarga, sem que nada tenha mudado na operação;
+- **a capacidade da janela conta dias sem expediente.** Com 8 horas por dia, a janela de 7 dias vale 56 horas, e não as 40 de uma semana de cinco dias;
+- **a carga não depende do planejamento.** Distribuir, retirar ou publicar atividades no Planejamento e na Agenda da semana não muda nada aqui. O que muda a carga é, por exemplo, alocar a pessoa em uma atividade ou retirá-la da alocação, concluir a atividade, apontar ou alterar o tempo previsto.
+
+Para uma capacidade de 8 horas por dia, os limites ficam assim:
+
+| Janela | Capacidade da janela | Atenção, acima de | Sobrecarga, acima de | Sobrecarga crítica, acima de | Baixa ocupação, apontado abaixo de |
+|---|---|---|---|---|---|
+| **7 dias** | 56h | 42h | 56h | 112h | 8h24 |
+| **15 dias** | 120h | 90h | 120h | 240h | 18h |
+| **30 dias** | 240h | 180h | 240h | 480h | 36h |
+
+### 18.7 Os estados e o risco
+
+O **estado** resume a situação da pessoa; o **risco** gradua essa situação. Os dois são calculados juntos:
+
+| Estado | Risco | Quando aparece |
+|---|---|---|
+| **Crítico** | **Crítico** | carga pendente acima do **dobro** da capacidade da janela — **sobrecarga crítica** |
+| **Crítico** | **Alto** | carga pendente acima da capacidade da janela, até o dobro — **sobrecarga** |
+| **Atenção** | **Médio** | carga pendente acima de **75%** da capacidade da janela, até 100% |
+| **Atenção** | **Alto** | o mesmo caso anterior, para um colaborador **inativo** |
+| **Atenção** | **Médio** | carga até 75%, mas o colaborador está **inativo** |
+| **Atenção** | **Médio** | carga até 75%, atividades em aberto **sem nenhum apontamento na janela** e capacidade pelas **8 horas assumidas** pelo sistema, sem capacidade padrão nem ajuste individual |
+| **Saudável** | **Baixo** | nenhum dos casos acima |
+| **Sem dados suficientes** | **Indefinido** | reservado para quando não há capacidade para comparar. **Na prática não aparece**: o sistema sempre encontra uma capacidade para a pessoa, nem que seja a de 8 horas |
+
+Como ler:
+
+- **só a sobrecarga leva a Crítico.** Para diferenciar os dois níveis, olhe o **Risco**: **Alto** é sobrecarga; **Crítico** é sobrecarga crítica;
+- **ficar sem apontar não muda o estado sozinho.** Quem tem atividades em aberto e nenhum apontamento na janela recebe o sinal amarelo **Sem apontamento recente com etapas abertas**, mas continua **Saudável** se a carga estiver até 75% — exceto no caso da capacidade assumida de 8 horas, na tabela acima;
+- **colaborador inativo nunca aparece como Saudável**, mesmo sem carga;
+- o percentual de **Uso** é arredondado. Perto dos limites — 75%, 100% e 200% —, confie no **Estado** e no **Risco**.
+
+A opção **Sem dados suficientes (estado)** do filtro **Estado operacional** existe, mas, pelo motivo acima, tende a não trazer ninguém.
+
+### 18.8 Sobrecarga e sobrecarga crítica
+
+Nesta tela, **sobrecarga** é ter, em aberto, mais trabalho do que cabe na capacidade de **todo o período** escolhido. Com a janela de 7 dias, a pessoa está em sobrecarga quando a carga pendente passa do que ela faria em 7 dias corridos; em **sobrecarga crítica**, quando passa do dobro — mais do que caberia em 14 dias.
+
+| Nível | Regra | Sinal na tabela | Estado e risco |
+|---|---|---|---|
+| **Sobrecarga** | carga pendente acima de 100% da capacidade da janela | **Pendência acima da capacidade da janela**, amarelo | Crítico, risco Alto |
+| **Sobrecarga crítica** | carga pendente acima de 200% da capacidade da janela | **Pendência acima do dobro da capacidade da janela**, vermelho | Crítico, risco Crítico |
+
+A pessoa recebe um sinal ou o outro, nunca os dois. Entre 75% e 100% não há sinal de carga: a indicação é o estado **Atenção**.
+
+> **Não confunda com a sobrecarga do planejamento.** No Glossário (capítulo 20), sobrecarga é o planejado para o colaborador passar da capacidade dele — e é isso que o **Planejamento**, a **Agenda da semana** e a **Minha fila** avisam, **dia a dia**. Aqui a comparação é entre **todo o trabalho em aberto** e a capacidade de **vários dias**, sem olhar o planejamento. Uma pessoa pode estar em sobrecarga aqui e ter todos os dias da semana dentro da capacidade no planejamento — e o contrário também.
+
+A carga pode parecer maior do que a real por motivos que a tela não mostra. Antes de concluir que alguém está sobrecarregado, confira "Atividades que continuam contando como abertas" e "Atividade compartilhada pesa inteira para cada pessoa", em **O que esperar**.
+
+### 18.9 Falta de apontamento recente e baixa ocupação
+
+Dois sinais olham para o tempo apontado na janela:
+
+| Sinal | Quando aparece | Cor |
+|---|---|---|
+| **Sem apontamento recente com etapas abertas** | a pessoa tem atividades em aberto e **nenhum** apontamento na janela | amarelo |
+| **Sinal de baixa ocupação recente** | a pessoa tem atividades em aberto com carga pendente e apontou, na janela, **menos de 15%** da capacidade da janela | cinza |
+
+Os dois podem aparecer juntos: quem não apontou nada também apontou menos de 15%.
+
+Conta como apontamento o registro em atividade de esteira, feito em **Apontar horas** (capítulo 7) ou no **Modo Fábrica** (capítulo 13), pela data de realização do trabalho. **Extra Esteira não conta**: quem passou a janela em apoio, limpeza ou deslocamento aparece sem apontamento recente ou com baixa ocupação, mesmo tendo registrado o tempo.
+
+Os cartões correspondentes têm alcance um pouco diferente dos sinais:
+
+- **Sem apontamento recente** conta **todas** as pessoas sem apontamento na janela, inclusive as que não têm atividade em aberto. O sinal só aparece para quem tem atividade em aberto;
+- **Baixa ocupação** usa exatamente a regra do sinal.
+
+A coluna **Último apontamento** mostra há quantos dias foi o apontamento mais recente **dentro da janela**. Se o último registro da pessoa é mais antigo do que a janela, aparece **sem registro na janela** — a tela não informa quando ele foi.
+
+### 18.10 Os sinais de qualidade dos dados
+
+Quatro sinais não falam de carga nem de apontamento: avisam que algum dado pede cuidado na leitura. Eles aparecem também, com outro texto, no bloco **Qualidade dos dados** do painel de detalhe.
+
+| Sinal na tabela | Cor | Texto no painel de detalhe | O que significa |
+|---|---|---|---|
+| **Capacidade por fallback** | amarelo | *"A capacidade foi estimada por fallback operacional."* | não há capacidade padrão nem ajuste individual válido hoje; o sistema assumiu **8 horas** por dia (capítulo 16, seção 16.13) |
+| **Colaborador inativo** | amarelo | *"O colaborador está inativo."* | só aparece com **Incluir colaboradores inativos** marcado |
+| **Carga via time** | cinza | *"A carga inclui etapas atribuídas a times dos quais o colaborador participa."* | parte da carga vem de atividades alocadas a uma equipe de que a pessoa é membro ativo |
+| **Sem etapas abertas** | cinza | *"Nenhuma etapa aberta foi encontrada para este colaborador."* | a pessoa não tem nenhuma atividade em aberto alocada |
+
+### 18.11 O que fazer diante de cada sinal
+
+A Saúde operacional não altera nada: ela indica onde olhar. As providências são tomadas em outras telas, cada uma com as suas permissões e regras.
+
+| Sinal ou estado | O que verificar primeiro | Onde agir |
+|---|---|---|
+| **Pendência acima do dobro da capacidade da janela** ou **Pendência acima da capacidade da janela** | se as atividades em aberto ainda são trabalho da pessoa: atividades já executadas e não concluídas, alocações em esteiras finalizadas ou canceladas, atividades dispensadas, alocações por equipe | concluir o que já foi feito (capítulo 6, seção 6.16); retirar ou trocar a alocação na estrutura (capítulo 6, seções 6.6 e 6.10); redistribuir o trabalho da semana (capítulos 8 e 9), o que alivia o dia a dia, mas não muda os números desta tela |
+| estado **Atenção** por carga | se o trabalho em aberto vai se concentrar nos próximos dias | acompanhar no **Planejamento** e na **Agenda da semana** (capítulos 8 e 9) |
+| **Sem apontamento recente com etapas abertas** | se a pessoa trabalhou e não apontou, esteve ausente, trabalhou só em Extra Esteira ou tem alocações que não correspondem mais ao trabalho real | orientar o apontamento (capítulos 7 e 13); corrigir apontamentos (capítulo 7); revisar as alocações (capítulo 6) |
+| **Sinal de baixa ocupação recente** | as mesmas causas do sinal anterior, com algum apontamento registrado | os mesmos caminhos do sinal anterior |
+| **Capacidade por fallback** | se a capacidade padrão foi configurada | **Configurações operacionais → Capacidade operacional** (capítulo 16, seção 16.13) |
+| **Carga via time** | se a pessoa de fato executa as atividades da equipe | rever a alocação da equipe na estrutura ou os membros da equipe (capítulos 6 e 16) |
+| **Colaborador inativo** com atividades em aberto | se essas atividades precisam passar para outra pessoa — colaborador inativo não recebe novas alocações nem entra no Modo Fábrica | trocar a alocação na estrutura (capítulo 6) |
+| **Sem etapas abertas** | se a pessoa deveria ter trabalho alocado | alocar na estrutura da esteira (capítulo 6) e planejar (capítulos 8 e 9) |
+
+Para ver em quais atividades a pessoa está alocada, use a lista **Em aberto** da **Jornada por colaborador** (capítulo 12). Ela mostra apenas as alocações **diretas** em esteiras que não estão finalizadas nem canceladas; as alocações por equipe e as de esteiras encerradas, que aqui continuam somando, só aparecem no detalhe de cada esteira (capítulo 6).
+
+> **Dispensar não tira a atividade desta conta.** Hoje, atividade dispensada continua somando na carga pendente (veja **O que esperar**). Concluir a atividade ou retirar a pessoa da alocação a tiram da conta; dispensar, não.
+
+## O que esperar
+
+### Atividades que continuam contando como abertas
+
+Na conta da carga, só a atividade **concluída** sai. Enquanto a pessoa estiver alocada, continuam somando:
+
+- **atividades dispensadas**, embora não aceitem mais apontamento (capítulo 6, seção 6.18);
+- atividades de esteiras **finalizadas** ou **canceladas** que não foram concluídas uma a uma. Finalizar ou cancelar a esteira não conclui as atividades (capítulo 6, seção 6.14);
+- atividades de esteiras ainda em **Rascunho / Em elaboração**, que nem foram liberadas para a fábrica;
+- atividades alocadas a uma equipe que foi **inativada** ou **removida**, para os membros que ela tinha.
+
+Em operações com esteiras antigas encerradas sem concluir as atividades, a carga pendente de quem trabalhou nelas pode ficar muito acima da real.
+
+### Atividade compartilhada pesa inteira para cada pessoa
+
+Quando duas pessoas — ou uma equipe inteira — estão alocadas na mesma atividade, **cada uma** recebe o tempo previsto inteiro da atividade como carga, e só o que ela mesma apontou é descontado. Uma atividade de 10 horas com duas pessoas alocadas soma 10 horas para cada uma; se uma delas apontar 6 horas, a carga da outra continua em 10 horas.
+
+### Os dias seguem o horário universal
+
+A data de referência — a **Referência** do painel de detalhe — é o dia de hoje pelo **horário universal**, três horas à frente do horário de Brasília. No restante do sistema, os apontamentos são datados pela referência de São Paulo (capítulo 7). Na prática:
+
+- entre **21h e meia-noite**, horário de Brasília, a tela já considera o dia seguinte como hoje: a janela avança um dia e a contagem de **Último apontamento** muda;
+- um apontamento feito depois das 21h, horário de Brasília, para o próprio dia entra na conta como do dia seguinte. Apontamentos lançados para dias anteriores não são afetados.
+
+### Números que não batem com outras telas
+
+| Tela | Por que difere |
+|---|---|
+| **Planejamento**, **Agenda da semana** e **Minha fila** (capítulos 8 a 10) | comparam o planejado de **um dia** com a capacidade daquele dia; aqui é todo o trabalho em aberto contra a capacidade da janela |
+| **Dashboard**, coluna **Previsto vs capacidade diária** (capítulo 15) | compara o previsto de todas as alocações diretas, inclusive de atividades concluídas, com a capacidade de um único dia, sem descontar o que foi apontado |
+| **Jornada por colaborador** (capítulo 12) | considera só alocações diretas e, no previsto, uma unidade de cada atividade, inclusive das concluídas; aqui entram as alocações por equipe e a quantidade prevista inteira, e só as atividades não concluídas |
+
+### Rótulos técnicos que aparecem na tela
+
+Alguns rótulos e dicas ainda usam termos internos. Leia assim:
+
+| Na tela | Leia como |
+|---|---|
+| **"etapas"**, em **Etapas abertas**, **Sem etapas abertas** e nos textos de apoio | atividades |
+| **"STEPs"**, no texto que aparece ao passar o mouse sobre os sinais | atividades |
+| **"fallback"**, em **Capacidade por fallback**, **Fallback operacional** e nos textos de apoio | as 8 horas por dia que o sistema assume quando não há capacidade padrão nem ajuste individual |
+| **"default global"** e **"override"**, no texto do sinal de capacidade | capacidade padrão e ajuste individual |
+| **"time"**, **"membership de equipe"** e **"membership de time"**, em **Carga via time** e nos textos de apoio | equipe e participação como membro da equipe |
+| **"snapshot"**, no texto do sinal **Sem etapas abertas** | o cálculo feito no momento da busca |
+| **"Regras determinísticas"**, no topo da tela | regras fixas de cálculo, iguais para todos |
+| **"capacidade agregada na janela (minutos)"**, nos textos de sobrecarga | capacidade da janela |
+| **"Total de minutos"**, no painel de detalhe | tempo total apontado na janela, exibido em horas e minutos |
+| **"Recência face à data de referência"**, no painel de detalhe | há quantos dias foi o último apontamento dentro da janela |
+
+## Quando algo é bloqueado
+
+### Falta de permissão
+
+Sem **Colaboradores admin: consultar**, o item não aparece no menu e o endereço direto mostra **"Sem permissão para esta área"**. Peça a liberação a quem administra os acessos (capítulo 4, seção 4.6).
+
+### Enquanto os dados carregam
+
+A área dos cartões e da tabela mostra **"Carregando saúde operacional…"**. Os filtros continuam acessíveis; mudar a janela ou a opção de inativos reinicia a busca. No painel de detalhe, o título mostra **Carregando…** até os números chegarem.
+
+### Quando não há dados
+
+| O que aparece | Quando aparece | O que fazer |
+|---|---|---|
+| *"Não há colaboradores para exibir com os filtros atuais."* | nenhuma pessoa atende à **Busca local** ou ao **Estado operacional** escolhido; ou não há colaborador ativo cadastrado | apagar a busca, voltar o estado para **Todos** e, se for o caso, marcar **Incluir colaboradores inativos** |
+| um traço na coluna **Sinais** | a pessoa não tem nenhum sinal | nada: é o resultado esperado de quem está em dia |
+| *"Sem avisos adicionais."*, no painel | não há aviso de qualidade dos dados para a pessoa | nada |
+
+### Quando a consulta falha
+
+| O que aparece | Causa | O que fazer |
+|---|---|---|
+| janela **Não foi possível carregar a saúde operacional**, com *"Ocorreu um problema ao obter o resumo. Tente novamente em instantes ou confirme a sua sessão."* e o botão **Entendi**. Pode vir acompanhada de um **Código de suporte** | falha de comunicação, sessão expirada ou indisponibilidade do serviço | clicar em **Entendi** e depois em **Atualizar**; se a sessão expirou, entrar de novo; persistindo, abrir chamado com o texto e o código exibidos |
+| faixa vermelha *"Não foi possível carregar a saúde operacional dos colaboradores. Tente atualizar a página ou verificar sua conexão."* | outras falhas na busca | clicar em **Atualizar** ou recarregar a página |
+| *"Não foi possível carregar o detalhe deste colaborador."*, dentro do painel | falha ao buscar o detalhe | fechar o painel e clicar de novo em **Ver detalhe** |
+
+Atenção a um comportamento da primeira situação: depois de **Entendi**, a área abaixo dos filtros fica **vazia** se era a primeira busca, ou volta a mostrar os **números da busca anterior** se a falha aconteceu em **Atualizar**. Nesse segundo caso, os números **não foram atualizados**, embora nada indique isso. Clique em **Atualizar** de novo ou recarregue a página.
+
+### Ações que não existem nesta tela
+
+| Limitação | Como proceder |
+|---|---|
+| analisar mais de 50 colaboradores | não há paginação nem filtro que traga os demais. Deixe **Incluir colaboradores inativos** desmarcado; para quem fica de fora, use a **Jornada por colaborador** e o **Planejamento** (capítulos 8 e 12), sabendo que as contas são diferentes |
+| filtrar por setor | não há esse filtro. O setor aparece na coluna **Colaborador**, mas a busca local procura só nome e código |
+| escolher outra data de referência ou um período livre | só **7**, **15** ou **30 dias**, sempre terminando hoje |
+| ordenar a tabela | a ordem é alfabética e fixa. Use **Estado operacional** para separar os casos |
+| ver as atividades da pessoa ou ir da linha para o cadastro dela | não há lista nem link na tela. Use a **Jornada por colaborador** (capítulo 12), o detalhe das esteiras (capítulo 6) e a tela **Colaboradores** (capítulo 16) |
+| ver todos os sinais de uma linha | o resumo **+N** não abre. Confira as colunas **Uso** e **Último apontamento** e o painel de detalhe |
+| acompanhar a evolução ao longo do tempo | cada busca é uma fotografia; a tela não guarda o histórico dos estados |
+| exportar ou imprimir | não há exportação nem impressão |
+| alterar capacidade, alocação ou apontamento | não há ações nesta tela. Use os capítulos 6, 7 e 16 |
+| ver a interpretação automática citada no painel | ainda não existe; o aviso é fixo |
 
 ---
 
