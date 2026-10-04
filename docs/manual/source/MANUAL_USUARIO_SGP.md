@@ -2,8 +2,8 @@
 
 **Produto:** SGP+ · Multivacia / ARGOS
 **Versão da aplicação nesta revisão:** 1.9.8
-**Revisão deste manual:** 2026-10-03
-**Situação:** base editorial criada; capítulos 1 a 21 com conteúdo final.
+**Revisão deste manual:** 2026-10-04
+**Situação:** capítulos 1 a 21 com conteúdo final, revisados na auditoria final de 2026-10-04.
 
 > **Este é o documento canônico do manual do usuário.** Versões em HTML ou PDF devem ser geradas a partir daqui.
 >
@@ -48,7 +48,7 @@ Por isso, ao longo do manual, cada recurso indica **para quem costuma estar disp
 
 ## 2.3 Como cada capítulo é organizado
 
-Todo capítulo de recurso segue a mesma sequência. Esse é o padrão que os capítulos pendentes deverão adotar quando forem escritos:
+Os capítulos de recurso seguem a mesma sequência:
 
 | Bloco | O que traz |
 |---|---|
@@ -70,14 +70,6 @@ Todo capítulo de recurso segue a mesma sequência. Esse é o padrão que os cap
 - Não ensina a corrigir problemas por URL, por parâmetro de endereço ou por qualquer caminho que a interface não ofereça.
 - Não descreve telas que existem no sistema mas **não têm entrada no menu**. Recursos nessa condição estão listados no **capítulo 21**, para apoio e gestão, sem instrução de uso.
 - Não substitui a decisão do gestor. Quando uma regra depende de autorização, o manual diz com quem falar, não como contornar.
-
-## 2.6 Capítulos ainda pendentes
-
-Capítulos marcados com
-
-> [PENDENTE DE ENRIQUECIMENTO — não publicar como capítulo final]
-
-contêm apenas a lista de tópicos a cobrir. Eles **não** devem ser publicados nem usados como orientação operacional.
 
 ---
 
@@ -336,7 +328,7 @@ Qualquer uma dessas três libera o botão **Apontamento gerencial** e a tela de 
 | permissão de **gerir as permissões por papel** | o item **Permissões por papel** (seção 4.7) | **não atribuída** pela instalação padrão |
 | **Health DB (produção)** | verificação técnica de funcionamento, usada pela equipe de infraestrutura. Não abre nenhuma tela | Administrador, Gestor |
 
-Na tela **Permissões por papel**, os nomes aparecem exatamente como na primeira coluna, inclusive com a grafia **Utilizadores** e os verbos **gerir** e **repor**.
+Na tela **Permissões por papel**, os nomes aparecem como na primeira coluna, inclusive com a grafia **Utilizadores** e os verbos **gerir** e **repor**. A exceção são sete nomes que a instalação grava com as letras acentuadas corrompidas: **Utilizadores: eliminação lógica**, **Utilizadores: forçar troca de senha**, **Colaboradores admin: eliminação lógica**, **Esteiras: gerir alocações por etapa**, **Matriz de operação: consultar**, **Matriz de operação: alterar** e **Health DB (produção)**. Neles, no lugar de cada letra acentuada aparece uma sequência de símbolos sem sentido. Reconheça-os pelo trecho legível do nome e pelo identificador técnico logo abaixo.
 
 ### 4.4 Como você percebe que falta uma permissão
 
@@ -3604,7 +3596,7 @@ Sua credencial pode estar em um de quatro estados:
 | liberada | tudo certo, basta o PIN | entrar normalmente |
 | sem PIN configurado | nunca foi criada uma credencial para você | pedir ao gestor que libere o acesso |
 | bloqueada | muitas tentativas erradas de PIN | esperar o bloqueio passar, ou pedir ao gestor para redefinir o PIN |
-| desabilitada | o acesso foi desligado | falar com o gestor |
+| desabilitada | a credencial foi desligada fora das telas do sistema — nenhuma tela atual produz esse estado | falar com o gestor, que religa o acesso com **Redefinir PIN** (capítulo 16) |
 
 Quem libera e redefine o PIN é quem administra colaboradores, em **Colaboradores** (capítulo 16). Não existe uma ação específica para desligar o PIN: para impedir que alguém entre no Modo Fábrica, a administração **inativa o cadastro do colaborador**, que deixa de aparecer na seleção do totem e do navegador da fábrica.
 
@@ -3841,7 +3833,7 @@ O totem ocupa a tela inteira, sem barra de navegador, e só a área das atividad
 |---|---|---|
 | **"PIN não configurado. Solicite ao gestor."** | nunca foi criada credencial para você | pedir a liberação a quem administra colaboradores |
 | **"Acesso bloqueado. Solicite ao gestor."** | tentativas erradas de PIN em excesso | esperar o bloqueio passar — tipicamente 15 minutos — ou pedir ao gestor para redefinir seu PIN, o que libera na hora |
-| **"Acesso desabilitado."** | o acesso de produção foi desligado | falar com o gestor |
+| **"Acesso desabilitado."** | a credencial de produção foi desligada fora das telas do sistema | falar com o gestor, que religa o acesso com **Redefinir PIN** (capítulo 16) |
 | **"PIN inválido. Tente novamente."** | o PIN digitado está errado | digitar de novo com atenção; o bloqueio chega depois de algumas tentativas (tipicamente 5) |
 | **"PIN inválido ou acesso não habilitado."** | PIN errado **ou** credencial indisponível — a mensagem é a mesma de propósito | conferir o PIN; se persistir, falar com o gestor |
 | **"Não foi possível entrar agora. Tente novamente mais tarde."** | o acesso está bloqueado neste momento | esperar e tentar de novo, ou pedir a redefinição |
@@ -4681,7 +4673,7 @@ O quadro **PIN do Modo Fábrica**, na janela **Editar colaborador**, mostra a si
 | **Ativo** | *"Acesso ao Modo Fábrica habilitado"* | a pessoa entra com o próprio PIN |
 | **Aguardando troca** | *"Será solicitado um novo PIN no próximo acesso"* | o PIN provisório ainda não foi trocado |
 | **Bloqueado** | *"Conta bloqueada por excesso de tentativas"* | erros de PIN em excesso; o bloqueio é temporário |
-| **Desabilitado** | *"Acesso ao Modo Fábrica desabilitado"* | o acesso foi desligado |
+| **Desabilitado** | *"Acesso ao Modo Fábrica desabilitado"* | a credencial foi desligada fora das telas do sistema; **Redefinir PIN** religa o acesso |
 
 Um único botão cobre liberar, desbloquear e redefinir:
 
@@ -6303,6 +6295,7 @@ Os termos técnicos abaixo são reproduzidos **apenas** para você reconhecê-lo
 | Situação da atividade exibida em código, no painel de encaixe do planejamento | **situação da atividade** | a tela ainda mostra o código interno em alguns casos |
 | **"Mês atual (UTC)"**, no seletor de período | mês atual pelo calendário local | o cálculo usa o fuso de São Paulo; o rótulo está incorreto |
 | Após redefinir o PIN: "Próximo acesso exigirá nova senha." | próximo acesso exigirá **novo PIN** | o recurso é o PIN do Modo Fábrica, não a senha |
+| Sete nomes com símbolos sem sentido no lugar das letras acentuadas, em **Permissões por papel** | o nome correto, listado na seção 4.3 | defeito de codificação no cadastro de permissões, regravado a cada atualização da base de dados |
 | Botão **"Remover (soft delete)"**, em Usuários e Colaboradores | **remover preservando o histórico** | o registro deixa de aparecer nas listas e a opção de restaurar não fica acessível pela tela; trate a remoção como definitiva |
 | Textos de filtro que citam nomes internos de parâmetro, no Painel operacional | o filtro correspondente | sem efeito sobre o uso; basta usar os filtros da tela |
 | **"passo"**, nas telas de Apontamento gerencial ("Lançamentos no passo", "Apontamento gerencial neste passo") | **atividade** | mesmo conceito, nome diferente |
