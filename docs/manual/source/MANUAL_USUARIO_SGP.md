@@ -3,7 +3,7 @@
 **Produto:** SGP+ · Multivacia / ARGOS
 **Versão da aplicação nesta revisão:** 1.9.8
 **Revisão deste manual:** 2026-10-03
-**Situação:** base editorial criada; capítulos 1 a 18, 20 e 21 com conteúdo final. O capítulo 19 segue marcado como pendente e **não deve ser publicado** como versão final.
+**Situação:** base editorial criada; capítulos 1 a 21 com conteúdo final.
 
 > **Este é o documento canônico do manual do usuário.** Versões em HTML ou PDF devem ser geradas a partir daqui.
 >
@@ -5780,13 +5780,446 @@ Atenção a um comportamento da primeira situação: depois de **Entendi**, a á
 
 # 19. Mensagens, bloqueios e como agir
 
-> [PENDENTE DE ENRIQUECIMENTO — não publicar como capítulo final]
+## Para que serve
 
-- índice de mensagens por situação, com causa e ação recomendada
-- bloqueios de apontamento por situação da esteira
-- bloqueios por sequência e por tempo acima do previsto
-- bloqueios de acesso e credencial
-- abrir chamado: quando, como e o que informar
+Este capítulo é o ponto de partida quando o SGP+ recusa algo, mostra um aviso que você não reconhece ou não faz o que você esperava. Ele ajuda a responder três perguntas:
+
+- **o que o sistema está dizendo?** — reconhecer o tipo de aviso e o que ele indica;
+- **é falha ou é regra?** — separar bloqueio de operação, bloqueio de acesso e falha de comunicação;
+- **o que fazer agora?** — resolver você mesmo, pedir a alguém da operação ou registrar um **chamado** de suporte.
+
+Cada capítulo de recurso já traz, no bloco **Quando algo é bloqueado**, as mensagens próprias daquela tela. Este capítulo **não repete** essas listas: ele reúne as situações que aparecem em várias telas, explica as regras de bloqueio que valem para o sistema inteiro e indica onde está o detalhe. A única tela descrita por completo aqui é a de **chamados**.
+
+| Você quer… | Vá para |
+|---|---|
+| entender uma janela de aviso que apareceu em qualquer tela | seção 19.1 |
+| achar rapidamente o que fazer diante de uma mensagem | seção 19.2 |
+| saber por que o apontamento foi recusado pela situação da esteira | seção 19.3 |
+| entender o pedido de justificativa por sequência ou por tempo acima do previsto | seção 19.4 |
+| resolver um problema para entrar ou para continuar conectado | seção 19.5 |
+| decidir se cabe um chamado, abri-lo e acompanhá-lo | seções 19.6 a 19.9 |
+
+## Onde fica
+
+Não existe uma tela de mensagens: cada aviso aparece na tela em que você está.
+
+| O que você procura | Onde está |
+|---|---|
+| as mensagens de uma tela específica | bloco **Quando algo é bloqueado** do capítulo daquela tela |
+| abrir um chamado | botão **Abrir chamado**, na barra superior, presente em todas as telas da área autenticada |
+| consultar os chamados que você abriu | menu lateral, agrupamento **Colaborador** → **Chamados** |
+| situações já conhecidas, telas sem entrada no menu e botões sem funcionamento | capítulo 21 |
+
+O botão **Abrir chamado** e o item **Chamados** só existem quando o **módulo de chamados está ativo no seu ambiente** (capítulo 3, seções 3.3 e 3.4). Com o módulo desligado, nenhum dos dois aparece, e o endereço direto da tela de chamados leva ao **Painel operacional**.
+
+O **Modo Fábrica** não tem botão de chamado, e a tela de entrada do sistema também não. Quem não consegue entrar não abre chamado pelo SGP+ (seção 19.6).
+
+[IMAGEM SUGERIDA: Barra superior da área autenticada com o botão Abrir chamado destacado ao lado de Apontar horas, e o menu lateral aberto no agrupamento Colaborador mostrando o item Chamados]
+
+## Quem costuma ter acesso
+
+As mensagens deste capítulo aparecem para qualquer pessoa, conforme o que ela tenta fazer.
+
+Abrir e consultar chamados **não depende de permissão**: qualquer conta que entre na área autenticada pode abrir chamado e ver os próprios chamados, inclusive com o perfil **Colaborador**. Também não é preciso que a conta esteja vinculada a um colaborador.
+
+| Situação | O que acontece |
+|---|---|
+| módulo de chamados ativo | o botão **Abrir chamado** e o item **Chamados** aparecem para todos |
+| módulo desligado no seu ambiente | nem o botão nem o item aparecem |
+| botão visível, mas o serviço de chamados desligado | a janela de abertura recusa o envio com *"Módulo de suporte está desativado."*, e a tela **Chamados** mostra *"Não foi possível carregar os chamados. Tente novamente."*. É uma questão de configuração do ambiente: avise a administração do sistema por outro meio |
+
+**Cada pessoa vê somente os chamados que ela mesma abriu.** Não há, no SGP+, tela em que a gestão ou a administração consulte os chamados de outras pessoas.
+
+## Como fazer
+
+### 19.1 Reconhecer o tipo de aviso
+
+O SGP+ comunica recusas e falhas de seis formas. A forma já diz muito sobre a causa.
+
+| Forma | Como aparece | O que costuma indicar |
+|---|---|---|
+| **mensagem no formulário** | texto curto junto ao campo ou ao botão, antes ou depois de confirmar | um dado faltando ou fora da regra |
+| **botão desativado** | o botão de confirmar fica apagado | falta preencher algo obrigatório |
+| **aviso rápido** | caixa no canto da tela que some sozinha após alguns segundos | confirmação de sucesso ou recusa simples |
+| **faixa vermelha** | faixa no alto da tela ou do bloco | dado recusado, conflito com outra alteração ou falha ao carregar parte da tela |
+| **janela de aviso** com o botão **Entendi** | precisa ser fechada para continuar | falta de permissão, sessão encerrada, falha de comunicação ou de serviço |
+| tela **"Sem permissão para esta área"** | ocupa a área de conteúdo | você abriu uma tela que a sua permissão não libera (capítulo 4, seção 4.4) |
+
+**Uma recusa não grava nada.** Quando o sistema recusa uma ação — por permissão ou por regra —, aquela ação não é gravada. Corrija o que a mensagem pede e envie de novo; não há nada a desfazer.
+
+#### As janelas de aviso comuns a várias telas
+
+Boa parte das telas usa o mesmo conjunto de janelas. O título indica a causa:
+
+| Título da janela | Mensagem mais comum | Causa | O que fazer |
+|---|---|---|---|
+| **Sem permissão** | *"Você não tem permissão para esta operação. Peça acesso ao administrador se necessário."* | a sua permissão não cobre a ação, ou foi retirada com a tela aberta | recarregar a página; se continuar, seguir o capítulo 4, seção 4.6 |
+| **Sessão inválida** | uma mensagem sobre a sessão, como *"Sessão expirada ou inválida. Faça login novamente."* | a sessão terminou ou deixou de valer | entrar de novo (seção 19.5) |
+| **Operação não concluída** | *"O recurso solicitado não foi encontrado ou não existe mais."* | o registro foi excluído ou deixou de existir enquanto a tela estava aberta | recarregar a página e conferir |
+| **Operação não concluída** | *"Serviço temporariamente indisponível. Tente novamente em instantes."* | o sistema não conseguiu processar o pedido | tentar de novo em instantes; persistindo, abrir chamado |
+| **Não foi possível continuar**, com a linha **Sistema indisponível no momento** | *"Não foi possível comunicar com o sistema agora. Tente novamente em instantes. Se o problema continuar, abra um chamado."* | o navegador não conseguiu falar com o sistema: rede, conexão ou serviço fora do ar | conferir a conexão, esperar e tentar de novo; persistindo, abrir chamado |
+
+Nem toda tela usa essas janelas: algumas mostram a mensagem dentro da própria tela, em texto próprio. O capítulo de cada recurso indica o caso.
+
+**Código de suporte.** Algumas janelas trazem, abaixo da mensagem, a linha **Código de suporte:** seguida de um código iniciado por **SGP-** — por exemplo, nas falhas de comunicação, de serviço e de permissão. Ele não muda nada no uso; identifica o tipo de falha para quem dá suporte. Se for abrir chamado, **copie o código exatamente como aparece** para a descrição (seção 19.8).
+
+[IMAGEM SUGERIDA: Janela "Não foi possível continuar" com a linha Sistema indisponível no momento, a mensagem de falha de comunicação, a linha Código de suporte e o botão Entendi]
+
+### 19.2 Índice de mensagens por situação
+
+Localize a situação e a mensagem. A última coluna diz onde a explicação completa está.
+
+**Entrar e continuar conectado**
+
+| Mensagem | Causa | O que fazer | Detalhe |
+|---|---|---|---|
+| *"E-mail ou senha inválidos."* | e-mail ou senha errados | revisar os dados; cada erro conta para o bloqueio temporário | 19.5 |
+| *"Não foi possível entrar agora. Tente novamente mais tarde."* | bloqueio temporário por tentativas erradas | aguardar, ou pedir a redefinição da senha | 19.5 |
+| *"Sua conta está inativa. Contacte o administrador."* | a conta foi inativada | pedir a reativação à administração | 19.5; capítulo 16, seção 16.10 |
+| *"Senha atual incorreta."* | ao trocar a senha, a senha atual foi digitada errada | digitar de novo | 19.5 |
+| janela **Sua sessão está prestes a expirar** | a sessão vai terminar por inatividade | **Continuar conectado** | 19.5 |
+| *"Sua sessão expirou. Faça login novamente."* | a sessão terminou | entrar de novo | 19.5 |
+| *"Sua sessão foi encerrada porque suas credenciais foram alteradas. Faça login novamente."* | a senha da conta mudou | entrar com a senha nova | 19.5 |
+
+**Acesso a telas e ações**
+
+| Mensagem | Causa | O que fazer | Detalhe |
+|---|---|---|---|
+| o item não aparece no menu | falta a permissão de consultar a tela | pedir a quem administra os acessos | capítulo 4, seções 4.4 e 4.6 |
+| **"Sem permissão para esta área"** | a tela foi aberta sem a permissão | idem | capítulo 4, seção 4.4 |
+| janela **Sem permissão** | a ação não é coberta pela sua permissão | idem | capítulo 4, seções 4.4 e 4.5 |
+| **"Contexto operacional ausente"**, *"Sua conta não está associada a um colaborador operacional…"* ou *"Conta sem colaborador operacional associado. Contate o administrador."* | a conta não está vinculada a um colaborador | pedir o vínculo à administração | capítulo 7; capítulo 16, seção 16.9 |
+| *"PIN não configurado. Solicite ao gestor."*, *"Acesso bloqueado. Solicite ao gestor."*, *"Acesso desabilitado."*, *"PIN inválido. Tente novamente."* | credencial do Modo Fábrica | seguir o capítulo 13 | capítulo 13 |
+
+**Apontar e concluir atividades**
+
+| Mensagem | Causa | O que fazer | Detalhe |
+|---|---|---|---|
+| *"Esta esteira ainda não foi liberada para produção."* e as demais mensagens sobre a situação da esteira | a esteira não está **A iniciar** nem **Em andamento** | falar com a gestão | 19.3 |
+| *"Esta esteira não está liberada para conclusão operacional de atividades."* | idem, ao concluir | idem | 19.3 |
+| *"Esta atividade já está concluída operacionalmente; não é possível novo apontamento."* | a atividade foi concluída | pedir a reabertura à gestão | 19.3; capítulo 6, seção 6.17 |
+| *"Esta atividade foi dispensada; não é possível novo apontamento."* | a atividade foi dispensada | pedir a restauração à gestão | 19.3; capítulo 6, seção 6.19 |
+| *"Informe uma justificativa para executar esta atividade fora da sequência recomendada."* | há atividade anterior pendente | informar a justificativa | 19.4 |
+| *"Informe uma justificativa para apontar acima do tempo previsto da atividade."* | no Modo Fábrica, o tempo passa do planejado | informar a justificativa | 19.4 |
+| aviso de que a atividade não está incluída na sequência operacional | a atividade não entra na sequência daquela esteira | falar com a gestão | 19.4 |
+| *"Esta atividade não está no seu planejamento publicado ou não permite apontamento."* | no Modo Fábrica, a atividade saiu do seu planejamento | atualizar a fila e confirmar com a gestão | capítulo 13 |
+| *"A data de realização não pode ser futura."* | data posterior a hoje | usar hoje ou data anterior | capítulos 7 e 13 |
+| fila vazia, *"Nenhuma atividade disponível no momento."* | planejamento da semana não publicado, ou tudo concluído | confirmar com a gestão | capítulos 10 e 13 |
+
+**Falhas de carregamento, gravação e comunicação**
+
+| Mensagem | Causa | O que fazer | Detalhe |
+|---|---|---|---|
+| mensagens iniciadas por *"Não foi possível carregar…"*, *"Não foi possível salvar…"*, *"Não foi possível publicar…"* | falha momentânea ao buscar ou gravar | tentar de novo e recarregar a página; persistindo, abrir chamado | capítulo da tela |
+| janelas **Operação não concluída** e **Não foi possível continuar** | falha de serviço ou de comunicação | idem | 19.1 |
+
+### 19.3 Bloqueios de apontamento por situação da esteira
+
+A **situação da esteira** decide se ela aceita trabalho. A regra é a mesma em **todos** os caminhos de apontamento — **Apontar horas**, página **Apontamento**, lançamento em nome de outro colaborador e **Modo Fábrica** — e vale também para **concluir** atividade.
+
+| Situação da esteira | Aceita apontamento e conclusão? | Mensagem ao tentar apontar | Quem destrava |
+|---|---|---|---|
+| **Rascunho / Em elaboração** | não | *"Esta esteira ainda não foi liberada para produção."* | a gestão, avançando a esteira até **Liberar para produção** (capítulo 6, seção 6.12) |
+| **Aguardando planejamento** | não | *"Esta esteira está em planejamento e ainda não permite apontamento."* | idem |
+| **Em planejamento** | não | *"Esta esteira está em planejamento e ainda não permite apontamento."* | a gestão, com **Liberar para produção** |
+| **A iniciar** | **sim** — o primeiro apontamento passa a esteira para **Em andamento** | — | — |
+| **Em andamento** | **sim** | — | — |
+| **Finalizada** | não | *"Esta esteira está finalizada e não permite novos apontamentos."* | pelo caminho normal, ninguém: a tela não oferece ação de situação em esteira finalizada (capítulo 6, seção 6.11). Fale com a gestão |
+| **Cancelada** | não | *"Esta esteira está cancelada e não permite novos apontamentos."* | idem |
+
+Ao **concluir** uma atividade em esteira fora de **A iniciar** e **Em andamento**, a mensagem é *"Esta esteira não está liberada para conclusão operacional de atividades."*.
+
+Mesmo com a esteira aceitando apontamento, a **atividade** pode recusar:
+
+| Situação da atividade | Mensagem | Quem destrava |
+|---|---|---|
+| **concluída** | *"Esta atividade já está concluída operacionalmente; não é possível novo apontamento."* | quem pode alterar esteiras, com **Reabrir atividade** (capítulo 6, seção 6.17) |
+| **dispensada** | *"Esta atividade foi dispensada; não é possível novo apontamento."* | quem pode alterar esteiras, com **Restaurar** (capítulo 6, seção 6.19) |
+
+Na prática:
+
+- as listas de apontamento já escondem ou marcam o que não aceita registro — **Apontar horas** só lista atividades de esteiras **A iniciar** e **Em andamento** (capítulo 7), e o Modo Fábrica mostra o cartão como **Apontamento bloqueado para esta atividade** (capítulo 13). Se mesmo assim a recusa aparecer, a situação mudou depois que a tela foi carregada: atualize a tela e confira a esteira no detalhe (capítulo 6, seção 6.2);
+- **Extra Esteira** não pertence a nenhuma esteira e por isso nunca é recusado pela situação da esteira;
+- atividades **incluídas** em esteira **Finalizada** ou **Cancelada** também não aceitam apontamento — a inclusão é aceita, mas o trabalho fica impossível de registrar (capítulo 21).
+
+### 19.4 Sequência e tempo acima do previsto: quando o sistema pede justificativa
+
+Estes casos **não são bloqueios**: o sistema pede uma **justificativa** e, com ela, aceita o registro. A recusa só acontece quando a justificativa exigida não é informada. A justificativa é escolhida de uma lista mantida pela gestão (capítulo 16, seção 16.15); algumas opções pedem um **complemento**.
+
+O comportamento muda conforme o caminho usado:
+
+| Caso | **Apontar horas** (área autenticada) | **Totem** do Modo Fábrica | **Navegador da fábrica** |
+|---|---|---|---|
+| há **atividade anterior pendente** na sequência | pede justificativa quando a tela indica **Fora de sequência** (capítulo 7) | pede justificativa | pede justificativa |
+| a atividade está **fora da sua alocação** ou do seu planejamento | pede justificativa (capítulo 7) | só por **+ Outra atividade**, sempre com justificativa (capítulo 13) | não é possível: não há **Outra atividade** |
+| o tempo passa do **previsto** | **não há verificação**: nenhum aviso, nenhuma justificativa | pede justificativa, com a faixa **Tempo acima do previsto — confirme o apontamento** | **recusado sem campo para justificar** — veja abaixo |
+| a atividade **não faz parte da sequência operacional** da esteira | recusado | recusado | recusado |
+
+Em todos os caminhos, o apontamento **fora de sequência** fica marcado como exceção no histórico da esteira (capítulos 6 e 7).
+
+#### Como o tempo acima do previsto é calculado no Modo Fábrica
+
+A conta compara dois números que aparecem no próprio cartão da atividade:
+
+- **Planejado** — o tempo planejado **para você** naquela atividade, no planejamento publicado;
+- **Realizado** — tudo o que já foi apontado na atividade, **por qualquer pessoa**, somado aos minutos que você está registrando agora.
+
+Se a soma passar do planejado, a justificativa é pedida. Consequências práticas:
+
+- **em atividade compartilhada, o tempo dos colegas conta.** A justificativa pode ser pedida mesmo que você tenha apontado pouco;
+- **sem tempo planejado para você** naquela atividade, a verificação não acontece;
+- **concluir sem registrar tempo novo** não passa pela verificação.
+
+#### No navegador da fábrica não há onde justificar o tempo acima do previsto
+
+O registro de apontamento do **navegador da fábrica** mostra o campo de justificativa **somente** quando há atividade anterior pendente. Quando o único motivo é o tempo acima do previsto, o sistema recusa com *"Informe uma justificativa para apontar acima do tempo previsto da atividade."* e a tela **não oferece** onde informá-la.
+
+**Como proceder:** registrar esse apontamento pelo **totem**, que tem o campo, ou pedir à gestão o lançamento em nome do colaborador (capítulo 7), que não faz essa verificação.
+
+### 19.5 Bloqueios de acesso e credencial
+
+#### Ao entrar no sistema
+
+As mensagens da entrada aparecem em uma **janela de aviso**, e o título da janela nem sempre corresponde à causa. Oriente-se pela mensagem:
+
+| Título da janela | Mensagem | Causa | O que fazer |
+|---|---|---|---|
+| **Sessão inválida** | *"E-mail ou senha inválidos."* | e-mail ou senha errados. O sistema não diz qual dos dois. Apesar do título, não há problema de sessão | revisar os dados com atenção: cada erro conta para o bloqueio temporário |
+| **Sem permissão** | *"Não foi possível entrar agora. Tente novamente mais tarde."* | depois de várias tentativas erradas seguidas, a conta fica **bloqueada por um tempo** — tipicamente **5 tentativas** e **15 minutos**, conforme a configuração do ambiente. Durante o bloqueio, nem a senha correta entra | aguardar e tentar de novo, ou pedir à administração **Redefinir senha** (capítulo 16, seção 16.10), que retira o bloqueio na hora |
+| **Sem permissão** | *"Sua conta está inativa. Contacte o administrador."* | a conta foi inativada | pedir à administração que a ative (capítulo 16, seção 16.10) |
+
+Depois da entrada, se a conta estiver marcada para troca de senha, abre a tela **Alterar senha obrigatória** (capítulo 3, seção 3.1).
+
+#### Ao trocar a senha
+
+Vale para **Alterar senha** e para **Alterar senha obrigatória**:
+
+| Mensagem | Causa | O que fazer |
+|---|---|---|
+| *"A nova senha deve ter pelo menos 8 caracteres."* | senha curta | escolher uma senha mais longa |
+| *"A confirmação não coincide com a nova senha."* | os dois campos ficaram diferentes | digitar de novo |
+| *"A nova senha deve ser diferente da senha atual."* | a nova senha é igual à atual | escolher outra |
+| janela **Sessão inválida** com *"Senha atual incorreta."* | a senha atual foi digitada errada. Apesar do título, você continua conectado | fechar a janela e digitar de novo a senha atual |
+
+Depois de trocar, você continua conectado no equipamento em que fez a troca. **Sessões abertas da mesma conta em outros equipamentos são encerradas** na ação seguinte delas (veja a tabela abaixo).
+
+#### Durante o uso
+
+| O que aparece | Causa | O que fazer |
+|---|---|---|
+| janela **Sua sessão está prestes a expirar**, com *"Por inatividade, sua sessão será encerrada em"* e um contador | o tempo sem uso está chegando ao limite definido pela administração (capítulo 3, seção 3.6) | **Continuar conectado** renova a sessão; **Sair agora** encerra |
+| tela de entrada com *"Sua sessão expirou. Faça login novamente."* | a sessão terminou por inatividade ou atingiu o tempo máximo total | entrar de novo. O que já foi gravado continua gravado; o que estava digitado e não salvo precisa ser refeito |
+| tela de entrada com *"Sua sessão foi encerrada porque suas credenciais foram alteradas. Faça login novamente."* | a senha da conta mudou: você a trocou em outro equipamento, ou a administração definiu ou redefiniu a senha (capítulo 16, seções 16.9 e 16.10) | entrar com a senha nova; se você não a conhece, pedir à administração |
+| janela **Sessão inválida** com *"Sessão expirada ou inválida. Faça login novamente."* | a sessão deixou de valer — por exemplo, a conta foi removida | entrar de novo; se não conseguir, procurar a administração |
+
+**O aviso de inatividade pode aparecer enquanto você usa o sistema.** O contador da janela é calculado a partir da sua entrada ou da última vez em que você clicou em **Continuar conectado** — não do seu último clique. Por isso, a janela pode surgir mesmo durante uso contínuo. Clique em **Continuar conectado** e siga normalmente. Se o contador chegar a zero, a janela some; a sessão só termina de fato se você realmente ficou sem usar o sistema pelo tempo definido, e isso se revela na ação seguinte, com a tela de entrada.
+
+#### Permissão, vínculo e Modo Fábrica
+
+- Para separar falta de permissão de outras causas — conta sem vínculo, conta inativa, troca de senha, regra de operação —, use a tabela **"Nem todo bloqueio é falta de permissão"** do capítulo 4, seção 4.4.
+- Para o **Modo Fábrica** — PIN não configurado, bloqueio por tentativas, credencial desabilitada, sessão de produção expirada —, use o bloco **Quando algo é bloqueado** do capítulo 13.
+- **A senha de acesso e o PIN do Modo Fábrica são independentes.** O bloqueio por tentativas em um não afeta o outro, e redefinir um não altera o outro.
+
+### 19.6 Quando abrir um chamado
+
+Abra chamado quando:
+
+- uma falha **se repete** depois de tentar de novo e recarregar a página — mensagens iniciadas por *"Não foi possível…"*, janelas **Operação não concluída** ou **Não foi possível continuar**;
+- a tela mostra um **Código de suporte** e o problema continua;
+- o sistema se comporta de forma diferente da descrita neste manual, e a situação não consta do capítulo 21;
+- ninguém na sua operação consegue resolver um problema de acesso — por exemplo, ninguém vê **Permissões por papel** (capítulo 4).
+
+Antes de abrir, confira se não é uma destas situações, que se resolvem dentro da operação:
+
+| Situação | Quem resolve |
+|---|---|
+| falta de permissão | quem administra os acessos (capítulo 4, seção 4.6) |
+| conta sem vínculo com colaborador | administração, em **Usuários** (capítulo 16, seção 16.9) |
+| conta inativa ou bloqueada por tentativas | administração, em **Usuários** (capítulo 16, seção 16.10) |
+| PIN do Modo Fábrica | quem administra colaboradores (capítulo 16, seção 16.5) |
+| recusa pela situação da esteira, por atividade concluída ou dispensada, ou pedido de justificativa | é regra de operação: gestão (seções 19.3 e 19.4) |
+| fila vazia | planejamento da semana não publicado: gestão (capítulos 8 e 10) |
+| botão sem funcionamento ou divergência já conhecida | capítulo 21 — não geram chamado |
+
+**Sem acesso ao sistema não há como abrir chamado pelo SGP+.** O chamado só é aberto de dentro da área autenticada. Quem não consegue entrar, ou está no Modo Fábrica, precisa procurar a administração ou pedir a alguém com acesso que registre o chamado.
+
+### 19.7 Abrir um chamado
+
+1. **Vá para a tela em que o problema aconteceu.** O chamado registra sozinho o endereço da tela de onde foi aberto.
+2. Clique em **Abrir chamado**, na barra superior. Abre a janela **Abrir chamado**.
+3. Em **Categoria**, escolha o tipo do pedido (tabela abaixo). A janela abre com **Dúvida** selecionada.
+4. Em **Assunto**, escreva um resumo de uma linha. O campo aceita até **160 caracteres** e para de receber texto nesse limite.
+5. Em **Descrição**, conte o que aconteceu, seguindo a seção 19.8.
+6. Marque **Isso está me impedindo de continuar** somente se você não consegue seguir com o trabalho sem a solução.
+7. Clique em **Registrar chamado**. Durante o envio, o botão mostra **Enviando...**.
+8. A janela se fecha e aparece **Chamado registrado com sucesso**, com o **Protocolo** — um código no formato **CHM-** seguido de números — e duas linhas sobre o aviso ao suporte, **E-mail** e **WhatsApp** (tabela abaixo).
+9. **Anote o protocolo** e clique em **Fechar**. Ele também fica disponível na tela **Chamados** (seção 19.9).
+
+Para desistir, clique em **Cancelar** ou fora da janela. Nada é registrado. O texto digitado continua na janela se você a abrir de novo, até recarregar a página ou sair do sistema.
+
+**Categorias**
+
+| Categoria | Quando usar |
+|---|---|
+| **Dúvida** | você não sabe como fazer algo, e este manual não respondeu |
+| **Erro** | o sistema mostrou falha ou fez algo diferente do esperado |
+| **Bloqueio operacional** | uma regra está impedindo o trabalho e você precisa de análise |
+| **Solicitação de apoio** | você precisa de ajuda de outra pessoa para concluir uma tarefa |
+| **Acesso/permissão** | problema de acesso que a sua operação não conseguiu resolver |
+
+**Prioridade.** A janela não tem campo de prioridade. Ela é definida pela marcação **Isso está me impedindo de continuar**: marcada, o chamado nasce com severidade **Alta**; desmarcada, **Média**. Conforme a configuração do ambiente, os chamados de severidade **Alta** podem ser avisados a destinatários diferentes. A categoria não muda quem é avisado.
+
+**As linhas de aviso da confirmação**
+
+As linhas **E-mail** e **WhatsApp** mostram um código em inglês, que diz se o suporte foi avisado:
+
+| Linha | Código | O que significa |
+|---|---|---|
+| **E-mail** | **SENT** | o aviso por e-mail foi enviado |
+| **E-mail** | **FAILED** | o envio do e-mail falhou |
+| **E-mail** | **SKIPPED** | nenhum e-mail foi enviado: o envio está desligado ou não há destinatário configurado no ambiente |
+| **WhatsApp** | **SKIPPED** | nesta versão, o aviso por WhatsApp não é enviado. A linha mostra sempre este código |
+
+**Se a linha E-mail não mostrar SENT, o chamado está gravado, mas ninguém foi avisado por ele.** Informe o protocolo a quem dá suporte na sua operação por outro meio.
+
+[IMAGEM SUGERIDA: Janela Abrir chamado preenchida — Categoria, Assunto, Descrição com mensagem e Código de suporte copiados, a marcação Isso está me impedindo de continuar e os botões Cancelar e Registrar chamado]
+
+[IMAGEM SUGERIDA: Janela Chamado registrado com sucesso mostrando o Protocolo e as linhas E-mail e WhatsApp]
+
+### 19.8 O que informar no chamado
+
+O chamado leva automaticamente a **sua conta** (e o colaborador vinculado a ela, se houver), a **categoria**, a **severidade**, o **assunto**, a **descrição**, a **data e hora** e o **endereço da tela** de onde foi aberto.
+
+Ele **não** leva a mensagem que apareceu, o código de suporte, imagens nem anexos — não há como anexar arquivo. Tudo isso precisa estar escrito na **Descrição**:
+
+| Informe | Exemplo |
+|---|---|
+| o que você estava fazendo e em qual tela | "Ao salvar o rascunho na Agenda da semana" |
+| o **texto exato** da mensagem e o título da janela | "Janela Operação não concluída: «Serviço temporariamente indisponível. Tente novamente em instantes.»" |
+| o **Código de suporte**, se apareceu | "Código de suporte: SGP-…" |
+| a esteira, a atividade, o colaborador e a data envolvidos | "Esteira da OS 1234, atividade Costura do banco, semana de 05/10" |
+| quando começou e se acontece sempre | "Desde as 14h, em todas as tentativas" |
+| o que você já tentou | "Recarreguei a página e entrei de novo no sistema" |
+| em importação por documento, a referência copiada | o texto de **Copiar referência** (capítulo 17) |
+
+**Nunca escreva senha nem PIN no chamado.**
+
+### 19.9 Acompanhar os seus chamados
+
+1. Abra **Colaborador → Chamados**. A tela **Chamados** informa: *"Lista dos seus chamados de suporte. Utilize os filtros para localizar um protocolo ou assunto."* Enquanto os dados são buscados, aparece **"Carregando chamados…"**.
+2. Se precisar, use os filtros e clique em **Aplicar filtros**.
+3. Na linha do chamado, use **Detalhe** para ler tudo, ou **Copiar protocolo**.
+
+**Filtros**
+
+| Filtro | O que faz |
+|---|---|
+| **Busca (protocolo ou assunto)** | encontra pelo protocolo ou pelo assunto, com qualquer parte do texto; maiúsculas e minúsculas não importam. A descrição não entra na busca |
+| **Status** | **Todos** (padrão), **Aberto**, **Em progresso**, **Resolvido**, **Fechado**. Veja em "O que esperar" por que só **Aberto** traz resultado |
+| **Categoria** | campo de texto que exige o **código exato** da categoria, como ele aparece na coluna **Categoria** — por exemplo, **BLOQUEIO_OPERACIONAL**. O nome em português não encontra nada. Na prática, deixe vazio |
+| **Severidade** | **Todas** (padrão), **Baixa**, **Média**, **Alta**, **Crítica**. Só **Média** e **Alta** ocorrem (seção 19.7) |
+| **Período (criação)** | **Todos** (padrão), **Hoje**, **7 dias** ou **30 dias**, pela data de abertura |
+
+Os filtros **só valem depois de Aplicar filtros**; o botão fica desativado durante a busca. As escolhas não ficam guardadas: ao voltar à tela, ela abre sem filtros.
+
+**A lista**
+
+| Coluna | Conteúdo |
+|---|---|
+| **Protocolo** | o código **CHM-…** |
+| **Status** | em português |
+| **Categoria** | o **código** da categoria (tabela "Códigos que aparecem na tela", adiante) |
+| **Severidade** | **Média** ou **Alta** |
+| **Assunto** | cortado quando é longo; o texto inteiro aparece ao passar o ponteiro do mouse |
+| **Criado em** e **Última atualização** | data e hora no horário local |
+| **Ações** | **Detalhe** e **Copiar protocolo** |
+
+Todos os seus chamados aparecem, sem divisão em páginas, do mais recente para o mais antigo.
+
+**Copiar protocolo** copia o código e mostra **"Protocolo copiado."**. Se o navegador não permitir, aparece **"Não foi possível copiar o protocolo."** — copie o código direto da coluna.
+
+**Detalhe** abre a janela **Chamado**, com o protocolo no topo e os campos **Assunto**, **Status**, **Severidade**, **Categoria**, **Descrição**, **Criado em** e **Atualizado em**. Nessa janela, **Status**, **Severidade** e **Categoria** aparecem em **código** (tabela adiante). Feche pelo botão **Fechar** ou clicando fora da janela.
+
+[IMAGEM SUGERIDA: Tela Chamados com o quadro de filtros, a lista com as colunas Protocolo, Status, Categoria, Severidade, Assunto, Criado em, Última atualização e os botões Detalhe e Copiar protocolo]
+
+## O que esperar
+
+### Registrar não é o mesmo que avisar
+
+O chamado é **sempre gravado** quando a confirmação aparece, mesmo que o aviso ao suporte falhe ou não seja enviado. O aviso por e-mail depende da configuração do seu ambiente, e o aviso por WhatsApp não é enviado nesta versão. Confira a linha **E-mail** da confirmação (seção 19.7).
+
+### O status não muda pelo sistema
+
+Não existe, no SGP+, ação que altere um chamado depois de aberto. Por isso:
+
+- todo chamado fica em **Aberto**, mesmo depois de atendido;
+- **Última atualização** mostra sempre a mesma data e hora de **Criado em**;
+- os filtros **Em progresso**, **Resolvido** e **Fechado** não trazem nada.
+
+A resposta do suporte chega **fora do sistema**, pelo canal que a sua operação usa. Não espere ver o andamento na tela **Chamados**: ela é um registro do que você pediu.
+
+### Não é possível complementar, cancelar nem reabrir
+
+Um chamado registrado não pode ser editado, complementado, cancelado nem respondido pela tela. Para acrescentar informação, abra **outro** chamado e cite o protocolo do primeiro na descrição.
+
+### Só você vê os seus chamados
+
+A tela **Chamados** mostra apenas os chamados abertos pela sua conta. Outra pessoa — inclusive a gestão — não os vê pelo SGP+. Quem atende recebe o chamado pelo aviso por e-mail.
+
+### A data do protocolo segue o horário universal
+
+A data e a hora que compõem o protocolo seguem o **horário universal**, três horas à frente do horário de Brasília. Um chamado aberto às 22h pode ter, no protocolo, a data do dia seguinte. Para saber quando o chamado foi aberto, use a coluna **Criado em**, que está no horário local.
+
+### Justificativa não é bloqueio
+
+Quando o sistema pede justificativa por sequência ou por tempo, o trabalho **pode** ser registrado: basta informar o motivo. Não abra chamado por esse pedido — ele é regra de operação (seção 19.4). A exceção é o navegador da fábrica, que não oferece campo para o tempo acima do previsto (mesma seção).
+
+## Quando algo é bloqueado
+
+### Ao abrir um chamado
+
+| Mensagem | Causa | O que fazer |
+|---|---|---|
+| *"Informe o assunto."* | o assunto ficou vazio | preencher o assunto |
+| *"Informe a descrição."* | a descrição ficou vazia | preencher a descrição |
+| *"Módulo de suporte está desativado."* | o serviço de chamados está desligado no ambiente, embora o botão apareça | avisar a administração do sistema por outro meio |
+| mensagem técnica iniciada por *"NETWORK_ERROR: falha ao contatar a API"* | o navegador não conseguiu falar com o sistema. O texto é técnico e não tem orientação para você | conferir a conexão e tentar de novo; nada foi registrado |
+| mensagem iniciada por *"Campo inválido: description"* | a descrição passou do limite de **10 mil caracteres** | encurtar a descrição |
+| tela de entrada, com aviso de sessão | a sessão terminou enquanto a janela estava aberta | entrar de novo e refazer o chamado; o texto digitado se perde |
+
+### Na tela Chamados
+
+| O que aparece | Causa | O que fazer |
+|---|---|---|
+| *"Nenhum chamado encontrado com os filtros atuais."* | você ainda não abriu chamado, ou os filtros não trazem nada | voltar **Status** e **Período (criação)** para **Todos**, esvaziar **Busca** e **Categoria** e clicar em **Aplicar filtros** |
+| *"Não foi possível carregar os chamados. Tente novamente."*, com *"Nenhum chamado encontrado com os filtros atuais."* logo abaixo | falha ao buscar a lista, ou serviço de chamados desligado. A segunda frase **não** significa que você não tem chamados | clicar em **Aplicar filtros** ou recarregar a página; persistindo, avisar a administração |
+| *"Não foi possível carregar o chamado."*, na janela de detalhe | falha ao buscar o chamado | fechar a janela e clicar de novo em **Detalhe** |
+| o item **Chamados** não aparece no menu | o módulo de chamados está desligado no ambiente | não há o que fazer pela tela |
+
+### Códigos que aparecem na tela
+
+Os chamados mostram alguns valores como **código interno em inglês ou em maiúsculas**. Eles estão aqui apenas para você reconhecê-los:
+
+| O que aparece | Onde | Leia como |
+|---|---|---|
+| **OPEN** | **Status**, na janela de detalhe | **Aberto** |
+| **MEDIUM** · **HIGH** | **Severidade**, na janela de detalhe | **Média** · **Alta** |
+| **DUVIDA** · **ERRO** · **BLOQUEIO_OPERACIONAL** · **SOLICITACAO_APOIO** · **ACESSO_PERMISSAO** | **Categoria**, na lista e na janela de detalhe; também é o que o filtro **Categoria** exige | **Dúvida** · **Erro** · **Bloqueio operacional** · **Solicitação de apoio** · **Acesso/permissão** |
+| **SENT** · **FAILED** · **SKIPPED** | linhas **E-mail** e **WhatsApp** da confirmação | **enviado** · **falhou** · **não enviado** |
+| **SGP-…** | linha **Código de suporte** das janelas de aviso | identificador da falha para o suporte |
+
+### Ações que não existem
+
+| Limitação | Como proceder |
+|---|---|
+| acompanhar o andamento do chamado pela tela | o status não muda; aguarde o retorno do suporte fora do sistema |
+| responder, complementar, anexar arquivo ou imagem | abrir outro chamado citando o protocolo; descrever em texto o que a imagem mostraria |
+| cancelar ou encerrar um chamado | avisar quem dá suporte, citando o protocolo |
+| ver chamados de outra pessoa | não existe; cada um vê só os seus |
+| abrir chamado pelo Modo Fábrica ou sem entrar no sistema | procurar a administração ou pedir a alguém com acesso que abra |
+| escolher a prioridade além de Alta ou Média | usar a marcação **Isso está me impedindo de continuar** com critério |
+| exportar ou imprimir a lista de chamados | não há exportação nem impressão |
+| justificar tempo acima do previsto pelo navegador da fábrica | usar o totem ou pedir o lançamento à gestão (seção 19.4) |
 
 ---
 
