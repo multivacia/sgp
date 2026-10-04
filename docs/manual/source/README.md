@@ -38,7 +38,20 @@ Mudança de comportamento, situação, permissão, validação, mensagem relevan
 
 O caminho inverso não é válido: o manual do usuário não é fonte de verdade sobre comportamento.
 
+## Gerar o manual do usuário em HTML
+
+`docs/manual/manual-usuario.html` é o manual integral em HTML, **derivado** de `MANUAL_USUARIO_SGP.md`. Não edite o HTML à mão: altere a fonte e regenere.
+
+| Comando | O que faz |
+|---|---|
+| `npm run manual:usuario:html` | gera `docs/manual/manual-usuario.html` e valida a estrutura |
+| `npm run manual:usuario:html:check` | só valida; falha se o HTML estiver desatualizado em relação à fonte ou inválido |
+
+Gerador: `scripts/generate-manual-usuario-html.mjs`, com a biblioteca `marked` (devDependency; requer `npm install`). Ele nunca escreve na fonte, produz o mesmo HTML para a mesma fonte (sem data de geração) e gera um arquivo único, sem dependência de rede. Se a validação falhar (capítulos 1 a 21, IDs únicos, links internos do índice, marcador de capítulo pendente, acentuação corrompida, revisão ausente), o HTML não é gravado.
+
+**PDF:** ainda não tem fluxo oficial.
+
 ## Outros caminhos relacionados
 
-- `docs/manual/*.html` — guias já publicados, derivados de versões anteriores. Alvo das avaliações de cobertura da matriz técnica.
+- `docs/manual/colaborador.html` e `docs/manual/gestor-esteira.html` — guias específicos por público, derivados de versões anteriores e escritos à mão. **Não** substituem o manual integral e não são gerados pelo comando acima. São o alvo das avaliações de cobertura da matriz técnica.
 - `docs/ai/reports/` — auditorias e fotografias históricas, entre elas `auditoria-cobertura-funcional-manual-2026-10-02/`, base da revisão de 2026-10-03.
