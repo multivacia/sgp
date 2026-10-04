@@ -11,6 +11,8 @@
  *
  * A saída é determinística: mesma fonte gera o mesmo HTML, byte a byte
  * (sem data de geração nem qualquer valor variável).
+ * Fins de linha: a fonte é normalizada para LF antes do parsing e o HTML é sempre
+ * escrito em LF, em qualquer sistema operacional (ver .gitattributes).
  */
 import { readFileSync, writeFileSync, existsSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
@@ -82,8 +84,12 @@ function wrapTables(html) {
   return html.replace(/<table>/g, '<div class="table-wrap">\n<table>').replace(/<\/table>/g, '</table>\n</div>')
 }
 
+function normalizeEol(text) {
+  return text.replace(/\r\n?/g, '\n')
+}
+
 function readSource() {
-  return readFileSync(SOURCE, 'utf8')
+  return normalizeEol(readFileSync(SOURCE, 'utf8'))
 }
 
 /**
@@ -560,7 +566,7 @@ function main() {
   const checkOnly = process.argv.includes('--check')
   const sourceBefore = readSource()
   const doc = buildDocument(sourceBefore)
-  const html = renderHtml(doc)
+  const html = normalizeEol(renderHtml(doc))
 
   if (readSource() !== sourceBefore) {
     throw new Error(`A fonte ${SOURCE_REL} mudou durante a geração. Abortado.`)
@@ -570,8 +576,15 @@ function main() {
 
   if (checkOnly) {
     if (!existsSync(OUTPUT)) problems.push(`${OUTPUT_REL} não existe — rode npm run manual:usuario:html`)
-    else if (readFileSync(OUTPUT, 'utf8') !== html) {
-      problems.push(`${OUTPUT_REL} está desatualizado em relação à fonte — rode npm run manual:usuario:html`)
+    else {
+      const current = readFileSync(OUTPUT, 'utf8')
+      if (current !== html) {
+        problems.push(
+          normalizeEol(current) === html
+            ? `${OUTPUT_REL} difere apenas nos fins de linha (esperado LF) — rode npm run manual:usuario:html ou faça novo checkout após o .gitattributes`
+            : `${OUTPUT_REL} está desatualizado em relação à fonte — rode npm run manual:usuario:html`,
+        )
+      }
     }
   }
 
