@@ -3,7 +3,7 @@
 **Produto:** SGP+ · Multivacia / ARGOS
 **Versão da aplicação nesta revisão:** 1.9.8
 **Revisão deste manual:** 2026-10-03
-**Situação:** base editorial criada; capítulos 1 a 3, 5 a 14, 20 e 21 com conteúdo final. Os capítulos 4 e 15 a 19 seguem marcados como pendentes e **não devem ser publicados** como versão final.
+**Situação:** base editorial criada; capítulos 1 a 3, 5 a 14, 17, 20 e 21 com conteúdo final. Os capítulos 4, 15, 16, 18 e 19 seguem marcados como pendentes e **não devem ser publicados** como versão final.
 
 > **Este é o documento canônico do manual do usuário.** Versões em HTML ou PDF devem ser geradas a partir daqui.
 >
@@ -3930,13 +3930,275 @@ Com esteiras marcadas, sair pelo menu lateral abre a confirmação **"Sair desta
 
 # 17. Importação por documento
 
-> [PENDENTE DE ENRIQUECIMENTO — não publicar como capítulo final]
+## Para que serve
 
-- enviar o documento e o que o sistema devolve
-- revisar o rascunho antes de criar a esteira
-- decidir item por item: reaproveitar, revisar semelhante, criar novo ou ignorar
-- o que impede a criação e como resolver
-- o que acontece depois de confirmar
+**Importação por documento** cria uma esteira a partir de uma **ordem de serviço em PDF**, em vez de montá-la item a item. Você envia o arquivo, o sistema lê o texto, propõe um **rascunho** e compara cada serviço encontrado com as **matrizes de operação** já cadastradas. Você revisa, decide o que reaproveitar e só então confirma.
+
+Três pontos definem o recurso:
+
+- **o envio não cria a esteira.** Ele só gera um rascunho. A esteira existe depois que você clica em **Criar esteira no SGP+** e confirma;
+- **a revisão é sua.** O sistema sugere; itens duvidosos ficam parados até você decidir;
+- **o resultado é uma esteira comum.** Depois de criada, vale tudo o que o capítulo 6 descreve.
+
+## Onde fica
+
+Há duas entradas, que abrem a mesma tela:
+
+| Entrada | Caminho |
+|---|---|
+| Menu lateral | **Gestão → Por documento** |
+| Painel operacional | botão **Nova esteira por documento**, no topo da tela |
+
+O título da página é **Nova esteira por documento**, com a linha de apoio *"Envie um PDF da ordem de serviço. O sistema gera um rascunho automático para revisar e corrigir antes de criar a esteira oficialmente no SGP+."*
+
+A tela é organizada de cima para baixo:
+
+1. a área **1. Documento (PDF)**, para enviar o arquivo, ao lado da área **2. Situação do rascunho**;
+2. os **avisos**, quando houver;
+3. a **Revisão da OS importada**, com as decisões item por item;
+4. os **Dados sugeridos (editáveis)**;
+5. os **Itens / etapas inferidos**;
+6. os botões **Criar esteira no SGP+** e **Novo documento**.
+
+Os blocos 3 a 6 só aparecem depois que o sistema devolve um rascunho utilizável.
+
+[IMAGEM SUGERIDA: Tela Nova esteira por documento logo após o envio — as áreas 1 e 2 lado a lado, o painel Revisão da OS importada com os quatro contadores e as seções de itens]
+
+## Quem costuma ter acesso
+
+O acesso é controlado por **permissão**. A exigida é a de **criar esteiras** — a mesma de **Nova esteira**, **Planejamento**, **Agenda da semana** e **Evolução das Esteiras**. Na configuração padrão, ela está com a **administração** e a **gestão**.
+
+A verificação acontece em dois pontos. Sem a permissão, o item **Por documento** não aparece no menu. Os botões do Painel operacional continuam visíveis, mas levam ao aviso **"Sem permissão para esta área"** — o mesmo que o endereço direto mostra. Além disso, o servidor exige a mesma permissão tanto para ler o documento quanto para criar a esteira, de modo que não há caminho alternativo.
+
+## Como fazer
+
+### Enviar o documento
+
+1. Abra **Gestão → Por documento**.
+2. **Arraste o PDF** para a área tracejada ou clique em **Escolher PDF** e selecione o arquivo.
+3. Aguarde. O envio começa **sozinho**, assim que o arquivo é escolhido — não há botão de enviar. Enquanto isso aparece *"Processando o documento e gerando o rascunho…"* e o botão fica como **Processando…**.
+
+O nome do arquivo escolhido aparece abaixo do botão. Para trocar de documento, escolha outro PDF: o envio recomeça e **as decisões já tomadas na revisão anterior são descartadas**. O botão **Novo documento**, no fim da tela, limpa tudo e volta ao início, também sem pedir confirmação.
+
+Antes do primeiro envio, a área **2. Situação do rascunho** mostra *"Ainda sem resultado. Envie um PDF para ver o rascunho e os avisos do interpretador."*
+
+**Limites a conhecer:**
+
+- o seletor de arquivos filtra por PDF, mas o sistema foi preparado para ler **PDF com texto**. Não há leitura de imagem: um PDF que seja apenas uma foto ou digitalização, sem texto selecionável, tende a resultar em rascunho vazio ou em avisos de que nada foi lido;
+- existe um **tamanho máximo** de arquivo. Por padrão, 15 MB; a equipe técnica pode alterar esse valor. Acima do limite, o envio é recusado.
+
+### Ler o resultado do envio
+
+Na área **2. Situação do rascunho** aparecem:
+
+| Informação | Como ler |
+|---|---|
+| **Situação** | **Concluído**: nenhuma das condições de Parcial ou Falhou. **Parcial**: o texto veio vazio ou vários dados importantes não foram identificados — o rascunho existe, mas pede mais atenção. **Falhou**: não há rascunho utilizável |
+| **Confiança global** | percentual que resume o quanto o sistema confia na leitura. É uma referência para sua atenção, não uma garantia |
+
+Abaixo, a faixa **Rastreabilidade (suporte)** mostra dois identificadores, **Pedido** e **Correlação**, e o botão **Copiar referência**. Se precisar abrir um chamado sobre um documento, copie e cole essa referência; o aviso *"Referência copiada para a área de transferência."* confirma. Não é preciso fazer nada com ela no uso normal.
+
+Outras linhas dessa área (estratégia, especialista, identificação do arquivo) são informações de apoio técnico e podem ser ignoradas.
+
+Uma faixa informativa pode aparecer acima das áreas, indicando **como o rascunho foi gerado** (*"Modo local: este rascunho foi gerado no servidor SGP+…"*, *"Modo demonstração (stub)…"* ou *"Modo remoto…"*). É um aviso de configuração do ambiente, sem relação com o seu documento. Se aparecer *"Modo demonstração (stub)"*, o rascunho é mínimo, apenas para teste: **não use para criar esteiras reais** e avise a equipe técnica.
+
+### Ler os avisos
+
+Quando o sistema encontra pontos duvidosos, abre-se a caixa **Avisos para revisão**, que diz que esses pontos *"não bloqueiam por si o envio, mas devem ser confirmados por um humano antes de criar a esteira"*. Cada aviso traz uma mensagem e, acima dela, um código técnico pequeno — **vale a mensagem**.
+
+As mensagens que o sistema pode mostrar:
+
+| Mensagem | O que significa | O que fazer |
+|---|---|---|
+| *"Número da OS não identificado com confiança suficiente."* | o número da ordem de serviço não foi lido com segurança | confira o número no PDF e preencha o nome da esteira a seu critério |
+| *"Linhas de serviço não identificado com confiança suficiente."* | nenhum serviço foi reconhecido no texto | confira se o PDF tem texto legível; sem serviços, não há o que revisar |
+| *"Nome sugerido da esteira não identificado com confiança suficiente."* | o sistema não conseguiu sugerir um nome | digite o nome em **Nome da esteira** |
+| *"… presente mas com confiança baixa."* | o dado foi lido, mas com pouca certeza | confira o dado na tela contra o PDF |
+| *"Trechos financeiros, tabulares ou sensíveis foram removidos antes do rascunho operacional."* | valores, totais, dados pessoais ou tabelas de preço foram retirados de propósito | nada a fazer; é proteção do sistema |
+| *"Nenhum serviço operacional válido foi identificado após filtros de ruído documental."* | depois da limpeza, não sobrou nenhum serviço | verifique o PDF; se for o documento correto, crie a esteira manualmente |
+| *"Texto vazio após extração; sugestões baseadas apenas no nome do ficheiro, se aplicável."* / *"Nenhum texto legível extraído do ficheiro."* | o PDF não tem texto que o sistema consiga ler | veja o limite sobre PDF de imagem, acima |
+| *"Não foi possível ler a estrutura do PDF; texto obtido por fallback pode ser incompleto."* | o arquivo está danificado ou fora do padrão; o sistema tentou recuperar o texto | confira o rascunho com atenção redobrada ou gere o PDF de novo |
+| *"Nenhuma atividade de Matriz compatível encontrada; revisão manual necessária."* | nenhum serviço do documento se parece com atividade das matrizes | todos os itens entram como novos; veja a seção abaixo |
+| *"Falha ao consultar candidatos de matriz; revisão manual recomendada."* | a comparação com as matrizes não pôde ser feita | os itens entram como novos; tente enviar de novo se quiser a comparação |
+
+### Conferir o resumo da revisão
+
+O painel **Revisão da OS importada** abre com um resumo do documento: **Origem**, **Tipo**, **Número**, **Status**, **Veículo**, **Placa mascarada** (parte da placa fica oculta de propósito) e **Confiança global**. Campos que o sistema não leu aparecem como **Não informado**.
+
+Se houve remoção de informação sensível, aparece o bloco **Dados protegidos removidos**, que informa se foram retirados dados pessoais e dados financeiros e quais categorias (por exemplo, preços, totais, telefone, endereço). Isso confirma que esses dados **não seguem** para a esteira.
+
+Quatro contadores resumem o que o sistema encontrou:
+
+| Contador | Significa |
+|---|---|
+| **Serviços extraídos** | quantos serviços foram lidos no documento |
+| **Itens reaproveitados (plano)** | quantos têm correspondência forte com uma matriz |
+| **Revisar similaridade** | quantos têm correspondência moderada ou ambígua e **exigem sua decisão** |
+| **Novos sugeridos** | quantos não encontraram atividade parecida e **exigem sua decisão** |
+
+Logo abaixo, **Pendências de revisão: N** mostra quantas decisões obrigatórias ainda faltam, com o detalhe de itens similares e novos pendentes, alternativas selecionadas e itens ignorados. Quando chega a zero, aparece *"Revisão obrigatória concluída."*
+
+**Esse número é o que libera o botão de criar:** enquanto houver pendência, **Criar esteira no SGP+** fica desativado. A tela também avisa, em faixa amarela, *"Existem itens que exigem decisão explícita antes da criação oficial da esteira."*
+
+### Entender como o sistema compara os itens
+
+Para cada serviço lido no documento, o sistema compara o **texto da descrição** com o nome e a descrição das atividades (e também das tarefas) das matrizes de operação. A comparação é por **palavras**: ignora acentos, maiúsculas e minúsculas, palavras comuns e ruídos como o nome do modelo do veículo, e reconhece variações de escrita (plural e singular, sinônimos de uso comum). Termos fortes do ofício — banco, ombreira, lateral, tampa, couro e semelhantes — pesam mais.
+
+O resultado é um percentual de **Confiança** por item e um **Motivo** em texto. A comparação **não** usa semelhança de som, nem outro código além do texto da descrição.
+
+Cada item cai em um de três grupos, e o grupo define o que se espera de você:
+
+| Seção | O que o sistema encontrou | O que você precisa fazer |
+|---|---|---|
+| **Reaproveitar da Matriz** | uma atividade (ou uma estrutura inteira) muito parecida | nada: o candidato já vem **pré-selecionado**. Você pode confirmar ou trocar por outra alternativa |
+| **Revisar similaridade** | correspondência moderada, ou dois candidatos tão próximos que o sistema não escolhe sozinho | **decidir**. O item fica pendente até lá |
+| **Nova atividade sugerida** | nada suficientemente parecido (*"Nenhuma atividade suficientemente parecida foi encontrada."*) | **decidir**. O item fica pendente até lá |
+
+### Decidir item por item
+
+Cada cartão mostra a descrição do serviço lido, o grupo, a **Confiança**, o **Motivo** e, quando há candidato, os dados dele: **Atividade**, **Setor**, **Etapa**, **Tempo**, **Time** e **Responsável**. Uma linha **Estado** informa a decisão atual.
+
+Os botões variam conforme o grupo:
+
+| Botão | Onde aparece | O que faz |
+|---|---|---|
+| **Manter candidato sugerido** | Reaproveitar da Matriz | confirma o candidato principal |
+| **Aceitar sugestão** | Revisar similaridade | aceita o candidato sugerido como correto |
+| **Ver alternativas** / **Escolher alternativa** / **Ocultar alternativas** | quando há outros candidatos | abre a lista de alternativas; **Usar esta** escolhe uma, e o botão passa a **Selecionado** |
+| **Criar como novo item** | Revisar similaridade e Nova atividade sugerida | descarta a correspondência e cria o item como atividade nova |
+| **Ignorar item** | Revisar similaridade e Nova atividade sugerida | tira o item da esteira |
+
+Pontos de atenção:
+
+- em **Nova atividade sugerida** não há **Aceitar sugestão**, porque não existe candidato;
+- em **Reaproveitar da Matriz** **não há** botão para ignorar nem para criar como novo. Se o candidato não serve, abra as alternativas e escolha outra. Se nenhuma serve, o caminho é criar a esteira e ajustar a atividade depois (capítulo 6);
+- uma decisão pode ser **refeita** a qualquer momento antes de criar: basta clicar em outro botão do mesmo cartão;
+- a alternativa pode ser **uma estrutura inteira** (uma tarefa ou um setor com várias atividades). Nesse caso o cartão mostra **Estrutura da Matriz sugerida**, com áreas, atividades e minutos, e avisa que, ao aceitar, *"esta estrutura representa um reaproveitamento composto da Matriz (não um item novo simples)"*;
+- quando a mesma estrutura é sugerida para mais de um item, ela entra **uma única vez** na esteira.
+
+O Estado de cada item usa estas expressões: **Decisão pendente**, **Candidato principal aceite**, **Alternativa da matriz selecionada**, **Confirmado como novo item** e **Item ignorado pelo revisor**.
+
+[IMAGEM SUGERIDA: Cartão de item em Revisar similaridade com os botões Aceitar sugestão, Escolher alternativa, Criar como novo item e Ignorar item, e a lista de alternativas aberta]
+
+### Peças e observações
+
+Se o documento listava **peças ou insumos**, o painel mostra um aviso de que o SGP+ **não** usa essa informação para montar a esteira nem para controle de estoque: só serviços entram. As peças não aparecem para decisão.
+
+O bloco **Observações operacionais** lista anotações do documento que interessam à operação, ou informa *"Não foram identificadas observações operacionais adicionais."*
+
+### Ajustar os dados da esteira
+
+Em **Dados sugeridos (editáveis)**, o texto reflete a leitura automática — *"não a versão final na base"*. Corrija o que for preciso:
+
+| Campo | Observação |
+|---|---|
+| **Nome da esteira** | **obrigatório**. Sem ele, a criação é recusada |
+| **Cliente** | texto livre |
+| **Veículo** | texto livre |
+| **Modelo / versão** | texto livre |
+| **Placa** | texto livre |
+| **Prazo estimado** | texto livre, sem formato obrigatório |
+| **Observações** | texto livre |
+| **Prioridade sugerida** | **Alta**, **Média** ou **Baixa**. Vem como **Média** quando o documento não indica |
+| **Referência OS (lida)** | só aparece quando o sistema leu o número da OS; é informativo |
+
+> **Nem tudo o que a tela mostra é gravado.** Na configuração padrão do sistema, todo PDF é lido como ordem de serviço do modelo da oficina. Nesse caso, os campos **Modelo / versão**, **Placa**, **Prazo estimado** e **Observações** aparecem **travados**, e **Cliente**, **Placa** e **Prazo estimado** **não são gravados** na esteira, mesmo que a tela mostre ou aceite um valor. Seguem de fato para a esteira o **Nome da esteira**, o **Veículo**, a **Prioridade** e a **Referência OS**, que é acrescentada às observações. Se precisar de cliente, placa ou prazo, preencha depois, em **Alterar Esteira** (capítulo 6).
+
+Em **Itens / etapas inferidos** você vê a estrutura que será criada. A tela a chama de **Opção → Área → Etapa**; na esteira criada, isso corresponde a **tarefa → setor → atividade**. Os títulos de cada nível e o campo **Min** (tempo planejado, em minutos) podem ser editados.
+
+Por padrão, os serviços novos entram em uma tarefa chamada **Itens inferidos do documento**, no setor **Serviço**. Quando você aceita uma estrutura inteira da matriz, uma **tarefa** da matriz entra como tarefa própria na esteira, com os setores e atividades dela; um **setor** da matriz entra como setor da tarefa **Itens inferidos do documento**. Mas atenção ao efeito das decisões sobre o que você editou:
+
+| Decisão | O que acontece com a atividade |
+|---|---|
+| **Manter candidato sugerido** / **Aceitar sugestão** | título e tempo vêm da matriz e **substituem** o que você digitou |
+| **Usar esta** (alternativa) | título e tempo vêm da alternativa escolhida |
+| **Criar como novo item** | vale o que está na tela, com o tempo que você informou |
+| **Ignorar item** | a atividade **não entra** na esteira |
+
+Em atividades novas, o **Min** parte de **0**. A tela não obriga a preencher, mas uma atividade sem tempo previsto não ajuda o planejamento: informe o tempo antes de criar.
+
+### Criar a esteira
+
+1. Confirme que **Pendências de revisão** está em zero e que o **Nome da esteira** está preenchido.
+2. Clique em **Criar esteira no SGP+**.
+3. O sistema abre uma confirmação do navegador:
+   - se havia itens que exigiam revisão: *"Confirmar criação da esteira oficial. Você confirmou os itens que exigiam revisão. A esteira oficial será criada a partir deste draft revisado."*;
+   - sem itens de revisão: *"Confirmar criação da esteira oficial a partir do draft revisado?"*.
+4. Em ambas, o texto traz o **Resumo das decisões**: **Alinhados à matriz**, **Novos confirmados**, **Ignorados pelo revisor** e **Alternativas selecionadas**. Confira os números e confirme.
+
+Durante a criação, o botão mostra **Criando…**. Cancelar a confirmação mantém tudo como estava, sem criar nada.
+
+## O que esperar
+
+### Depois de confirmar
+
+Você é levado ao **detalhe da esteira** criada, com o aviso **"Esteira criada a partir do documento revisto."**
+
+A esteira nasce em **Rascunho / Em elaboração**, como qualquer outra, e **a produção ainda não a vê**. Para o trabalho chegar à fábrica, valem as mesmas etapas do capítulo 6: fazer a esteira avançar, planejar e publicar o plano.
+
+O que a esteira traz:
+
+- as **atividades reaproveitadas** vêm com o **responsável** e a **equipe** que a matriz já tinha como padrão, quando existirem. Atividades novas nascem **sem responsável**;
+- a **quantidade prevista** não é pedida nesta tela. Confira e ajuste cada atividade no detalhe da esteira (capítulo 6);
+- as decisões da revisão ficam registradas internamente na esteira, para rastreabilidade. Não há tela para consultá-las.
+
+Esta tela **não** mostra os atalhos **Ver backlog** e **Ir a Minha fila** que aparecem ao criar pela **Nova esteira**; só o aviso acima.
+
+> Se, após a revisão, não restar nenhuma atividade (por exemplo, todos os itens foram ignorados), a esteira é criada com uma única atividade provisória chamada **Defina as etapas do serviço**, com tempo zero. Edite ou substitua essa atividade antes de planejar.
+
+### Proteções de conteúdo
+
+O sistema não deixa passar para a esteira valores, totais, descontos, condições de pagamento, dados pessoais ou outros dados sensíveis. Eles são retirados na leitura e, se algum trecho suspeito ainda estiver no que você vê na tela, a criação é recusada (ver abaixo). Peças e insumos também ficam de fora.
+
+### Sair da tela no meio da revisão
+
+Depois de enviar um documento, sair pelo menu lateral abre a confirmação **"Sair desta página?"**, avisando que o contexto atual — filtros, seleções ou alterações ainda não guardadas — pode ser descartado. **Cancelar** mantém você na revisão; **Sair e continuar** descarta o rascunho e as decisões. A revisão **não é salva**: se sair, terá de enviar o PDF novamente.
+
+## Quando algo é bloqueado
+
+### Falta de permissão
+
+Sem a permissão de **criar esteiras**, a tela mostra **"Sem permissão para esta área"**. Peça a liberação a quem administra os acessos.
+
+### O botão Criar esteira no SGP+ está desativado
+
+| Causa | Como saber | O que fazer |
+|---|---|---|
+| há itens em **Revisar similaridade** ou **Nova atividade sugerida** sem decisão | **Pendências de revisão** maior que zero | decida cada item pendente |
+| o conteúdo contém dado financeiro ou sensível | aparece em faixa vermelha *"O draft contém conteúdo financeiro ou sensível removido por segurança. Reimporte ou revise o documento antes de criar a esteira."* | retire o trecho do campo em que aparece ou envie o documento de novo |
+| a criação já está em andamento | o botão mostra **Criando…** | aguarde |
+
+O botão fica desativado **sem explicação na própria tela** — a pista é o contador **Pendências de revisão**.
+
+### Mensagens ao tentar criar
+
+| Mensagem | Causa | O que fazer |
+|---|---|---|
+| *"Indique o nome da esteira antes de criar."* | **Nome da esteira** vazio | preencha o campo |
+| *"O draft contém conteúdo financeiro ou sensível removido por segurança. Reimporte ou revise o documento antes de criar a esteira."* | texto com valores, totais ou dados sensíveis nos campos ou nas observações | remova o trecho ou reenvie o documento |
+| *"O draft contém conteúdo não operacional (partItems). Revise antes de criar."* / *"O draft contém campos de debug internos e não pode ser enviado para criação."* | o rascunho contém informação que não deve seguir para a esteira | reenvie o documento; se persistir, abra chamado com a **referência de suporte** |
+| *"Cada opção precisa de um título."* / *"Cada área precisa de um título."* / *"Cada etapa precisa de um título."* | você apagou o título de uma tarefa, de um setor ou de uma atividade | preencha o título que ficou vazio (lembrando: **opção** = tarefa, **área** = setor, **etapa** = atividade) |
+| *"A estrutura contém uma etapa sintética de Matriz. Remova o item agregado e mantenha apenas as atividades reais."* | a estrutura final contém um item agregado que não corresponde a uma atividade real | escolha outra alternativa ou **Criar como novo item** para o serviço envolvido; se persistir, abra chamado |
+
+A mensagem aparece em faixa vermelha no alto da tela. O texto usa a palavra **draft**, que é o **rascunho** deste capítulo.
+
+### Quando o documento não gera rascunho
+
+Se o documento não rende um rascunho utilizável, a tela mostra, em vermelho, *"Não foi possível obter um rascunho utilizável a partir deste documento. Corrija o arquivo ou tente outro envio. Se o problema continuar, contate o suporte."*, com a lista dos motivos e o botão **Enviar outro documento**. O caso mais comum é o arquivo **vazio** (*"Ficheiro vazio; nada a interpretar."*).
+
+Quando o problema é de comunicação, sessão ou serviço, o sistema mostra o erro de duas formas, conforme a gravidade: em **faixa vermelha** no alto da tela, ou em uma **janela de aviso** que precisa ser fechada. Nos dois casos, a tela continua utilizável: corrija o que o aviso indicar e envie de novo. Se a sessão expirou, entre novamente no sistema.
+
+### Ações que não existem nesta tela
+
+| Limitação | Como proceder |
+|---|---|
+| Não é possível **salvar** a revisão para continuar depois | conclua na mesma visita, ou envie o documento de novo |
+| Só se envia **um PDF por vez** | envie um documento, crie a esteira e repita |
+| Não é possível **adicionar ou remover** atividades na lista **Itens / etapas inferidos** | use **Ignorar item** para tirar; para acrescentar, use **Incluir novo item** no detalhe da esteira (capítulo 6) |
+| Não há como informar **responsável**, **equipe** ou **quantidade prevista** aqui | faça no detalhe da esteira, depois de criada |
+| Não é possível **desfazer** a criação nesta tela | a esteira criada é uma esteira normal e segue as regras do capítulo 6 |
+| Peças e insumos do documento são ignorados | não há como importá-los |
+| O sistema **não** lê imagem | use PDF com texto, ou crie a esteira manualmente |
 
 ---
 
