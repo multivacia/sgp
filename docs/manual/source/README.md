@@ -49,6 +49,25 @@ O caminho inverso não é válido: o manual do usuário não é fonte de verdade
 
 Gerador: `scripts/generate-manual-usuario-html.mjs`, com a biblioteca `marked` (devDependency; requer `npm install`). Ele nunca escreve na fonte, produz o mesmo HTML para a mesma fonte (sem data de geração) e gera um arquivo único, sem dependência de rede. Se a validação falhar (capítulos 1 a 21, IDs únicos, links internos do índice, marcador de capítulo pendente, acentuação corrompida, revisão ausente), o HTML não é gravado.
 
+### Abrir o manual: fora e dentro do SGP+
+
+O mesmo arquivo atende os dois usos. Não existe segunda cópia no repositório.
+
+- **Fora do SGP+:** abra `docs/manual/manual-usuario.html` direto no navegador. O seletor **Claro / Escuro** fica no topo e a escolha é guardada no próprio navegador (`sgp.manual.tema`). Sem escolha guardada, vale o tema do sistema operacional. Não há CDN nem requisição de rede.
+- **Dentro do SGP+:** menu **? Ajuda** da barra superior, na mesma aba, em `/manual/manual-usuario.html`. **Como usar esta tela** abre na seção da tela atual; **Manual do usuário** abre no início. O botão Voltar do navegador (ou **Voltar ao SGP+**) retorna à tela anterior.
+
+Parâmetros de URL (todos opcionais; nenhum carrega dados de sessão ou de usuário):
+
+| Parâmetro | Efeito |
+|---|---|
+| `tema=claro` ou `tema=escuro` | define o tema inicial e tem prioridade sobre a preferência guardada. O SGP+ envia o tema atual (Light Executive = claro; os demais = escuro) |
+| `integrado=1` | indica abertura pelo SGP+ e mostra **Voltar ao SGP+** |
+| `#cap-5`, `#sec-3-6`… | âncora de capítulo ou seção, como em qualquer link |
+
+**Publicação:** o plugin `vite-plugin-manual-usuario.ts` serve o HTML gerado em `/manual/manual-usuario.html` no `npm run dev` e o inclui, byte a byte, em `dist/manual/` no `npm run build`. Rode `npm run manual:usuario:html` antes do build quando a fonte mudar. O build usa o arquivo que estiver em `docs/manual/`.
+
+**Mapa tela → seção:** fica em um único arquivo, `src/lib/help/manual-help.ts`. O teste `manual-help.test.ts` falha se alguma âncora mapeada deixar de existir no HTML gerado. Ao renomear um título do manual, rode o teste e ajuste o mapa. Os títulos numerados (por exemplo `16.7`) mantêm o ID; os demais derivam do texto do título.
+
 **PDF:** ainda não tem fluxo oficial.
 
 ## Outros caminhos relacionados

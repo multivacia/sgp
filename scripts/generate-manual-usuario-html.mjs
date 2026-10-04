@@ -9,6 +9,12 @@
  *   npm run manual:usuario:html:check    só valida: falha se o HTML em disco estiver
  *                                        desatualizado em relação à fonte ou inválido
  *
+ * Tema e modo de abertura (ver docs/manual/source/README.md):
+ *   ?tema=claro|escuro   tema inicial (tem prioridade sobre a preferência guardada)
+ *   ?integrado=1         aberto a partir do SGP+ (mostra "Voltar ao SGP+")
+ * Sem parâmetros, vale a preferência guardada no navegador (sgp.manual.tema) e,
+ * na falta dela, a do sistema operacional. O seletor Claro/Escuro grava a preferência.
+ *
  * A saída é determinística: mesma fonte gera o mesmo HTML, byte a byte
  * (sem data de geração nem qualquer valor variável).
  * Fins de linha: a fonte é normalizada para LF antes do parsing e o HTML é sempre
@@ -200,13 +206,25 @@ function renderHtml(doc) {
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="generator" content="scripts/generate-manual-usuario-html.mjs" />
+  <meta name="color-scheme" content="dark light" />
   <title>${escapeHtml(doc.title)}</title>
+  <script>
+${THEME_HEAD_SCRIPT}
+  </script>
   <style>
 ${CSS}
   </style>
 </head>
 <body>
 <div class="page-wrap">
+
+  <div class="doc-toolbar">
+    <a class="back-sgp" id="voltar-sgp" href="/app/">← Voltar ao SGP+</a>
+    <div class="theme-switch" role="group" aria-label="Tema do manual">
+      <button type="button" data-tema="claro" aria-pressed="false">Claro</button>
+      <button type="button" data-tema="escuro" aria-pressed="true">Escuro</button>
+    </div>
+  </div>
 
   <header class="doc-header">
     <div class="badge">SGP+ · Manual do Usuário</div>
@@ -227,12 +245,68 @@ ${chaptersMarkup}
   </footer>
 
 </div>
+<script>
+${THEME_BODY_SCRIPT}
+</script>
 </body>
 </html>
 `
 }
 
+/**
+ * Script no <head>: define o tema ANTES da primeira pintura (sem piscar).
+ * Prioridade: ?tema= (SGP+) > preferência guardada > tema do sistema > escuro.
+ * Não lê nem grava nada além da preferência de tema; não faz nenhuma requisição.
+ */
+const THEME_HEAD_SCRIPT = `    (function () {
+      var root = document.documentElement;
+      var valid = function (v) { return v === 'claro' || v === 'escuro'; };
+      var params = new URLSearchParams(window.location.search);
+      var theme = params.get('tema');
+      if (!valid(theme)) {
+        theme = null;
+        try { var saved = window.localStorage.getItem('sgp.manual.tema'); if (valid(saved)) theme = saved; } catch (e) {}
+      }
+      if (!theme) {
+        theme = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'claro' : 'escuro';
+      }
+      root.setAttribute('data-theme', theme);
+      if (params.get('integrado') === '1') root.setAttribute('data-modo', 'integrado');
+    })();`
+
+/** Script no fim do <body>: seletor Claro/Escuro e retorno ao SGP+ (voltar no histórico). */
+const THEME_BODY_SCRIPT = `    (function () {
+      var root = document.documentElement;
+      var buttons = document.querySelectorAll('.theme-switch button');
+      function sync() {
+        var current = root.getAttribute('data-theme');
+        for (var i = 0; i < buttons.length; i++) {
+          buttons[i].setAttribute('aria-pressed', String(buttons[i].getAttribute('data-tema') === current));
+        }
+      }
+      for (var i = 0; i < buttons.length; i++) {
+        buttons[i].addEventListener('click', function (event) {
+          var theme = event.currentTarget.getAttribute('data-tema');
+          root.setAttribute('data-theme', theme);
+          try { window.localStorage.setItem('sgp.manual.tema', theme); } catch (e) {}
+          sync();
+        });
+      }
+      sync();
+      document.addEventListener('click', function (event) {
+        var link = event.target.closest ? event.target.closest('a[href^="#"]') : null;
+        if (link) root.classList.add('rolagem-suave');
+      });
+      var back = document.getElementById('voltar-sgp');
+      if (back) {
+        back.addEventListener('click', function (event) {
+          if (window.history.length > 1) { event.preventDefault(); window.history.back(); }
+        });
+      }
+    })();`
+
 const CSS = `    :root {
+      color-scheme: dark;
       --gold:        #c9a227;
       --gold-dim:    #a07e18;
       --navy:        #101824;
@@ -244,14 +318,55 @@ const CSS = `    :root {
       --border:      rgba(255,255,255,0.08);
       --text:        #e2e8f0;
       --text-muted:  #94a3b8;
+      --link:        #6fa8d6;
+      --accent:      #c9a227;
+      --accent-bg:   rgba(201,162,39,.15);
+      --accent-line: rgba(201,162,39,.2);
+      --heading:     #ffffff;
+      --strong:      #f1f5f9;
+      --h4:          #cbd5e1;
+      --code-bg:     rgba(62,123,170,.18);
+      --code-fg:     #93c5fd;
+      --pre-fg:      #cbd5e1;
+      --callout-bg:  rgba(62,123,170,.12);
+      --callout-fg:  #dbeafe;
+      --row-hover:   rgba(255,255,255,.025);
+      --focus:       #7db6e8;
+      --control-bg:  #1a2637;
       --font-title:  'Montserrat', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
       --font-body:   'Open Sans', 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
       --font-mono:   'Cascadia Mono', Consolas, 'Courier New', monospace;
     }
 
+    :root[data-theme="claro"] {
+      color-scheme: light;
+      --void:        #f4f6f9;
+      --surface:     #ffffff;
+      --surface-2:   #eaeff5;
+      --border:      rgba(15,23,42,0.14);
+      --text:        #1e293b;
+      --text-muted:  #475569;
+      --link:        #1c5a8c;
+      --accent:      #7a5c0c;
+      --accent-bg:   rgba(201,162,39,.18);
+      --accent-line: rgba(122,92,12,.35);
+      --heading:     #0f172a;
+      --strong:      #0f172a;
+      --h4:          #334155;
+      --code-bg:     #e6edf6;
+      --code-fg:     #1e3a8a;
+      --pre-fg:      #1e293b;
+      --callout-bg:  #e8f1fa;
+      --callout-fg:  #12304d;
+      --row-hover:   rgba(15,23,42,.04);
+      --focus:       #1c5a8c;
+      --control-bg:  #ffffff;
+    }
+
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-    html { scroll-behavior: smooth; }
+    /* Rolagem suave só ao clicar em link interno: a âncora da URL abre já na posição certa. */
+    html.rolagem-suave { scroll-behavior: smooth; }
 
     body {
       background: var(--void);
@@ -268,8 +383,49 @@ const CSS = `    :root {
       padding: 48px 24px 80px;
     }
 
-    a { color: var(--blue-bright); }
-    a:hover { color: var(--gold); }
+    a { color: var(--link); }
+    a:hover { color: var(--accent); }
+
+    /* ── Barra do manual: tema e retorno ao SGP+ ── */
+    .doc-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 28px;
+    }
+    .back-sgp { display: none; font-size: 14px; font-weight: 600; text-decoration: none; }
+    :root[data-modo="integrado"] .back-sgp { display: inline-flex; min-height: 44px; align-items: center; }
+    .back-sgp:hover { text-decoration: underline; }
+    .theme-switch {
+      display: inline-flex;
+      margin-left: auto;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: var(--control-bg);
+      padding: 3px;
+      gap: 2px;
+    }
+    .theme-switch button {
+      min-height: 44px;
+      min-width: 76px;
+      padding: 0 14px;
+      border: 0;
+      border-radius: 8px;
+      background: transparent;
+      color: var(--text-muted);
+      font: inherit;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .theme-switch button:hover { color: var(--text); }
+    .theme-switch button[aria-pressed="true"] { background: var(--accent-bg); color: var(--accent); }
+
+    a:focus-visible, button:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; border-radius: 4px; }
+    :is(h2, h3, h4, h5, h6):target { outline: 2px solid var(--focus); outline-offset: 6px; border-radius: 4px; }
+    @media (prefers-reduced-motion: reduce) { html.rolagem-suave { scroll-behavior: auto; } }
 
     /* ── Header ── */
     .doc-header {
@@ -284,9 +440,9 @@ const CSS = `    :root {
       font-weight: 700;
       letter-spacing: .08em;
       text-transform: uppercase;
-      color: var(--gold);
-      border: 1px solid rgba(201,162,39,.35);
-      background: rgba(201,162,39,.08);
+      color: var(--accent);
+      border: 1px solid var(--accent-line);
+      background: var(--accent-bg);
       border-radius: 4px;
       padding: 3px 10px;
       margin-bottom: 14px;
@@ -295,7 +451,7 @@ const CSS = `    :root {
       font-family: var(--font-title);
       font-size: 2rem;
       font-weight: 700;
-      color: #fff;
+      color: var(--heading);
       line-height: 1.2;
       margin-bottom: 16px;
     }
@@ -323,8 +479,8 @@ const CSS = `    :root {
     .toc ol { list-style: none; }
     .toc li { padding: 6px 0; border-bottom: 1px solid var(--border); }
     .toc li:last-child { border-bottom: none; }
-    .toc a { color: var(--blue-bright); text-decoration: none; }
-    .toc a:hover { color: var(--gold); text-decoration: underline; }
+    .toc a { color: var(--link); text-decoration: none; }
+    .toc a:hover { color: var(--accent); text-decoration: underline; }
     .toc-chapter { font-weight: 600; font-size: 14px; display: inline-flex; gap: 10px; align-items: baseline; }
     .toc-num {
       display: inline-block;
@@ -332,8 +488,8 @@ const CSS = `    :root {
       text-align: center;
       font-family: var(--font-title);
       font-size: 12px;
-      color: var(--gold);
-      background: rgba(201,162,39,.15);
+      color: var(--accent);
+      background: var(--accent-bg);
       border-radius: 6px;
       padding: 1px 4px;
     }
@@ -352,8 +508,8 @@ const CSS = `    :root {
     h2 {
       font-size: 1.35rem;
       font-weight: 700;
-      color: var(--gold);
-      border-bottom: 1px solid rgba(201,162,39,.2);
+      color: var(--accent);
+      border-bottom: 1px solid var(--accent-line);
       padding-bottom: 8px;
       margin-bottom: 20px;
     }
@@ -364,7 +520,7 @@ const CSS = `    :root {
       min-width: 30px;
       height: 30px;
       padding: 0 4px;
-      background: rgba(201,162,39,.15);
+      background: var(--accent-bg);
       border-radius: 6px;
       font-size: 14px;
       margin-right: 8px;
@@ -373,13 +529,13 @@ const CSS = `    :root {
     h3 {
       font-size: 1.05rem;
       font-weight: 700;
-      color: #fff;
+      color: var(--heading);
       margin: 32px 0 12px;
     }
     h4 {
       font-size: .95rem;
       font-weight: 600;
-      color: #cbd5e1;
+      color: var(--h4);
       margin: 24px 0 10px;
     }
     h5, h6 {
@@ -390,7 +546,7 @@ const CSS = `    :root {
     }
 
     p { margin-bottom: 14px; }
-    strong { color: #f1f5f9; }
+    strong { color: var(--strong); }
 
     ul, ol { padding-left: 24px; margin-bottom: 14px; }
     li { margin-bottom: 4px; }
@@ -399,8 +555,8 @@ const CSS = `    :root {
     code {
       font-family: var(--font-mono);
       font-size: 13px;
-      background: rgba(62,123,170,.18);
-      color: #93c5fd;
+      background: var(--code-bg);
+      color: var(--code-fg);
       padding: 2px 6px;
       border-radius: 4px;
     }
@@ -415,7 +571,7 @@ const CSS = `    :root {
     pre code {
       background: none;
       padding: 0;
-      color: #cbd5e1;
+      color: var(--pre-fg);
       line-height: 1.8;
       white-space: pre;
     }
@@ -443,23 +599,23 @@ const CSS = `    :root {
       min-width: 120px;
     }
     tbody tr:last-child td { border-bottom: none; }
-    tbody tr:hover { background: rgba(255,255,255,.025); }
+    tbody tr:hover { background: var(--row-hover); }
 
     /* ── Avisos ── */
     .callout {
-      background: rgba(62,123,170,.12);
-      border-left: 3px solid var(--blue-bright);
+      background: var(--callout-bg);
+      border-left: 3px solid var(--link);
       border-radius: 8px;
       padding: 14px 18px;
       margin-bottom: 18px;
       font-size: 14px;
-      color: #dbeafe;
+      color: var(--callout-fg);
     }
     .callout p:last-child { margin-bottom: 0; }
-    .callout strong { color: #fff; }
+    .callout strong { color: var(--heading); }
 
     .image-placeholder {
-      border: 1px dashed rgba(148,163,184,.35);
+      border: 1px dashed var(--border);
       border-radius: 8px;
       padding: 10px 14px;
       font-size: 12.5px;
@@ -469,7 +625,7 @@ const CSS = `    :root {
 
     .back-to-top { font-size: 12px; text-align: right; margin-top: 8px; }
     .back-to-top a { text-decoration: none; color: var(--text-muted); }
-    .back-to-top a:hover { color: var(--gold); }
+    .back-to-top a:hover { color: var(--accent); }
 
     .doc-footer {
       margin-top: 64px;
@@ -492,8 +648,9 @@ const CSS = `    :root {
     }
 
     @media print {
-      :root { --border: #cbd5e1; --text-muted: #475569; }
-      html { scroll-behavior: auto; }
+      :root, :root[data-theme] { --border: #cbd5e1; --text-muted: #475569; }
+      .doc-toolbar { display: none; }
+      html.rolagem-suave { scroll-behavior: auto; }
       body { background: #fff; color: #111; font-size: 11pt; }
       .page-wrap { max-width: none; padding: 0; }
       .doc-header h1, h3, strong, .callout strong, .doc-meta strong { color: #111; }
@@ -555,6 +712,10 @@ function validate(html, doc) {
   if (/PENDENTE DE ENRIQUECIMENTO/i.test(html)) problems.push('marcador "PENDENTE DE ENRIQUECIMENTO" presente')
   if (html.includes('\uFFFD')) problems.push('caractere de substituição U+FFFD presente (acentuação corrompida)')
   if (/Ã[\u0080-\u00BF]|Â[\u0080-\u00BF]/.test(html)) problems.push('sequência típica de mojibake (UTF-8 lido como Latin-1) presente')
+
+  if (!html.includes('class="theme-switch"')) problems.push('seletor de tema Claro/Escuro ausente')
+  if (!html.includes('data-theme="claro"') || !html.includes('prefers-color-scheme')) problems.push('suporte aos temas claro/escuro ausente')
+  if (/\bfetch\s*\(|XMLHttpRequest|sendBeacon|document\.cookie/.test(html)) problems.push('script do manual faz requisição ou usa cookies')
 
   if (!doc.revision) problems.push('linha "Revisão deste manual" não encontrada na fonte')
   else if (!html.includes(doc.revision)) problems.push(`revisão ${doc.revision} ausente no HTML`)
