@@ -3306,7 +3306,7 @@ Sua credencial pode estar em um de quatro estados:
 | bloqueada | muitas tentativas erradas de PIN | esperar o bloqueio passar, ou pedir ao gestor para redefinir o PIN |
 | desabilitada | o acesso foi desligado | falar com o gestor |
 
-Quem libera, redefine PIN e desliga acesso é quem administra colaboradores, em **Colaboradores** (capítulo 16).
+Quem libera e redefine o PIN é quem administra colaboradores, em **Colaboradores** (capítulo 16). Não existe uma ação específica para desligar o PIN: para impedir que alguém entre no Modo Fábrica, a administração **inativa o cadastro do colaborador**, que deixa de aparecer na seleção do totem e do navegador da fábrica.
 
 ## Como fazer
 
@@ -4915,7 +4915,7 @@ Os termos técnicos abaixo são reproduzidos **apenas** para você reconhecê-lo
 | Situação da atividade exibida em código, no painel de encaixe do planejamento | **situação da atividade** | a tela ainda mostra o código interno em alguns casos |
 | **"Mês atual (UTC)"**, no seletor de período | mês atual pelo calendário local | o cálculo usa o fuso de São Paulo; o rótulo está incorreto |
 | Após redefinir o PIN: "Próximo acesso exigirá nova senha." | próximo acesso exigirá **novo PIN** | o recurso é o PIN do Modo Fábrica, não a senha |
-| Botão **"Remover (soft delete)"**, em Usuários e Colaboradores | **remover preservando o histórico** | o registro deixa de aparecer e pode ser restaurado |
+| Botão **"Remover (soft delete)"**, em Usuários e Colaboradores | **remover preservando o histórico** | o registro deixa de aparecer nas listas e a opção de restaurar não fica acessível pela tela; trate a remoção como definitiva |
 | Textos de filtro que citam nomes internos de parâmetro, no Painel operacional | o filtro correspondente | sem efeito sobre o uso; basta usar os filtros da tela |
 | **"passo"**, nas telas de Apontamento gerencial ("Lançamentos no passo", "Apontamento gerencial neste passo") | **atividade** | mesmo conceito, nome diferente |
 | **"Voltando ao Kiosk…"**, após registrar por Outra atividade ou Extra Esteira no totem | voltando ao **Modo Fábrica** | "Kiosk" é o nome interno do totem |

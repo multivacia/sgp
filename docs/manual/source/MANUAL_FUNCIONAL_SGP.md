@@ -1967,7 +1967,7 @@ A quantidade máxima de tentativas e a duração do bloqueio são parâmetros de
 
 ## 40.8 Usuário inativo
 
-Usuário inativo não pode autenticar nem continuar utilizando sessão previamente válida.
+Usuário inativo não pode autenticar. Uma sessão que já estava aberta não é encerrada automaticamente apenas pela inativação.
 
 Mensagem:
 
