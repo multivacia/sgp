@@ -3615,13 +3615,293 @@ O totem ocupa a tela inteira, sem barra de navegador, e só a área das atividad
 
 # 14. Evolução das Esteiras
 
-> [PENDENTE DE ENRIQUECIMENTO — não publicar como capítulo final]
+## Para que serve
 
-- previsto, realizado e tempo excedido por atividade
-- as classificações de desvio e as faixas de cada uma
-- filtros disponíveis
-- selecionar esteiras e imprimir o resultado
-- como atividade dispensada afeta o total
+**Evolução das Esteiras** compara, lado a lado, o **tempo previsto** e o **tempo realizado** do trabalho da fábrica. A tela desce do geral para o detalhe: começa na esteira e vai até cada apontamento registrado.
+
+São quatro níveis, na mesma sequência da estrutura da esteira:
+
+```text
+Esteira
+└── Tarefa
+    └── Setor
+        └── Atividade
+            └── Apontamentos
+```
+
+Em cada nível a tela mostra quanto tempo estava previsto, quanto já foi registrado, quanto falta, quanto passou do previsto e uma classificação de desvio. Serve para responder a perguntas como: esta esteira está consumindo mais tempo do que o planejado? Em qual tarefa, setor ou atividade o tempo estourou? Quem registrou esse tempo?
+
+A tela é de **consulta e impressão**. Ela não altera planejamento, não cria nem corrige apontamentos e não muda a situação de esteiras ou atividades.
+
+## Onde fica
+
+No menu lateral, entre em **Gestão → Evolução das Esteiras**.
+
+O título da página é **Evolução das Esteiras**, com a linha de apoio *"Acompanhe o progresso previsto x realizado de esteiras, tarefas, setores, atividades e apontamentos."*
+
+A página é organizada de cima para baixo:
+
+1. a **faixa de filtros**, com o botão **Gerar PDF** à direita;
+2. a linha **Resumo geral**, com os totais do que está sendo exibido;
+3. a **tabela**, com uma linha por esteira e as linhas internas que você abrir;
+4. o **rodapé da tabela**, com a contagem de registros e a paginação.
+
+Os dados carregam sozinhos ao abrir a página. Não é necessário acionar nada para a primeira consulta.
+
+[IMAGEM SUGERIDA: Tela Evolução das Esteiras completa — faixa de filtros com Gerar PDF, linha Resumo geral e as primeiras linhas da tabela com as colunas Previsto, Realizado, Falta, Excedente, Evolução e Eficiência]
+
+## Quem costuma ter acesso
+
+O acesso é controlado por **permissão**, não por nome de perfil. A permissão exigida é a de **criar esteiras** — a mesma que libera **Nova esteira**, **Por documento**, **Planejamento** e **Agenda da semana**.
+
+Na configuração padrão do sistema, essa permissão está atribuída à **administração** e à **gestão**. Contas de colaborador, sem permissões de gestão, não têm acesso.
+
+A verificação acontece em dois pontos. Ao abrir a tela sem a permissão, aparece o aviso **"Sem permissão para esta área"**, com a orientação de contatar um administrador. A consulta dos dados exige a mesma permissão no servidor, de modo que não há caminho alternativo para ver o conteúdo sem ela.
+
+O filtro por colaborador usa a lista de colaboradores e está disponível para quem já conseguiu abrir a tela.
+
+## Como fazer
+
+### Consultar a evolução
+
+1. Abra **Gestão → Evolução das Esteiras**. A consulta é feita automaticamente.
+2. Leia a linha **Resumo geral** para ter a visão do conjunto.
+3. Localize a esteira que interessa na tabela.
+4. Clique na seta (**›**) à esquerda do nome para abrir as **tarefas**.
+5. Abra a tarefa para ver os **setores**; abra o setor para ver as **atividades**.
+6. Abra a atividade para ver os **apontamentos analíticos** registrados nela.
+
+Cada nível é aberto e fechado de forma independente. A seta aparece apenas quando existe conteúdo abaixo daquela linha.
+
+### Filtrar
+
+A faixa superior tem quatro campos sempre visíveis:
+
+| Campo | O que faz |
+|---|---|
+| **Período** | duas datas, de e até. Limita quais **apontamentos** entram na conta |
+| **Esteira** | busca por parte do **nome** ou do **código** da esteira |
+| **Status** | deixa apenas as esteiras na situação escolhida. O padrão é **Todos** |
+| **Agrupar por** | fixo em **Hierarquia**; não há outra opção para escolher |
+
+O botão **Filtros** abre dois campos adicionais:
+
+- **Colaborador** — deixa apenas as esteiras em que a pessoa escolhida tem apontamento ou alocação, e limita os apontamentos exibidos aos dela. O padrão é **Todos**;
+- **Somente com tempo excedido** — deixa apenas as esteiras cujo total passou do previsto.
+
+A consulta é refeita automaticamente pouco depois de você parar de digitar ou de alterar um campo. **Não existe botão Atualizar nesta tela:** para buscar dados novos sem mexer nos filtros, recarregue a página.
+
+### Selecionar esteiras e gerar o PDF
+
+1. Marque a caixa na coluna **Seleção**, na linha da esteira. A seleção existe apenas no nível da esteira.
+2. Para marcar de uma vez todas as esteiras da página atual, use a caixa no cabeçalho da coluna.
+3. Confira o contador abaixo do botão: enquanto nada estiver marcado, ele mostra **"Selecione ao menos uma esteira."**; depois, a quantidade selecionada.
+4. Clique em **Gerar PDF**. O sistema abre a janela de impressão do navegador, onde você escolhe a impressora ou salva como PDF.
+
+A seleção é mantida enquanto você muda de página e de filtro. Esteiras que deixam de aparecer no resultado saem da seleção.
+
+### Imprimir o ticket de uma atividade
+
+1. Abra a esteira até o nível **Atividade**.
+2. Na linha da atividade, clique em **Imprimir ticket**.
+
+O ticket sai na impressora térmica quando o agente de impressão local está disponível no computador; caso contrário, o sistema usa a impressão do navegador.
+
+### Navegar entre as páginas
+
+O rodapé da tabela mostra quantos registros estão sendo exibidos e o total. É possível escolher **10**, **25** ou **50** linhas por página — o padrão é 25 — e avançar ou voltar com as setas. A contagem considera **esteiras**, não as linhas internas abertas.
+
+## O que esperar
+
+### As colunas da tabela
+
+As mesmas colunas valem para todos os níveis:
+
+| Coluna | O que mostra |
+|---|---|
+| **Item** | o nível (Esteira, Tarefa, Setor, Atividade), o nome e, na esteira, o código. Na atividade, o nome do responsável aparece ao lado |
+| **Status** | a situação da esteira ou da atividade. Tarefa e setor não têm situação própria e mostram **—** |
+| **Previsto** | o tempo previsto. Mostra **—** quando não há tempo previsto |
+| **Realizado** | o tempo já registrado em apontamentos |
+| **Falta** | quanto ainda falta para alcançar o previsto. Nunca fica negativo |
+| **Excedente** | quanto passou do previsto, destacado em âmbar. Mostra **—** quando não passou |
+| **Evolução** | o percentual de realizado sobre previsto, com barra de progresso |
+| **Eficiência** | a comparação entre previsto e realizado, com a classificação de desvio |
+| **Seleção** | a caixa de seleção, apenas na linha da esteira |
+
+Os tempos aparecem no formato de horas e minutos, como `02h30` ou `0h45`.
+
+A coluna **Evolução** pode passar de 100% quando o realizado supera o previsto — a barra enche até o limite, mas o número continua subindo. Quando não há tempo previsto, a coluna mostra **—**.
+
+### A linha Resumo geral
+
+Acima da tabela, o **Resumo geral** mostra, para tudo o que o filtro devolveu: a quantidade de esteiras, **Previsto**, **Realizado**, **Falta**, **Excedente**, **Evolução média** e **Eficiência ponderada**.
+
+Dois pontos mudam a leitura desses números:
+
+- **Falta** e **Excedente** do resumo são valores **líquidos** do conjunto: somam-se todos os previstos e todos os realizados e compara-se o resultado. Uma esteira adiantada compensa outra atrasada, e o excedente do conjunto pode ficar menor do que o excedente visível nas linhas, ou até aparecer como **—** mesmo havendo esteiras estouradas;
+- **Evolução média** é a **média dos percentuais das esteiras** que têm tempo previsto, e não o realizado total dividido pelo previsto total. Os dois cálculos não coincidem.
+
+O resumo acompanha os filtros, inclusive a paginação não o altera: ele descreve todo o resultado, não apenas a página visível.
+
+### A classificação de desvio
+
+A coluna **Eficiência** compara previsto e realizado. O percentual é o **previsto sobre o realizado**: acima de 100% o trabalho levou menos tempo do que o previsto; abaixo de 100%, levou mais. Abaixo do percentual aparecem a diferença em minutos e em percentual, como `+15 min · +50%`.
+
+Quando há base de cálculo, a classificação é uma destas cinco:
+
+| Classificação | Quando aparece |
+|---|---|
+| **Mais rápido que previsto** | o realizado ficou abaixo do previsto |
+| **Dentro do previsto** | realizado e previsto são iguais |
+| **Leve desvio** | o realizado passou do previsto em até 10% |
+| **Atenção** | passou em mais de 10% e até 30% |
+| **Crítico** | passou em mais de 30% |
+
+Há três situações em que **não existe base de cálculo** e nenhuma classificação é atribuída:
+
+| Situação | O que significa |
+|---|---|
+| **Sem tempo previsto** | a atividade não tem tempo previsto registrado |
+| **Não iniciada** | tem tempo previsto, nenhum apontamento e não está concluída |
+| **Concluída sem apontamento** | está concluída, tem tempo previsto, mas nenhum tempo foi registrado |
+
+Nesses casos a célula mostra o texto da situação ou, quando nem isso se aplica, **"Sem base calculável"**.
+
+Na linha da atividade, abaixo da classificação aparece ainda **Parcial** — quando a atividade entrou na conta sem estar concluída — ou **Concluída**.
+
+### Como a eficiência do conjunto é formada
+
+Nas linhas de setor, tarefa e esteira, e também no **Resumo geral**, a eficiência é **ponderada**: somam-se os previstos e os realizados **apenas das atividades que têm base de cálculo** e aplica-se a mesma tabela de faixas ao resultado. Atividades sem tempo previsto, não iniciadas ou concluídas sem apontamento ficam **fora** desse cálculo.
+
+Para que nada se perca de vista, essas atividades são contadas ao lado, em uma linha de apoio como:
+
+`4 no cálculo · 1 parcial · 2 não iniciadas · 1 sem tempo previsto`
+
+Essa contagem explica diferenças entre o que a classificação indica e o volume de atividades existente. Uma esteira com muitas atividades não iniciadas pode aparecer **Dentro do previsto** porque apenas as poucas atividades com tempo registrado entraram na conta.
+
+Quando nenhuma atividade tem base de cálculo — ou quando o previsto ou o realizado somados ficam em zero — não há percentual e a célula fica em **—** ou **"Sem base calculável"**, ainda que as contagens de apoio apareçam.
+
+### As situações exibidas
+
+Nenhuma situação é excluída da consulta. Aparecem esteiras em **Rascunho / Em elaboração**, **Aguardando planejamento**, **Em planejamento**, **A iniciar**, **Em andamento**, **Finalizada** e **Cancelada** — inclusive esteiras já encerradas e canceladas, que continuam somando no **Resumo geral**. Para analisar só o trabalho corrente, use o filtro **Status**.
+
+Nas atividades, as situações possíveis são **Aberta**, **Em andamento**, **Concluída**, **Reaberta**, **Bloqueada** e **Dispensada**.
+
+Esteiras removidas do sistema não aparecem.
+
+### De onde vêm os números
+
+- O **previsto** vem da estrutura da esteira: é o tempo unitário da atividade **multiplicado pela quantidade prevista**. Quando a quantidade não está informada, o sistema considera uma unidade. A quantidade prevista **não é exibida em coluna própria** — ela entra já embutida no previsto;
+- o **realizado** vem dos apontamentos de tempo da atividade, respeitando os filtros de período e de colaborador;
+- o **responsável** mostrado na atividade é apenas o **responsável principal** dela. Alocações de equipe e colaboradores adicionais não aparecem nessa coluna;
+- os totais de tarefa, setor e esteira são sempre a **soma das atividades** abaixo deles, nunca um valor informado à parte.
+
+Alterar o planejamento da semana não muda os números desta tela: ela lê a estrutura da esteira e os apontamentos, não a distribuição semanal.
+
+### Os apontamentos analíticos
+
+Ao abrir uma atividade, aparece o bloco **Apontamentos analíticos**, com um registro por linha, **do mais recente para o mais antigo**. Cada linha traz:
+
+- a **data de realização** do trabalho, no formato dia/mês/ano, pela referência de São Paulo — e não a data em que o lançamento foi digitado;
+- o **nome de quem registrou**;
+- um selo com a **forma de registro** do apontamento;
+- o **tempo** do apontamento, na coluna Realizado;
+- a **observação**, quando houver;
+- a **quantidade executada** (**Qtd**), quando informada.
+
+As demais colunas ficam em **—** nas linhas de apontamento: previsto, falta, excedente, evolução e eficiência existem por atividade, não por apontamento.
+
+Se a atividade estiver aberta e não houver registros, aparece **"Nenhum apontamento analítico registrado."**
+
+### Atividade dispensada
+
+Uma atividade **Dispensada** é tratada de forma própria, e vale entender exatamente como:
+
+- **na linha dela**, o tempo previsto original continua visível na coluna **Previsto**;
+- **Falta** e **Evolução** ficam zerados: não se espera mais execução dela;
+- a coluna **Eficiência** mostra **Sem tempo previsto**, porque a atividade foi retirada da base de cálculo;
+- **nos totais** de setor, tarefa, esteira e no **Resumo geral**, o previsto dela conta como **zero** — ou seja, dispensar uma atividade reduz o previsto do conjunto.
+
+Há um ponto que exige atenção na leitura: se a atividade dispensada **já tinha apontamentos**, esse tempo realizado **continua somando** nos totais acima dela, enquanto o previsto correspondente foi retirado. O conjunto pode então apresentar excedente, ou uma eficiência pior, por causa de tempo registrado em algo que deixou de ser previsto. Nesse caso, abra as atividades e confira as dispensadas antes de concluir que houve estouro de tempo.
+
+[IMAGEM SUGERIDA: Linha de atividade com o selo Dispensada mostrando Previsto preenchido, Falta e Evolução zerados e Eficiência como Sem tempo previsto, com a linha do setor acima evidenciando o previsto reduzido]
+
+### O que o período muda e o que não muda
+
+O filtro **Período** limita **apenas os apontamentos**. Ele não limita quais esteiras aparecem nem o tempo previsto.
+
+Em consequência, ao escolher uma janela curta você verá o previsto completo das atividades diante de um realizado parcial. O resultado tende a mostrar baixa evolução e muitas atividades como **Não iniciada**, sem que isso signifique atraso. Para avaliar execução total, deixe o período em branco.
+
+As datas informadas são interpretadas pelo fuso do computador em uso, enquanto a data de realização exibida nos apontamentos segue a referência de São Paulo. Em um equipamento configurado em outro fuso, um apontamento no limite da janela pode entrar ou sair do resultado de forma diferente do que a data mostrada sugere.
+
+### O resultado do PDF
+
+O documento gerado traz, nesta ordem: o título **Evolução das Esteiras**, a data e hora de geração, a linha de filtros aplicados, o **Resumo geral** das esteiras selecionadas e, em seguida, um bloco por esteira.
+
+Dois pontos diferem da tela:
+
+- cada bloco sai com a **hierarquia inteira aberta** — tarefas, setores, atividades e apontamentos — independentemente do que você tinha expandido na tela;
+- o documento **não traz a coluna Eficiência**. Ele é um relatório de previsto, realizado, falta, excedente e evolução; a classificação de desvio permanece apenas na tela.
+
+O **Resumo geral** do documento é recalculado apenas sobre as esteiras **selecionadas**, e por isso costuma diferir do resumo exibido na tela, que considera todo o resultado do filtro.
+
+Na linha de filtros aplicados, a situação escolhida e as datas aparecem no formato interno do sistema, e o filtro de colaborador aparece como **"Colaborador filtrado"**, sem o nome da pessoa. Para registrar com clareza o recorte usado, anote-o junto ao documento.
+
+### O ticket da atividade
+
+O ticket impresso identifica o trabalho e traz: esteira (com o código, quando existir), tarefa, setor, atividade, um código curto de identificação da atividade, a situação, os tempos previsto, realizado e pendente, o responsável e a data e hora da impressão.
+
+A impressão sai pela impressora térmica quando o agente local está disponível. Quando não está, o sistema recorre à impressão do navegador. **Esta tela não exibe aviso quando essa troca acontece:** se o ticket abrir a janela de impressão do navegador em vez de sair na impressora térmica, é esse o motivo.
+
+## Quando algo é bloqueado
+
+### Falta de permissão
+
+Sem a permissão de **criar esteiras**, a tela não aparece no menu e o endereço direto mostra **"Sem permissão para esta área"**, com a orientação de contatar um administrador. Não há visão parcial nem somente-leitura reduzida: ou a permissão existe, ou o conteúdo não é exibido.
+
+### Enquanto os dados carregam
+
+Durante a consulta, a área da tabela mostra **"Carregando evolução das esteiras…"**. Os filtros continuam acessíveis; cada alteração reinicia a busca.
+
+### Quando não há dados
+
+| O que aparece | Quando aparece |
+|---|---|
+| **"Nenhuma esteira encontrada com os filtros atuais."** | nenhuma esteira atende à combinação de filtros |
+| **"Nenhum apontamento analítico registrado."** | a atividade aberta não tem apontamentos no recorte atual |
+| **Nenhum registro**, no rodapé | a tabela está sem linhas |
+
+Quando a mensagem de ausência de esteiras aparecer sem explicação óbvia, verifique a combinação de filtros — em especial **Período**, **Colaborador** e **Somente com tempo excedido**, que atuam em conjunto. Limpe os filtros antes de concluir que não existem dados.
+
+Uma esteira **sem estrutura cadastrada** aparece na tabela, mas sem seta de abertura, com **Previsto** e **Evolução** em **—** e a eficiência como **"Sem base calculável"**. Não é erro: não há atividades para comparar.
+
+### Quando a consulta falha
+
+Há duas respostas diferentes, conforme o tipo de falha:
+
+- em falhas tratadas como recuperáveis, aparece um painel vermelho com a mensagem do sistema e o botão **Tentar novamente**;
+- em falhas impeditivas — sessão expirada, falta de permissão no servidor, ausência de comunicação ou indisponibilidade do serviço — abre-se uma janela com o título **"Não foi possível carregar a evolução das esteiras"** e a mensagem *"Ocorreu um problema ao obter os dados. Tente novamente em instantes ou confirme a sua sessão."*, com o botão **Entendi**.
+
+Atenção a um comportamento desta segunda situação: ao fechar a janela em **Entendi**, a tela passa a exibir **"Nenhuma esteira encontrada com os filtros atuais."**, como se o filtro não tivesse retornado dados, e **não oferece Tentar novamente**. A consulta não foi concluída. Recarregue a página — e, se a mensagem indicar sessão, entre novamente no sistema.
+
+### Ações que não existem nesta tela
+
+| Limitação | Como proceder |
+|---|---|
+| Não é possível **ordenar** a tabela. As esteiras vêm da mais recente para a mais antiga, e tarefas, setores e atividades seguem a sequência da estrutura | use **Esteira** e **Status** para reduzir o resultado |
+| **Agrupar por** está fixo em **Hierarquia** e não aceita outra escolha | — |
+| Não há botão **Atualizar** | altere um filtro ou recarregue a página |
+| **Gerar PDF** fica indisponível sem seleção | marque ao menos uma esteira; o contador indica a situação |
+| A seleção e o PDF existem apenas no nível da **esteira** | não é possível gerar o documento de uma tarefa, setor ou atividade isolada |
+| Não é possível **corrigir apontamentos, alterar tempos ou mudar situações** aqui | use as telas de apontamentos, planejamento e esteiras |
+| A **quantidade prevista** não tem coluna própria | consulte-a no detalhe da esteira; aqui ela já está embutida no previsto |
+| O filtro **Colaborador** lista apenas colaboradores **ativos** | o trabalho de uma pessoa inativa aparece nos totais e nos apontamentos, mas não é possível filtrar por ela |
+| **Somente com tempo excedido** avalia o **total da esteira** | uma esteira com atividade estourada, mas total dentro do previsto, não passa por esse filtro; desmarque-o e procure o excedente nas linhas internas |
+
+### Ao sair da tela com esteiras selecionadas
+
+Com esteiras marcadas, sair pelo menu lateral abre a confirmação **"Sair desta página?"**, avisando que o contexto atual — filtros e seleções — pode ser descartado. Escolha **Cancelar** para permanecer e concluir o PDF, ou **Sair e continuar** para seguir e perder a seleção.
 
 ---
 
