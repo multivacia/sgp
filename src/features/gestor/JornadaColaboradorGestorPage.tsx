@@ -45,6 +45,8 @@ import {
   OPERATIONAL_TIMEZONE,
   operationalDayRangeIso,
 } from '../../domain/operational/workDate'
+import { TimeEntryJustificationNote } from '../../components/operational/TimeEntryJustificationNote'
+import { JourneyExtraTimeEntriesSection } from '../../components/operational/JourneyExtraTimeEntriesSection'
 
 function JornadaGestorSkeleton() {
   return (
@@ -810,6 +812,13 @@ export function JornadaColaboradorGestorPage() {
                       <p className="text-xs text-slate-500">
                         {e.stepName} · {formatHumanMinutes(e.minutes)}
                       </p>
+                      <TimeEntryJustificationNote entry={e} />
+                      {e.notes?.trim() ? (
+                        <p className="mt-0.5 text-[11px] leading-snug text-slate-500">
+                          <span className="font-semibold">Observação: </span>
+                          {e.notes.trim()}
+                        </p>
+                      ) : null}
                     </div>
                     <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500">
                       <span>
@@ -827,6 +836,13 @@ export function JornadaColaboradorGestorPage() {
               </ul>
             )}
           </section>
+
+          <JourneyExtraTimeEntriesSection
+            summary={journey.extraTimeEntriesSummary}
+            entries={journey.recentExtraTimeEntries ?? []}
+            limit={journey.query.limit ?? 20}
+            showCollaborator={isMultiSelection}
+          />
         </>
       )}
 

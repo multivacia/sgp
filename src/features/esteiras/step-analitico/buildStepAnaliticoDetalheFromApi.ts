@@ -86,6 +86,8 @@ function buildHistoricoFromTimeEntries(
       te.isOutOfSequence === true && te.outOfSequenceJustification?.trim()
         ? te.outOfSequenceJustification.trim()
         : undefined,
+    justificativaPadraoRotulo: te.standardJustificationLabel?.trim() || undefined,
+    justificativaPadraoComplemento: te.standardJustificationComplement?.trim() || undefined,
     createdAt: te.entryAt,
     origem: 'api',
   }))

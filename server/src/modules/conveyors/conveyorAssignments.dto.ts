@@ -94,6 +94,9 @@ export type TimeEntryListItemDto = TimeEntryDelegationPublic & {
   exceptionJustification: string | null
   isOutOfSequence: boolean
   outOfSequenceJustification: string | null
+  /** Justificativa padronizada (catálogo) gravada no apontamento — inclui a voluntária. */
+  standardJustificationLabel: string | null
+  standardJustificationComplement: string | null
   entryAt: string
   createdAt: string
   updatedAt: string
@@ -205,6 +208,8 @@ export function timeEntryListRowToDto(row: ConveyorTimeEntryListRow): TimeEntryL
     exceptionJustification: row.exception_justification,
     isOutOfSequence: Boolean(row.is_out_of_sequence),
     outOfSequenceJustification: row.out_of_sequence_justification,
+    standardJustificationLabel: row.standard_justification_label?.trim() || null,
+    standardJustificationComplement: row.standard_justification_complement?.trim() || null,
     entryAt: row.entry_at.toISOString(),
     createdAt: row.created_at.toISOString(),
     updatedAt: row.updated_at.toISOString(),

@@ -33,6 +33,10 @@ import { ThermalActivityTicketsPrintArea } from '../operational-tickets/ThermalA
 import { ThermalTicketPrintProgressOverlay } from '../operational-tickets/ThermalTicketPrintProgressOverlay'
 import { isBatchThermalTicketPrint } from '../operational-tickets/thermalTicketPrintQueue'
 import { useActivityTicketPrint } from '../operational-tickets/useActivityTicketPrint'
+import {
+  DEFAULT_CONVEYOR_PROGRESS_PDF_ORIENTATION,
+  type ConveyorProgressPdfOrientation,
+} from './conveyorProgressPdfOrientation'
 
 const LOAD_BLOCKING_TITLE = 'Não foi possível carregar a evolução das esteiras'
 const LOAD_BLOCKING_MESSAGE =
@@ -74,6 +78,9 @@ export function ConveyorProgressPage() {
   const [collaboratorsLoading, setCollaboratorsLoading] = useState(true)
 
   const { printPayload, isPrinting, printError, requestPrint } = useConveyorProgressPrint()
+  const [pdfOrientation, setPdfOrientation] = useState<ConveyorProgressPdfOrientation>(
+    DEFAULT_CONVEYOR_PROGRESS_PDF_ORIENTATION,
+  )
   const {
     currentSheet,
     printProgress,
@@ -192,7 +199,7 @@ export function ConveyorProgressPage() {
 
   const handleGeneratePdf = () => {
     if (selectedItems.length === 0) return
-    requestPrint(selectedItems, filters)
+    requestPrint(selectedItems, filters, pdfOrientation)
   }
 
   const handlePrintActivity = useCallback(
@@ -228,6 +235,8 @@ export function ConveyorProgressPage() {
         onGeneratePdf={handleGeneratePdf}
         pdfDisabled={selectedIds.size === 0}
         pdfLoading={isPrinting}
+        pdfOrientation={pdfOrientation}
+        onPdfOrientationChange={setPdfOrientation}
         selectionHint={printError ?? selectionHint}
       />
 
@@ -269,6 +278,7 @@ export function ConveyorProgressPage() {
           items={printPayload.items}
           generatedAt={printPayload.generatedAt}
           appliedFilters={printPayload.appliedFilters}
+          orientation={printPayload.orientation}
           summary={computeConveyorProgressSummary(printPayload.items)}
         />
       ) : null}

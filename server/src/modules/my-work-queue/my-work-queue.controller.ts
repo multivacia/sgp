@@ -19,11 +19,15 @@ export async function getMyWorkQueue(req: Request, res: Response): Promise<void>
       typeof req.query.includePastDue === 'boolean'
         ? req.query.includePastDue
         : queryString(req.query.includePastDue),
+    from: queryString(req.query.from) || undefined,
+    to: queryString(req.query.to) || undefined,
   })
   const result = await serviceGetMyWorkQueue(pool, {
     userId: auth.id,
     date: q.date ?? null,
     includePastDue: q.includePastDue,
+    from: q.from ?? null,
+    to: q.to ?? null,
   })
   res.status(200).json(ok(result.data, result.meta))
 }

@@ -23,6 +23,12 @@ export type PlanningBoardFilters = {
   conveyorId: string
   state: PlanningFilterState
   q: string
+  /**
+   * Período pela **data planejada** do item (`YYYY-MM-DD`, inclusivo). Pontas opcionais;
+   * restrito à semana carregada no quadro.
+   */
+  dateFrom?: string
+  dateTo?: string
 }
 
 export const DEFAULT_PLANNING_BOARD_FILTERS: PlanningBoardFilters = {
@@ -30,6 +36,23 @@ export const DEFAULT_PLANNING_BOARD_FILTERS: PlanningBoardFilters = {
   conveyorId: PLANNING_CONVEYOR_ALL,
   state: 'all',
   q: '',
+  dateFrom: '',
+  dateTo: '',
+}
+
+export function isPlanningPeriodFilterActive(filters: PlanningBoardFilters): boolean {
+  return Boolean(filters.dateFrom?.trim() || filters.dateTo?.trim())
+}
+
+/** Data civil (`YYYY-MM-DD`) dentro do período do quadro (inclusivo; pontas vazias = abertas). */
+export function matchesPlanningPeriod(dateIso: string, filters: PlanningBoardFilters): boolean {
+  const from = filters.dateFrom?.trim()
+  const to = filters.dateTo?.trim()
+  if (!from && !to) return true
+  if (!dateIso) return false
+  if (from && dateIso < from) return false
+  if (to && dateIso > to) return false
+  return true
 }
 
 export type PlanningCollaboratorOption = {
@@ -86,7 +109,8 @@ export function isPlanningBoardFiltersActive(filters: PlanningBoardFilters): boo
     filters.collaboratorId !== PLANNING_COLLABORATOR_ALL ||
     filters.conveyorId !== PLANNING_CONVEYOR_ALL ||
     filters.state !== 'all' ||
-    filters.q.trim() !== ''
+    filters.q.trim() !== '' ||
+    isPlanningPeriodFilterActive(filters)
   )
 }
 
@@ -220,6 +244,10 @@ export function filterPlanningDraftItems<T extends PlanningFilterableItem>(
     }
 
     if (!matchesPlanningTextSearch(item, filters.q)) {
+      return false
+    }
+
+    if (!matchesPlanningPeriod(item.plannedDate, filters)) {
       return false
     }
 
