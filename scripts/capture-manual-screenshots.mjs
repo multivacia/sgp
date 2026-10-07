@@ -27,6 +27,23 @@ import { ITEMS } from './lib/manual-capture/items/index.mjs'
 const OUT_DIR = path.join(repoRoot, 'docs/manual/assets/screenshots')
 const MANIFEST = path.join(OUT_DIR, 'manifest.json')
 const DEFAULT_VIEWPORT = { width: 1440, height: 1000 }
+/** Permissão exigida pela rota (src/routes/AppRoutes.tsx); Modo Fábrica usa sessão de produção própria. */
+const ROUTE_PERMISSIONS = [
+  [/^\/app\/permissoes-por-papel/, ['rbac.manage_role_permissions']],
+  [/^\/app\/usuarios\/trilha/, ['audit.view']],
+  [/^\/app\/(nova-esteira|importar-os|planejamento-semanal|agenda-semanal|gestao\/evolucao-esteiras|esteiras\/[^/]+\/alterar)/, ['conveyors.create']],
+  [/^\/app\/dashboard/, ['dashboard.view_operational', 'dashboard.view_executive']],
+  [/^\/app\/(colaboradores|gestao\/jornada-colaborador)/, ['collaborators_admin.view']],
+  [/^\/app\/configuracoes-operacionais/, ['operational_settings.manage']],
+  [/^\/app\/gestao\/apontamento\//, ['time_entries.create_on_behalf | time_entries.edit_any | time_entries.delete_any']],
+  [/^\/app\/kiosk/, ['sessão do Modo Fábrica (colaborador + PIN)']],
+]
+
+function permissionsFor(route) {
+  if (!route) return []
+  return ROUTE_PERMISSIONS.find(([re]) => re.test(route))?.[1] ?? ['usuário autenticado']
+}
+
 const STATUSES = new Set(['CAPTURED', 'BLOCKED', 'REQUIRES_EXTERNAL_VIEWER', 'NOT_APPLICABLE'])
 
 const args = process.argv.slice(2)
@@ -81,6 +98,7 @@ function manifestEntry({ marker, item }, result) {
     route: item.route,
     viewport: item.viewport ?? DEFAULT_VIEWPORT,
     user: item.user === null ? null : (item.user ?? adminUser).email,
+    permissions: permissionsFor(item.route),
     scenario: item.scenario,
     mockEndpoints: result.mockEndpoints ?? [],
     unexpectedApiCalls: result.unexpected ?? [],
@@ -186,6 +204,32 @@ async function runItem(browser, entry) {
   }
 }
 
+/**
+ * Garante que as fixtures/itens de captura só usam dados fictícios:
+ * e-mails apenas em `.example` e nenhum domínio/marca de cliente real.
+ */
+async function scanFixturesForRealData() {
+  const dir = path.join(repoRoot, 'scripts/lib/manual-capture')
+  const files = []
+  async function walk(d) {
+    for (const e of await readdir(d, { withFileTypes: true })) {
+      const p = path.join(d, e.name)
+      if (e.isDirectory()) await walk(p)
+      else if (/\.(mjs|ts)$/.test(e.name)) files.push(p)
+    }
+  }
+  await walk(dir)
+  const problems = []
+  for (const f of files) {
+    const src = await readFile(f, 'utf8')
+    for (const m of src.matchAll(/[\w.+-]+@([\w-]+(?:\.[\w-]+)+)/g)) {
+      if (!m[1].endsWith('.example')) problems.push(`${path.relative(repoRoot, f)}: e-mail fora de .example (${m[0]})`)
+    }
+    if (/multivacia\.com|bravo\.com|@gmail|@hotmail/i.test(src)) problems.push(`${path.relative(repoRoot, f)}: domínio real encontrado`)
+  }
+  return problems
+}
+
 async function validate(markers) {
   const problems = []
   const manifest = await loadManifest()
@@ -211,6 +255,7 @@ async function validate(markers) {
     if (!known.has(f)) problems.push(`arquivo sem entrada no manifesto: ${f}`)
   }
   if (!existsSync(path.join(OUT_DIR, 'extra-ajuda-menu.png'))) problems.push('extra-ajuda-menu.png ausente')
+  problems.push(...(await scanFixturesForRealData()))
   const counts = {}
   for (const e of manifest.items) counts[e.status] = (counts[e.status] ?? 0) + 1
   return { problems, counts, markers: markers.length, total: manifest.items.length }

@@ -1,6 +1,10 @@
 /** Capítulo 8 — Planejamento semanal. */
 import { h, ok } from '../mock-api.mjs'
 import { clipToBottomOf } from '../clip.mjs'
+import path from 'node:path'
+import { composePanels } from '../compose.mjs'
+import { runServerBridge } from '../server/run.mjs'
+import { renderXlsxSheets, xlsxRenderAvailable } from '../xlsx-render.mjs'
 import { backlogPayload, factoryIntakePayload, weekPayload } from '../fixtures/planning.mjs'
 
 export const planningHandlers = (weekOpts = {}) => () => [
@@ -87,6 +91,35 @@ MAIN.push({
   notes:
     'DIVERGÊNCIA: no código atual os três painéis não são exibidos no Planejamento. Eles ficam em abas secundárias do painel lateral que estão desligadas por flag: SHOW_PLANNING_SECONDARY_TABS = false (src/features/operational-planning/planningUiFlags.ts) e activeSidePanelTab é forçado para "backlog" (OperationalPlanningPage.tsx ~L1572). Mesmo quando ativos, são abas (um painel por vez), não lado a lado. Pendências de sincronização e Fora do planejado estão acessíveis na gaveta "Itens de atenção" da Agenda da semana (ver cap09-05); "Esteiras aguardando encaixe" (FactoryIntakePanel) não tem acesso visível. O cartão "Pendências de sincronização" do Planejamento ainda diz "revise na aba Pendências", aba que não aparece. Recomendação: revisar o texto do manual (cap. 8) ou reativar a flag.',
   async run() {},
+})
+
+MAIN.push({
+  id: 'cap08-05',
+  slug: 'exportacoes-comparadas',
+  match: 'As duas exportações comparadas',
+  route: null,
+  scenario:
+    'Planilhas REAIS geradas pelos builders do backend (operational-planning.export.ts e operational-planning.weekly-view.export.ts) para a semana fictícia 29/06–03/07/2026; renderizadas localmente e comparadas: "Planejamento" (uma linha por atividade) e "Visão semanal" (matriz colaborador × dia).',
+  notes:
+    'Imagem composta de duas renderizações por LibreOffice headless (não é captura do Excel). Os .xlsx gerados estão preservados como evidência (extraFiles).',
+  extraFiles: ['cap08-05-planejamento.xlsx', 'cap08-05-visao-semanal.xlsx'],
+  async run({ context, outDir }) {
+    if (!xlsxRenderAvailable()) return { status: 'REQUIRES_EXTERNAL_VIEWER', notes: 'LibreOffice/pdftoppm indisponíveis; .xlsx preservados.' }
+    const planning = path.join(outDir, 'cap08-05-planejamento.xlsx')
+    const weekly = path.join(outDir, 'cap08-05-visao-semanal.xlsx')
+    runServerBridge('planning-exports', [planning, weekly])
+    const [p1] = await renderXlsxSheets(planning, { dpi: 80 })
+    const [w1] = await renderXlsxSheets(weekly, { dpi: 110 })
+    await composePanels(context, {
+      panels: [
+        { caption: 'Exportar Excel — aba "Planejamento" (uma linha por atividade)', buffer: p1 },
+        { caption: 'Exportar visão semanal — aba "Visão semanal" (colaborador × dia)', buffer: w1 },
+      ],
+      columns: 1,
+      width: 1800,
+      file: path.join(outDir, 'cap08-05-exportacoes-comparadas.png'),
+    })
+  },
 })
 
 export default MAIN

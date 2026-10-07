@@ -2,6 +2,10 @@
 import { h, ok } from '../mock-api.mjs'
 import { journeyPayload } from '../fixtures/journey.mjs'
 import { sidebarRight, unionClip } from '../clip.mjs'
+import path from 'node:path'
+import { writeFile } from 'node:fs/promises'
+import { runServerBridge } from '../server/run.mjs'
+import { renderXlsxSheets, xlsxRenderAvailable } from '../xlsx-render.mjs'
 
 const IDS = ['col-carlos', 'col-bruno', 'col-diana']
 const ROUTE = `/app/gestao/jornada-colaborador?colaboradorIds=${IDS.join(',')}`
@@ -50,6 +54,23 @@ export default [
       const left = await sidebarRight(page)
       const clip = await unionClip([first, last], 40)
       await shot(null, { clip: { x: left + 8, y: clip.y, width: 1440 - left - 16, height: clip.height } })
+    },
+  },
+  {
+    id: 'cap12-03',
+    slug: 'exportacao-aba-resumo',
+    match: 'Aba Resumo da exportação',
+    route: null,
+    scenario:
+      'Planilha REAL de "Exportar Excel" da Jornada por colaborador (buildOperationalJourneyExportWorkbookBuffer do backend) para Carlos Demo, Bruno Exemplo e Diana Exemplo (25/06–01/07/2026): aba Resumo com uma linha por colaborador e a linha Total geral destacada.',
+    notes: 'Renderização da aba Resumo por LibreOffice headless (não é captura do Excel). O .xlsx gerado está preservado como evidência (extraFiles).',
+    extraFiles: ['cap12-03-jornada-export.xlsx'],
+    async run({ outDir }) {
+      if (!xlsxRenderAvailable()) return { status: 'REQUIRES_EXTERNAL_VIEWER', notes: 'LibreOffice/pdftoppm indisponíveis; .xlsx preservado.' }
+      const xlsx = path.join(outDir, 'cap12-03-jornada-export.xlsx')
+      runServerBridge('journey-export', [xlsx])
+      const [resumo] = await renderXlsxSheets(xlsx, { dpi: 110 })
+      await writeFile(path.join(outDir, 'cap12-03-exportacao-aba-resumo.png'), resumo)
     },
   },
 ]
