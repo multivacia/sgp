@@ -1,7 +1,7 @@
 # Manual do Usuário — SGP+
 
 **Produto:** SGP+ · Multivacia / ARGOS
-**Versão da aplicação nesta revisão:** 1.9.8
+**Versão da aplicação nesta revisão:** 1.9.9
 **Revisão deste manual:** 2026-10-04
 **Situação:** capítulos 1 a 21 com conteúdo final, revisados na auditoria final de 2026-10-04.
 
