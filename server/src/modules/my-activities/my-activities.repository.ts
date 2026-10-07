@@ -1,6 +1,7 @@
 import type pg from 'pg'
 import { mondayOfWeekContaining } from '../operational-planning/operational-planning.week.js'
 import { findPublishedWorkPlanForWeek } from '../my-work-queue/my-work-queue.repository.js'
+import { foldSearchText, sqlFold } from '../../shared/accentInsensitiveSearch.js'
 
 export type MyActivityRawRow = {
   assignee_id: string
@@ -105,7 +106,7 @@ export type TimeEntryCandidateRawRow = {
   planned_date: string | null
 }
 
-/** Termos de busca dos candidatos de apontamento: `q` (livre) e filtros combináveis por esteira/atividade. */
+/** Termos de busca dos candidatos de apontamento: `q` (livre) e o par esteira/atividade (`&`). */
 export type TimeEntryCandidateSearch = {
   q: string | null
   conveyorQ?: string | null
@@ -113,30 +114,32 @@ export type TimeEntryCandidateSearch = {
 }
 
 function normalizeSearchTerm(term: string | null | undefined): string | null {
-  const t = term?.trim()
+  const t = term ? foldSearchText(term) : ''
   return t ? t : null
 }
 
 /**
- * Filtros por esteira e por atividade (interseção — AND entre si e com `q`).
- * Esteira: nome, código, cliente, veículo, placa. Atividade: atividade, setor, tarefa.
- * Espera os aliases `cv`, `step`, `area` e `opt` na query.
+ * Pesquisa "Esteira & atividade" (interseção — AND entre si e com `q`), parcial e sem
+ * diferenciar maiúsculas/acentos.
+ * - Esteira/OS: nome, código/OS, cliente, veículo, placa.
+ * - Atividade: somente o **nome da atividade** (STEP) pertencente à esteira encontrada.
+ * Espera os aliases `cv` e `step` na query.
  */
 function scopedCandidateSearchSql(conveyorParam: number, activityParam: number): string {
+  const like = (expr: string, param: number) =>
+    `${sqlFold(expr)} LIKE '%' || $${param}::text || '%'`
   return `
       AND (
         $${conveyorParam}::text IS NULL
-        OR cv.name ILIKE '%' || $${conveyorParam} || '%'
-        OR COALESCE(cv.code, '') ILIKE '%' || $${conveyorParam} || '%'
-        OR COALESCE(cv.client_name, '') ILIKE '%' || $${conveyorParam} || '%'
-        OR COALESCE(cv.vehicle, '') ILIKE '%' || $${conveyorParam} || '%'
-        OR COALESCE(cv.plate, '') ILIKE '%' || $${conveyorParam} || '%'
+        OR ${like('cv.name', conveyorParam)}
+        OR ${like('cv.code', conveyorParam)}
+        OR ${like('cv.client_name', conveyorParam)}
+        OR ${like('cv.vehicle', conveyorParam)}
+        OR ${like('cv.plate', conveyorParam)}
       )
       AND (
         $${activityParam}::text IS NULL
-        OR step.name ILIKE '%' || $${activityParam} || '%'
-        OR area.name ILIKE '%' || $${activityParam} || '%'
-        OR opt.name ILIKE '%' || $${activityParam} || '%'
+        OR ${like('step.name', activityParam)}
       )`
 }
 

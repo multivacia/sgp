@@ -244,7 +244,7 @@ export async function serviceListTimeEntryCandidates(
     q: string | null
     /** Filtro por esteira; combinado com `activityQ` e `q` via AND. */
     conveyorQ?: string | null
-    /** Filtro por atividade/setor/tarefa; combinado com `conveyorQ` e `q` via AND. */
+    /** Nome da atividade; combinado com `conveyorQ` e `q` via AND. */
     activityQ?: string | null
     limit: number
     includeUnassigned: boolean

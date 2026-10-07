@@ -1,13 +1,15 @@
 # Retorno — ajustes-tati-2026-10-07
 
 - **TASK_ID:** `ajustes-tati-2026-10-07`
-- **Data/hora:** 2026-10-07 23:20 UTC (20:20 em São Paulo)
+- **Data/hora:** 2026-10-07 23:20 UTC (rodada 1) · atualizado 2026-10-07 23:51 UTC (rodada 2: itens 2 revisto, 5 completo, 10 novo)
 - **Prompt:** `docs/ai/prompts/ajustes-tati-2026-10-07.md`
-- **Objetivo:** investigar, corrigir e validar os ajustes alinhados com a Tati (itens 2 a 9). O item 1 (Guia Prático e manuais) ficou **fora do escopo** por instrução explícita do usuário nesta sessão.
-- **Status final:** itens 2–9 implementados e validados localmente; **commit local, sem push/PR** (aguardando autorização após a revisão).
+- **Objetivo:** investigar, corrigir e validar os ajustes alinhados com a Tati (itens 2 a 10). O item 1 (Guias Práticos) ficou **fora do escopo** por instrução explícita do usuário nesta sessão.
+- **Status final:** itens 2–10 implementados e validados localmente; **commits locais, sem push/PR** (aguardando autorização após a revisão).
+- **Rodada 2 (revisão do usuário):** item 2 refeito conforme a especificação revisada (campo único com `&`); item 5 estava parcial (período limitado à semana exibida) e agora atravessa semanas; item 10 implementado.
 - **Branch:** `fix/ajustes-tati-2026-10-07` (criada a partir de `origin/develop`)
 - **SHA inicial (base):** `ecb26da78c4a4dbfefcfab7f5de494a31445555d` (`origin/develop`, v1.9.9)
-- **SHA final:** o commit local que contém este arquivo (ver `git log -1` na branch; informado na resposta da sessão).
+- **SHA da rodada 1:** `2c7e458ee952a1ab3ad5fb9e3eadb5199c88532d`
+- **SHA final:** o commit local da rodada 2 que contém esta versão do arquivo (informado na resposta da sessão; ver `git log -1`).
 - **Remotos confirmados após `git fetch origin --prune`:**
   - `origin/main` = `c611d10feacf329bdc217fe391ebf47a90a6ea7a`
   - `origin/develop` = `ecb26da78c4a4dbfefcfab7f5de494a31445555d`
@@ -22,10 +24,11 @@
 
 | # | Tela / origem | Comportamento atual comprovado | Causa-raiz | Tipo |
 |---|---|---|---|---|
-| 2 | Drawer **Apontar horas** (`QuickTimeEntryDrawer`) → `GET /me/time-entry-candidates` | Campo único `q` com **OR** entre esteira, cliente, veículo, placa, setor e atividade. "Corolla Costura" → **0 resultados** (reproduzido via API). | Contrato só tinha um termo livre; não havia como cruzar esteira **e** atividade. | Melhoria pequena |
+| 2 | Drawer **Apontar horas** (`QuickTimeEntryDrawer`) → `GET /me/time-entry-candidates` | Campo único `q` com **OR** entre esteira, cliente, veículo, placa, setor e atividade; diferencia acentos. "Corolla Costura" → **0 resultados** (reproduzido via API). | O contrato tinha só um termo livre, sem forma de restringir a esteira **e**, dentro dela, a atividade. | Melhoria pequena |
 | 3 | **Evolução das Esteiras** → `ConveyorProgressPrintView` + `window.print()` | Sem orientação; o relatório era renderizado **dentro do shell do app** (`h-dvh` + `overflow-hidden` + `main overflow-y-auto`). No teste local (Chromium headless, instantâneo do DOM no momento do `print()`), o código base gerou **PDF de 1 página em branco**. | Sem `@page`; relatório recortado pelos contêineres do shell; tabela herdava cor clara do tema escuro; colunas espremidas por texto longo. | Melhoria + correção |
 | 4 | **Minha fila** → `GET /me/work-queue` | Só por dia (`date`) e atrasadas, com o plano publicado da semana daquele dia. | Não havia filtro de período. | Melhoria |
-| 5 | **Planejamento** (`OperationalPlanningPage`) | Quadro semanal (uma semana por vez, carregada inteira, sem paginação); filtros do quadro no frontend; sem atalho de data. | Não havia filtro de período nem salto para uma data. | Melhoria pequena |
+| 5 | **Planejamento** (`OperationalPlanningPage`) | Quadro semanal (uma semana por vez); filtros do quadro no frontend; sem atalho de data. Não havia como ver o planejado de várias semanas de uma vez. | Os dados só eram carregados por semana (`GET /operational-planning/week`). | Melhoria |
+| 10 | **Planejamento** → exportações | Já existiam "Exportar Excel" (abas *Planejamento* e *Capacidade*, só a semana) e "Exportar visão semanal". Não havia backlog na planilha, nem recorte por período, nem instruções para IA. | Exportação limitada à semana e ao planejado. | Melhoria |
 | 6 | **Minha jornada** → `GET /my-operational-journey` | O período já existia ("Intervalo personalizado"), mas ficava **recolhido** em "Período e filtros", exigia **as duas datas** e não validava início ≤ fim no cliente (só voltava erro genérico da API). | Descoberta difícil + pontas obrigatórias. | Melhoria pequena |
 | 7 | Jornada (colaborador e gestor) → `operational-journey.repository` | (a) Minha jornada **não exibia** nada de Extra Esteira (a API já mandava o resumo). (b) Jornada gerencial mostrava só total e top descrições, **sem a lista**. (c) Todas as agregações faziam `INNER JOIN` com a descrição exigindo `d.deleted_at IS NULL`: **excluir uma descrição do catálogo apagava o histórico** dos totais e da exportação. Reproduzido: com a descrição "Treinamento interno" excluída, a regra antiga soma **183 min / 16** lançamentos; a correta é **223 min / 17**. | Renderização ausente + filtro de soft-delete indevido no histórico. | Correção |
 | 8 | Lista de apontamentos (Minha jornada, Jornada gerencial, Apontamento gerencial, painel analítico da atividade, Evolução, exportação XLSX da jornada) | (a) Exceção e fora de sequência só apareciam como **tooltip** no selo (invisível em toque/tablet). (b) A **justificativa voluntária** (catálogo, em apontamento normal) é gravada **somente** em `standard_justification_label_snapshot`/`_complement` (migration 0048) e **nenhuma consulta lia essas colunas** — nunca aparecia em lugar nenhum (confirmado no banco). (c) "Apontamento gerencial" não mostrava justificativa nem observação. | Colunas de catálogo nunca selecionadas + exibição só por tooltip. | Correção |
@@ -33,9 +36,17 @@
 
 ## O que foi feito
 
-### Item 2 — filtro Esteira + Atividade (AND)
-- API: novos parâmetros opcionais `conveyorQ` (nome, código, cliente, veículo, placa) e `activityQ` (atividade, setor, tarefa) em `GET /me/time-entry-candidates`, aplicados **no SQL** nas três fontes (alocação, plano publicado e "outras atividades"), combinados por **AND** entre si e com o `q` legado (mantido por compatibilidade). O Kiosk (`/production/...`) não mudou.
-- UI: o campo único "Pesquisar" virou dois campos independentes, **Esteira** e **Atividade**. Limpar um não apaga o outro e dispara nova consulta ao backend. Há um aviso visível quando os dois estão preenchidos. "Buscar outras atividades" passa a aceitar 2+ caracteres em qualquer um dos filtros.
+### Item 2 — pesquisa "Esteira & atividade" (rodada 2, especificação revisada)
+- Um **único campo** de pesquisa, com placeholder `Esteira & atividade (ex.: 7070 & XPTO)` e uma dica curta abaixo.
+- **Backend** (`my-activities.controller` + `shared/accentInsensitiveSearch.ts`): quando `q` contém `&`:
+  - o termo da **esquerda** restringe a esteira/OS (nome, código/OS, cliente, veículo, placa);
+  - o termo da **direita** restringe **somente o nome da atividade** dessa esteira (não casa tarefa nem setor);
+  - a busca é parcial e ignora maiúsculas/minúsculas, acentos e espaços ao redor do `&`;
+  - o filtro é aplicado no SQL das três fontes (alocação, plano publicado e "outras atividades").
+- **Acentos:** a extensão `unaccent` não existe no banco e criá-la exigiria migration. Por isso a comparação usa `translate(lower(...))`, com o mesmo mapa aplicado ao termo em JS.
+- **Sem `&`:** a pesquisa livre continua idêntica à de antes.
+- **Kiosk/Modo Fábrica:** não foi alterado (o controller de produção não interpreta `&`).
+- Os parâmetros `conveyorQ`/`activityQ` da rodada 1 continuam aceitos pela API (mesma semântica), mas a tela não os usa mais.
 
 ### Item 3 — PDF retrato/paisagem
 - O motor continua o mesmo (`window.print()` do navegador), sem dependência nova. Seletor **"Orientação do PDF"** (Retrato = padrão; Paisagem) gera `@page { size: portrait|landscape; margin: 10mm }`, só enquanto o relatório está montado (a impressão térmica não é afetada). O tamanho do papel continua o da impressora/diálogo.
@@ -47,10 +58,43 @@
 - No modo período, os totais do resumo valem para o período inteiro e "sobrecarga" (que é diária) não se aplica. "Hoje" de referência = dia civil em São Paulo.
 - UI: alternância **Por dia / Por período** (`?mode=periodo&from=&to=`), validação início ≤ fim, feedback "Exibindo atividades com data planejada de … a …", rótulos de KPI e seções ajustados.
 
-### Item 5 — Planejamento por período
-- **Semântica:** **data planejada** do item, dentro da **semana exibida**. O quadro é semanal e carrega a semana inteira, sem paginação, e os filtros do quadro já são aplicados no cliente sobre esse conjunto completo, com totais da visão filtrada. O novo filtro segue exatamente esse padrão canônico e não esconde registros.
-- UI: filtro "Período (data planejada)" com De/Até (pontas opcionais, limitadas à semana), validação, feedback, contagem "Exibindo X de Y". O período é limpo ao trocar de semana; os demais filtros são preservados. Novo atalho **"Ir para a data"** para saltar à semana de qualquer data. "Fora do plano" respeita o período pela data do apontamento.
-- **Limitação / decisão de produto:** uma visão consolidada de **várias semanas** no quadro exige redesenho e **não foi feita**. As exportações (Excel / visão semanal) continuam exportando a **semana inteira**, como já acontecia com os demais filtros do quadro.
+### Item 5 — Planejamento por período (rodada 2: atravessa semanas)
+- **Semântica:** **data planejada** do item, inclusiva, em **todas as semanas** do período.
+  - Fonte por semana: o mesmo plano que o quadro mostra (rascunho/revisão em edição; sem rascunho, o publicado).
+  - Pontas opcionais: com só uma data, a janela vai até 92 dias. Início > fim → aviso e 400 na API.
+- **API:** `GET /operational-planning/period-items?from=&to=`, com o mesmo guard das rotas de Planejamento (`conveyors.create`). Retorna itens, semanas abrangidas com a situação de cada plano e totais.
+- **UI:**
+  - Barra **"Pesquisa por período"** sempre visível no cabeçalho. Na rodada 1, o período ficava dentro dos filtros do quadro, que somem quando a semana está vazia, e era limitado à semana exibida.
+  - Painel de resultados com todas as semanas do período: data, colaborador, esteira, atividade, tempo, situação da atividade e versão do plano. Mostra "X de Y itens · horas", chips das semanas com a situação do plano e o botão **"Ver semana"** em cada item.
+  - Os demais filtros do quadro (colaborador, esteira, "sem responsável", busca) são aplicados com a mesma regra do quadro sobre esse conjunto completo. "Capacidade excedida" vale só para a semana do quadro, e o painel avisa isso.
+  - O quadro semanal continua filtrando os dias da semana exibida.
+  - O atalho **"Ir para a data"** foi mantido. O período não é mais limpo ao trocar de semana.
+- **Exportação:** a nova exportação para IA (item 10) respeita o período. As exportações existentes ("Exportar Excel" e "Exportar visão semanal") continuam semanais, sem alteração.
+
+### Item 10 — Exportação Excel para IA (rodada 2)
+- **Ponto de partida verificado:** já existiam `GET /operational-planning/week/export.xlsx` (abas *Planejamento* e *Capacidade*) e a visão semanal. Nenhuma das duas foi alterada.
+  - O novo export **reutiliza** os estilos, cores e helpers de célula do export semanal (foi preciso só tornar os helpers exportados) e as regras canônicas `buildCapacityByCollaboratorDay`, `classifyCapacityRow` e `mapExportActivityStatusLabel`.
+- **API:** `GET /operational-planning/export-ai.xlsx?from=&to=` (período) **ou** `?weekStart=` (semana), mesmo guard. Gerado no backend a partir do banco (não usa dados do navegador); o backlog é lido sem a paginação de 200 da tela.
+- **Botão:** "Exportar para IA (período)" quando a pesquisa por período está ativa; senão, "Exportar para IA (semana)" com a semana exibida. Com alterações não salvas, salva o rascunho antes, como o "Exportar Excel".
+- **Abas:**
+  1. **Prompt para IA** — instruções:
+     - não alterar o que já está planejado;
+     - respeitar capacidade/saldo, dias úteis, datas/prazos, prioridade, sequência, equipe/responsável e duração;
+     - não inventar dados.
+     Inclui um formato de resposta sugerido e o dicionário das abas.
+  2. **Backlog** — estoque atual elegível, independente do recorte. Duas origens:
+     - "Backlog": atividades disponíveis no backlog canônico;
+     - "Aguardando encaixe": itens do plano da esteira ainda não encaixados em nenhum plano semanal.
+     Campos: IDs, código/OS, esteira, cliente, veículo, placa, prioridade, prazo (e se está vencido, destacado em vermelho), tarefa, setor, atividade, quantidade, tempos previsto/realizado/pendente, colaboradores e equipes alocados, fora de sequência, data/responsável sugeridos e situação.
+  3. **Planejado** — itens do recorte. Campos: semana, situação do plano, data, dia, IDs, colaborador, equipe, esteira, prioridade, prazo, tarefa, setor, atividade, ordem, quantidade, tempo, situação da atividade e observações.
+  4. **Carga dos colaboradores** — por colaborador (ativos + alocados): equipe(s), dias úteis do recorte, dias sem capacidade cadastrada, capacidade somada (configuração operacional; sem cadastro → "Capacidade não cadastrada", nada inventado), horas planejadas (= soma da aba Planejado), saldo e ocupação como **fórmulas** do Excel, e situação.
+  5. **Carga por dia** — o mesmo detalhamento por colaborador e dia útil.
+- **Formatação:**
+  - cabeçalho `#1F2933` com texto branco, como no export atual;
+  - filtros e primeira linha de dados congelada;
+  - datas `dd/mm/aaaa`, tempos `[h]:mm`, saldo em minutos;
+  - cores de situação (vermelho = sobrecarregado/prazo vencido, âmbar = no limite, verde = concluída) **sempre acompanhadas** de coluna de texto.
+- **Limitação:** itens planejados só para equipe (sem colaborador) não entram na carga individual. Isso está documentado na aba de prompt.
 
 ### Item 6 — Minha jornada por período
 - **Semântica (inalterada):** data do apontamento (`entry_at`, dia civil de São Paulo). A carga de atividades continua sendo o retrato atual, sem período, como já era.
@@ -84,8 +128,30 @@
 - `src/domain/operational/timeEntryJustificationDisplay.ts` (+ `.test.ts`)
 - `src/features/conveyor-progress/conveyorProgressPdfOrientation.ts`
 - `src/lib/operational/operationalDataEvents.ts` (+ `.test.ts`)
-- `docs/ai/prompts/ajustes-tati-2026-10-07.md`
+- `docs/ai/prompts/ajustes-tati-2026-10-07.md` (atualizado com o prompt revisado)
 - este retorno
+
+**Criados na rodada 2:**
+- `server/src/shared/accentInsensitiveSearch.ts`
+- `server/src/shared/operationalDateRange.ts`
+- `server/src/modules/operational-planning/operational-planning.range.ts`
+- `server/src/modules/operational-planning/operational-planning.range.service.ts`
+- `server/src/modules/operational-planning/operational-planning.range.controller.ts`
+- `server/src/modules/operational-planning/operational-planning.ai-export.ts`
+- `server/src/tests/accent-insensitive-search.test.ts`
+- `server/src/tests/operational-planning-range.integration.test.ts`
+- `src/features/operational-planning/PlanningPeriodSearchPanel.tsx`
+
+**Alterados na rodada 2:**
+- `my-activities` (controller, repository, schemas, service)
+- `my-work-queue/work-queue-period.ts` (passa a usar o resolvedor compartilhado)
+- `operational-planning` (routes; repository — colunas adicionais de prioridade, quantidade e código/OS; service — campos aditivos no backlog; export — helpers passaram a ser exportados)
+- `time-entry-candidates-http.integration.test.ts`
+- `QuickTimeEntryDrawer`
+- `myActivitiesApiService`
+- `operationalPlanningApiService` (+ teste)
+- tipos de Planejamento
+- `OperationalPlanningPage`
 
 **Alterados (backend):**
 - `my-activities` (schemas, controller, service, repository)
@@ -123,14 +189,26 @@ Ambiente local descartável: PostgreSQL 16 em `/var/tmp` (porta 55432), migratio
 | `npx eslint .` | 117 problemas (94 erros, 23 avisos) — **idêntico à baseline de `develop`** (comparado arquivo a arquivo; nenhum novo) |
 | `npx vitest run` (frontend) | 1426 ok / **5 falhas preexistentes** (`ApontamentoPage.test.tsx` ×3, `ApontamentoGestorPage.test.tsx` ×2 — falham igualmente sem as alterações: botão "Registar apontamento" não encontrado) |
 | `npx vitest run` (servidor, com banco) | 1253 ok / 16 skip / **5 falhas, todas fora do escopo**: 4 preexistentes (versão `1.9.9` vs `1.9.4` esperada; texto "colaborador operacional vinculado" ×2; fórmula `=SUM` no XLSX semanal), confirmadas com `git stash` sobre o código base. A 5ª (`production-auth` "ordenada por nome") é do **ambiente local**: o banco novo usa collation `C` e os testes rodaram 3× acumulando nomes ("Pri C HTTP…" vs "Pri C bb…"), o que diverge do `localeCompare('pt-BR')` do teste. Não tem relação com as alterações. |
-| Testes novos/alterados | `time-entry-candidates-http.integration` (filtro AND), `my-work-queue-period.integration` (6 casos: modo diário, várias semanas, pontas abertas, 400s), `work-queue-period`, `periodFilter`, `timeEntryJustificationDisplay`, `operationalDataEvents`, `planningBoardFilters` (período), `conveyorProgressPage` (orientação) — **todos passando** |
+| Rodada 2 — testes completos | Frontend: build OK; lint 117 problemas (94 erros), **nenhum novo** vs. baseline; vitest 1428 ok / as mesmas 5 falhas preexistentes. Servidor: tsc OK; vitest 1261 ok / 16 skip / as mesmas 5 falhas fora do escopo listadas acima. |
+| Rodada 2 — testes novos | `time-entry-candidates-http.integration` (exemplos obrigatórios `7070 & XPTO` → 3 atividades, `7070 & banco` → 2, acentos/maiúsculas/espaços, termo direito não casa a tarefa, sem `&` inalterado); `accent-insensitive-search`; `operational-planning-range.integration` (período atravessa semana publicada + rascunho, 400/403, `.xlsx` lido com ExcelJS: abas, cabeçalhos, filtro, congelamento, fórmula de saldo, Planejado × Carga, backlog com prioridade/tempo; export por semana); `operationalPlanningApiService` (URLs) — **todos passando** |
+| Testes novos/alterados (rodada 1) | `time-entry-candidates-http.integration` (filtro AND), `my-work-queue-period.integration` (6 casos: modo diário, várias semanas, pontas abertas, 400s), `work-queue-period`, `periodFilter`, `timeEntryJustificationDisplay`, `operationalDataEvents`, `planningBoardFilters` (período), `conveyorProgressPage` (orientação) — **todos passando** |
 
 Validação manual local (API + Vite + Chromium/Playwright; capturas e PDFs guardados fora do repositório):
 
-- **Item 2:** placa `AAA1A11` + "costura" → só "Costura banco"; "corolla" + "corte" → só "Corte espuma"; `q` legado "Corolla Costura" → vazio (defeito reproduzido); limpar "Atividade" mantém "Esteira" e reconsulta.
+- **Item 2 (rodada 2):** esteira fictícia "Gol GTI Demo", OS `7070`:
+  - `7070 & XPTO` → corte do tecido XPTO, Costura do tecido XPTO, Revestir banco com tecido XPTO;
+  - `7070 & banco` → Revestir banco com tecido XPTO, Revestir banco do couro;
+  - `7070&BANCÓ` → as mesmas duas;
+  - o placeholder aparece no drawer.
+  Esteiras de teste com código iniciado por 7070 também aparecem, o que está correto para busca parcial.
 - **Item 3:** PDF Retrato = 612×792 pt, 5 páginas; Paisagem = 792×612 pt, 6 páginas. Título, cabeçalho de colunas e justificativas presentes (`pdftotext`). Código base, mesmo método: 1 página em branco.
 - **Item 4:** 05–16/10 → 5 atividades, KPIs "no período", feedback correto; 12–16/10 → só a semana seguinte; início > fim → mensagem; `?date=2026-10-07` → modo diário inalterado.
-- **Item 5:** 07–08/10 → "Exibindo 2 de 3"; início > fim → mensagem; "Ir para a data" 14/10 → semana 2026-10-12 e período limpo.
+- **Item 5 (rodada 2):** 06–15/10 → painel com "5 de 5 itens · 5 h" em duas semanas (05/10 e 12/10, publicadas), incluindo itens de 13/10 e 15/10, fora da semana exibida; início > fim → mensagem.
+- **Item 10 (rodada 2):** download pela tela de `planejamento-ia-periodo-2026-10-06-a-2026-10-15.xlsx` e `planejamento-ia-semana-2026-10-05-a-2026-10-09.xlsx`, abertos com openpyxl:
+  - 5 abas; cabeçalho `FF1F2933`/branco; filtro e congelamento `A4` em todas;
+  - período: Planejado = 5 itens/300 min, carga da Maria = 8 dias úteis, capacidade 3840 min, planejado 300 min, fórmulas `=(F-G)*1440` e `=G/F`;
+  - semana: 3 itens/180 min, 5 dias úteis;
+  - Planejado × Carga consistentes nos dois arquivos.
 - **Item 6:** só data inicial → carrega com "Janela"; início > fim → mensagem.
 - **Item 7:** seção Extra Esteira com "Treinamento interno" mesmo após excluir a descrição do catálogo; origem Modo Fábrica exibida.
 - **Item 8:** "Justificativa: Atividade anterior pendente de outro colaborador — Aguardando peça" (voluntária), "Justificativa (fora de sequência): …" e "Observação: Ajuste no ponto" visíveis.
@@ -142,17 +220,19 @@ Não houve regressão observada em permissões (nenhuma rota/guard alterada), pa
 
 1. **Item 1 (Guia Prático/manuais)** não foi feito, por instrução do usuário. Os capítulos 7, 10, 11, 12, 14 e 15 do manual descrevem comportamentos que mudaram e devem ser atualizados depois.
 2. **PDF:** a validação usou Chromium headless. A orientação via `@page size` é respeitada pelo Chrome/Edge (o diálogo trava a orientação); o Firefox respeita parcialmente. Validar com a Tati no navegador usado na fábrica.
-3. **Planejamento multi-semana** e **período nas exportações do Planejamento** exigem decisão de produto (hoje exportam a semana inteira, como os demais filtros do quadro).
+3. **Planejamento:** o quadro de arrastar e soltar continua semanal; a visão entre semanas é o painel de pesquisa (somente leitura). "Exportar Excel" e "Exportar visão semanal" continuam semanais; o período é aplicado na exportação para IA.
+7. **Exportação para IA:** a coluna "Prazo vencido" usa a regra existente do backlog (`isDeadlineOverdue`); prazos em texto livre (ex.: "15 dias") não são interpretados como data. A planilha não envia nada a serviços de IA; é só um arquivo para uso posterior.
 4. **Minha fila:** janela máxima de 92 dias e "Por período" mostra só planos **publicados** (regra existente da fila).
 5. Card "Alocações em STEPs" (ver item 9): possível inconsistência semântica preexistente, não alterada.
 6. A suíte de testes de integração altera dados do banco onde roda. Nunca rodá-la contra banco compartilhado.
 
 ## Roteiro objetivo de validação com a Tati (08/10, 09:00–09:30)
 
-1. **Apontar horas** (cabeçalho): preencher *Esteira* = placa ou nome e *Atividade* = "costura" → só a interseção; apagar *Atividade* → volta a lista da esteira.
+1. **Apontar horas** (cabeçalho): pesquisar `7070 & XPTO` (trocar 7070 por uma OS real) → só as atividades daquela OS com "XPTO" no nome. Testar `7070 & banco` e uma pesquisa sem `&` (inalterada).
 2. **Evolução das Esteiras:** selecionar 3+ esteiras → *Orientação do PDF* = Retrato → *Gerar PDF*; repetir com Paisagem. Conferir título, colunas e páginas seguintes.
 3. **Minha fila** → *Por período* → De/Até atravessando duas semanas; testar datas invertidas (mensagem); voltar em *Por dia*.
-4. **Planejamento** → *Ir para a data*; nos filtros do quadro, *Período (data planejada)* com dois dias → contagem "Exibindo X de Y".
+4. **Planejamento** → *Pesquisa por período* atravessando duas ou mais semanas → painel com os itens de todas as semanas, "Ver semana", e combinação com o filtro de colaborador. Testar datas invertidas (mensagem).
+4b. **Planejamento** → *Exportar para IA (período)* e, sem período, *Exportar para IA (semana)* → abrir o Excel e conferir as abas Prompt, Backlog, Planejado e Carga (o saldo bate com capacidade − planejado).
 5. **Minha jornada** → "Período e filtros" (já aberto) → *Intervalo personalizado* só com a data inicial.
 6. **Extra Esteira:** lançar um Extra Esteira (web e/ou Modo Fábrica) → conferir a seção "Extra Esteira no período" (Minha jornada e Jornada por colaborador).
 7. **Justificativas:** apontar com justificativa do catálogo (normal e fora de sequência) → conferir o texto visível em Minha jornada, Jornada por colaborador, Apontamento gerencial e painel da atividade.
@@ -160,10 +240,10 @@ Não houve regressão observada em permissões (nenhuma rota/guard alterada), pa
 
 ## Próximo passo recomendado
 
-Revisar o diff. Se aprovado, autorizar o push da branch `fix/ajustes-tati-2026-10-07` e a abertura de PR para `develop`. Depois da validação com a Tati, atualizar o manual (item 1).
+Revisar o diff das duas rodadas. Se aprovado, autorizar o push da branch `fix/ajustes-tati-2026-10-07` e a abertura de PR para `develop`. Depois da validação com a Tati, atualizar o manual (item 1).
 
 ## Estado final
 
-- **Commit:** local, único, na branch `fix/ajustes-tati-2026-10-07`. **Sem push, sem PR, sem merge/deploy.**
+- **Commits:** locais (rodada 1 `2c7e458e` + rodada 2) na branch `fix/ajustes-tati-2026-10-07`. **Sem push, sem PR, sem merge/deploy.**
 - **`git status` após o commit:** limpo (artefatos de validação mantidos fora do repositório; `server/dist` removido).
 - **Uso/tokens disponíveis:** INDISPONÍVEL — a sessão não fornece métrica confiável.

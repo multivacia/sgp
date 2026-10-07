@@ -256,81 +256,81 @@ describe.skipIf(!hasDb)('GET /api/v1/me/time-entry-candidates (integração)', (
     expect(ok.body.data.notes).toContain('integração')
   })
 
-  it('filtros conveyorQ + activityQ funcionam isolados e combinados (AND)', async () => {
+  it('pesquisa "Esteira & atividade" (q com &): esteira/OS à esquerda, nome da atividade à direita', async () => {
     await linkAppUserToCollaborator(pool, MARIA_APP_USER_ID, COLAB_SEED)
-    const tag = randomUUID().slice(0, 8)
-    const body = minimalConveyorBody(`Filtro ${tag}`)
-    body.options[0]!.areas[0]!.steps = [
-      {
-        titulo: `Costura ${tag}`,
-        orderIndex: 1,
+    const tag = randomUUID().replace(/-/g, '').slice(0, 6)
+    const code = `7070${tag}`
+    const mk = async (nome: string, stepTitles: string[], osCode: string) => {
+      const body = minimalConveyorBody(nome)
+      body.options[0]!.titulo = 'Bancos dianteiros'
+      body.options[0]!.areas[0]!.titulo = 'Tapeçaria'
+      body.options[0]!.areas[0]!.steps = stepTitles.map((titulo, i) => ({
+        titulo,
+        orderIndex: i + 1,
         plannedMinutes: 30,
-        sourceOrigin: 'manual',
+        sourceOrigin: 'manual' as const,
         required: true,
-      },
-      {
-        titulo: `Corte ${tag}`,
-        orderIndex: 2,
-        plannedMinutes: 30,
-        sourceOrigin: 'manual',
-        required: true,
-      },
-    ]
-    const created = await serviceCreateConveyor(pool, body)
-    await setConveyorProductionStatusForIntegration(pool, created.id)
-    const steps = await pool.query<{ id: string; name: string }>(
-      `SELECT id::text, name FROM conveyor_nodes
-       WHERE conveyor_id = $1::uuid AND node_type = 'STEP' AND deleted_at IS NULL
-       ORDER BY order_index`,
-      [created.id],
-    )
-    for (const st of steps.rows) {
-      await serviceCreateConveyorNodeAssignee(pool, {
-        conveyorId: created.id,
-        conveyorNodeId: st.id,
-        collaboratorId: COLAB_SEED,
-        isPrimary: true,
-      })
+      }))
+      const created = await serviceCreateConveyor(pool, body)
+      await setConveyorProductionStatusForIntegration(pool, created.id)
+      await pool.query(`UPDATE conveyors SET code = $2 WHERE id = $1::uuid`, [created.id, osCode])
+      const steps = await pool.query<{ id: string }>(
+        `SELECT id::text FROM conveyor_nodes
+         WHERE conveyor_id = $1::uuid AND node_type = 'STEP' AND deleted_at IS NULL`,
+        [created.id],
+      )
+      for (const st of steps.rows) {
+        await serviceCreateConveyorNodeAssignee(pool, {
+          conveyorId: created.id,
+          conveyorNodeId: st.id,
+          collaboratorId: COLAB_SEED,
+          isPrimary: true,
+        })
+      }
+      return created.id
     }
+    const target = await mk(
+      `Esteira ${code}`,
+      [
+        'corte do tecido XPTO',
+        'Costura do tecido XPTO',
+        'Revestir banco com tecido XPTO',
+        'Revestir banco do couro',
+        'Lixar estrutura',
+      ],
+      code,
+    )
+    // Outra esteira com atividade "XPTO" — não pode aparecer.
+    const other = await mk(`Outra ${tag}`, ['Costura do tecido XPTO'], `9090${tag}`)
+
     const cookieMaria = await sessionCookieForUser(pool, MARIA_APP_USER_ID, MARIA_EMAIL)
-    const fetchNames = async (qs: string) => {
+    const search = async (q: string) => {
       const res = await request(app)
-        .get(`/api/v1/me/time-entry-candidates?${qs}`)
+        .get(`/api/v1/me/time-entry-candidates?q=${encodeURIComponent(q)}`)
         .set('Cookie', cookieMaria)
       expect(res.status).toBe(200)
-      return (res.body.data as Array<{ conveyorId: string; stepName: string }>)
-        .filter((x) => x.conveyorId === created.id)
-        .map((x) => x.stepName)
+      const rows = res.body.data as Array<{ conveyorId: string; stepName: string }>
+      expect(rows.some((r) => r.conveyorId === other)).toBe(false)
+      return rows
+        .filter((r) => r.conveyorId === target)
+        .map((r) => r.stepName)
         .sort()
     }
 
-    // Somente esteira: as duas atividades.
-    expect(await fetchNames(`conveyorQ=${encodeURIComponent(`Filtro ${tag}`)}`)).toEqual(
-      [`Corte ${tag}`, `Costura ${tag}`].sort(),
+    expect(await search(`${code} & XPTO`)).toEqual(
+      ['Costura do tecido XPTO', 'Revestir banco com tecido XPTO', 'corte do tecido XPTO'].sort(),
     )
-    // Somente atividade: apenas Costura.
-    expect(await fetchNames(`activityQ=${encodeURIComponent(`Costura ${tag}`)}`)).toEqual([
-      `Costura ${tag}`,
-    ])
-    // Combinado (AND): esteira + atividade.
-    expect(
-      await fetchNames(
-        `conveyorQ=${encodeURIComponent(tag)}&activityQ=${encodeURIComponent('Corte')}`,
-      ),
-    ).toEqual([`Corte ${tag}`])
-    // Combinado sem interseção: nenhuma linha desta esteira.
-    expect(
-      await fetchNames(
-        `conveyorQ=${encodeURIComponent('zzzz_nomatch')}&activityQ=${encodeURIComponent(`Corte ${tag}`)}`,
-      ),
-    ).toEqual([])
-    // Esteira por placa/cliente continua válida no filtro de esteira; atividade por setor.
-    expect(
-      await fetchNames(
-        `conveyorQ=${encodeURIComponent('ClienteFiltroX')}&activityQ=${encodeURIComponent(`Costura ${tag}`)}`,
-      ),
-    ).toEqual([`Costura ${tag}`])
-    // Termo de atividade não casa com nome de esteira (escopo separado).
-    expect(await fetchNames(`activityQ=${encodeURIComponent(`Filtro ${tag}`)}`)).toEqual([])
+    expect(await search(`${code} & banco`)).toEqual(
+      ['Revestir banco com tecido XPTO', 'Revestir banco do couro'].sort(),
+    )
+    // Sem diferenciar maiúsculas/acentos e com espaços extras ao redor do &.
+    expect(await search(`  ${code}   &   xptó  `)).toHaveLength(3)
+    expect(await search(`${code}&BANCO`)).toHaveLength(2)
+    // Termo direito casa só o nome da atividade (não a tarefa "Bancos dianteiros").
+    expect(await search(`${code} & dianteiros`)).toEqual([])
+    // Termo esquerdo sozinho → todas as atividades da esteira.
+    expect(await search(`${code} &`)).toHaveLength(5)
+    // Sem &, a pesquisa livre segue como antes (nome da esteira contém o código).
+    expect(await search(code)).toHaveLength(5)
   })
 })

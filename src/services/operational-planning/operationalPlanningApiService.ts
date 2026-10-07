@@ -1,6 +1,7 @@
 import type {
   OperationalPlanningBacklogPayload,
   OperationalPlanningFactoryIntakePayload,
+  OperationalPlanningPeriodItemsPayload,
   OperationalPlanningWeekActivityPayload,
   OperationalPlanningWeekPayload,
   SaveOperationalWeekPlanInput,
@@ -229,4 +230,87 @@ export async function getFactoryIntakeItems(
     'GET',
     `${BASE}/operational-planning/factory-intake${s ? `?${s}` : ''}`,
   )
+}
+
+/** Recorte do Planejamento: período (`from`/`to`, pontas opcionais) ou semana do quadro. */
+export type OperationalPlanningRangeScope =
+  | { kind: 'period'; from?: string; to?: string }
+  | { kind: 'week'; weekStart: string }
+
+function planningRangeQuery(scope: OperationalPlanningRangeScope): string {
+  const sp = new URLSearchParams()
+  if (scope.kind === 'week') {
+    sp.set('weekStart', scope.weekStart)
+  } else {
+    if (scope.from) sp.set('from', scope.from)
+    if (scope.to) sp.set('to', scope.to)
+  }
+  return sp.toString()
+}
+
+/** GET /operational-planning/period-items — itens planejados atravessando semanas (data planejada). */
+export async function getOperationalPlanningPeriodItems(
+  from: string | undefined,
+  to: string | undefined,
+): Promise<OperationalPlanningPeriodItemsPayload> {
+  return requestJson<OperationalPlanningPeriodItemsPayload>(
+    'GET',
+    `${BASE}/operational-planning/period-items?${planningRangeQuery({ kind: 'period', from, to })}`,
+  )
+}
+
+export const EXPORT_OPERATIONAL_PLANNING_AI_FAIL_MESSAGE =
+  'Não foi possível exportar a planilha de planejamento para IA.'
+
+/** Baixa o `.xlsx` "Planejamento para IA" (Backlog, Planejado e Carga) do recorte informado. */
+export async function exportOperationalPlanningAiToExcel(
+  scope: OperationalPlanningRangeScope,
+): Promise<void> {
+  const baseUrl = getApiBaseUrl()
+  const pathPart = `${BASE}/operational-planning/export-ai.xlsx?${planningRangeQuery(scope)}`
+  const url = baseUrl ? `${baseUrl}${pathPart}` : pathPart
+
+  let res: Response
+  try {
+    res = await fetch(url, { method: 'GET', credentials: 'include' })
+  } catch (e) {
+    throw new ApiError(EXPORT_OPERATIONAL_PLANNING_AI_FAIL_MESSAGE, 503, {
+      code: 'NETWORK_ERROR',
+      cause: e,
+    })
+  }
+
+  if (!res.ok) {
+    let parsed: unknown = null
+    try {
+      const text = await res.text()
+      parsed = text ? JSON.parse(text) : null
+    } catch {
+      // Corpo não-JSON: segue com mensagem padrão pelo status.
+    }
+    const { message, code, errorRef, correlationId, category, severity, details } =
+      parseErrorEnvelope(parsed, res.status)
+    throw new ApiError(message, res.status, {
+      code,
+      errorRef,
+      correlationId,
+      category,
+      severity,
+      details,
+    })
+  }
+
+  const blob = await res.blob()
+  const filename =
+    filenameFromContentDisposition(res.headers.get('Content-Disposition')) ??
+    'planejamento-ia.xlsx'
+  const objectUrl = URL.createObjectURL(blob)
+  const anchor = document.createElement('a')
+  anchor.href = objectUrl
+  anchor.download = filename
+  anchor.rel = 'noopener'
+  document.body.appendChild(anchor)
+  anchor.click()
+  anchor.remove()
+  URL.revokeObjectURL(objectUrl)
 }

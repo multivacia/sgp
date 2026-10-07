@@ -23,18 +23,13 @@ export type TimeEntryCandidatesResult = {
  * GET /api/v1/me/time-entry-candidates — atividades em aberto apontáveis neste recorte.
  */
 export async function listTimeEntryCandidates(options?: {
+  /** Pesquisa livre; com `&`: `esteira/OS & nome da atividade` (interpretado no backend). */
   q?: string
-  /** Filtro por esteira (nome, código, cliente, veículo, placa). Combinado com `activityQ` via AND. */
-  conveyorQ?: string
-  /** Filtro por atividade (atividade, setor, tarefa). Combinado com `conveyorQ` via AND. */
-  activityQ?: string
   limit?: number
   includeUnassigned?: boolean
 }): Promise<TimeEntryCandidatesResult> {
   const sp = new URLSearchParams()
   if (options?.q?.trim()) sp.set('q', options.q.trim())
-  if (options?.conveyorQ?.trim()) sp.set('conveyorQ', options.conveyorQ.trim())
-  if (options?.activityQ?.trim()) sp.set('activityQ', options.activityQ.trim())
   if (options?.limit != null) sp.set('limit', String(options.limit))
   if (options?.includeUnassigned) sp.set('includeUnassigned', 'true')
   const qs = sp.toString()
