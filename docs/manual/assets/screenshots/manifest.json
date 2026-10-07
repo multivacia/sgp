@@ -1169,6 +1169,55 @@
       "notes": "Resultado do interpretador mockado (fixtures/document-import.mjs, schema draft v1.1.0); o PDF enviado é um arquivo fictício mínimo gerado em memória."
     },
     {
+      "id": "cap18-01",
+      "chapter": "18. Saúde operacional",
+      "section": "Onde fica",
+      "manualLine": 5450,
+      "marker": "[IMAGEM SUGERIDA: Tela Saúde operacional dos colaboradores — quadro de filtros com Janela (dias), Incluir colaboradores inativos, Busca local e Estado operacional; os seis cartões de resumo; as primeiras linhas da tabela com as colunas Estado, Risco, Carga pendente, Uso e Sinais]",
+      "file": "cap18-01-saude-operacional.png",
+      "extraFiles": [],
+      "route": "/app/colaboradores/saude-operacional",
+      "viewport": {
+        "width": 1440,
+        "height": 1500
+      },
+      "user": "ana.demo@sgp.example",
+      "scenario": "Saúde operacional com 6 colaboradores fictícios: filtros (Janela, inativos, Busca local, Estado operacional), seis cartões de resumo e primeiras linhas da tabela (Estado, Risco, Carga pendente, Uso, Sinais).",
+      "mockEndpoints": [
+        "GET /api/v1/auth/me",
+        "GET /api/v1/collaborators/operational-health-summary",
+        "GET /api/v1/version"
+      ],
+      "unexpectedApiCalls": [],
+      "status": "CAPTURED",
+      "notes": "Linhas, sinais e totais produzidos por mapSnapshotToOperationalHealthSummaryRow / computeOperationalHealthSummaryTotals reais (server/src) a partir de snapshots fictícios (scripts/lib/manual-capture/server/operational-health.ts)."
+    },
+    {
+      "id": "cap18-02",
+      "chapter": "18. Saúde operacional",
+      "section": "Como fazer",
+      "manualLine": 5561,
+      "marker": "[IMAGEM SUGERIDA: Painel de detalhe aberto à direita, com os blocos Capacidade, Carga, Apontamentos recentes e Qualidade dos dados e o aviso fixo no rodapé]",
+      "file": "cap18-02-painel-de-detalhe.png",
+      "extraFiles": [],
+      "route": "/app/colaboradores/saude-operacional",
+      "viewport": {
+        "width": 1440,
+        "height": 1100
+      },
+      "user": "ana.demo@sgp.example",
+      "scenario": "Detalhe de Carlos Demo aberto à direita: blocos Capacidade, Carga, Apontamentos recentes e Qualidade dos dados, com o aviso fixo no rodapé.",
+      "mockEndpoints": [
+        "GET /api/v1/auth/me",
+        "GET /api/v1/collaborators/col-carlos/operational-health-snapshot",
+        "GET /api/v1/collaborators/operational-health-summary",
+        "GET /api/v1/version"
+      ],
+      "unexpectedApiCalls": [],
+      "status": "CAPTURED",
+      "notes": "Linhas, sinais e totais produzidos por mapSnapshotToOperationalHealthSummaryRow / computeOperationalHealthSummaryTotals reais (server/src) a partir de snapshots fictícios (scripts/lib/manual-capture/server/operational-health.ts)."
+    },
+    {
       "id": "extra-ajuda-menu",
       "chapter": "Extra — Barra superior (menu Ajuda)",
       "section": null,
