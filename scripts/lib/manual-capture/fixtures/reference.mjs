@@ -119,3 +119,27 @@ export const MATRIX_ITEMS = MATRIX_TREES.map(({ children, ...item }) => item)
 export function collaboratorsList() {
   return COLLABORATORS.map(collaboratorApiJson)
 }
+
+const LINKED = {
+  'col-ana': ['user-ana-demo', 'ana.demo@sgp.example', 'Ana Demo'],
+  'col-carlos': ['user-carlos-demo', 'carlos.demo@sgp.example', 'Carlos Demo'],
+  'col-bruno': ['user-bruno-exemplo', 'bruno.exemplo@sgp.example', 'Bruno Exemplo'],
+}
+
+/** GET /admin/collaborators — colaborador + vínculo de usuário + estado do PIN do Modo Fábrica. */
+export function adminCollaboratorJson(c, overrides = {}) {
+  const link = LINKED[c.id]
+  return {
+    ...collaboratorApiJson(c),
+    deleted_at: null,
+    linked_user_id: link?.[0] ?? null,
+    linked_user_email: link?.[1] ?? null,
+    linked_user_display_name: link?.[2] ?? null,
+    productionPin: { hasCredential: c.id !== 'col-fernanda', enabled: c.id !== 'col-fernanda', mustChange: c.id === 'col-diana', locked: false },
+    ...overrides,
+  }
+}
+
+export function adminCollaboratorsList() {
+  return COLLABORATORS.map((c) => adminCollaboratorJson(c))
+}

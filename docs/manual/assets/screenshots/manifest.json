@@ -643,6 +643,180 @@
       "notes": null
     },
     {
+      "id": "cap10-01",
+      "chapter": "10. Minha Fila",
+      "section": "Onde fica",
+      "manualLine": 2650,
+      "marker": "[IMAGEM SUGERIDA: tela Minha fila com o painel de números, o seletor de data e os grupos Atrasadas, Hoje e Concluídas]",
+      "file": "cap10-01-minha-fila.png",
+      "extraFiles": [],
+      "route": "/app/minha-fila",
+      "viewport": {
+        "width": 1440,
+        "height": 1900
+      },
+      "user": "carlos.demo@sgp.example",
+      "scenario": "Colaborador Carlos Demo em 01/07/2026: painel de números, seletor de data e grupos Atrasadas, Hoje e Concluídas.",
+      "mockEndpoints": [
+        "GET /api/v1/auth/me",
+        "GET /api/v1/me/work-queue",
+        "GET /api/v1/version"
+      ],
+      "unexpectedApiCalls": [],
+      "status": "CAPTURED",
+      "notes": null
+    },
+    {
+      "id": "cap10-02",
+      "chapter": "10. Minha Fila",
+      "section": "Como fazer",
+      "manualLine": 2754,
+      "marker": "[IMAGEM SUGERIDA: cartão da fila com o selo Próxima atividade recomendada, o tempo previsto e os botões Apontar horas e Abrir Esteira]",
+      "file": "cap10-02-cartao-proxima-recomendada.png",
+      "extraFiles": [],
+      "route": "/app/minha-fila",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "user": "carlos.demo@sgp.example",
+      "scenario": "Cartão \"Desmontar painéis\" com o selo de próxima atividade recomendada, tempo previsto e botões Apontar horas e Abrir Esteira.",
+      "mockEndpoints": [
+        "GET /api/v1/auth/me",
+        "GET /api/v1/me/work-queue",
+        "GET /api/v1/version"
+      ],
+      "unexpectedApiCalls": [],
+      "status": "CAPTURED",
+      "notes": null
+    },
+    {
+      "id": "cap10-03",
+      "chapter": "10. Minha Fila",
+      "section": "Como fazer",
+      "manualLine": 2801,
+      "marker": "[IMAGEM SUGERIDA: faixa amarela de planejamento acima da capacidade do dia, acima do grupo Atrasadas]",
+      "file": "cap10-03-faixa-acima-da-capacidade.png",
+      "extraFiles": [],
+      "route": "/app/minha-fila",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "user": "carlos.demo@sgp.example",
+      "scenario": "Dia com 10 h planejadas para 8 h de capacidade: faixa amarela acima do grupo Atrasadas.",
+      "mockEndpoints": [
+        "GET /api/v1/auth/me",
+        "GET /api/v1/me/work-queue",
+        "GET /api/v1/version"
+      ],
+      "unexpectedApiCalls": [],
+      "status": "CAPTURED",
+      "notes": null
+    },
+    {
+      "id": "cap10-04",
+      "chapter": "10. Minha Fila",
+      "section": "Quando algo é bloqueado",
+      "manualLine": 2956,
+      "marker": "[IMAGEM SUGERIDA: gaveta Execução rápida aberta a partir do cartão, com data, tempo, quantidade e o botão Salvar apontamento e concluir atividade]",
+      "file": "cap10-04-execucao-rapida.png",
+      "extraFiles": [],
+      "route": "/app/minha-fila",
+      "viewport": {
+        "width": 1440,
+        "height": 1300
+      },
+      "user": "carlos.demo@sgp.example",
+      "scenario": "Botão Apontar horas do cartão \"Desmontar painéis\" → gaveta Execução rápida com data, tempo, quantidade e Salvar apontamento e concluir atividade.",
+      "mockEndpoints": [
+        "GET /api/v1/auth/me",
+        "GET /api/v1/me/extra-time-entries",
+        "GET /api/v1/me/extra-time-entry-descriptions",
+        "GET /api/v1/me/time-entry-candidates",
+        "GET /api/v1/me/time-entry-justifications",
+        "GET /api/v1/me/work-queue",
+        "GET /api/v1/version"
+      ],
+      "unexpectedApiCalls": [],
+      "status": "CAPTURED",
+      "notes": null
+    },
+    {
+      "id": "cap11-01",
+      "chapter": "11. Minha Jornada",
+      "section": "Como fazer",
+      "manualLine": 3007,
+      "marker": "[IMAGEM SUGERIDA: Período e filtros aberto, com o intervalo personalizado e a Janela visíveis.]",
+      "file": "cap11-01-periodo-e-filtros.png",
+      "extraFiles": [],
+      "route": "/app/jornada?periodPreset=custom&periodFrom=2026-06-15&periodTo=2026-07-01",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "user": "carlos.demo@sgp.example",
+      "scenario": "Minha jornada de Carlos Demo com \"Período e filtros\" aberto, recorte \"Personalizado\" (15/06–01/07/2026) e a linha Janela visível.",
+      "mockEndpoints": [
+        "GET /api/v1/auth/me",
+        "GET /api/v1/my-operational-journey",
+        "GET /api/v1/version"
+      ],
+      "unexpectedApiCalls": [],
+      "status": "CAPTURED",
+      "notes": null
+    },
+    {
+      "id": "cap12-01",
+      "chapter": "12. Jornada Gerencial",
+      "section": "Como fazer",
+      "manualLine": 3233,
+      "marker": "[IMAGEM SUGERIDA: Quadro de consulta com três colaboradores selecionados na faixa de iniciais, o popover de busca aberto e a linha de confirmação dos nomes.]",
+      "file": "cap12-01-quadro-de-consulta.png",
+      "extraFiles": [],
+      "route": "/app/gestao/jornada-colaborador?colaboradorIds=col-carlos,col-bruno,col-diana",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "user": "ana.demo@sgp.example",
+      "scenario": "Três colaboradores (Carlos Demo, Bruno Exemplo, Diana Exemplo) na faixa de iniciais, popover de busca aberto e a linha de confirmação dos nomes.",
+      "mockEndpoints": [
+        "GET /api/v1/admin/collaborators",
+        "GET /api/v1/auth/me",
+        "GET /api/v1/collaborators/operational-journey",
+        "GET /api/v1/version"
+      ],
+      "unexpectedApiCalls": [],
+      "status": "CAPTURED",
+      "notes": "Observação de auditoria: o popover de busca abre sobre a linha de confirmação dos nomes (\"3 colaboradores: …\"), que fica parcialmente encoberta enquanto o popover está aberto (comportamento real)."
+    },
+    {
+      "id": "cap12-02",
+      "chapter": "12. Jornada Gerencial",
+      "section": "O que esperar",
+      "manualLine": 3341,
+      "marker": "[IMAGEM SUGERIDA: Resumo do escopo com os quatro números, o painel de Cobertura de tempo e o painel de Pressão de atraso.]",
+      "file": "cap12-02-resumo-do-escopo.png",
+      "extraFiles": [],
+      "route": "/app/gestao/jornada-colaborador?colaboradorIds=col-carlos,col-bruno,col-diana",
+      "viewport": {
+        "width": 1440,
+        "height": 1800
+      },
+      "user": "ana.demo@sgp.example",
+      "scenario": "Escopo de 3 colaboradores: quatro números (alocações, previsto estrutural, minutos apontados no período e acumulado), painel Cobertura de tempo e painel Pressão de atraso.",
+      "mockEndpoints": [
+        "GET /api/v1/admin/collaborators",
+        "GET /api/v1/auth/me",
+        "GET /api/v1/collaborators/operational-journey",
+        "GET /api/v1/version"
+      ],
+      "unexpectedApiCalls": [],
+      "status": "CAPTURED",
+      "notes": "Observação: a tela não tem um título literal \"Resumo do escopo\"; entre os quatro números e os painéis de Cobertura/Pressão aparece também o bloco \"Extra esteira (período)\"."
+    },
+    {
       "id": "extra-ajuda-menu",
       "chapter": "Extra — Barra superior (menu Ajuda)",
       "section": null,

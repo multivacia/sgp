@@ -9,7 +9,15 @@ import { readFileSync } from 'node:fs'
 import path from 'node:path'
 import { repoRoot } from './inventory.mjs'
 import { FIXED_NOW_ISO } from './fixtures/common.mjs'
-import { MATRIX_ITEMS, MATRIX_TREES, ROLES, SECTORS, TEAMS, collaboratorsList } from './fixtures/reference.mjs'
+import {
+  MATRIX_ITEMS,
+  MATRIX_TREES,
+  ROLES,
+  SECTORS,
+  TEAMS,
+  adminCollaboratorsList,
+  collaboratorsList,
+} from './fixtures/reference.mjs'
 
 const appVersion = JSON.parse(readFileSync(path.join(repoRoot, 'app-version.json'), 'utf8'))
 
@@ -54,6 +62,13 @@ export function baseHandlers(user) {
     ),
     // Dados de referência comuns a várias telas (podem ser sobrepostos pelo item).
     h('GET', '/api/v1/collaborators', () => ok(collaboratorsList())),
+    h('GET', '/api/v1/admin/collaborators', () => {
+      const rows = adminCollaboratorsList()
+      return ok(rows, { total: rows.length, limit: 250, offset: 0 })
+    }),
+    h('GET', /^\/api\/v1\/admin\/collaborators\/[^/]+$/, ({ url }) =>
+      ok(adminCollaboratorsList().find((c) => c.id === decodeURIComponent(url.pathname.split('/')[5])) ?? null),
+    ),
     h('GET', '/api/v1/sectors', () => ok(SECTORS)),
     h('GET', '/api/v1/roles', () => ok(ROLES)),
     h('GET', '/api/v1/teams', () => ok(TEAMS, { total: TEAMS.length, limit: 200, offset: 0 })),
