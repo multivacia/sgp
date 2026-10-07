@@ -93,6 +93,9 @@ export type TimeEntryHistoryRow = {
   exception_justification: string | null
   is_out_of_sequence: boolean
   out_of_sequence_justification: string | null
+  /** Snapshot da justificativa padronizada (catálogo) — inclui a justificativa voluntária. */
+  standard_justification_label: string | null
+  standard_justification_complement: string | null
 }
 
 export type ExtraTimeEntriesSummaryRow = {
@@ -131,7 +134,9 @@ export async function listTimeEntriesForCollaboratorInPeriod(
       cte.entry_origin,
       cte.exception_justification,
       cte.is_out_of_sequence,
-      cte.out_of_sequence_justification
+      cte.out_of_sequence_justification,
+      cte.standard_justification_label_snapshot AS standard_justification_label,
+      cte.standard_justification_complement AS standard_justification_complement
     ${journeyTimeEntriesFromSql()}
       AND cte.collaborator_id = $1::uuid
       AND cte.entry_at >= $2::timestamptz
@@ -183,7 +188,9 @@ export async function listAllTimeEntriesForCollaboratorInPeriod(
       cte.entry_origin,
       cte.exception_justification,
       cte.is_out_of_sequence,
-      cte.out_of_sequence_justification
+      cte.out_of_sequence_justification,
+      cte.standard_justification_label_snapshot AS standard_justification_label,
+      cte.standard_justification_complement AS standard_justification_complement
     ${journeyTimeEntriesFromSql(`
     LEFT JOIN conveyor_nodes area ON area.id = step.parent_id
     LEFT JOIN conveyor_nodes opt ON opt.id = step.root_id`)}
@@ -226,7 +233,6 @@ export async function listExtraTimeEntriesInPeriodForCollaborator(
     FROM operational_extra_time_entries e
     INNER JOIN operational_extra_time_entry_descriptions d
       ON d.id = e.description_id
-     AND d.deleted_at IS NULL
     WHERE e.collaborator_id = $1::uuid
       AND e.deleted_at IS NULL
       AND e.entry_date >= ($2::timestamptz AT TIME ZONE '${OPERATIONAL_TIMEZONE}')::date
@@ -254,7 +260,6 @@ export async function summarizeExtraTimeEntriesInPeriodForCollaborator(
     FROM operational_extra_time_entries e
     INNER JOIN operational_extra_time_entry_descriptions d
       ON d.id = e.description_id
-     AND d.deleted_at IS NULL
     WHERE e.collaborator_id = $1::uuid
       AND e.deleted_at IS NULL
       AND e.entry_date >= ($2::timestamptz AT TIME ZONE '${OPERATIONAL_TIMEZONE}')::date
@@ -295,7 +300,6 @@ export async function listTopExtraTimeEntryDescriptionsInPeriodForCollaborator(
     FROM operational_extra_time_entries e
     INNER JOIN operational_extra_time_entry_descriptions d
       ON d.id = e.description_id
-     AND d.deleted_at IS NULL
     WHERE e.collaborator_id = $1::uuid
       AND e.deleted_at IS NULL
       AND e.entry_date >= ($2::timestamptz AT TIME ZONE '${OPERATIONAL_TIMEZONE}')::date
@@ -421,7 +425,9 @@ export async function listTimeEntriesForCollaboratorsInPeriod(
       cte.entry_origin,
       cte.exception_justification,
       cte.is_out_of_sequence,
-      cte.out_of_sequence_justification
+      cte.out_of_sequence_justification,
+      cte.standard_justification_label_snapshot AS standard_justification_label,
+      cte.standard_justification_complement AS standard_justification_complement
     ${journeyTimeEntriesFromSql('LEFT JOIN collaborators col ON col.id = cte.collaborator_id')}
       AND cte.collaborator_id = ANY($1::uuid[])
       AND cte.entry_at >= $2::timestamptz
@@ -451,7 +457,6 @@ export async function summarizeExtraTimeEntriesInPeriodForCollaborators(
     FROM operational_extra_time_entries e
     INNER JOIN operational_extra_time_entry_descriptions d
       ON d.id = e.description_id
-     AND d.deleted_at IS NULL
     WHERE e.collaborator_id = ANY($1::uuid[])
       AND e.deleted_at IS NULL
       AND e.entry_date >= ($2::timestamptz AT TIME ZONE '${OPERATIONAL_TIMEZONE}')::date
@@ -497,7 +502,6 @@ export async function listTopExtraTimeEntryDescriptionsInPeriodForCollaborators(
     FROM operational_extra_time_entries e
     INNER JOIN operational_extra_time_entry_descriptions d
       ON d.id = e.description_id
-     AND d.deleted_at IS NULL
     WHERE e.collaborator_id = ANY($1::uuid[])
       AND e.deleted_at IS NULL
       AND e.entry_date >= ($2::timestamptz AT TIME ZONE '${OPERATIONAL_TIMEZONE}')::date
@@ -514,4 +518,56 @@ export async function listTopExtraTimeEntryDescriptionsInPeriodForCollaborators(
     totalMinutes: Number.parseInt(row.total_minutes, 10) || 0,
     entriesCount: Number.parseInt(row.entries_count, 10) || 0,
   }))
+}
+
+export type ExtraTimeEntryJourneyRow = {
+  id: string
+  collaborator_id: string
+  collaborator_name: string | null
+  entry_date: string
+  minutes: number
+  description: string
+  notes: string | null
+  origin: string
+}
+
+/**
+ * Lançamentos Extra Esteira no período (mais recentes primeiro) — mesmo universo de
+ * `summarizeExtraTimeEntriesInPeriodForCollaborators`. Descrições excluídas do catálogo
+ * continuam visíveis para preservar o histórico.
+ */
+export async function listExtraTimeEntriesInPeriodForCollaborators(
+  pool: pg.Pool,
+  args: {
+    collaboratorIds: string[]
+    from: Date
+    to: Date
+    limit: number
+  },
+): Promise<ExtraTimeEntryJourneyRow[]> {
+  const r = await pool.query<ExtraTimeEntryJourneyRow>(
+    `
+    SELECT
+      e.id::text,
+      e.collaborator_id::text AS collaborator_id,
+      col.full_name AS collaborator_name,
+      to_char(e.entry_date, 'YYYY-MM-DD') AS entry_date,
+      e.minutes,
+      d.description,
+      e.notes,
+      e.origin
+    FROM operational_extra_time_entries e
+    INNER JOIN operational_extra_time_entry_descriptions d
+      ON d.id = e.description_id
+    LEFT JOIN collaborators col ON col.id = e.collaborator_id
+    WHERE e.collaborator_id = ANY($1::uuid[])
+      AND e.deleted_at IS NULL
+      AND e.entry_date >= ($2::timestamptz AT TIME ZONE '${OPERATIONAL_TIMEZONE}')::date
+      AND e.entry_date <= ($3::timestamptz AT TIME ZONE '${OPERATIONAL_TIMEZONE}')::date
+    ORDER BY e.entry_date DESC, e.created_at DESC
+    LIMIT $4::int
+    `,
+    [args.collaboratorIds, args.from, args.to, args.limit],
+  )
+  return r.rows
 }

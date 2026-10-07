@@ -28,6 +28,23 @@ export type OperationalJourneyTimeEntryApi = {
   exceptionJustification: string | null
   isOutOfSequence: boolean
   outOfSequenceJustification: string | null
+  /** Justificativa padronizada (catálogo): rótulo e complemento gravados no apontamento. */
+  standardJustificationLabel: string | null
+  standardJustificationComplement: string | null
+}
+
+/** Lançamento Extra Esteira (tempo fora de esteira) no período da jornada. */
+export type OperationalJourneyExtraTimeEntryApi = {
+  id: string
+  collaboratorId: string
+  collaboratorName: string | null
+  /** Data de trabalho (YYYY-MM-DD, dia civil de São Paulo). */
+  entryDate: string
+  minutes: number
+  description: string
+  notes: string | null
+  /** WEB (SGP) ou PRODUCTION (Modo Fábrica/Kiosk). */
+  origin: 'WEB' | 'PRODUCTION'
 }
 
 export type PendenciaTempoItemApi = {
@@ -111,4 +128,6 @@ export type OperationalJourneyApi = {
   assignmentsOpen: OperationalJourneyAssignmentApi[]
   assignmentsAtRisk: OperationalJourneyAssignmentApi[]
   recentTimeEntries: OperationalJourneyTimeEntryApi[]
+  /** Lançamentos Extra Esteira do período (até `query.limit`). */
+  recentExtraTimeEntries: OperationalJourneyExtraTimeEntryApi[]
 }

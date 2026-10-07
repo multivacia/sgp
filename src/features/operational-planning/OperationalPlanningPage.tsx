@@ -97,6 +97,7 @@ import { FactoryIntakePanel } from './FactoryIntakePanel'
 import {
   buildPlanningFilterOptions,
   DEFAULT_PLANNING_BOARD_FILTERS,
+  isPlanningPeriodFilterActive,
   filterPlanningDraftItems,
   isPlanningBoardFiltersActive,
   PLANNING_COLLABORATOR_ALL,
@@ -176,6 +177,7 @@ import {
   PLANNING_PAGE_ROOT_CLASS,
   PLANNING_UPPER_SECTION_CLASS,
 } from './planningOperationalLayout'
+import { describePeriodRange, validatePeriodRange } from '../../domain/operational/periodFilter'
 
 export { ACTIVITY_TICKET_PRINT_SUPPORT_MESSAGE } from '../operational-tickets/activityTicketPrintCopy'
 
@@ -705,6 +707,12 @@ export function OperationalPlanningPage() {
   const [planningFilters, setPlanningFilters] = useState<PlanningBoardFilters>(
     () => ({ ...DEFAULT_PLANNING_BOARD_FILTERS }),
   )
+  /** O período do quadro vale para a semana exibida; trocar de semana limpa só o período. */
+  useEffect(() => {
+    setPlanningFilters((f) =>
+      f.dateFrom || f.dateTo ? { ...f, dateFrom: '', dateTo: '' } : f,
+    )
+  }, [weekMonday])
   const [busy, setBusy] = useState(false)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [successMsg, setSuccessMsg] = useState<string | null>(null)
@@ -1431,6 +1439,10 @@ export function OperationalPlanningPage() {
     [draftItems, planningFilters, capacityRows],
   )
   const planningFiltersActive = isPlanningBoardFiltersActive(planningFilters)
+  const planningPeriodError = validatePeriodRange({
+    from: planningFilters.dateFrom ?? '',
+    to: planningFilters.dateTo ?? '',
+  })
   const activeDraftItemsCount = draftItems.length
 
   const daySummaries = useMemo(
@@ -1508,9 +1520,10 @@ export function OperationalPlanningPage() {
     if (
       planningFilters.collaboratorId !== PLANNING_COLLABORATOR_ALL ||
       planningFilters.conveyorId !== PLANNING_CONVEYOR_ALL ||
-      planningFilters.q.trim() !== ''
+      planningFilters.q.trim() !== '' ||
+      isPlanningPeriodFilterActive(planningFilters)
     ) {
-      return 'Fora do plano respeita filtros de esteira, colaborador e busca.'
+      return 'Fora do plano respeita filtros de esteira, colaborador, busca e período (data do apontamento).'
     }
     return null
   }, [planningFiltersActive, executionOutsidePlanEntries.length, planningFilters])
@@ -1612,6 +1625,21 @@ export function OperationalPlanningPage() {
                 ›
               </button>
             </div>
+            <label className="flex items-center gap-2 text-[12px] text-slate-400">
+              Ir para a data
+              <input
+                type="date"
+                className="rounded-lg border border-white/[0.08] bg-white/[0.04] px-2 py-1 text-[12px] text-slate-100"
+                aria-label="Ir para a semana da data"
+                disabled={busy}
+                value=""
+                onChange={(e) => {
+                  const v = e.target.value
+                  if (!v) return
+                  setWeekMonday(mondayOfWeekContainingLocal(new Date(`${v}T12:00:00`)))
+                }}
+              />
+            </label>
 
             <span
               className={[
@@ -1847,6 +1875,52 @@ export function OperationalPlanningPage() {
                     ) : null}
                   </select>
                 </label>
+                <div className="block text-[11px] text-slate-500 sm:col-span-2 xl:col-span-2">
+                  Período (data planejada)
+                  <div className="mt-1 flex flex-wrap items-center gap-2">
+                    <input
+                      type="date"
+                      aria-label="Período — data inicial"
+                      className="rounded-xl border border-white/[0.08] bg-white/[0.04] px-3 py-2 text-[13px] text-slate-100"
+                      min={displayedWeekRange.start}
+                      max={planningFilters.dateTo || displayedWeekRange.end}
+                      value={planningFilters.dateFrom ?? ''}
+                      onChange={(e) =>
+                        setPlanningFilters((f) => ({ ...f, dateFrom: e.target.value }))
+                      }
+                    />
+                    <span className="text-slate-600">até</span>
+                    <input
+                      type="date"
+                      aria-label="Período — data final"
+                      className="rounded-xl border border-white/[0.08] bg-white/[0.04] px-3 py-2 text-[13px] text-slate-100"
+                      min={planningFilters.dateFrom || displayedWeekRange.start}
+                      max={displayedWeekRange.end}
+                      value={planningFilters.dateTo ?? ''}
+                      onChange={(e) =>
+                        setPlanningFilters((f) => ({ ...f, dateTo: e.target.value }))
+                      }
+                    />
+                  </div>
+                  {planningPeriodError ? (
+                    <p className="mt-1 text-[11px] font-medium text-rose-200" role="alert">
+                      {planningPeriodError}
+                    </p>
+                  ) : isPlanningPeriodFilterActive(planningFilters) ? (
+                    <p className="mt-1 text-[11px] text-slate-400">
+                      Itens com data planejada{' '}
+                      {describePeriodRange({
+                        from: planningFilters.dateFrom ?? '',
+                        to: planningFilters.dateTo ?? '',
+                      })}
+                      .
+                    </p>
+                  ) : (
+                    <p className="mt-1 text-[11px] text-slate-600">
+                      Opcional · dentro da semana exibida (use “Ir para a data” para trocar de semana).
+                    </p>
+                  )}
+                </div>
                 <label className="block text-[11px] text-slate-500">
                   Busca no plano
                   <input

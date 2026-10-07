@@ -55,6 +55,10 @@ import type {
 } from '../../domain/dashboard/dashboard.types'
 import { DashboardChartsSkeleton } from '../../components/dashboard/charts/DashboardChartsSkeleton'
 import { formatWorkDateFromEntryAt } from '../../domain/operational/workDate'
+import { subscribeOperationalDataChanged } from '../../lib/operational/operationalDataEvents'
+
+/** Ao voltar para a aba após este intervalo, o Dashboard reconsulta os indicadores. */
+const DASHBOARD_REFRESH_ON_RETURN_MS = 30_000
 
 const OperationalDashboardCharts = lazy(() =>
   import('../../components/dashboard/charts/OperationalDashboardCharts').then((m) => ({
@@ -257,6 +261,34 @@ export function DashboardPage() {
   useEffect(() => {
     void load()
   }, [load])
+
+  /**
+   * Cards refletem apontamentos/conclusões feitos sem sair do Dashboard (ex.: "Apontar horas"
+   * do cabeçalho) e ao voltar para a aba após alterações em outra aba. Sem polling.
+   */
+  const loadRef = useRef(load)
+  loadRef.current = load
+  useEffect(() => {
+    const unsubscribe = subscribeOperationalDataChanged(() => {
+      void loadRef.current()
+    })
+    let hiddenAt: number | null = null
+    const onVisibility = () => {
+      if (document.visibilityState === 'hidden') {
+        hiddenAt = Date.now()
+        return
+      }
+      if (hiddenAt != null && Date.now() - hiddenAt >= DASHBOARD_REFRESH_ON_RETURN_MS) {
+        void loadRef.current()
+      }
+      hiddenAt = null
+    }
+    document.addEventListener('visibilitychange', onVisibility)
+    return () => {
+      unsubscribe()
+      document.removeEventListener('visibilitychange', onVisibility)
+    }
+  }, [])
 
   useEffect(() => {
     if (!operational || !canManageOperationalCapacity) {

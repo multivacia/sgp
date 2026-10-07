@@ -31,6 +31,8 @@ export async function getTimeEntryCandidates(
   const auth = req.authUser!
   const parsed = timeEntryCandidatesQuerySchema.parse({
     q: queryString(req.query.q),
+    conveyorQ: queryString(req.query.conveyorQ),
+    activityQ: queryString(req.query.activityQ),
     limit: queryString(req.query.limit),
     includeUnassigned:
       typeof req.query.includeUnassigned === 'boolean'
@@ -41,6 +43,8 @@ export async function getTimeEntryCandidates(
   const result = await serviceListTimeEntryCandidates(pool, {
     collaboratorId,
     q: parsed.q?.trim() ? parsed.q.trim() : null,
+    conveyorQ: parsed.conveyorQ?.trim() ? parsed.conveyorQ.trim() : null,
+    activityQ: parsed.activityQ?.trim() ? parsed.activityQ.trim() : null,
     limit: parsed.limit,
     includeUnassigned: Boolean(parsed.includeUnassigned),
   })

@@ -434,6 +434,8 @@ export type ConveyorTimeEntryListRow = {
   exception_justification: string | null
   is_out_of_sequence: boolean
   out_of_sequence_justification: string | null
+  standard_justification_label: string | null
+  standard_justification_complement: string | null
   recorded_by_user_email: string | null
   entry_at: Date
   created_at: Date
@@ -537,6 +539,8 @@ export async function listConveyorTimeEntriesByStep(
             cte.conveyor_node_assignee_id, cte.minutes, cte.executed_quantity, cte.notes, cte.entry_mode,
             cte.metadata_json, cte.entry_origin, cte.exception_justification,
             cte.is_out_of_sequence, cte.out_of_sequence_justification,
+            cte.standard_justification_label_snapshot AS standard_justification_label,
+            cte.standard_justification_complement AS standard_justification_complement,
             au.email AS recorded_by_user_email,
             cte.entry_at, cte.created_at, cte.updated_at
      FROM conveyor_time_entries cte

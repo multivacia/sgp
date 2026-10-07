@@ -8,6 +8,7 @@ import { mondayOfWeekContaining } from '../operational-planning/operational-plan
 import type { MyWorkQueueItemApi, MyWorkQueueResponseApi } from './my-work-queue.dto.js'
 import {
   findPublishedWorkPlanForWeek,
+  findPublishedWorkPlansInRange,
   listMyWorkQueueRows,
   type MyWorkQueueListOptions,
   type MyWorkQueueRawRow,
@@ -15,6 +16,8 @@ import {
 import { applyWorkQueuePrioritization } from './work-queue-prioritization.js'
 import { mapWorkQueueSequenceForCollaborator } from './work-queue-sequence-for-collaborator.js'
 import { resolveIsNextRecommended } from './work-queue-sequence-presentation.js'
+import { resolveWorkQueuePeriod } from './work-queue-period.js'
+import { operationalToday } from '../../shared/operationalWorkDate.js'
 
 function todayIsoLocal(): string {
   const t = new Date()
@@ -25,9 +28,13 @@ function todayIsoLocal(): string {
   ].join('-')
 }
 
-function emptyResponse(date: string): MyWorkQueueResponseApi {
+function emptyResponse(
+  date: string,
+  period: { from: string; to: string } | null = null,
+): MyWorkQueueResponseApi {
   return {
     date,
+    period,
     planStatus: null,
     summary: {
       plannedItemsToday: 0,
@@ -79,38 +86,81 @@ export async function serviceGetWorkQueueForCollaborator(
     includePastDue?: boolean
     /** Filtros adicionais (ex.: Modo Produção — somente itens PLANNED da semana vigente). */
     listOptions?: MyWorkQueueListOptions
+    /**
+     * Pesquisa por período (data planejada, inclusiva) já resolvida por `resolveWorkQueuePeriod`.
+     * Quando presente, `date` passa a ser "hoje" (America/Sao_Paulo) e `includePastDue` é ignorado.
+     */
+    period?: { from: string; to: string } | null
   },
 ): Promise<MyWorkQueueResponseApi> {
-  const date = input.date?.trim() || todayIsoLocal()
+  const period = input.period ?? null
+  const date = period ? operationalToday() : input.date?.trim() || todayIsoLocal()
   const includePastDue = input.includePastDue ?? true
   const { collaboratorId } = input
 
-  const weekStartDate = mondayOfWeekContaining(date)
-  const plan = await findPublishedWorkPlanForWeek(pool, weekStartDate)
-  if (!plan) {
-    return emptyResponse(date)
+  let raw: MyWorkQueueRawRow[]
+  if (period) {
+    const plans = await findPublishedWorkPlansInRange(
+      pool,
+      mondayOfWeekContaining(period.from),
+      mondayOfWeekContaining(period.to),
+    )
+    if (plans.length === 0) {
+      return emptyResponse(date, period)
+    }
+    const perPlan = await Promise.all(
+      plans.map((plan) =>
+        listMyWorkQueueRows(pool, {
+          workPlanId: plan.id,
+          collaboratorId,
+          date,
+          includePastDue: false,
+          periodRange: period,
+          listOptions: {
+            weekStartDate: plan.weekStartDate,
+            weekEndDate: plan.weekEndDate,
+            ...input.listOptions,
+          },
+        }),
+      ),
+    )
+    raw = perPlan.flat()
+  } else {
+    const weekStartDate = mondayOfWeekContaining(date)
+    const plan = await findPublishedWorkPlanForWeek(pool, weekStartDate)
+    if (!plan) {
+      return emptyResponse(date)
+    }
+
+    raw = await listMyWorkQueueRows(pool, {
+      workPlanId: plan.id,
+      collaboratorId,
+      date,
+      includePastDue,
+      listOptions: {
+        weekStartDate: plan.weekStartDate,
+        weekEndDate: plan.weekEndDate,
+        ...input.listOptions,
+      },
+    })
   }
 
-  const raw = await listMyWorkQueueRows(pool, {
-    workPlanId: plan.id,
-    collaboratorId,
-    date,
-    includePastDue,
-    listOptions: {
-      weekStartDate: plan.weekStartDate,
-      weekEndDate: plan.weekEndDate,
-      ...input.listOptions,
-    },
-  })
-
+  /** Itens que compõem os totais: o dia selecionado ou, no modo período, o período inteiro. */
+  const scopeRows = period ? raw : raw.filter((row) => row.planned_date === date)
   const capacity = await serviceResolveCollaboratorDailyCapacity(pool, collaboratorId, date)
-  const plannedMinutesToday = raw
-    .filter((row) => row.planned_date === date)
-    .reduce((sum, row) => sum + Math.max(0, Number(row.planned_minutes ?? 0) || 0), 0)
+  const plannedMinutesToday = scopeRows.reduce(
+    (sum, row) => sum + Math.max(0, Number(row.planned_minutes ?? 0) || 0),
+    0,
+  )
+  const todayMinutes = period
+    ? raw
+        .filter((row) => row.planned_date === date)
+        .reduce((sum, row) => sum + Math.max(0, Number(row.planned_minutes ?? 0) || 0), 0)
+    : plannedMinutesToday
   const plannedVsCapacity = {
-    plannedMinutesForDay: plannedMinutesToday,
+    plannedMinutesForDay: todayMinutes,
     capacityMinutesForDay: capacity.resolvedDailyMinutes,
-    overload: plannedMinutesToday > capacity.resolvedDailyMinutes,
+    overload: todayMinutes > capacity.resolvedDailyMinutes,
   }
 
   const conveyorIds = [...new Set(raw.map((row) => row.conveyor_id))]
@@ -222,18 +272,20 @@ export async function serviceGetWorkQueueForCollaborator(
   const items = applyWorkQueuePrioritization(mappedItems)
 
   const summary = {
-    plannedItemsToday: raw.filter((row) => row.planned_date === date).length,
+    plannedItemsToday: scopeRows.length,
     plannedMinutesToday,
     overdueItems: items.filter((item) => item.group === 'overdue').length,
     completedItemsToday: items.filter((item) => item.group === 'completed').length,
     outOfSequenceItems: items.filter((item) => item.hasPreviousPendingStep).length,
     unassignedExceptionItems: items.filter((item) => item.requiresUnassignedJustification).length,
     capacityMinutesToday: capacity.resolvedDailyMinutes,
-    overload: plannedVsCapacity.overload,
+    /** Sobrecarga é diária; no modo período não se aplica ao total do período. */
+    overload: period ? false : plannedVsCapacity.overload,
   }
 
   return {
     date,
+    period,
     planStatus: 'PUBLISHED',
     summary,
     items,
@@ -246,16 +298,19 @@ export async function serviceGetMyWorkQueue(
     userId: string
     date?: string | null
     includePastDue?: boolean
+    from?: string | null
+    to?: string | null
   },
 ): Promise<{
   data: MyWorkQueueResponseApi
   meta: { collaboratorId: string | null; unavailableReason: string | null }
 }> {
-  const date = input.date?.trim() || todayIsoLocal()
+  const period = resolveWorkQueuePeriod(input.from, input.to)
+  const date = period ? operationalToday() : input.date?.trim() || todayIsoLocal()
   const collaboratorId = await findCollaboratorIdByAppUserId(pool, input.userId)
   if (!collaboratorId) {
     return {
-      data: emptyResponse(date),
+      data: emptyResponse(date, period),
       meta: {
         collaboratorId: null,
         unavailableReason:
@@ -268,6 +323,7 @@ export async function serviceGetMyWorkQueue(
     collaboratorId,
     date: input.date,
     includePastDue: input.includePastDue,
+    period,
   })
 
   return { data, meta: { collaboratorId, unavailableReason: null } }
