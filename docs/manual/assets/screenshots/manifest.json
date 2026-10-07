@@ -1121,6 +1121,54 @@
       "notes": null
     },
     {
+      "id": "cap17-01",
+      "chapter": "17. Importação por documento",
+      "section": "Onde fica",
+      "manualLine": 5165,
+      "marker": "[IMAGEM SUGERIDA: Tela Nova esteira por documento logo após o envio — as áreas 1 e 2 lado a lado, o painel Revisão da OS importada com os quatro contadores e as seções de itens]",
+      "file": "cap17-01-nova-esteira-por-documento.png",
+      "extraFiles": [],
+      "route": "/app/importar-os",
+      "viewport": {
+        "width": 1440,
+        "height": 1700
+      },
+      "user": "ana.demo@sgp.example",
+      "scenario": "Envio do PDF fictício OS-EXEMPLO-0001: áreas 1 (envio) e 2 (situação do rascunho) lado a lado e o painel Revisão da OS importada com os quatro contadores e as seções de itens.",
+      "mockEndpoints": [
+        "GET /api/v1/auth/me",
+        "GET /api/v1/version",
+        "POST /api/v1/conveyors/document-draft"
+      ],
+      "unexpectedApiCalls": [],
+      "status": "CAPTURED",
+      "notes": "Resultado do interpretador mockado (fixtures/document-import.mjs, schema draft v1.1.0); o PDF enviado é um arquivo fictício mínimo gerado em memória. Recorte termina nas Pendências de revisão; as seções de itens (Reaproveitar da Matriz, Revisar similaridade…) seguem abaixo — ver cap17-02. Observação de auditoria: textos \"Ficheiro selecionado\" (pt-PT) e \"Tipo: TASK\" (jargão) aparecem na tela."
+    },
+    {
+      "id": "cap17-02",
+      "chapter": "17. Importação por documento",
+      "section": "Como fazer",
+      "manualLine": 5281,
+      "marker": "[IMAGEM SUGERIDA: Cartão de item em Revisar similaridade com os botões Aceitar sugestão, Escolher alternativa, Criar como novo item e Ignorar item, e a lista de alternativas aberta]",
+      "file": "cap17-02-revisar-similaridade.png",
+      "extraFiles": [],
+      "route": "/app/importar-os",
+      "viewport": {
+        "width": 1440,
+        "height": 1900
+      },
+      "user": "ana.demo@sgp.example",
+      "scenario": "Cartão \"Revestimento couro volante\" em Revisar similaridade com Aceitar sugestão, Escolher alternativa (lista aberta), Criar como novo item e Ignorar item.",
+      "mockEndpoints": [
+        "GET /api/v1/auth/me",
+        "GET /api/v1/version",
+        "POST /api/v1/conveyors/document-draft"
+      ],
+      "unexpectedApiCalls": [],
+      "status": "CAPTURED",
+      "notes": "Resultado do interpretador mockado (fixtures/document-import.mjs, schema draft v1.1.0); o PDF enviado é um arquivo fictício mínimo gerado em memória."
+    },
+    {
       "id": "extra-ajuda-menu",
       "chapter": "Extra — Barra superior (menu Ajuda)",
       "section": null,
