@@ -1,8 +1,10 @@
 import { describe, expect, it, vi, afterEach, beforeEach } from 'vitest'
 import {
   applyConveyorPlanValuesToWeekItem,
+  exportOperationalPlanningAiToExcel,
   exportOperationalPlanningWeekToExcel,
   getFactoryIntakeItems,
+  getOperationalPlanningPeriodItems,
 } from './operationalPlanningApiService'
 import * as client from '../../lib/api/client'
 
@@ -229,5 +231,54 @@ describe('exportOperationalPlanningWeekToExcel', () => {
     await expect(exportOperationalPlanningWeekToExcel('2026-09-07')).rejects.toMatchObject({
       status: 500,
     })
+  })
+})
+
+describe('getOperationalPlanningPeriodItems', () => {
+  afterEach(() => vi.restoreAllMocks())
+
+  it('chama GET /operational-planning/period-items com pontas opcionais', async () => {
+    const spy = vi.spyOn(client, 'requestJson').mockResolvedValue({} as never)
+    await getOperationalPlanningPeriodItems('2026-10-01', '2026-10-31')
+    expect(spy).toHaveBeenCalledWith(
+      'GET',
+      '/api/v1/operational-planning/period-items?from=2026-10-01&to=2026-10-31',
+    )
+    await getOperationalPlanningPeriodItems('2026-10-01', undefined)
+    expect(spy).toHaveBeenLastCalledWith(
+      'GET',
+      '/api/v1/operational-planning/period-items?from=2026-10-01',
+    )
+  })
+})
+
+describe('exportOperationalPlanningAiToExcel', () => {
+  const fetchMock = vi.fn()
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.stubGlobal('fetch', fetchMock)
+    vi.stubGlobal('URL', { createObjectURL: vi.fn(() => 'blob:mock'), revokeObjectURL: vi.fn() })
+    vi.stubGlobal('document', {
+      createElement: vi.fn(() => ({ click: vi.fn(), remove: vi.fn() })),
+      body: { appendChild: vi.fn() },
+    })
+    fetchMock.mockResolvedValue({ ok: true, blob: async () => new Blob(['x']), headers: { get: () => null } })
+  })
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    vi.restoreAllMocks()
+  })
+
+  it('usa período quando informado e semana caso contrário', async () => {
+    await exportOperationalPlanningAiToExcel({ kind: 'period', from: '2026-10-01', to: '2026-10-31' })
+    expect(fetchMock).toHaveBeenLastCalledWith(
+      '/api/v1/operational-planning/export-ai.xlsx?from=2026-10-01&to=2026-10-31',
+      { method: 'GET', credentials: 'include' },
+    )
+    await exportOperationalPlanningAiToExcel({ kind: 'week', weekStart: '2026-10-05' })
+    expect(fetchMock).toHaveBeenLastCalledWith(
+      '/api/v1/operational-planning/export-ai.xlsx?weekStart=2026-10-05',
+      { method: 'GET', credentials: 'include' },
+    )
   })
 })

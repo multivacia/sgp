@@ -64,35 +64,35 @@ const WEEKDAY_LABELS_PT = [
   'Sábado',
 ] as const
 
-const FILL_HEADER: ExcelJS.Fill = {
+export const FILL_HEADER: ExcelJS.Fill = {
   type: 'pattern',
   pattern: 'solid',
   fgColor: { argb: 'FF1F2933' },
 }
-const FONT_HEADER: Partial<ExcelJS.Font> = { bold: true, color: { argb: 'FFFFFFFF' }, size: 11 }
+export const FONT_HEADER: Partial<ExcelJS.Font> = { bold: true, color: { argb: 'FFFFFFFF' }, size: 11 }
 
-const FILL_RED: ExcelJS.Fill = {
+export const FILL_RED: ExcelJS.Fill = {
   type: 'pattern',
   pattern: 'solid',
   fgColor: { argb: 'FFF4CCCC' },
 }
-const FONT_RED: Partial<ExcelJS.Font> = { color: { argb: 'FFCC0000' } }
+export const FONT_RED: Partial<ExcelJS.Font> = { color: { argb: 'FFCC0000' } }
 
-const FILL_AMBER: ExcelJS.Fill = {
+export const FILL_AMBER: ExcelJS.Fill = {
   type: 'pattern',
   pattern: 'solid',
   fgColor: { argb: 'FFFFF2CC' },
 }
-const FONT_AMBER: Partial<ExcelJS.Font> = { color: { argb: 'FF7F6000' } }
+export const FONT_AMBER: Partial<ExcelJS.Font> = { color: { argb: 'FF7F6000' } }
 
-const FILL_GREEN: ExcelJS.Fill = {
+export const FILL_GREEN: ExcelJS.Fill = {
   type: 'pattern',
   pattern: 'solid',
   fgColor: { argb: 'FFD9EAD3' },
 }
-const FONT_GREEN: Partial<ExcelJS.Font> = { color: { argb: 'FF274E13' } }
+export const FONT_GREEN: Partial<ExcelJS.Font> = { color: { argb: 'FF274E13' } }
 
-const TABLE_BORDER: Partial<ExcelJS.Borders> = {
+export const TABLE_BORDER: Partial<ExcelJS.Borders> = {
   top: { style: 'thin' },
   left: { style: 'thin' },
   bottom: { style: 'thin' },
@@ -182,17 +182,17 @@ export function sanitizeExcelText(value: string): string {
   return value
 }
 
-function formatSituationLabel(situation: OperationalPlanningExportSituation): string {
+export function formatSituationLabel(situation: OperationalPlanningExportSituation): string {
   if (situation === 'PUBLICADO') return 'PUBLICADO'
   if (situation === 'RASCUNHO') return 'RASCUNHO'
   return 'REVISÃO NÃO PUBLICADA'
 }
 
-function formatDateBrPt(date: Date): string {
+export function formatDateBrPt(date: Date): string {
   return date.toLocaleDateString('pt-BR')
 }
 
-function formatTimestampBrPt(date: Date): string {
+export function formatTimestampBrPt(date: Date): string {
   return date.toLocaleString('pt-BR', {
     timeZone: 'America/Sao_Paulo',
     day: '2-digit',
@@ -203,7 +203,7 @@ function formatTimestampBrPt(date: Date): string {
   })
 }
 
-function formatMinutesLabel(minutes: number): string {
+export function formatMinutesLabel(minutes: number): string {
   const min = Math.max(0, Math.floor(minutes))
   if (min < 60) return `${min} min`
   const h = Math.floor(min / 60)
@@ -211,13 +211,13 @@ function formatMinutesLabel(minutes: number): string {
   return m > 0 ? `${h} h ${m} min` : `${h} h`
 }
 
-function applyTableCellStyle(cell: ExcelJS.Cell): void {
+export function applyTableCellStyle(cell: ExcelJS.Cell): void {
   cell.border = TABLE_BORDER
   cell.alignment = { vertical: 'top', wrapText: true }
   if (!cell.font) cell.font = { size: 11 }
 }
 
-function writeHeaderRow(
+export function writeHeaderRow(
   sheet: ExcelJS.Worksheet,
   rowNumber: number,
   headers: readonly string[],
@@ -233,7 +233,7 @@ function writeHeaderRow(
   })
 }
 
-function setDateCell(cell: ExcelJS.Cell, dateIso: string | null): void {
+export function setDateCell(cell: ExcelJS.Cell, dateIso: string | null): void {
   if (!dateIso) {
     cell.value = '—'
     return
@@ -242,7 +242,7 @@ function setDateCell(cell: ExcelJS.Cell, dateIso: string | null): void {
   cell.numFmt = 'dd/mm/yyyy'
 }
 
-function setDurationCell(cell: ExcelJS.Cell, minutes: number | null): void {
+export function setDurationCell(cell: ExcelJS.Cell, minutes: number | null): void {
   if (minutes == null) {
     cell.value = null
     return
@@ -251,7 +251,7 @@ function setDurationCell(cell: ExcelJS.Cell, minutes: number | null): void {
   cell.numFmt = '[h]:mm'
 }
 
-function setTextCell(cell: ExcelJS.Cell, value: string): void {
+export function setTextCell(cell: ExcelJS.Cell, value: string): void {
   cell.value = sanitizeExcelText(value)
 }
 
