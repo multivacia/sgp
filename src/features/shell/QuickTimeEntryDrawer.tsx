@@ -50,6 +50,7 @@ import { JustificationSelect } from '../../components/operational/JustificationS
 import { resolvePreferredJustificationCategory } from '../../domain/operational/timeEntryJustificationField'
 import { QuickTimeEntryCandidateActions } from './QuickTimeEntryCandidateActions'
 import { WorkDateField } from '../../components/ui/WorkDateField'
+import { notifyOperationalDataChanged } from '../../lib/operational/operationalDataEvents'
 import {
   formatIsoDateBr,
   operationalTodayIso,
@@ -90,8 +91,10 @@ export function QuickTimeEntryDrawer({
   const { presentBlocking } = useSgpErrorSurface()
   const [phase, setPhase] = useState<Phase>('list')
   const [tab, setTab] = useState<DrawerTab>('conveyor')
-  const [search, setSearch] = useState('')
-  const [debouncedSearch, setDebouncedSearch] = useState('')
+  /** Filtros combináveis (AND): esteira e atividade — cada um independente. */
+  const [conveyorSearch, setConveyorSearch] = useState('')
+  const [activitySearch, setActivitySearch] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState(() => ({ conveyor: '', activity: '' }))
   /** Inclui atividades em aberto fora da alocação do colaborador (com critério no servidor). */
   const [searchOtherActivities, setSearchOtherActivities] = useState(false)
   const [items, setItems] = useState<TimeEntryCandidateItem[]>([])
@@ -134,19 +137,25 @@ export function QuickTimeEntryDrawer({
 
   useEffect(() => {
     const t = window.setTimeout(
-      () => setDebouncedSearch(search),
+      () =>
+        setDebouncedSearch((prev) =>
+          prev.conveyor === conveyorSearch && prev.activity === activitySearch
+            ? prev
+            : { conveyor: conveyorSearch, activity: activitySearch },
+        ),
       SEARCH_DEBOUNCE_MS,
     )
     return () => window.clearTimeout(t)
-  }, [search])
+  }, [conveyorSearch, activitySearch])
 
   useEffect(() => {
     if (!open) {
       setPhase('list')
       setTab('conveyor')
       setSelected(null)
-      setSearch('')
-      setDebouncedSearch('')
+      setConveyorSearch('')
+      setActivitySearch('')
+      setDebouncedSearch({ conveyor: '', activity: '' })
       setSearchOtherActivities(false)
       setLoadError(null)
       setSubmitError(null)
@@ -183,7 +192,8 @@ export function QuickTimeEntryDrawer({
     setLoadError(null)
     try {
       const r = await listTimeEntryCandidates({
-        q: debouncedSearch || undefined,
+        conveyorQ: debouncedSearch.conveyor || undefined,
+        activityQ: debouncedSearch.activity || undefined,
         limit: 50,
         includeUnassigned: searchOtherActivities,
       })
@@ -391,6 +401,7 @@ export function QuickTimeEntryDrawer({
           workDate,
         }),
       )
+      notifyOperationalDataChanged(markAsDone ? 'activity_completed' : 'time_entry_created')
       pushToast(
         workDate === operationalTodayIso()
           ? resolveTimeEntrySuccessToast(markAsDone)
@@ -461,6 +472,7 @@ export function QuickTimeEntryDrawer({
             }
           : {}),
       })
+      notifyOperationalDataChanged('activity_completed')
       pushToast(QUICK_TIME_ENTRY_TOAST.activityCompleted, 'success')
       setCompleteConfirmCandidate(null)
       setCompleteJustification(emptyJustificationValue())
@@ -524,6 +536,7 @@ export function QuickTimeEntryDrawer({
         minutes: extraMinutes,
         notes: extraNotes.trim() || undefined,
       })
+      notifyOperationalDataChanged('extra_time_entry_created')
       pushToast('Apontamento extra esteira registrado com sucesso.', 'success')
       setExtraDescriptionId('')
       setExtraMinutesStr('30')
@@ -645,16 +658,35 @@ export function QuickTimeEntryDrawer({
                           <p className="mt-1 text-amber-50/90">{unavailableReason}</p>
                         </div>
                       ) : null}
-                      <label className="block text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">
-                        Pesquisar
-                        <input
-                          type="search"
-                          value={search}
-                          onChange={(e) => setSearch(e.target.value)}
-                          placeholder="Esteira, cliente, veículo, placa, setor, tarefa, atividade…"
-                          className="mt-1.5 w-full rounded-xl border border-[color:var(--semantic-border-glass-strong)] bg-sgp-app-panel-deep/90 px-3 py-2 text-sm text-slate-200 outline-none ring-sgp-blue-bright/0 transition focus:ring-2 focus:ring-sgp-blue-bright/25"
-                        />
-                      </label>
+<div className="grid gap-3 sm:grid-cols-2">
+                        <label className="block text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">
+                          Esteira
+                          <input
+                            type="search"
+                            value={conveyorSearch}
+                            onChange={(e) => setConveyorSearch(e.target.value)}
+                            placeholder="Nome, código, cliente, veículo, placa…"
+                            aria-label="Filtrar por esteira"
+                            className="mt-1.5 w-full rounded-xl border border-[color:var(--semantic-border-glass-strong)] bg-sgp-app-panel-deep/90 px-3 py-2 text-sm text-slate-200 outline-none ring-sgp-blue-bright/0 transition focus:ring-2 focus:ring-sgp-blue-bright/25"
+                          />
+                        </label>
+                        <label className="block text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">
+                          Atividade
+                          <input
+                            type="search"
+                            value={activitySearch}
+                            onChange={(e) => setActivitySearch(e.target.value)}
+                            placeholder="Atividade, setor, tarefa…"
+                            aria-label="Filtrar por atividade"
+                            className="mt-1.5 w-full rounded-xl border border-[color:var(--semantic-border-glass-strong)] bg-sgp-app-panel-deep/90 px-3 py-2 text-sm text-slate-200 outline-none ring-sgp-blue-bright/0 transition focus:ring-2 focus:ring-sgp-blue-bright/25"
+                          />
+                        </label>
+                      </div>
+                      {conveyorSearch.trim() && activitySearch.trim() ? (
+                        <p className="text-[11px] text-slate-500">
+                          Mostrando atividades que atendem aos dois filtros (esteira e atividade).
+                        </p>
+                      ) : null}
                       <label className="flex cursor-pointer items-start gap-2.5 rounded-xl border border-white/[0.06] bg-black/15 px-3 py-2.5 text-xs text-slate-300">
                         <input
                           type="checkbox"
@@ -666,8 +698,8 @@ export function QuickTimeEntryDrawer({
                         <span>
                           <span className="font-semibold text-slate-100">Buscar outras atividades</span>
                           <span className="mt-0.5 block text-[11px] leading-snug text-slate-500">
-                            Inclui atividades em aberto fora da sua alocação. Use pelo menos 2 caracteres na
-                            pesquisa. Será necessária uma justificativa ao apontar.
+                            Inclui atividades em aberto fora da sua alocação. Use pelo menos 2 caracteres em
+                            um dos filtros. Será necessária uma justificativa ao apontar.
                           </span>
                         </span>
                       </label>
@@ -693,8 +725,8 @@ export function QuickTimeEntryDrawer({
                         </p>
                       ) : items.length === 0 ? (
                         <p className="text-sm text-slate-500">
-                          {debouncedSearch.trim()
-                            ? 'Nenhuma atividade corresponde à pesquisa.'
+                          {debouncedSearch.conveyor.trim() || debouncedSearch.activity.trim()
+                            ? 'Nenhuma atividade corresponde aos filtros informados.'
                             : 'Sem atividades em aberto para apontamento.'}
                         </p>
                       ) : (

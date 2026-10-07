@@ -105,6 +105,41 @@ export type TimeEntryCandidateRawRow = {
   planned_date: string | null
 }
 
+/** Termos de busca dos candidatos de apontamento: `q` (livre) e filtros combináveis por esteira/atividade. */
+export type TimeEntryCandidateSearch = {
+  q: string | null
+  conveyorQ?: string | null
+  activityQ?: string | null
+}
+
+function normalizeSearchTerm(term: string | null | undefined): string | null {
+  const t = term?.trim()
+  return t ? t : null
+}
+
+/**
+ * Filtros por esteira e por atividade (interseção — AND entre si e com `q`).
+ * Esteira: nome, código, cliente, veículo, placa. Atividade: atividade, setor, tarefa.
+ * Espera os aliases `cv`, `step`, `area` e `opt` na query.
+ */
+function scopedCandidateSearchSql(conveyorParam: number, activityParam: number): string {
+  return `
+      AND (
+        $${conveyorParam}::text IS NULL
+        OR cv.name ILIKE '%' || $${conveyorParam} || '%'
+        OR COALESCE(cv.code, '') ILIKE '%' || $${conveyorParam} || '%'
+        OR COALESCE(cv.client_name, '') ILIKE '%' || $${conveyorParam} || '%'
+        OR COALESCE(cv.vehicle, '') ILIKE '%' || $${conveyorParam} || '%'
+        OR COALESCE(cv.plate, '') ILIKE '%' || $${conveyorParam} || '%'
+      )
+      AND (
+        $${activityParam}::text IS NULL
+        OR step.name ILIKE '%' || $${activityParam} || '%'
+        OR area.name ILIKE '%' || $${activityParam} || '%'
+        OR opt.name ILIKE '%' || $${activityParam} || '%'
+      )`
+}
+
 /**
  * STEPs apontáveis: esteira ativa (não concluída), STEP ativo e não concluído operacionalmente;
  * alocação direta ou via time (membro ativo). Uma linha por STEP (prioriza assignee COLLABORATOR).
@@ -112,9 +147,11 @@ export type TimeEntryCandidateRawRow = {
 export async function listTimeEntryCandidatesForCollaborator(
   pool: pg.Pool,
   collaboratorId: string,
-  options: { q: string | null; limit: number },
+  options: TimeEntryCandidateSearch & { limit: number },
 ): Promise<TimeEntryCandidateRawRow[]> {
   const q = options.q?.trim() || null
+  const conveyorQ = normalizeSearchTerm(options.conveyorQ)
+  const activityQ = normalizeSearchTerm(options.activityQ)
   const limit = options.limit
   const r = await pool.query<TimeEntryCandidateRawRow>(
     `
@@ -200,7 +237,7 @@ export async function listTimeEntryCandidatesForCollaborator(
           OR COALESCE(cv.plate, '') ILIKE '%' || $2 || '%'
           OR area.name ILIKE '%' || $2 || '%'
           OR step.name ILIKE '%' || $2 || '%'
-        )
+        )${scopedCandidateSearchSql(4, 5)}
     )
     SELECT
       assignee_id,
@@ -231,7 +268,7 @@ export async function listTimeEntryCandidatesForCollaborator(
       step_order_index::int
     LIMIT $3::int
     `,
-    [collaboratorId, q, limit],
+    [collaboratorId, q, limit, conveyorQ, activityQ],
   )
   return r.rows
 }
@@ -243,9 +280,11 @@ export async function listTimeEntryCandidatesForCollaborator(
 export async function listTimeEntryUnassignedOpenStepsForCollaborator(
   pool: pg.Pool,
   collaboratorId: string,
-  options: { q: string | null; limit: number },
+  options: TimeEntryCandidateSearch & { limit: number },
 ): Promise<TimeEntryCandidateRawRow[]> {
   const q = options.q?.trim() || null
+  const conveyorQ = normalizeSearchTerm(options.conveyorQ)
+  const activityQ = normalizeSearchTerm(options.activityQ)
   const limit = options.limit
   const r = await pool.query<TimeEntryCandidateRawRow>(
     `
@@ -329,14 +368,14 @@ export async function listTimeEntryUnassignedOpenStepsForCollaborator(
         OR area.name ILIKE '%' || $2 || '%'
         OR opt.name ILIKE '%' || $2 || '%'
         OR step.name ILIKE '%' || $2 || '%'
-      )
+      )${scopedCandidateSearchSql(4, 5)}
     ORDER BY
       opt.order_index::int,
       area.order_index::int,
       step.order_index::int
     LIMIT $3::int
     `,
-    [collaboratorId, q, limit],
+    [collaboratorId, q, limit, conveyorQ, activityQ],
   )
   return r.rows
 }
@@ -347,10 +386,9 @@ export async function listTimeEntryUnassignedOpenStepsForCollaborator(
  */
 export async function listTimeEntryCandidatesFromPublishedPlan(
   pool: pg.Pool,
-  input: {
+  input: TimeEntryCandidateSearch & {
     collaboratorId: string
     date: string
-    q: string | null
     limit: number
   },
 ): Promise<TimeEntryCandidateRawRow[]> {
@@ -359,6 +397,8 @@ export async function listTimeEntryCandidatesFromPublishedPlan(
   if (!plan) return []
 
   const q = input.q?.trim() || null
+  const conveyorQ = normalizeSearchTerm(input.conveyorQ)
+  const activityQ = normalizeSearchTerm(input.activityQ)
   const limit = input.limit
 
   const r = await pool.query<TimeEntryCandidateRawRow>(
@@ -452,7 +492,7 @@ export async function listTimeEntryCandidatesFromPublishedPlan(
         OR COALESCE(cv.plate, '') ILIKE '%' || $4 || '%'
         OR area.name ILIKE '%' || $4 || '%'
         OR step.name ILIKE '%' || $4 || '%'
-      )
+      )${scopedCandidateSearchSql(8, 9)}
     ORDER BY
       CASE WHEN i.planned_date < $3::date THEN 0 ELSE 1 END ASC,
       i.planned_date ASC,
@@ -470,6 +510,8 @@ export async function listTimeEntryCandidatesFromPublishedPlan(
       plan.weekStartDate,
       plan.weekEndDate,
       limit,
+      conveyorQ,
+      activityQ,
     ],
   )
   return r.rows

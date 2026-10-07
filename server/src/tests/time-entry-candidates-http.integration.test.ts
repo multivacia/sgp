@@ -255,4 +255,82 @@ describe.skipIf(!hasDb)('GET /api/v1/me/time-entry-candidates (integração)', (
     expect(ok.body.data.minutes).toBe(12)
     expect(ok.body.data.notes).toContain('integração')
   })
+
+  it('filtros conveyorQ + activityQ funcionam isolados e combinados (AND)', async () => {
+    await linkAppUserToCollaborator(pool, MARIA_APP_USER_ID, COLAB_SEED)
+    const tag = randomUUID().slice(0, 8)
+    const body = minimalConveyorBody(`Filtro ${tag}`)
+    body.options[0]!.areas[0]!.steps = [
+      {
+        titulo: `Costura ${tag}`,
+        orderIndex: 1,
+        plannedMinutes: 30,
+        sourceOrigin: 'manual',
+        required: true,
+      },
+      {
+        titulo: `Corte ${tag}`,
+        orderIndex: 2,
+        plannedMinutes: 30,
+        sourceOrigin: 'manual',
+        required: true,
+      },
+    ]
+    const created = await serviceCreateConveyor(pool, body)
+    await setConveyorProductionStatusForIntegration(pool, created.id)
+    const steps = await pool.query<{ id: string; name: string }>(
+      `SELECT id::text, name FROM conveyor_nodes
+       WHERE conveyor_id = $1::uuid AND node_type = 'STEP' AND deleted_at IS NULL
+       ORDER BY order_index`,
+      [created.id],
+    )
+    for (const st of steps.rows) {
+      await serviceCreateConveyorNodeAssignee(pool, {
+        conveyorId: created.id,
+        conveyorNodeId: st.id,
+        collaboratorId: COLAB_SEED,
+        isPrimary: true,
+      })
+    }
+    const cookieMaria = await sessionCookieForUser(pool, MARIA_APP_USER_ID, MARIA_EMAIL)
+    const fetchNames = async (qs: string) => {
+      const res = await request(app)
+        .get(`/api/v1/me/time-entry-candidates?${qs}`)
+        .set('Cookie', cookieMaria)
+      expect(res.status).toBe(200)
+      return (res.body.data as Array<{ conveyorId: string; stepName: string }>)
+        .filter((x) => x.conveyorId === created.id)
+        .map((x) => x.stepName)
+        .sort()
+    }
+
+    // Somente esteira: as duas atividades.
+    expect(await fetchNames(`conveyorQ=${encodeURIComponent(`Filtro ${tag}`)}`)).toEqual(
+      [`Corte ${tag}`, `Costura ${tag}`].sort(),
+    )
+    // Somente atividade: apenas Costura.
+    expect(await fetchNames(`activityQ=${encodeURIComponent(`Costura ${tag}`)}`)).toEqual([
+      `Costura ${tag}`,
+    ])
+    // Combinado (AND): esteira + atividade.
+    expect(
+      await fetchNames(
+        `conveyorQ=${encodeURIComponent(tag)}&activityQ=${encodeURIComponent('Corte')}`,
+      ),
+    ).toEqual([`Corte ${tag}`])
+    // Combinado sem interseção: nenhuma linha desta esteira.
+    expect(
+      await fetchNames(
+        `conveyorQ=${encodeURIComponent('zzzz_nomatch')}&activityQ=${encodeURIComponent(`Corte ${tag}`)}`,
+      ),
+    ).toEqual([])
+    // Esteira por placa/cliente continua válida no filtro de esteira; atividade por setor.
+    expect(
+      await fetchNames(
+        `conveyorQ=${encodeURIComponent('ClienteFiltroX')}&activityQ=${encodeURIComponent(`Costura ${tag}`)}`,
+      ),
+    ).toEqual([`Costura ${tag}`])
+    // Termo de atividade não casa com nome de esteira (escopo separado).
+    expect(await fetchNames(`activityQ=${encodeURIComponent(`Filtro ${tag}`)}`)).toEqual([])
+  })
 })

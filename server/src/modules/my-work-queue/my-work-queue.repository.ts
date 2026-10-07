@@ -87,6 +87,44 @@ function planItemStatusFilterSql(planItemStatuses: readonly string[] | undefined
   return `AND i.status IN (${list})`
 }
 
+/**
+ * Planos publicados vigentes (um por semana — o mais recente) cujas semanas intersectam
+ * `[fromDate, toDate]`. Usado pela pesquisa por período da Minha fila.
+ */
+export async function findPublishedWorkPlansInRange(
+  pool: pg.Pool,
+  fromWeekStartDate: string,
+  toWeekStartDate: string,
+): Promise<MyWorkQueuePlanRow[]> {
+  const r = await pool.query<{
+    id: string
+    status: 'PUBLISHED'
+    week_start_date: string
+    week_end_date: string
+  }>(
+    `
+    SELECT DISTINCT ON (week_start_date)
+      id::text,
+      status,
+      week_start_date::text AS week_start_date,
+      week_end_date::text AS week_end_date
+    FROM operational_work_plans
+    WHERE week_start_date >= $1::date
+      AND week_start_date <= $2::date
+      AND status = 'PUBLISHED'
+      AND deleted_at IS NULL
+    ORDER BY week_start_date ASC, published_at DESC NULLS LAST, updated_at DESC
+    `,
+    [fromWeekStartDate, toWeekStartDate],
+  )
+  return r.rows.map((row) => ({
+    id: row.id,
+    status: row.status,
+    weekStartDate: row.week_start_date.trim(),
+    weekEndDate: row.week_end_date.trim(),
+  }))
+}
+
 export async function listMyWorkQueueRows(
   pool: pg.Pool,
   input: {
@@ -95,25 +133,37 @@ export async function listMyWorkQueueRows(
     date: string
     includePastDue: boolean
     listOptions?: MyWorkQueueListOptions
+    /**
+     * Pesquisa por período (data planejada, inclusiva). Quando presente, substitui o recorte
+     * "dia + atrasadas" (`date`/`includePastDue`); `date` segue como referência de "hoje".
+     */
+    periodRange?: { from: string; to: string }
   },
 ): Promise<MyWorkQueueRawRow[]> {
   const listOptions = input.listOptions
   const statusFilterSql = planItemStatusFilterSql(listOptions?.planItemStatuses)
   const weekStart = listOptions?.weekStartDate?.trim()
   const weekEnd = listOptions?.weekEndDate?.trim()
+  const queryParams: unknown[] = [input.workPlanId, input.collaboratorId, input.date]
+  const param = (value: unknown): string => {
+    queryParams.push(value)
+    return `$${queryParams.length}`
+  }
+  const dateScopeSql = input.periodRange
+    ? `AND i.planned_date >= ${param(input.periodRange.from)}::date
+      AND i.planned_date <= ${param(input.periodRange.to)}::date`
+    : `AND (
+        i.planned_date = $3::date
+        OR (
+          ${param(input.includePastDue)}::boolean = TRUE
+          AND i.planned_date < $3::date
+          AND (step.operational_status IS DISTINCT FROM 'COMPLETED' AND step.operational_status IS DISTINCT FROM 'ABORTED')
+        )
+      )`
   const weekBoundsSql =
     weekStart && weekEnd
-      ? `AND i.planned_date >= $5::date AND i.planned_date <= $6::date`
+      ? `AND i.planned_date >= ${param(weekStart)}::date AND i.planned_date <= ${param(weekEnd)}::date`
       : ''
-  const queryParams: unknown[] = [
-    input.workPlanId,
-    input.collaboratorId,
-    input.date,
-    input.includePastDue,
-  ]
-  if (weekStart && weekEnd) {
-    queryParams.push(weekStart, weekEnd)
-  }
 
   const r = await pool.query<{
     work_plan_id: string
@@ -206,14 +256,7 @@ export async function listMyWorkQueueRows(
       ${statusFilterSql}
       AND i.assigned_collaborator_id = $2::uuid
       ${weekBoundsSql}
-      AND (
-        i.planned_date = $3::date
-        OR (
-          $4::boolean = TRUE
-          AND i.planned_date < $3::date
-          AND (step.operational_status IS DISTINCT FROM 'COMPLETED' AND step.operational_status IS DISTINCT FROM 'ABORTED')
-        )
-      )
+      ${dateScopeSql}
     ORDER BY
       CASE
         WHEN i.planned_date < $3::date THEN 0

@@ -3,6 +3,9 @@ import {
   buildPlanningFilterOptions,
   DEFAULT_PLANNING_BOARD_FILTERS,
   filterPlanningDraftItems,
+  isPlanningBoardFiltersActive,
+  isPlanningPeriodFilterActive,
+  matchesPlanningPeriod,
   matchesPlanningTextSearch,
   PLANNING_COLLABORATOR_UNASSIGNED,
   type PlanningFilterableItem,
@@ -224,5 +227,57 @@ describe('matchesPlanningTextSearch', () => {
         'x',
       ),
     ).toBe(false)
+  })
+})
+
+describe('filtro de período (data planejada)', () => {
+  const items = [
+    item({ plannedDate: '2026-05-18', activityTitle: 'Seg' }),
+    item({ plannedDate: '2026-05-19', activityTitle: 'Ter', assignedCollaboratorId: 'c2' }),
+    item({ plannedDate: '2026-05-20', activityTitle: 'Qua' }),
+    item({ plannedDate: '2026-05-22', activityTitle: 'Sex' }),
+  ]
+
+  it('sem datas não filtra e não marca filtro ativo', () => {
+    expect(filterPlanningDraftItems(items, DEFAULT_PLANNING_BOARD_FILTERS)).toHaveLength(4)
+    expect(isPlanningBoardFiltersActive(DEFAULT_PLANNING_BOARD_FILTERS)).toBe(false)
+  })
+
+  it('intervalo inclusivo nas duas pontas', () => {
+    const filters = { ...DEFAULT_PLANNING_BOARD_FILTERS, dateFrom: '2026-05-19', dateTo: '2026-05-20' }
+    expect(filterPlanningDraftItems(items, filters).map((i) => i.activityTitle)).toEqual([
+      'Ter',
+      'Qua',
+    ])
+    expect(isPlanningBoardFiltersActive(filters)).toBe(true)
+    expect(isPlanningPeriodFilterActive(filters)).toBe(true)
+  })
+
+  it('pontas opcionais (só início / só fim)', () => {
+    expect(
+      filterPlanningDraftItems(items, { ...DEFAULT_PLANNING_BOARD_FILTERS, dateFrom: '2026-05-20' }).map(
+        (i) => i.activityTitle,
+      ),
+    ).toEqual(['Qua', 'Sex'])
+    expect(
+      filterPlanningDraftItems(items, { ...DEFAULT_PLANNING_BOARD_FILTERS, dateTo: '2026-05-18' }).map(
+        (i) => i.activityTitle,
+      ),
+    ).toEqual(['Seg'])
+  })
+
+  it('combina com os demais filtros (AND)', () => {
+    const filters = {
+      ...DEFAULT_PLANNING_BOARD_FILTERS,
+      collaboratorId: 'c1',
+      dateFrom: '2026-05-18',
+      dateTo: '2026-05-19',
+    }
+    expect(filterPlanningDraftItems(items, filters).map((i) => i.activityTitle)).toEqual(['Seg'])
+  })
+
+  it('matchesPlanningPeriod sem data no item exclui quando o período está ativo', () => {
+    expect(matchesPlanningPeriod('', { ...DEFAULT_PLANNING_BOARD_FILTERS, dateFrom: '2026-05-18' })).toBe(false)
+    expect(matchesPlanningPeriod('', DEFAULT_PLANNING_BOARD_FILTERS)).toBe(true)
   })
 })

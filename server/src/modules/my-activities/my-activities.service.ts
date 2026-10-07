@@ -242,6 +242,10 @@ export async function serviceListTimeEntryCandidates(
   input: {
     collaboratorId: string | null
     q: string | null
+    /** Filtro por esteira; combinado com `activityQ` e `q` via AND. */
+    conveyorQ?: string | null
+    /** Filtro por atividade/setor/tarefa; combinado com `conveyorQ` e `q` via AND. */
+    activityQ?: string | null
     limit: number
     includeUnassigned: boolean
   },
@@ -259,11 +263,17 @@ export async function serviceListTimeEntryCandidates(
     }
   }
 
+  const searchTerms = {
+    q: input.q,
+    conveyorQ: input.conveyorQ ?? null,
+    activityQ: input.activityQ ?? null,
+  }
+
   const rawAssigned = await listTimeEntryCandidatesForCollaborator(
     pool,
     input.collaboratorId,
     {
-      q: input.q,
+      ...searchTerms,
       limit: input.limit,
     },
   )
@@ -272,7 +282,7 @@ export async function serviceListTimeEntryCandidates(
   const rawFromPlan = await listTimeEntryCandidatesFromPublishedPlan(pool, {
     collaboratorId: input.collaboratorId,
     date: referenceDate,
-    q: input.q,
+    ...searchTerms,
     limit: input.limit,
   })
 
@@ -288,13 +298,15 @@ export async function serviceListTimeEntryCandidates(
 
   const qOk =
     input.includeUnassigned &&
-    Boolean(input.q && input.q.trim().length >= 2)
+    [input.q, input.conveyorQ, input.activityQ].some(
+      (term) => Boolean(term && term.trim().length >= 2),
+    )
 
   if (qOk) {
     const rawUnassigned = await listTimeEntryUnassignedOpenStepsForCollaborator(
       pool,
       input.collaboratorId,
-      { q: input.q, limit: input.limit },
+      { ...searchTerms, limit: input.limit },
     )
     tagged = [
       ...tagged,
