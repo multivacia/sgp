@@ -80,7 +80,7 @@ function manifestEntry({ marker, item }, result) {
     extraFiles: result.extraFiles ?? item.extraFiles ?? [],
     route: item.route,
     viewport: item.viewport ?? DEFAULT_VIEWPORT,
-    user: (item.user ?? adminUser).email,
+    user: item.user === null ? null : (item.user ?? adminUser).email,
     scenario: item.scenario,
     mockEndpoints: result.mockEndpoints ?? [],
     unexpectedApiCalls: result.unexpected ?? [],

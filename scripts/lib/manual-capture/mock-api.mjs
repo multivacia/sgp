@@ -48,7 +48,10 @@ export function sessionIdle() {
 
 export function baseHandlers(user) {
   return [
-    h('GET', '/api/v1/auth/me', () => ok({ user, sessionIdle: sessionIdle() })),
+    // Sem usuário (ex.: Modo Fábrica) a sessão do app responde 401 real.
+    h('GET', '/api/v1/auth/me', () =>
+      user ? ok({ user, sessionIdle: sessionIdle() }) : fail(401, 'UNAUTHENTICATED', 'Sessão não encontrada.'),
+    ),
     h('POST', '/api/v1/auth/heartbeat', () => ok({ sessionIdle: sessionIdle() })),
     h('GET', '/api/v1/version', () =>
       ok({
@@ -90,7 +93,7 @@ function matches(handler, method, pathname) {
  * @param {import('playwright').Page | import('playwright').BrowserContext} target
  */
 export async function installMockApi(target, { user, handlers = [] }) {
-  const all = [...handlers, ...(user ? baseHandlers(user) : [])]
+  const all = [...handlers, ...baseHandlers(user)]
   const log = { served: new Set(), unexpected: [] }
   await target.route(
     (url) => url.pathname.startsWith('/api/'),

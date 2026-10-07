@@ -817,6 +817,135 @@
       "notes": "Observação: a tela não tem um título literal \"Resumo do escopo\"; entre os quatro números e os painéis de Cobertura/Pressão aparece também o bloco \"Extra esteira (período)\"."
     },
     {
+      "id": "cap13-01",
+      "chapter": "13. Modo Fábrica",
+      "section": "Quando algo é bloqueado",
+      "manualLine": 3896,
+      "marker": "[IMAGEM SUGERIDA: Tela inicial do totem — cabeçalho SGP · Modo Fábrica com \"Quem é você?\", a busca por nome e a grade de cartões, incluindo um cartão apagado de colaborador sem acesso]",
+      "file": "cap13-01-totem-quem-e-voce.png",
+      "extraFiles": [],
+      "route": "/app/kiosk",
+      "viewport": {
+        "width": 1280,
+        "height": 800
+      },
+      "user": null,
+      "scenario": "Totem: cabeçalho SGP · Modo Fábrica, \"Quem é você?\", busca por nome e grade de cartões, com Fernanda Teste (acesso desativado) apagada.",
+      "mockEndpoints": [
+        "GET /api/v1/auth/me",
+        "GET /api/v1/production/collaborators",
+        "GET /api/v1/version"
+      ],
+      "unexpectedApiCalls": [],
+      "status": "CAPTURED",
+      "notes": "Viewport 1280x800 (totem em paisagem)."
+    },
+    {
+      "id": "cap13-02",
+      "chapter": "13. Modo Fábrica",
+      "section": "Quando algo é bloqueado",
+      "manualLine": 3898,
+      "marker": "[IMAGEM SUGERIDA: Teclado de PIN — foto e nome do colaborador, a instrução de 4 dígitos e os pontos indicando os dígitos já digitados]",
+      "file": "cap13-02-teclado-de-pin.png",
+      "extraFiles": [],
+      "route": "/app/kiosk",
+      "viewport": {
+        "width": 1280,
+        "height": 800
+      },
+      "user": null,
+      "scenario": "Carlos Demo selecionado → teclado de PIN com dois dígitos já digitados.",
+      "mockEndpoints": [
+        "GET /api/v1/auth/me",
+        "GET /api/v1/production/collaborators",
+        "GET /api/v1/version"
+      ],
+      "unexpectedApiCalls": [],
+      "status": "CAPTURED",
+      "notes": "Viewport 1280x800 (totem em paisagem)."
+    },
+    {
+      "id": "cap13-03",
+      "chapter": "13. Modo Fábrica",
+      "section": "Quando algo é bloqueado",
+      "manualLine": 3900,
+      "marker": "[IMAGEM SUGERIDA: Cartão de atividade no modo carrossel — Realizado e Planejado, o percentual de tempo previsto, os botões de tempo, a barra de evolução da sessão e o botão de concluir ao registrar]",
+      "file": "cap13-03-cartao-atividade-carrossel.png",
+      "extraFiles": [],
+      "route": "/app/kiosk",
+      "viewport": {
+        "width": 1280,
+        "height": 800
+      },
+      "user": null,
+      "scenario": "Após o PIN: carrossel com \"Recuperar espuma\" (Realizado 1 h · Planejado 2 h), percentual do previsto, botões de tempo com 30 min selecionado, evolução da sessão e \"Concluir atividade ao registrar\".",
+      "mockEndpoints": [
+        "GET /api/v1/auth/me",
+        "GET /api/v1/production/collaborators",
+        "GET /api/v1/production/me/work-queue",
+        "GET /api/v1/version",
+        "POST /api/v1/production/auth/login"
+      ],
+      "unexpectedApiCalls": [],
+      "status": "CAPTURED",
+      "notes": "Viewport 1280x800 (totem em paisagem)."
+    },
+    {
+      "id": "cap13-04",
+      "chapter": "13. Modo Fábrica",
+      "section": "Quando algo é bloqueado",
+      "manualLine": 3902,
+      "marker": "[IMAGEM SUGERIDA: Cartão com a faixa de tempo acima do previsto aberta e o campo de justificativa obrigatório, com o botão mudado para Registrar apontamento (exceção)]",
+      "file": "cap13-04-tempo-acima-do-previsto.png",
+      "extraFiles": [],
+      "route": "/app/kiosk",
+      "viewport": {
+        "width": 1280,
+        "height": 1250
+      },
+      "user": null,
+      "scenario": "Atividade com 1h40 realizados de 2 h previstos; escolhido 60 min → faixa \"Tempo acima do previsto\", justificativa obrigatória e botão \"Registrar apontamento (exceção)\".",
+      "mockEndpoints": [
+        "GET /api/v1/auth/me",
+        "GET /api/v1/production/collaborators",
+        "GET /api/v1/production/me/work-queue",
+        "GET /api/v1/production/time-entry-justifications",
+        "GET /api/v1/version",
+        "POST /api/v1/production/auth/login"
+      ],
+      "unexpectedApiCalls": [],
+      "status": "CAPTURED",
+      "notes": "Viewport 1280x800 (totem em paisagem)."
+    },
+    {
+      "id": "cap13-05",
+      "chapter": "13. Modo Fábrica",
+      "section": "Quando algo é bloqueado",
+      "manualLine": 3904,
+      "marker": "[IMAGEM SUGERIDA: Fluxo Outra atividade na etapa de revisão, mostrando Colaborador, Atividade, Contexto, Data, Minutos e Justificativa antes de confirmar]",
+      "file": "cap13-05-outra-atividade-revisao.png",
+      "extraFiles": [],
+      "route": "/app/kiosk",
+      "viewport": {
+        "width": 1280,
+        "height": 800
+      },
+      "user": null,
+      "scenario": "\"+ Outra atividade\" → busca \"teto\" → \"Aplicar tecido\" (ET-0102) → 30 min + justificativa → etapa de revisão com Colaborador, Atividade, Contexto, Data, Minutos e Justificativa.",
+      "mockEndpoints": [
+        "GET /api/v1/auth/me",
+        "GET /api/v1/production/collaborators",
+        "GET /api/v1/production/me/time-entry-candidates",
+        "GET /api/v1/production/me/work-queue",
+        "GET /api/v1/production/time-entry-justifications",
+        "GET /api/v1/version",
+        "POST /api/v1/production/auth/login"
+      ],
+      "unexpectedApiCalls": [],
+      "status": "CAPTURED",
+      "notes": "Viewport 1280x800 (totem em paisagem)."
+    },
+    {
       "id": "extra-ajuda-menu",
       "chapter": "Extra — Barra superior (menu Ajuda)",
       "section": null,
