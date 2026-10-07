@@ -1,0 +1,672 @@
+{
+  "generatedBy": "scripts/capture-manual-screenshots.mjs",
+  "source": "docs/manual/source/MANUAL_USUARIO_SGP.md",
+  "fixedClock": "2026-07-01T13:00:00.000Z",
+  "markersInManual": 51,
+  "extraItems": 1,
+  "items": [
+    {
+      "id": "cap04-01",
+      "chapter": "4. Perfis e permissões — visão para o usuário",
+      "section": "Como fazer",
+      "manualLine": 422,
+      "marker": "[IMAGEM SUGERIDA: Tela Permissões por papel com o perfil Gestor selecionado no campo Papel, os grupos de permissões com caixas marcadas e desmarcadas e o botão Salvar alterações]",
+      "file": "cap04-01-permissoes-por-papel.png",
+      "extraFiles": [],
+      "route": "/app/permissoes-por-papel",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "user": "ana.demo@sgp.example",
+      "scenario": "Papel Gestor selecionado; catálogo real de permissões agrupado por domínio, com caixas marcadas (permissões do Gestor) e desmarcadas.",
+      "mockEndpoints": [
+        "GET /api/v1/auth/me",
+        "GET /api/v1/rbac/permissions",
+        "GET /api/v1/rbac/roles",
+        "GET /api/v1/rbac/roles/11111111-1111-1111-1111-111111111111/permissions",
+        "GET /api/v1/rbac/roles/33333333-3333-3333-3333-333333333333/permissions",
+        "GET /api/v1/version"
+      ],
+      "unexpectedApiCalls": [],
+      "status": "CAPTURED",
+      "notes": null
+    },
+    {
+      "id": "cap04-02",
+      "chapter": "4. Perfis e permissões — visão para o usuário",
+      "section": "Como fazer",
+      "manualLine": 449,
+      "marker": "[IMAGEM SUGERIDA: Trilha administrativa filtrada por Permissões do papel atualizadas, com as colunas Quando, Evento, Actor, Alvo, Colab. e Metadados]",
+      "file": "cap04-02-trilha-administrativa.png",
+      "extraFiles": [],
+      "route": "/app/usuarios/trilha",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "user": "ana.demo@sgp.example",
+      "scenario": "Filtro \"Tipo de evento\" = Permissões do papel atualizadas aplicado; dois eventos de alteração de papel.",
+      "mockEndpoints": [
+        "GET /api/v1/admin/audit-events",
+        "GET /api/v1/auth/me",
+        "GET /api/v1/version"
+      ],
+      "unexpectedApiCalls": [],
+      "status": "CAPTURED",
+      "notes": null
+    },
+    {
+      "id": "cap05-01",
+      "chapter": "5. Painel operacional",
+      "section": "Quando algo é bloqueado",
+      "manualLine": 747,
+      "marker": "[IMAGEM SUGERIDA: Painel operacional com os seis cartões no alto, um deles destacado como filtro ativo, e a lista abaixo mostrando na coluna Situação rótulos diferentes do nome do cartão selecionado]",
+      "file": "cap05-01-painel-operacional-filtro-ativo.png",
+      "extraFiles": [],
+      "route": "/app/backlog",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "user": "ana.demo@sgp.example",
+      "scenario": "Cartão \"Em execução\" ativo como filtro; lista mostra esteiras com Situação \"Em andamento\" e \"A iniciar\" (rótulos diferentes do cartão).",
+      "mockEndpoints": [
+        "GET /api/v1/auth/me",
+        "GET /api/v1/conveyors",
+        "GET /api/v1/conveyors/health-analysis/summary",
+        "GET /api/v1/version"
+      ],
+      "unexpectedApiCalls": [],
+      "status": "CAPTURED",
+      "notes": null
+    },
+    {
+      "id": "cap05-02",
+      "chapter": "5. Painel operacional",
+      "section": "Quando algo é bloqueado",
+      "manualLine": 749,
+      "marker": "[IMAGEM SUGERIDA: Mesma esteira em dois momentos — antes do prazo, contada em Em execução; depois do prazo, contada em Em atraso e ausente do cartão anterior]",
+      "file": "cap05-02-esteira-antes-depois-prazo.png",
+      "extraFiles": [],
+      "route": null,
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "user": "ana.demo@sgp.example",
+      "scenario": "Composição de duas capturas reais da mesma esteira ET-0103 (prazo 06/07/2026): relógio em 01/07 (contada em Em execução) e em 08/07 (contada em Em atraso, ausente de Em execução).",
+      "mockEndpoints": [
+        "GET /api/v1/auth/me",
+        "GET /api/v1/conveyors",
+        "GET /api/v1/conveyors/health-analysis/summary",
+        "GET /api/v1/version"
+      ],
+      "unexpectedApiCalls": [],
+      "status": "CAPTURED",
+      "notes": "Imagem composta (duas capturas reais lado a lado via HTML local), conforme regra de comparação."
+    },
+    {
+      "id": "cap06-01",
+      "chapter": "6. Esteiras",
+      "section": "Para que serve",
+      "manualLine": 768,
+      "marker": "[IMAGEM SUGERIDA: detalhe de uma esteira em andamento, com cabeçalho, situação, resumo operacional e o início da estrutura operacional]",
+      "file": "cap06-01-detalhe-esteira.png",
+      "extraFiles": [],
+      "route": "/app/esteiras/conv-101",
+      "viewport": {
+        "width": 1440,
+        "height": 1100
+      },
+      "user": "ana.demo@sgp.example",
+      "scenario": "Detalhe da esteira ET-0101 (Em andamento): cabeçalho, selo de situação, resumo operacional e dados básicos.",
+      "mockEndpoints": [
+        "GET /api/v1/auth/me",
+        "GET /api/v1/conveyors/conv-101",
+        "GET /api/v1/conveyors/conv-101/node-workload",
+        "GET /api/v1/conveyors/conv-101/operational-events",
+        "GET /api/v1/conveyors/conv-101/operational-plan",
+        "GET /api/v1/conveyors/conv-101/steps/step-1/assignees",
+        "GET /api/v1/conveyors/conv-101/steps/step-1/time-entries",
+        "GET /api/v1/conveyors/conv-101/steps/step-2/assignees",
+        "GET /api/v1/conveyors/conv-101/steps/step-2/time-entries",
+        "GET /api/v1/conveyors/conv-101/steps/step-3/assignees",
+        "GET /api/v1/conveyors/conv-101/steps/step-3/time-entries",
+        "GET /api/v1/conveyors/conv-101/steps/step-4/assignees",
+        "GET /api/v1/conveyors/conv-101/steps/step-4/time-entries",
+        "GET /api/v1/conveyors/conv-101/steps/step-5/assignees",
+        "GET /api/v1/conveyors/conv-101/steps/step-5/time-entries",
+        "GET /api/v1/conveyors/conv-101/steps/step-6/assignees",
+        "GET /api/v1/conveyors/conv-101/steps/step-6/time-entries",
+        "GET /api/v1/conveyors/conv-101/steps/step-7/assignees",
+        "GET /api/v1/conveyors/conv-101/steps/step-7/time-entries",
+        "GET /api/v1/conveyors/conv-101/steps/step-8/assignees",
+        "GET /api/v1/conveyors/conv-101/steps/step-8/time-entries",
+        "GET /api/v1/conveyors/conv-101/steps/step-9/assignees",
+        "GET /api/v1/conveyors/conv-101/steps/step-9/time-entries",
+        "GET /api/v1/version"
+      ],
+      "unexpectedApiCalls": [],
+      "status": "CAPTURED",
+      "notes": "DIVERGÊNCIA PARCIAL: no código atual (EsteiraDetalhePage.tsx) o bloco Estrutura operacional fica abaixo de Dados básicos, Pendência e concentração, Plano Operacional e Eventos operacionais — não aparece junto do resumo numa mesma tela. A imagem cobre cabeçalho/situação/resumo/dados básicos; a estrutura está em cap06-02."
+    },
+    {
+      "id": "cap06-02",
+      "chapter": "6. Esteiras",
+      "section": "Como fazer",
+      "manualLine": 852,
+      "marker": "[IMAGEM SUGERIDA: bloco Estrutura operacional do detalhe, mostrando Tarefa 1 → Setor 1 → lista de atividades numeradas, com tempo ao lado de cada uma]",
+      "file": "cap06-02-estrutura-operacional.png",
+      "extraFiles": [],
+      "route": "/app/esteiras/conv-101",
+      "viewport": {
+        "width": 1440,
+        "height": 3200
+      },
+      "user": "ana.demo@sgp.example",
+      "scenario": "Bloco Estrutura operacional: Tarefa 1 → Setor 1 (Tapeçaria) → atividades numeradas com tempo previsto.",
+      "mockEndpoints": [
+        "GET /api/v1/auth/me",
+        "GET /api/v1/conveyors/conv-101",
+        "GET /api/v1/conveyors/conv-101/node-workload",
+        "GET /api/v1/conveyors/conv-101/operational-events",
+        "GET /api/v1/conveyors/conv-101/operational-plan",
+        "GET /api/v1/conveyors/conv-101/steps/step-1/assignees",
+        "GET /api/v1/conveyors/conv-101/steps/step-1/time-entries",
+        "GET /api/v1/conveyors/conv-101/steps/step-2/assignees",
+        "GET /api/v1/conveyors/conv-101/steps/step-2/time-entries",
+        "GET /api/v1/conveyors/conv-101/steps/step-3/assignees",
+        "GET /api/v1/conveyors/conv-101/steps/step-3/time-entries",
+        "GET /api/v1/conveyors/conv-101/steps/step-4/assignees",
+        "GET /api/v1/conveyors/conv-101/steps/step-4/time-entries",
+        "GET /api/v1/conveyors/conv-101/steps/step-5/assignees",
+        "GET /api/v1/conveyors/conv-101/steps/step-5/time-entries",
+        "GET /api/v1/conveyors/conv-101/steps/step-6/assignees",
+        "GET /api/v1/conveyors/conv-101/steps/step-6/time-entries",
+        "GET /api/v1/conveyors/conv-101/steps/step-7/assignees",
+        "GET /api/v1/conveyors/conv-101/steps/step-7/time-entries",
+        "GET /api/v1/conveyors/conv-101/steps/step-8/assignees",
+        "GET /api/v1/conveyors/conv-101/steps/step-8/time-entries",
+        "GET /api/v1/conveyors/conv-101/steps/step-9/assignees",
+        "GET /api/v1/conveyors/conv-101/steps/step-9/time-entries",
+        "GET /api/v1/version"
+      ],
+      "unexpectedApiCalls": [],
+      "status": "CAPTURED",
+      "notes": "Observação de auditoria: cada atividade exibe abaixo o painel \"STEP · Equipe e apontamentos\" (StepAnaliticoPanel), com o termo técnico STEP visível ao usuário; o manual não menciona esse painel."
+    },
+    {
+      "id": "cap06-03",
+      "chapter": "6. Esteiras",
+      "section": "Como fazer",
+      "manualLine": 924,
+      "marker": "[IMAGEM SUGERIDA: passo Estrutura da tela Nova esteira, com o catálogo Bases e extras à esquerda e a esteira em montagem à direita]",
+      "file": "cap06-03-nova-esteira-estrutura.png",
+      "extraFiles": [],
+      "route": "/app/nova-esteira",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "user": "ana.demo@sgp.example",
+      "scenario": "Nova esteira no passo Estrutura: catálogo \"Bases e extras\" à esquerda (matrizes fictícias) e a esteira em montagem à direita com a base \"Reforma de bancos\" aplicada.",
+      "mockEndpoints": [
+        "GET /api/v1/auth/me",
+        "GET /api/v1/collaborators",
+        "GET /api/v1/operation-matrix/items",
+        "GET /api/v1/operation-matrix/items/mx-bancos/tree",
+        "GET /api/v1/operation-matrix/items/mx-portas/tree",
+        "GET /api/v1/operation-matrix/items/mx-teto/tree",
+        "GET /api/v1/teams",
+        "GET /api/v1/version"
+      ],
+      "unexpectedApiCalls": [],
+      "status": "CAPTURED",
+      "notes": null
+    },
+    {
+      "id": "cap06-04",
+      "chapter": "6. Esteiras",
+      "section": "Como fazer",
+      "manualLine": 1121,
+      "marker": "[IMAGEM SUGERIDA: cabeçalho do detalhe de uma esteira Em andamento, com o selo de situação e a faixa de botões Finalizar esteira, Cancelar esteira, Voltar para planejamento e Voltar para backlog]",
+      "file": "cap06-04-cabecalho-acoes-status.png",
+      "extraFiles": [],
+      "route": "/app/esteiras/conv-101",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "user": "ana.demo@sgp.example",
+      "scenario": "Cabeçalho da esteira Em andamento com selo de situação e botões Finalizar esteira, Cancelar esteira, Voltar para planejamento e Voltar para backlog.",
+      "mockEndpoints": [
+        "GET /api/v1/auth/me",
+        "GET /api/v1/conveyors/conv-101",
+        "GET /api/v1/conveyors/conv-101/node-workload",
+        "GET /api/v1/conveyors/conv-101/operational-events",
+        "GET /api/v1/conveyors/conv-101/operational-plan",
+        "GET /api/v1/conveyors/conv-101/steps/step-1/assignees",
+        "GET /api/v1/conveyors/conv-101/steps/step-1/time-entries",
+        "GET /api/v1/conveyors/conv-101/steps/step-2/assignees",
+        "GET /api/v1/conveyors/conv-101/steps/step-2/time-entries",
+        "GET /api/v1/conveyors/conv-101/steps/step-3/assignees",
+        "GET /api/v1/conveyors/conv-101/steps/step-3/time-entries",
+        "GET /api/v1/conveyors/conv-101/steps/step-4/assignees",
+        "GET /api/v1/conveyors/conv-101/steps/step-4/time-entries",
+        "GET /api/v1/conveyors/conv-101/steps/step-5/assignees",
+        "GET /api/v1/conveyors/conv-101/steps/step-5/time-entries",
+        "GET /api/v1/conveyors/conv-101/steps/step-6/assignees",
+        "GET /api/v1/conveyors/conv-101/steps/step-6/time-entries",
+        "GET /api/v1/conveyors/conv-101/steps/step-7/assignees",
+        "GET /api/v1/conveyors/conv-101/steps/step-7/time-entries",
+        "GET /api/v1/conveyors/conv-101/steps/step-8/assignees",
+        "GET /api/v1/conveyors/conv-101/steps/step-8/time-entries",
+        "GET /api/v1/conveyors/conv-101/steps/step-9/assignees",
+        "GET /api/v1/conveyors/conv-101/steps/step-9/time-entries",
+        "GET /api/v1/version"
+      ],
+      "unexpectedApiCalls": [],
+      "status": "CAPTURED",
+      "notes": null
+    },
+    {
+      "id": "cap06-05",
+      "chapter": "6. Esteiras",
+      "section": "Como fazer",
+      "manualLine": 1336,
+      "marker": "[IMAGEM SUGERIDA: duas linhas de atividade lado a lado — uma com o selo Dispensada e o botão Restaurar, outra concluída com o botão Reabrir atividade]",
+      "file": "cap06-05-atividade-dispensada-e-concluida.png",
+      "extraFiles": [],
+      "route": "/app/esteiras/conv-101",
+      "viewport": {
+        "width": 1440,
+        "height": 3200
+      },
+      "user": "ana.demo@sgp.example",
+      "scenario": "Na estrutura: \"Remover revestimento antigo\" concluída (botão Reabrir atividade) e \"Aplicar manta acústica\" Dispensada (botão Restaurar).",
+      "mockEndpoints": [
+        "GET /api/v1/auth/me",
+        "GET /api/v1/conveyors/conv-101",
+        "GET /api/v1/conveyors/conv-101/node-workload",
+        "GET /api/v1/conveyors/conv-101/operational-events",
+        "GET /api/v1/conveyors/conv-101/operational-plan",
+        "GET /api/v1/conveyors/conv-101/steps/step-1/assignees",
+        "GET /api/v1/conveyors/conv-101/steps/step-1/time-entries",
+        "GET /api/v1/conveyors/conv-101/steps/step-2/assignees",
+        "GET /api/v1/conveyors/conv-101/steps/step-2/time-entries",
+        "GET /api/v1/conveyors/conv-101/steps/step-3/assignees",
+        "GET /api/v1/conveyors/conv-101/steps/step-3/time-entries",
+        "GET /api/v1/conveyors/conv-101/steps/step-4/assignees",
+        "GET /api/v1/conveyors/conv-101/steps/step-4/time-entries",
+        "GET /api/v1/conveyors/conv-101/steps/step-5/assignees",
+        "GET /api/v1/conveyors/conv-101/steps/step-5/time-entries",
+        "GET /api/v1/conveyors/conv-101/steps/step-6/assignees",
+        "GET /api/v1/conveyors/conv-101/steps/step-6/time-entries",
+        "GET /api/v1/conveyors/conv-101/steps/step-7/assignees",
+        "GET /api/v1/conveyors/conv-101/steps/step-7/time-entries",
+        "GET /api/v1/conveyors/conv-101/steps/step-8/assignees",
+        "GET /api/v1/conveyors/conv-101/steps/step-8/time-entries",
+        "GET /api/v1/conveyors/conv-101/steps/step-9/assignees",
+        "GET /api/v1/conveyors/conv-101/steps/step-9/time-entries",
+        "GET /api/v1/version"
+      ],
+      "unexpectedApiCalls": [],
+      "status": "CAPTURED",
+      "notes": "As linhas aparecem empilhadas (layout real da lista); o recorte mostra as duas linhas na mesma imagem."
+    },
+    {
+      "id": "cap06-06",
+      "chapter": "6. Esteiras",
+      "section": "Como fazer",
+      "manualLine": 1422,
+      "marker": "[IMAGEM SUGERIDA: janela Incluir novo item, com o campo Motivo da inclusão e os quatro cartões de modo]",
+      "file": "cap06-06-incluir-novo-item.png",
+      "extraFiles": [],
+      "route": "/app/esteiras/conv-101/alterar",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "user": "ana.demo@sgp.example",
+      "scenario": "Alterar esteira ET-0101 → aba Estrutura → botão \"Incluir novo item\": janela com Motivo da inclusão e os quatro cartões de modo.",
+      "mockEndpoints": [
+        "GET /api/v1/auth/me",
+        "GET /api/v1/collaborators",
+        "GET /api/v1/conveyors/conv-101",
+        "GET /api/v1/operation-matrix/items",
+        "GET /api/v1/operation-matrix/items/mx-bancos/tree",
+        "GET /api/v1/operation-matrix/items/mx-portas/tree",
+        "GET /api/v1/operation-matrix/items/mx-teto/tree",
+        "GET /api/v1/teams",
+        "GET /api/v1/version"
+      ],
+      "unexpectedApiCalls": [],
+      "status": "CAPTURED",
+      "notes": null
+    },
+    {
+      "id": "cap07-01",
+      "chapter": "7. Apontamentos",
+      "section": "Quando algo é bloqueado",
+      "manualLine": 1876,
+      "marker": "[IMAGEM SUGERIDA: Gaveta Apontar horas na aba Esteira — lista com os blocos Minhas atividades e Fora da sua alocação, mostrando num cartão os números Previsto, Realizado e Pendente e os botões Apontar e Concluir atividade]",
+      "file": "cap07-01-gaveta-apontar-horas.png",
+      "extraFiles": [],
+      "route": "/app/backlog",
+      "viewport": {
+        "width": 1440,
+        "height": 2400
+      },
+      "user": "ana.demo@sgp.example",
+      "scenario": "Botão \"Apontar horas\" da barra superior → aba Esteira; \"Buscar outras atividades\" marcado com pesquisa \"Veículo\" → blocos Minhas atividades e Fora da sua alocação; cartões com Previsto/Realizado/Pendente, Apontar e Concluir atividade.",
+      "mockEndpoints": [
+        "GET /api/v1/auth/me",
+        "GET /api/v1/conveyors",
+        "GET /api/v1/conveyors/health-analysis/summary",
+        "GET /api/v1/me/extra-time-entries",
+        "GET /api/v1/me/extra-time-entry-descriptions",
+        "GET /api/v1/me/time-entry-candidates",
+        "GET /api/v1/version"
+      ],
+      "unexpectedApiCalls": [],
+      "status": "CAPTURED",
+      "notes": "Viewport alto para mostrar os dois blocos da gaveta numa única imagem; recorte na própria gaveta."
+    },
+    {
+      "id": "cap07-02",
+      "chapter": "7. Apontamentos",
+      "section": "Quando algo é bloqueado",
+      "manualLine": 1878,
+      "marker": "[IMAGEM SUGERIDA: Formulário Registrar tempo com a faixa de fora de sequência aberta, listando as atividades anteriores pendentes, e os dois botões de salvar]",
+      "file": "cap07-02-registrar-tempo-fora-de-sequencia.png",
+      "extraFiles": [],
+      "route": "/app/backlog",
+      "viewport": {
+        "width": 1440,
+        "height": 1800
+      },
+      "user": "ana.demo@sgp.example",
+      "scenario": "Apontar horas → \"Apontar\" na atividade \"Revestir painéis\" (ET-0103) que tem 2 atividades anteriores pendentes → formulário Registrar tempo com a faixa de fora de sequência e os botões Salvar apontamento / Salvar apontamento e concluir atividade.",
+      "mockEndpoints": [
+        "GET /api/v1/auth/me",
+        "GET /api/v1/conveyors",
+        "GET /api/v1/conveyors/health-analysis/summary",
+        "GET /api/v1/me/extra-time-entries",
+        "GET /api/v1/me/extra-time-entry-descriptions",
+        "GET /api/v1/me/time-entry-candidates",
+        "GET /api/v1/me/time-entry-justifications",
+        "GET /api/v1/version"
+      ],
+      "unexpectedApiCalls": [],
+      "status": "CAPTURED",
+      "notes": null
+    },
+    {
+      "id": "cap07-03",
+      "chapter": "7. Apontamentos",
+      "section": "Quando algo é bloqueado",
+      "manualLine": 1880,
+      "marker": "[IMAGEM SUGERIDA: Tela Apontamento gerencial — Novo lançamento com o motivo obrigatório e, abaixo, a lista de lançamentos com as ações Editar e Remover]",
+      "file": "cap07-03-apontamento-gerencial.png",
+      "extraFiles": [],
+      "route": "/app/gestao/apontamento/step-3?conveyorId=conv-101",
+      "viewport": {
+        "width": 1440,
+        "height": 1700
+      },
+      "user": "ana.demo@sgp.example",
+      "scenario": "Apontamento gerencial da atividade \"Recuperar espuma\" (ET-0101): bloco Novo lançamento com o motivo obrigatório preenchido e, abaixo, lista de lançamentos com Editar… e Remover….",
+      "mockEndpoints": [
+        "GET /api/v1/auth/me",
+        "GET /api/v1/conveyors/conv-101/steps/step-3/assignees",
+        "GET /api/v1/conveyors/conv-101/steps/step-3/sequence-check",
+        "GET /api/v1/conveyors/conv-101/steps/step-3/time-entries",
+        "GET /api/v1/version"
+      ],
+      "unexpectedApiCalls": [],
+      "status": "CAPTURED",
+      "notes": null
+    },
+    {
+      "id": "cap08-01",
+      "chapter": "8. Planejamento semanal",
+      "section": "Quando algo é bloqueado",
+      "manualLine": 2231,
+      "marker": "[IMAGEM SUGERIDA: Planejamento da Semana — cabeçalho com a navegação de semana, o selo \"Revisão em planejamento\" e o selo \"Alterações não publicadas\", seguido do quadro colaborador × dia com cartões distribuídos]",
+      "file": "cap08-01-planejamento-da-semana.png",
+      "extraFiles": [],
+      "route": "/app/planejamento-semanal?weekStart=2026-06-29",
+      "viewport": {
+        "width": 1440,
+        "height": 2600
+      },
+      "user": "ana.demo@sgp.example",
+      "scenario": "Semana 29/06–03/07/2026 com revisão em planejamento (plano publicado ativo + alterações não publicadas) e quadro colaborador × dia preenchido.",
+      "mockEndpoints": [
+        "GET /api/v1/auth/me",
+        "GET /api/v1/collaborators",
+        "GET /api/v1/operational-planning/backlog",
+        "GET /api/v1/operational-planning/factory-intake",
+        "GET /api/v1/operational-planning/week",
+        "GET /api/v1/operational-planning/week-activity",
+        "GET /api/v1/version"
+      ],
+      "unexpectedApiCalls": [],
+      "status": "CAPTURED",
+      "notes": "Viewport alto para incluir cabeçalho e quadro na mesma imagem; recorte sem o menu lateral."
+    },
+    {
+      "id": "cap08-02",
+      "chapter": "8. Planejamento semanal",
+      "section": "Quando algo é bloqueado",
+      "manualLine": 2233,
+      "marker": "[IMAGEM SUGERIDA: Aviso \"Capacidade diária ultrapassada\" com Colaborador, Data, Capacidade diária, Tempo planejado e Excedente, e a frase de que o planejamento pode continuar]",
+      "file": "cap08-02-capacidade-diaria-ultrapassada.png",
+      "extraFiles": [],
+      "route": "/app/planejamento-semanal?weekStart=2026-06-29",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "user": "ana.demo@sgp.example",
+      "scenario": "Adicionar ao plano \"Cortar tapetes\" (90 min pendentes) para Carlos Demo na quarta 01/07, que já tem 7 h planejadas (capacidade 8 h) → aviso Capacidade diária ultrapassada.",
+      "mockEndpoints": [
+        "GET /api/v1/auth/me",
+        "GET /api/v1/collaborators",
+        "GET /api/v1/operational-planning/backlog",
+        "GET /api/v1/operational-planning/factory-intake",
+        "GET /api/v1/operational-planning/week",
+        "GET /api/v1/operational-planning/week-activity",
+        "GET /api/v1/version"
+      ],
+      "unexpectedApiCalls": [],
+      "status": "CAPTURED",
+      "notes": null
+    },
+    {
+      "id": "cap08-03",
+      "chapter": "8. Planejamento semanal",
+      "section": "Quando algo é bloqueado",
+      "manualLine": 2235,
+      "marker": "[IMAGEM SUGERIDA: Janela \"Adicionar ao plano\" com os atalhos \"Cadastrados na atividade\", o campo Dia e o campo Minutos planejados preenchido com o tempo restante]",
+      "file": "cap08-03-adicionar-ao-plano.png",
+      "extraFiles": [],
+      "route": "/app/planejamento-semanal?weekStart=2026-06-29",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "user": "ana.demo@sgp.example",
+      "scenario": "Janela Adicionar ao plano para \"Cortar tapetes\" (ET-0109): atalhos \"Cadastrados na atividade\" (Carlos Demo, Diana Exemplo), campo Dia e Minutos planejados com o tempo restante (90 min).",
+      "mockEndpoints": [
+        "GET /api/v1/auth/me",
+        "GET /api/v1/collaborators",
+        "GET /api/v1/operational-planning/backlog",
+        "GET /api/v1/operational-planning/factory-intake",
+        "GET /api/v1/operational-planning/week",
+        "GET /api/v1/operational-planning/week-activity",
+        "GET /api/v1/version"
+      ],
+      "unexpectedApiCalls": [],
+      "status": "CAPTURED",
+      "notes": "Observação de auditoria: no tema Light Executive a janela é renderizada com fundo escuro e o título \"Adicionar ao plano\" fica com contraste muito baixo (OperationalPlanningPage.tsx, modal ~L2275)."
+    },
+    {
+      "id": "cap09-01",
+      "chapter": "9. Agenda da semana",
+      "section": "Quando algo é bloqueado",
+      "manualLine": 2608,
+      "marker": "[IMAGEM SUGERIDA: Agenda da Semana — cabeçalho com navegação de semana e selo de estado, faixa de resumo com o botão Atenção e a grade colaborador × dia preenchida]",
+      "file": "cap09-01-agenda-da-semana.png",
+      "extraFiles": [],
+      "route": "/app/agenda-semanal?weekStart=2026-06-29",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "user": "ana.demo@sgp.example",
+      "scenario": "Agenda da semana 29/06–03/07/2026: cabeçalho com navegação e selo de estado, faixa de resumo com botão Atenção e grade colaborador × dia preenchida.",
+      "mockEndpoints": [
+        "GET /api/v1/auth/me",
+        "GET /api/v1/collaborators",
+        "GET /api/v1/operational-planning/backlog",
+        "GET /api/v1/operational-planning/week",
+        "GET /api/v1/version"
+      ],
+      "unexpectedApiCalls": [],
+      "status": "CAPTURED",
+      "notes": null
+    },
+    {
+      "id": "cap09-02",
+      "chapter": "9. Agenda da semana",
+      "section": "Quando algo é bloqueado",
+      "manualLine": 2610,
+      "marker": "[IMAGEM SUGERIDA: arraste em andamento — a faixa \"Arrastando: {atividade} — solte sobre um espaço livre da agenda\" no alto, com a célula de destino destacada]",
+      "file": "cap09-02-arraste-em-andamento.png",
+      "extraFiles": [],
+      "route": "/app/agenda-semanal?weekStart=2026-06-29",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "user": "ana.demo@sgp.example",
+      "scenario": "Arraste do cartão \"Cortar tapetes\" do backlog até a célula de Diana Exemplo na quinta 02/07, capturado durante o gesto (faixa \"Arrastando…\" e célula de destino destacada).",
+      "mockEndpoints": [
+        "GET /api/v1/auth/me",
+        "GET /api/v1/collaborators",
+        "GET /api/v1/operational-planning/backlog",
+        "GET /api/v1/operational-planning/week",
+        "GET /api/v1/version"
+      ],
+      "unexpectedApiCalls": [],
+      "status": "CAPTURED",
+      "notes": null
+    },
+    {
+      "id": "cap09-03",
+      "chapter": "9. Agenda da semana",
+      "section": "Quando algo é bloqueado",
+      "manualLine": 2612,
+      "marker": "[IMAGEM SUGERIDA: gaveta \"Backlog operacional\" aberta a partir do botão + Backlog, com o convite \"Alocar tudo em lote\" e os cartões de atividade]",
+      "file": "cap09-03-gaveta-backlog-operacional.png",
+      "extraFiles": [],
+      "route": "/app/agenda-semanal?weekStart=2026-06-29",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "user": "ana.demo@sgp.example",
+      "scenario": "Botão \"+ Backlog\" → gaveta Backlog operacional com o convite \"Alocar tudo em lote\" (4 itens) e os cartões de atividade.",
+      "mockEndpoints": [
+        "GET /api/v1/auth/me",
+        "GET /api/v1/collaborators",
+        "GET /api/v1/operational-planning/backlog",
+        "GET /api/v1/operational-planning/week",
+        "GET /api/v1/version"
+      ],
+      "unexpectedApiCalls": [],
+      "status": "CAPTURED",
+      "notes": null
+    },
+    {
+      "id": "cap09-04",
+      "chapter": "9. Agenda da semana",
+      "section": "Quando algo é bloqueado",
+      "manualLine": 2614,
+      "marker": "[IMAGEM SUGERIDA: tela \"Alocação em lote\" com o progresso, o bloco Sugestão e os botões de atribuir, escolher outra pessoa e deixar para depois]",
+      "file": "cap09-04-alocacao-em-lote.png",
+      "extraFiles": [],
+      "route": "/app/agenda-semanal?weekStart=2026-06-29",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "user": "ana.demo@sgp.example",
+      "scenario": "Convite do backlog → \"Alocar tudo em lote\": tela de alocação com progresso, bloco Sugestão e botões de atribuir, escolher outra pessoa e deixar para depois.",
+      "mockEndpoints": [
+        "GET /api/v1/auth/me",
+        "GET /api/v1/collaborators",
+        "GET /api/v1/operational-planning/backlog",
+        "GET /api/v1/operational-planning/week",
+        "GET /api/v1/version"
+      ],
+      "unexpectedApiCalls": [],
+      "status": "CAPTURED",
+      "notes": null
+    },
+    {
+      "id": "cap09-05",
+      "chapter": "9. Agenda da semana",
+      "section": "Quando algo é bloqueado",
+      "manualLine": 2616,
+      "marker": "[IMAGEM SUGERIDA: gaveta \"Itens de atenção\" com os dois painéis — Pendências de sincronização, com o botão Aplicar plano da esteira, e Fora do planejado]",
+      "file": "cap09-05-gaveta-itens-de-atencao.png",
+      "extraFiles": [],
+      "route": "/app/agenda-semanal?weekStart=2026-06-29",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "user": "ana.demo@sgp.example",
+      "scenario": "Botão Atenção → gaveta Itens de atenção com Pendências de sincronização (1 item divergente, botão Aplicar plano da esteira) e Fora do planejado (1 apontamento).",
+      "mockEndpoints": [
+        "GET /api/v1/auth/me",
+        "GET /api/v1/collaborators",
+        "GET /api/v1/operational-planning/backlog",
+        "GET /api/v1/operational-planning/week",
+        "GET /api/v1/version"
+      ],
+      "unexpectedApiCalls": [],
+      "status": "CAPTURED",
+      "notes": null
+    },
+    {
+      "id": "extra-ajuda-menu",
+      "chapter": "Extra — Barra superior (menu Ajuda)",
+      "section": null,
+      "manualLine": null,
+      "marker": "EXTRA: menu Ajuda aberto na barra superior (src/components/shell/HelpMenu.tsx).",
+      "file": "extra-ajuda-menu.png",
+      "extraFiles": [],
+      "route": "/app/permissoes-por-papel",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "user": "ana.demo@sgp.example",
+      "scenario": "Menu \"? Ajuda\" da barra superior aberto, com a ajuda contextual da tela atual, o manual completo e Abrir chamado.",
+      "mockEndpoints": [
+        "GET /api/v1/auth/me",
+        "GET /api/v1/rbac/permissions",
+        "GET /api/v1/rbac/roles",
+        "GET /api/v1/rbac/roles/11111111-1111-1111-1111-111111111111/permissions",
+        "GET /api/v1/version"
+      ],
+      "unexpectedApiCalls": [],
+      "status": "CAPTURED",
+      "notes": null
+    }
+  ]
+}

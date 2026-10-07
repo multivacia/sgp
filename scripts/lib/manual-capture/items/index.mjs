@@ -1,0 +1,15 @@
+/** Catálogo de itens de captura (um por marcação do manual + extras). */
+import cap04 from './cap04.mjs'
+import cap05 from './cap05.mjs'
+import cap06 from './cap06.mjs'
+import cap07 from './cap07.mjs'
+import cap08 from './cap08.mjs'
+import cap09 from './cap09.mjs'
+import extra from './extra.mjs'
+
+const all = [...cap04, ...cap05, ...cap06, ...cap07, ...cap08, ...cap09, ...extra]
+
+export const ITEMS = all.map((it) => ({
+  ...it,
+  chapterNumber: it.chapterNumber ?? (Number.parseInt(it.id.replace(/^cap/, ''), 10) || 0),
+}))
