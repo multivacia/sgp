@@ -946,6 +946,181 @@
       "notes": "Viewport 1280x800 (totem em paisagem)."
     },
     {
+      "id": "cap14-01",
+      "chapter": "14. Evolução das Esteiras",
+      "section": "Onde fica",
+      "manualLine": 3943,
+      "marker": "[IMAGEM SUGERIDA: Tela Evolução das Esteiras completa — faixa de filtros com Gerar PDF, linha Resumo geral e as primeiras linhas da tabela com as colunas Previsto, Realizado, Falta, Excedente, Evolução e Eficiência]",
+      "file": "cap14-01-evolucao-das-esteiras.png",
+      "extraFiles": [],
+      "route": "/app/gestao/evolucao-esteiras",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "user": "ana.demo@sgp.example",
+      "scenario": "Evolução das Esteiras com 4 esteiras: faixa de filtros com Gerar PDF, linha Resumo geral e primeiras linhas da tabela (Previsto, Realizado, Falta, Excedente, Evolução, Eficiência).",
+      "mockEndpoints": [
+        "GET /api/v1/auth/me",
+        "GET /api/v1/collaborators",
+        "GET /api/v1/management/conveyor-progress",
+        "GET /api/v1/version"
+      ],
+      "unexpectedApiCalls": [],
+      "status": "CAPTURED",
+      "notes": "Payload de /management/conveyor-progress produzido pelo serviceConveyorProgress real (server/src) sobre pool stub com fixtures (scripts/lib/manual-capture/server/conveyor-progress.ts)."
+    },
+    {
+      "id": "cap14-02",
+      "chapter": "14. Evolução das Esteiras",
+      "section": "O que esperar",
+      "manualLine": 4120,
+      "marker": "[IMAGEM SUGERIDA: Linha de atividade com o selo Dispensada mostrando Previsto preenchido, Falta e Evolução zerados e Eficiência como Sem tempo previsto, com a linha do setor acima evidenciando o previsto reduzido]",
+      "file": "cap14-02-atividade-dispensada.png",
+      "extraFiles": [],
+      "route": "/app/gestao/evolucao-esteiras",
+      "viewport": {
+        "width": 1440,
+        "height": 1600
+      },
+      "user": "ana.demo@sgp.example",
+      "scenario": "ET-0101 → Bancos dianteiros → Tapeçaria expandidos: \"Aplicar manta acústica\" Dispensada (Previsto 45 min, Falta e Evolução zerados, Eficiência \"Sem tempo previsto\") e a linha do setor acima com o previsto reduzido.",
+      "mockEndpoints": [
+        "GET /api/v1/auth/me",
+        "GET /api/v1/collaborators",
+        "GET /api/v1/management/conveyor-progress",
+        "GET /api/v1/version"
+      ],
+      "unexpectedApiCalls": [],
+      "status": "CAPTURED",
+      "notes": "Payload de /management/conveyor-progress produzido pelo serviceConveyorProgress real (server/src) sobre pool stub com fixtures (scripts/lib/manual-capture/server/conveyor-progress.ts)."
+    },
+    {
+      "id": "cap15-01",
+      "chapter": "15. Dashboard e indicadores",
+      "section": "Onde fica",
+      "manualLine": 4239,
+      "marker": "[IMAGEM SUGERIDA: Tela Dashboards na visão Operacional, modo Cards — faixa com Operacional/Gerencial, Cards/Gráficos e Atualizar; abaixo, o bloco Resumo com os quatro cartões]",
+      "file": "cap15-01-dashboards-operacional-cards.png",
+      "extraFiles": [],
+      "route": "/app/dashboard",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "user": "ana.demo@sgp.example",
+      "scenario": "Dashboards na visão Operacional em modo Cards: faixa Operacional/Gerencial, Cards/Gráficos e Atualizar; bloco Resumo com os quatro cartões.",
+      "mockEndpoints": [
+        "GET /api/v1/admin/operational-settings/collaborators/col-bruno/capacity",
+        "GET /api/v1/admin/operational-settings/collaborators/col-carlos/capacity",
+        "GET /api/v1/admin/operational-settings/collaborators/col-diana/capacity",
+        "GET /api/v1/admin/operational-settings/collaborators/col-eduardo/capacity",
+        "GET /api/v1/auth/me",
+        "GET /api/v1/dashboard/executive",
+        "GET /api/v1/dashboard/operational",
+        "GET /api/v1/version"
+      ],
+      "unexpectedApiCalls": [],
+      "status": "CAPTURED",
+      "notes": null
+    },
+    {
+      "id": "cap16-01",
+      "chapter": "16. Cadastros e administração",
+      "section": "Onde fica",
+      "manualLine": 4556,
+      "marker": "[IMAGEM SUGERIDA: Tela Colaboradores operacionais — filtros Buscar, Setor, Papel operacional e Situação, a tabela com as colunas Colaborador, Setor, Usuário (acesso), Atualizado e Situação, e o menu de ações de uma linha aberto]",
+      "file": "cap16-01-colaboradores-operacionais.png",
+      "extraFiles": [],
+      "route": "/app/colaboradores",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "user": "ana.demo@sgp.example",
+      "scenario": "Colaboradores operacionais: filtros Buscar, Setor, Papel operacional e Situação; tabela com Colaborador, Setor, Usuário (acesso), Atualizado e Situação; menu de ações da linha de Carlos Demo aberto.",
+      "mockEndpoints": [
+        "GET /api/v1/admin/collaborators",
+        "GET /api/v1/admin/operational-settings/collaborators/col-ana/capacity",
+        "GET /api/v1/admin/operational-settings/collaborators/col-bruno/capacity",
+        "GET /api/v1/admin/operational-settings/collaborators/col-carlos/capacity",
+        "GET /api/v1/admin/operational-settings/collaborators/col-diana/capacity",
+        "GET /api/v1/admin/operational-settings/collaborators/col-eduardo/capacity",
+        "GET /api/v1/admin/operational-settings/collaborators/col-fernanda/capacity",
+        "GET /api/v1/auth/me",
+        "GET /api/v1/roles",
+        "GET /api/v1/sectors",
+        "GET /api/v1/version"
+      ],
+      "unexpectedApiCalls": [],
+      "status": "CAPTURED",
+      "notes": null
+    },
+    {
+      "id": "cap16-02",
+      "chapter": "16. Cadastros e administração",
+      "section": "Como fazer",
+      "manualLine": 4693,
+      "marker": "[IMAGEM SUGERIDA: Janela Editar colaborador com os quadros Capacidade operacional e PIN do Modo Fábrica, o selo Aguardando troca e o botão Redefinir PIN]",
+      "file": "cap16-02-editar-colaborador.png",
+      "extraFiles": [],
+      "route": "/app/colaboradores",
+      "viewport": {
+        "width": 1440,
+        "height": 1500
+      },
+      "user": "ana.demo@sgp.example",
+      "scenario": "Editar colaborador de Diana Exemplo: quadros Capacidade operacional e PIN do Modo Fábrica, selo \"Aguardando troca\" (PIN deve ser trocado no próximo acesso) e botão Redefinir PIN.",
+      "mockEndpoints": [
+        "GET /api/v1/admin/collaborators",
+        "GET /api/v1/admin/operational-settings/collaborators/col-ana/capacity",
+        "GET /api/v1/admin/operational-settings/collaborators/col-bruno/capacity",
+        "GET /api/v1/admin/operational-settings/collaborators/col-carlos/capacity",
+        "GET /api/v1/admin/operational-settings/collaborators/col-diana/capacity",
+        "GET /api/v1/admin/operational-settings/collaborators/col-eduardo/capacity",
+        "GET /api/v1/admin/operational-settings/collaborators/col-fernanda/capacity",
+        "GET /api/v1/auth/me",
+        "GET /api/v1/roles",
+        "GET /api/v1/sectors",
+        "GET /api/v1/version"
+      ],
+      "unexpectedApiCalls": [],
+      "status": "CAPTURED",
+      "notes": null
+    },
+    {
+      "id": "cap16-03",
+      "chapter": "16. Cadastros e administração",
+      "section": "Como fazer",
+      "manualLine": 4904,
+      "marker": "[IMAGEM SUGERIDA: Aba Capacidade operacional — quadro Capacidade padrão com Horas por dia e Salvar padrão, e a tabela Ajustes por colaborador com as colunas Padrão (org.), Ajuste individual, Capacidade efetiva e Origem]",
+      "file": "cap16-03-capacidade-operacional.png",
+      "extraFiles": [],
+      "route": "/app/configuracoes-operacionais",
+      "viewport": {
+        "width": 1440,
+        "height": 1400
+      },
+      "user": "ana.demo@sgp.example",
+      "scenario": "Configurações operacionais → aba Capacidade operacional: Capacidade padrão (8 h/dia, Salvar padrão) e tabela Ajustes por colaborador (Eduardo Teste com ajuste individual de 6 h).",
+      "mockEndpoints": [
+        "GET /api/v1/admin/collaborators",
+        "GET /api/v1/admin/operational-settings/capacity",
+        "GET /api/v1/admin/operational-settings/collaborators/col-ana/capacity",
+        "GET /api/v1/admin/operational-settings/collaborators/col-bruno/capacity",
+        "GET /api/v1/admin/operational-settings/collaborators/col-carlos/capacity",
+        "GET /api/v1/admin/operational-settings/collaborators/col-diana/capacity",
+        "GET /api/v1/admin/operational-settings/collaborators/col-eduardo/capacity",
+        "GET /api/v1/admin/operational-settings/collaborators/col-fernanda/capacity",
+        "GET /api/v1/admin/operational-settings/sectors",
+        "GET /api/v1/auth/me",
+        "GET /api/v1/version"
+      ],
+      "unexpectedApiCalls": [],
+      "status": "CAPTURED",
+      "notes": null
+    },
+    {
       "id": "extra-ajuda-menu",
       "chapter": "Extra — Barra superior (menu Ajuda)",
       "section": null,

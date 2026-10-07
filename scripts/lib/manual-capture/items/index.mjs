@@ -9,9 +9,12 @@ import cap10 from './cap10.mjs'
 import cap11 from './cap11.mjs'
 import cap12 from './cap12.mjs'
 import cap13 from './cap13.mjs'
+import cap14 from './cap14.mjs'
+import cap15 from './cap15.mjs'
+import cap16 from './cap16.mjs'
 import extra from './extra.mjs'
 
-const all = [...cap04, ...cap05, ...cap06, ...cap07, ...cap08, ...cap09, ...cap10, ...cap11, ...cap12, ...cap13, ...extra]
+const all = [...cap04, ...cap05, ...cap06, ...cap07, ...cap08, ...cap09, ...cap10, ...cap11, ...cap12, ...cap13, ...cap14, ...cap15, ...cap16, ...extra]
 
 export const ITEMS = all.map((it) => ({
   ...it,

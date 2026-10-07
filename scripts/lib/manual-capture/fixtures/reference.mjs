@@ -15,8 +15,18 @@ export const ROLES = [
   { id: 'role-montador', name: 'Montador', is_active: true },
 ]
 
+const ROLE_BY_COLLAB = {
+  'col-ana': 'role-gestor',
+  'col-carlos': 'role-tapeceiro',
+  'col-bruno': 'role-costureiro',
+  'col-diana': 'role-montador',
+  'col-eduardo': 'role-montador',
+  'col-fernanda': 'role-costureiro',
+}
+
 export function collaboratorApiJson(c) {
   const sector = SECTORS.find((s) => s.name === c.sector)
+  const role = ROLES.find((r) => r.id === ROLE_BY_COLLAB[c.id])
   return {
     id: c.id,
     code: c.code,
@@ -25,12 +35,12 @@ export function collaboratorApiJson(c) {
     nickname: null,
     email: `${c.full_name.toLowerCase().replace(/\s+/g, '.')}@sgp.example`,
     phone: null,
-    job_title: c.role,
+    job_title: role?.name ?? c.role,
     avatar_url: null,
     sector_id: sector?.id ?? null,
     sector_name: sector?.name ?? null,
-    role_id: null,
-    role_name: c.role,
+    role_id: role?.id ?? null,
+    role_name: role?.name ?? c.role,
     status: 'ACTIVE',
     is_active: true,
     notes: null,
@@ -142,4 +152,35 @@ export function adminCollaboratorJson(c, overrides = {}) {
 
 export function adminCollaboratorsList() {
   return COLLABORATORS.map((c) => adminCollaboratorJson(c))
+}
+
+/** Capacidade operacional: padrão da organização 8 h; Eduardo Teste com ajuste individual de 6 h. */
+export const CAPACITY_DEFAULT = { defaultDailyMinutes: 480, updatedAt: '2026-05-04T12:00:00.000Z', updatedBy: 'ana.demo@sgp.example' }
+
+export function capacityResolved(collaboratorId, date = '2026-07-01') {
+  const override =
+    collaboratorId === 'col-eduardo'
+      ? {
+          id: 'cap-ov-1',
+          collaboratorId,
+          dailyMinutes: 360,
+          effectiveFrom: '2026-06-01',
+          effectiveTo: null,
+          isActive: true,
+          createdAt: '2026-05-28T12:00:00.000Z',
+          updatedAt: '2026-05-28T12:00:00.000Z',
+          createdBy: 'ana.demo@sgp.example',
+          updatedBy: 'ana.demo@sgp.example',
+          deletedAt: null,
+        }
+      : null
+  return {
+    collaboratorId,
+    date,
+    defaultDailyMinutes: 480,
+    overrideDailyMinutes: override ? override.dailyMinutes : null,
+    resolvedDailyMinutes: override ? override.dailyMinutes : 480,
+    source: override ? 'override' : 'default',
+    overrides: override ? [override] : [],
+  }
 }

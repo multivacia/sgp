@@ -15,7 +15,9 @@ import {
   ROLES,
   SECTORS,
   TEAMS,
+  CAPACITY_DEFAULT,
   adminCollaboratorsList,
+  capacityResolved,
   collaboratorsList,
 } from './fixtures/reference.mjs'
 
@@ -71,6 +73,10 @@ export function baseHandlers(user) {
     }),
     h('GET', /^\/api\/v1\/admin\/collaborators\/[^/]+$/, ({ url }) =>
       ok(adminCollaboratorsList().find((c) => c.id === decodeURIComponent(url.pathname.split('/')[5])) ?? null),
+    ),
+    h('GET', '/api/v1/admin/operational-settings/capacity', () => ok(CAPACITY_DEFAULT)),
+    h('GET', /^\/api\/v1\/admin\/operational-settings\/collaborators\/[^/]+\/capacity$/, ({ url, query }) =>
+      ok(capacityResolved(decodeURIComponent(url.pathname.split('/')[6]), query.get('date') ?? undefined)),
     ),
     h('GET', '/api/v1/sectors', () => ok(SECTORS)),
     h('GET', '/api/v1/roles', () => ok(ROLES)),
