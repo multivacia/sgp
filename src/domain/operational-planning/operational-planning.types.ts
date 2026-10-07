@@ -217,3 +217,41 @@ export type SaveOperationalWeekPlanInput = {
     conveyorOperationalPlanItemId?: string | null
   }>
 }
+
+/** Situação do plano usado em cada semana (rascunho/revisão em edição, senão o publicado). */
+export type OperationalPlanningPlanSituation = 'PUBLICADO' | 'RASCUNHO' | 'REVISAO_NAO_PUBLICADA'
+
+/** Item planejado retornado pela pesquisa por período (atravessa semanas). */
+export type OperationalPlanningPeriodItem = {
+  workPlanItemId: string
+  weekStartDate: string
+  planSituation: OperationalPlanningPlanSituation
+  plannedDate: string
+  plannedOrder: number
+  plannedMinutes: number | null
+  assignedCollaboratorId: string | null
+  assignedCollaboratorName: string | null
+  assignedTeamName: string | null
+  conveyorId: string
+  conveyorCode: string | null
+  conveyorTitle: string
+  taskTitle: string
+  sectorTitle: string
+  activityNodeId: string
+  activityTitle: string
+  activityOperationalStatus: string | null
+  activityStatusLabel: string
+}
+
+/** GET /operational-planning/period-items */
+export type OperationalPlanningPeriodItemsPayload = {
+  range: { from: string; to: string }
+  weeks: Array<{
+    weekStartDate: string
+    weekEndDate: string
+    situation: OperationalPlanningPlanSituation | null
+    workPlanId: string | null
+  }>
+  summary: { plannedItems: number; plannedMinutes: number; collaboratorsCount: number }
+  items: OperationalPlanningPeriodItem[]
+}

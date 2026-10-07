@@ -2,9 +2,9 @@ import { z } from 'zod'
 
 export const timeEntryCandidatesQuerySchema = z.object({
   q: z.string().optional(),
-  /** Filtro por esteira (nome, código, cliente, veículo, placa) — combinado com `activityQ` via AND. */
+  /** Esteira/OS (nome, código, cliente, veículo, placa) — AND com `activityQ`. `q` com `&` preenche ambos. */
   conveyorQ: z.string().max(200).optional(),
-  /** Filtro por atividade (atividade, setor, tarefa) — combinado com `conveyorQ` via AND. */
+  /** Nome da atividade — AND com `conveyorQ`. */
   activityQ: z.string().max(200).optional(),
   limit: z.coerce.number().int().min(1).max(50).optional().default(50),
   includeUnassigned: z
