@@ -7,55 +7,69 @@
 
 ## Identificação
 
-- TASK_ID: `ajustes-tati-2026-10-07`
-- Atualizado em: `2026-10-07 23:51 UTC`
-- Branch: `fix/ajustes-tati-2026-10-07` (local, **não publicada**)
-- Base: `origin/develop` @ `ecb26da7`
-- Working tree: `clean` após commit local
+- TASK_ID: `ajustes-tati-2026-10-07` (integração: `ajustes-tati-2026-10-07-integracao`)
+- Atualizado em: `2026-10-08 UTC`
+- Branch: `integration/ajustes-tati-2026-10-07`
+- Base: `origin/develop` @ `ecb26da78c4a4dbfefcfab7f5de494a31445555d`
+- HEAD: ver `git log -1`
+- Working tree: `clean` após commit
 
 ## Objetivo atual
 
-Ajustes alinhados com a Tati (itens 2–10); item 1 (Guias Práticos) adiado por decisão do usuário.
+Integrar, para validação com a Tati, as duas frentes desenvolvidas em paralelo a partir da mesma base:
+
+| Frente | Branch de origem | SHA |
+|---|---|---|
+| A — itens 2–10 (funcionais) | `origin/fix/ajustes-tati-2026-10-07` | `2c7e458e` → `f6f1d6a15de694f36cc49a957e19bfbf8032a6ab` |
+| B — item 1 (Guias Práticos, 40 capturas) | `origin/docs/ajustes-tati-2026-10-07-guias-praticos` | `f8eab69eafafd7cb801fc4b0d83c663e8081f185` |
 
 ## Estado em uma frase
 
-Itens 2–10 implementados e validados localmente (rodada 2: item 2 com `&`, item 5 entre semanas, item 10 export IA); commits locais aguardando autorização de push/PR.
+Três commits aplicados por cherry-pick (ordem: `2c7e458e`, `f6f1d6a1`, `f8eab69e`); conflitos só em docs de contexto, resolvidos por conteúdo. Sem PR, sem merge em `develop`, sem deploy.
 
 ## Concluído
 
-- Rodada 2: pesquisa `esteira & atividade` (campo único, sem acento/caixa); período do Planejamento
-  atravessando semanas (`GET /operational-planning/period-items`); export IA
-  (`GET /operational-planning/export-ai.xlsx`, abas Prompt/Backlog/Planejado/Carga).
-- Rodada 1: Apontar horas (substituído na rodada 2); PDF retrato/paisagem na Evolução;
-  período em Minha fila (API `from`/`to`), Planejamento (filtro do quadro) e Minha jornada;
-  Extra Esteira visível e histórico preservado; justificativas visíveis (inclui catálogo);
-  Dashboard atualiza após apontamento via evento in-app.
+- Frente A: pesquisa `esteira & atividade`; PDF retrato/paisagem; períodos em Minha fila, Planejamento (entre semanas) e Minha jornada; Extra Esteira e justificativas visíveis; Dashboard atualiza após apontamento (evento in-app, sem polling); export para IA (Prompt/Backlog/Planejado/Carga dos colaboradores/Carga por dia).
+- Frente B: `docs/manual/colaborador.html` e `docs/manual/gestor-esteira.html` reescritos; 21 + 19 capturas fictícias; capítulos `GUIA-COL-001…010` e `GUIA-GES-001…010`.
+- Integração: retorno consolidado em `docs/ai/returns/ajustes-tati-2026-10-07-retorno.md` (duas frentes) e `docs/ai/returns/ajustes-tati-2026-10-07-integracao-retorno.md`.
 
 ## Decisões já tomadas
 
-- Semânticas de período: fila = data planejada (plano publicado, máx. 92 dias);
-  planejamento = data planejada em todas as semanas do período (máx. 92 dias); jornada = data do apontamento.
-- Sem migration; sem mudança de RBAC/Kiosk/versão.
+- Semânticas de período: fila = data planejada (plano publicado, máx. 92 dias); planejamento = data planejada em todas as semanas do período (máx. 92 dias); jornada = data do apontamento.
+- Guias canônicos = os dois HTML escritos à mão (não o manual integral).
+- Sem migration; sem mudança de RBAC/Kiosk/versão/dependências.
+- Integração por cherry-pick preservando autoria; nenhuma branch de origem alterada.
 
 ## Pendências
 
-- Autorização para push/PR; validação com a Tati em 08/10 09:00–09:30.
-- Guias Práticos (item 1) e manual: atualizar após validação.
+- Validação com a Tati (inclui PDF no navegador da fábrica — não validado aqui).
+- Guias escritos antes das correções da frente A: atualizar texto/capturas de `GUIA-COL-005/006` e `GUIA-GES-004/005` (itens 7, 8, 9) após o aceite.
+- Decidir `GUIA-GES-001` (`time_entries.create_on_behalf` ausente nas migrations).
+- Card "Alocações em STEPs": possível inconsistência semântica preexistente (decisão de produto).
+- Após aceite: decisão humana sobre PR da branch de integração para `develop`.
 
 ## Próxima ação exata
 
-- Revisar diff; se aprovado, `git push -u origin fix/ajustes-tati-2026-10-07` e abrir PR para `develop`.
+- Validar com a Tati seguindo o roteiro de `docs/ai/returns/ajustes-tati-2026-10-07-integracao-retorno.md`.
 
 ## Riscos / ressalvas
 
-- PDF validado em Chromium; confirmar no navegador da fábrica.
-- Planejamento multi-semana e período nas exportações do planejamento: decisão de produto.
+- `npx eslint .` e alguns testes têm falhas preexistentes (ver retorno de integração).
+- A suíte de integração do servidor altera dados do banco: nunca rodar contra banco compartilhado.
+
+## Não repetir
+
+- Não reauditar o manual integral (fora do escopo).
+- Não usar dados reais nas capturas.
+- Não fazer force-push nem alterar `main`/`develop`/`homol`.
 
 ## Referências úteis
 
-- Retorno: `docs/ai/returns/ajustes-tati-2026-10-07-retorno.md`
+- Retorno consolidado: `docs/ai/returns/ajustes-tati-2026-10-07-retorno.md`
+- Retorno da integração: `docs/ai/returns/ajustes-tati-2026-10-07-integracao-retorno.md`
 - Prompt: `docs/ai/prompts/ajustes-tati-2026-10-07.md`
 
 ## Uso de contexto / sessão
 
 - Percentual confiável disponível: `INDISPONÍVEL`
+- Observação: não estimar percentuais quando a ferramenta não expuser a métrica.

@@ -3,599 +3,559 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Manual do Colaborador — SGP</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700&family=Open+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+  <title>Guia Prático do Colaborador — SGP+</title>
   <style>
     :root {
-      --gold:        #c9a227;
-      --gold-dim:    #a07e18;
-      --navy:        #101824;
-      --void:        #050a12;
-      --blue-bright: #3e7baa;
-      --emerald:     #34d399;
-      --surface:     #141e2b;
-      --surface-2:   #1a2637;
-      --border:      rgba(255,255,255,0.08);
-      --text:        #e2e8f0;
-      --text-muted:  #94a3b8;
+      --gold: #c9a227;
+      --void: #050a12;
+      --blue: #5b9bd5;
+      --emerald: #34d399;
+      --amber: #fbbf24;
+      --red: #f87171;
+      --surface: #111a26;
+      --surface-2: #182434;
+      --border: rgba(255,255,255,0.09);
+      --text: #e2e8f0;
+      --muted: #94a3b8;
     }
-
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
+    html { scroll-behavior: smooth; }
     body {
       background: var(--void);
       color: var(--text);
-      font-family: 'Open Sans', sans-serif;
+      font-family: 'Open Sans', 'Segoe UI', Roboto, Arial, sans-serif;
       font-size: 15px;
-      line-height: 1.7;
+      line-height: 1.65;
     }
-
-    /* ── Layout ── */
-    .page-wrap {
-      max-width: 860px;
-      margin: 0 auto;
-      padding: 48px 24px 80px;
+    .page { max-width: 920px; margin: 0 auto; padding: 40px 20px 80px; }
+    header.doc { border-bottom: 1px solid var(--border); padding-bottom: 24px; margin-bottom: 32px; }
+    .badge {
+      display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: .08em;
+      text-transform: uppercase; color: var(--gold); border: 1px solid rgba(201,162,39,.35);
+      background: rgba(201,162,39,.08); border-radius: 4px; padding: 3px 10px; margin-bottom: 12px;
     }
-
-    /* ── Header ── */
-    .doc-header {
-      border-bottom: 1px solid var(--border);
-      padding-bottom: 28px;
-      margin-bottom: 48px;
-    }
-    .doc-header .badge {
-      display: inline-block;
-      font-family: 'Montserrat', sans-serif;
-      font-size: 11px;
-      font-weight: 700;
-      letter-spacing: .08em;
-      text-transform: uppercase;
-      color: var(--gold);
-      border: 1px solid rgba(201,162,39,.35);
-      background: rgba(201,162,39,.08);
-      border-radius: 4px;
-      padding: 3px 10px;
-      margin-bottom: 14px;
-    }
-    .doc-header h1 {
-      font-family: 'Montserrat', sans-serif;
-      font-size: 2rem;
-      font-weight: 700;
-      color: #fff;
-      line-height: 1.2;
-    }
-    .doc-header .subtitle {
-      margin-top: 10px;
-      color: var(--text-muted);
-      font-size: 14px;
-      max-width: 620px;
-    }
-
-    /* ── Table of contents ── */
-    .toc {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 20px 24px;
-      margin-bottom: 48px;
-    }
-    .toc-title {
-      font-family: 'Montserrat', sans-serif;
-      font-size: 12px;
-      font-weight: 700;
-      letter-spacing: .08em;
-      text-transform: uppercase;
-      color: var(--text-muted);
-      margin-bottom: 12px;
-    }
-    .toc ol {
-      padding-left: 20px;
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 4px 24px;
-    }
-    @media (max-width: 560px) { .toc ol { grid-template-columns: 1fr; } }
-    .toc a {
-      color: var(--blue-bright);
-      text-decoration: none;
-      font-size: 14px;
-    }
-    .toc a:hover { color: var(--gold); text-decoration: underline; }
-
-    /* ── Sections ── */
-    .section { margin-bottom: 52px; }
-
+    h1 { font-family: 'Montserrat', 'Segoe UI', Arial, sans-serif; font-size: 1.9rem; color: #fff; line-height: 1.2; }
+    .subtitle { margin-top: 8px; color: var(--muted); font-size: 14px; }
+    .meta { margin-top: 10px; color: var(--muted); font-size: 12px; }
+    nav.toc { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 18px 22px; margin-bottom: 40px; }
+    nav.toc p { font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
+    nav.toc ol { padding-left: 20px; columns: 2; column-gap: 28px; }
+    @media (max-width: 640px) { nav.toc ol { columns: 1; } }
+    nav.toc a { color: var(--blue); text-decoration: none; font-size: 14px; }
+    nav.toc a:hover { color: var(--gold); text-decoration: underline; }
+    section { margin-bottom: 48px; }
     h2 {
-      font-family: 'Montserrat', sans-serif;
-      font-size: 1.15rem;
-      font-weight: 700;
-      color: var(--gold);
-      border-bottom: 1px solid rgba(201,162,39,.2);
-      padding-bottom: 8px;
-      margin-bottom: 20px;
-      scroll-margin-top: 24px;
+      font-family: 'Montserrat', 'Segoe UI', Arial, sans-serif; font-size: 1.2rem; color: var(--gold);
+      border-bottom: 1px solid rgba(201,162,39,.22); padding-bottom: 8px; margin-bottom: 16px; scroll-margin-top: 16px;
     }
-    h2 .num {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      width: 26px;
-      height: 26px;
-      background: rgba(201,162,39,.15);
-      border-radius: 6px;
-      font-size: 12px;
-      margin-right: 8px;
-      vertical-align: middle;
+    h3 { font-size: .95rem; color: #cbd5e1; margin: 22px 0 8px; scroll-margin-top: 16px; }
+    p { margin-bottom: 12px; }
+    ol.steps, ul { margin: 0 0 14px 22px; }
+    ol.steps li, ul li { margin-bottom: 6px; }
+    strong { color: #fff; }
+    .where { font-size: 13px; color: var(--muted); margin-bottom: 12px; }
+    .where b { color: var(--text); }
+    .ok, .warn, .info, .ref {
+      border-radius: 8px; padding: 12px 16px; margin: 0 0 16px; font-size: 14px; border-left: 3px solid;
     }
-
-    h3 {
-      font-family: 'Montserrat', sans-serif;
-      font-size: .9rem;
-      font-weight: 600;
-      color: #cbd5e1;
-      margin: 24px 0 10px;
+    .ok { background: rgba(52,211,153,.07); border-color: var(--emerald); }
+    .warn { background: rgba(251,191,36,.07); border-color: var(--amber); }
+    .info { background: rgba(91,155,213,.08); border-color: var(--blue); }
+    .ref { background: rgba(248,113,113,.06); border-color: var(--red); }
+    .ref a, .info a, .warn a { color: var(--blue); }
+    figure { margin: 6px 0 20px; }
+    figure a { display: block; }
+    figure img {
+      display: block; max-width: 100%; height: auto; border: 1px solid var(--border); border-radius: 8px;
+      background: #0b1320;
     }
-
-    p { margin-bottom: 14px; }
-
-    /* ── Code / paths ── */
-    code {
-      font-family: 'Courier New', monospace;
-      font-size: 13px;
-      background: rgba(62,123,170,.18);
-      color: #93c5fd;
-      padding: 2px 6px;
-      border-radius: 4px;
-    }
-
-    /* ── Tables ── */
-    .table-wrap { overflow-x: auto; margin-bottom: 18px; }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 14px;
-    }
-    thead th {
-      background: var(--surface-2);
-      color: var(--text-muted);
-      font-weight: 600;
-      font-size: 12px;
-      letter-spacing: .04em;
-      text-transform: uppercase;
-      padding: 10px 14px;
-      text-align: left;
-      border-bottom: 1px solid var(--border);
-    }
-    tbody td {
-      padding: 10px 14px;
-      border-bottom: 1px solid var(--border);
-      vertical-align: top;
-    }
-    tbody tr:last-child td { border-bottom: none; }
-    tbody tr:hover { background: rgba(255,255,255,.025); }
-
-    /* ── Flow diagram ── */
-    .flow {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 20px 24px;
-      margin-bottom: 18px;
-      font-family: 'Courier New', monospace;
-      font-size: 13px;
-      color: #94a3b8;
-      line-height: 1.8;
-      white-space: pre-wrap;
-    }
-
-    /* ── Callout boxes ── */
-    .callout {
-      border-radius: 8px;
-      padding: 14px 18px;
-      margin-bottom: 18px;
-      font-size: 14px;
-      display: flex;
-      gap: 10px;
-      align-items: flex-start;
-    }
-    .callout.info {
-      background: rgba(62,123,170,.12);
-      border-left: 3px solid var(--blue-bright);
-      color: #93c5fd;
-    }
-    .callout.warning {
-      background: rgba(245,158,11,.08);
-      border-left: 3px solid #f59e0b;
-      color: #fde68a;
-    }
-    .callout.success {
-      background: rgba(52,211,153,.08);
-      border-left: 3px solid var(--emerald);
-      color: #6ee7b7;
-    }
-    .callout-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
-
-    /* ── Step list ── */
-    .steps { counter-reset: step; list-style: none; padding: 0; }
-    .steps li {
-      counter-increment: step;
-      display: flex;
-      gap: 14px;
-      margin-bottom: 12px;
-      align-items: flex-start;
-    }
-    .steps li::before {
-      content: counter(step);
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      min-width: 26px;
-      height: 26px;
-      background: rgba(201,162,39,.15);
-      border: 1px solid rgba(201,162,39,.3);
-      border-radius: 50%;
-      font-family: 'Montserrat', sans-serif;
-      font-size: 12px;
-      font-weight: 700;
-      color: var(--gold);
-      flex-shrink: 0;
-      margin-top: 1px;
-    }
-
-    /* ── Badge pills ── */
-    .pill {
-      display: inline-block;
-      font-size: 12px;
-      font-weight: 600;
-      border-radius: 4px;
-      padding: 2px 8px;
-    }
-    .pill-red   { background: rgba(239,68,68,.15);   color: #fca5a5; }
-    .pill-green { background: rgba(52,211,153,.12);  color: #6ee7b7; }
-    .pill-gray  { background: rgba(255,255,255,.07); color: #94a3b8; }
-
-    /* ── Footer ── */
-    .doc-footer {
-      margin-top: 64px;
-      padding-top: 24px;
-      border-top: 1px solid var(--border);
-      font-size: 12px;
-      color: var(--text-muted);
-      display: flex;
-      justify-content: space-between;
-      flex-wrap: wrap;
-      gap: 8px;
-    }
+    figure.narrow img { max-width: min(480px, 100%); }
+    figcaption { font-size: 12.5px; color: var(--muted); margin-top: 6px; }
+    .tw { overflow-x: auto; margin-bottom: 16px; }
+    table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+    th { background: var(--surface-2); color: var(--muted); font-size: 11.5px; text-transform: uppercase; letter-spacing: .04em; text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--border); }
+    td { padding: 9px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+    .div-item { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px 18px; margin-bottom: 16px; scroll-margin-top: 16px; }
+    .div-item h3 { margin-top: 0; color: #fff; }
+    .div-item dl { display: grid; grid-template-columns: 190px 1fr; gap: 6px 14px; font-size: 13.5px; }
+    @media (max-width: 640px) { .div-item dl { grid-template-columns: 1fr; } }
+    .div-item dt { color: var(--muted); }
+    .div-item dd, .div-item dt { min-width: 0; overflow-wrap: anywhere; }
+    code { font-family: Consolas, 'Courier New', monospace; font-size: 12.5px; background: rgba(91,155,213,.14); color: #a5c8f0; padding: 1px 5px; border-radius: 4px; }
+    footer { border-top: 1px solid var(--border); padding-top: 18px; color: var(--muted); font-size: 12px; }
+    a.top { font-size: 12px; color: var(--muted); text-decoration: none; }
   </style>
 </head>
 <body>
-<div class="page-wrap">
+<div class="page">
 
-  <!-- Header -->
-  <header class="doc-header">
-    <div class="badge">SGP · Manual do Usuário</div>
-    <h1>Manual do Colaborador</h1>
-    <p class="subtitle">
-      Para quem aponta atividades no SGP — pelo navegador (app web) ou pelo tablet fixo na
-      fábrica (Modo Fábrica / Kiosk).
-    </p>
-  </header>
+<header class="doc">
+  <span class="badge">SGP+ · Guia prático</span>
+  <h1>Guia Prático do Colaborador</h1>
+  <p class="subtitle">Para quem executa atividades e registra o tempo trabalhado — pelo navegador (com e-mail e senha) ou pelo totem da fábrica (com PIN).</p>
+  <p class="meta">Revisão: 07/10/2026 · conferido contra o SGP+ v1.9.9 · todas as telas usam dados fictícios. O manual completo continua em <b>? Ajuda → Manual do usuário</b>.</p>
+</header>
 
-  <!-- Table of contents -->
-  <nav class="toc" aria-label="Índice">
-    <div class="toc-title">Neste manual</div>
-    <ol>
-      <li><a href="#s1">O que é o SGP</a></li>
-      <li><a href="#s2">Primeiro acesso</a></li>
-      <li><a href="#s3">Minhas Atividades</a></li>
-      <li><a href="#s4">Fazer um Apontamento</a></li>
-      <li><a href="#s5">Minha Fila</a></li>
-      <li><a href="#s6">Jornada</a></li>
-      <li><a href="#s7">Kiosk — Tablet da Fábrica</a></li>
-      <li><a href="#s8">SGP+ Produção — Web</a></li>
-      <li><a href="#s9">Dúvidas frequentes</a></li>
-    </ol>
-  </nav>
+<nav class="toc" aria-label="Índice">
+  <p>Neste guia</p>
+  <ol>
+    <li><a href="#entrar">Entrar no SGP+</a></li>
+    <li><a href="#tela">Conhecer a tela</a></li>
+    <li><a href="#fila">Ver o trabalho do dia — Minha fila</a></li>
+    <li><a href="#apontar-fila">Apontar horas pela fila</a></li>
+    <li><a href="#sequencia">Quando o sistema pede justificativa</a></li>
+    <li><a href="#concluir">Concluir uma atividade</a></li>
+    <li><a href="#outra">Apontar em atividade fora da sua fila</a></li>
+    <li><a href="#extra">Registrar Extra Esteira</a></li>
+    <li><a href="#jornada">Conferir o que lançou — Minha jornada</a></li>
+    <li><a href="#totem">Totem da fábrica (Modo Fábrica)</a></li>
+    <li><a href="#navegador-fabrica">Navegador da fábrica (SGP+ Produção)</a></li>
+    <li><a href="#erros">Erros comuns e como sair deles</a></li>
+    <li><a href="#divergencias">Divergências, ressalvas e decisões pendentes</a></li>
+  </ol>
+</nav>
 
-  <!-- 1 -->
-  <section class="section" id="s1">
-    <h2><span class="num">1</span> O que é o SGP e por que você usa ele</h2>
-    <p>
-      O SGP registra o tempo que você dedica a cada atividade de uma esteira (OS / veículo).
-      Com esses apontamentos o gestor enxerga o andamento real do serviço sem precisar
-      perguntar a ninguém.
-    </p>
-    <div class="callout success">
-      <span class="callout-icon">✓</span>
-      <span>
-        <strong>Seu papel é simples:</strong> quando terminar um bloco de trabalho, registre
-        quanto tempo você dedicou. O restante acontece automaticamente.
-      </span>
-    </div>
-  </section>
+<!-- 1 -->
+<section id="entrar">
+  <h2>1. Entrar no SGP+</h2>
+  <p class="where">Onde: endereço do SGP+ informado pela gestão → tela <b>Entrar</b>.</p>
+  <ol class="steps">
+    <li>Digite seu <strong>e-mail</strong> e sua <strong>senha</strong>.</li>
+    <li>Clique em <strong>Entrar</strong> (ou pressione Enter).</li>
+    <li>Se o sistema pedir troca de senha, crie uma nova com <strong>pelo menos 8 caracteres</strong> e diferente da atual.</li>
+  </ol>
+  <figure class="narrow">
+    <a href="img/guia-colaborador/01-login.png"><img src="img/guia-colaborador/01-login.png" alt="Tela de login do SGP+ com e-mail e senha preenchidos" loading="lazy" /></a>
+    <figcaption>Tela de entrada. O e-mail exibido é fictício.</figcaption>
+  </figure>
+  <div class="warn"><b>Bloqueios comuns.</b> “E-mail ou senha inválidos.” — revise os dados (o sistema não diz qual está errado). “Não foi possível entrar agora…” — houve bloqueio temporário por tentativas; aguarde. “Sua conta está inativa…” — só a administração reativa. Esqueceu a senha? Peça à gestão a redefinição.</div>
+  <div class="info">O <b>totem da fábrica</b> não usa e-mail e senha: usa seu nome e um <b>PIN</b>. Veja a <a href="#totem">seção 10</a>.</div>
+</section>
 
-  <!-- 2 -->
-  <section class="section" id="s2">
-    <h2><span class="num">2</span> Primeiro acesso</h2>
-    <ol class="steps">
-      <li>Abra o endereço do SGP no navegador (fornecido pelo gestor ou TI).</li>
-      <li>Digite seu <strong>e-mail</strong> e sua <strong>senha</strong> e clique em <strong>Entrar</strong>.</li>
-      <li>
-        Se for o primeiro login, o sistema pedirá para você <strong>criar uma nova senha</strong>
-        — siga as instruções na tela e guarde bem.
-      </li>
-    </ol>
-    <div class="callout warning">
-      <span class="callout-icon">⚠</span>
-      <span><strong>Esqueceu a senha?</strong> Peça ao gestor para fazer o reset administrativo.</span>
-    </div>
-  </section>
+<!-- 2 -->
+<section id="tela">
+  <h2>2. Conhecer a tela</h2>
+  <p>À esquerda fica o <strong>menu lateral</strong>. Como colaborador, você usa o grupo <strong>Colaborador</strong>:</p>
+  <div class="tw"><table>
+    <thead><tr><th>Item do menu</th><th>Para que serve</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Minha fila</strong></td><td>o que foi planejado para você no dia (seção 3)</td></tr>
+      <tr><td><strong>Minha jornada</strong></td><td>seus apontamentos e o resumo do período (seção 9)</td></tr>
+      <tr><td><strong>Alterar senha</strong> (grupo Conta)</td><td>trocar sua senha</td></tr>
+    </tbody>
+  </table></div>
+  <p>Na <strong>barra superior</strong>, em qualquer tela:</p>
+  <ul>
+    <li><strong>Apontar horas</strong> — abre a gaveta de apontamento sem sair da tela (seções 4, 7 e 8).</li>
+    <li><strong>Ajuda</strong> — <em>Como usar esta tela</em> e o <em>Manual do usuário</em>.</li>
+    <li><strong>Seu nome</strong> — tema da aplicação, <strong>Alterar senha</strong> e <strong>Sair</strong>.</li>
+  </ul>
+  <figure>
+    <a href="img/guia-colaborador/12-menu-usuario.png"><img src="img/guia-colaborador/12-menu-usuario.png" alt="Barra superior com Busca rápida, Apontar horas, Ajuda e o menu do usuário aberto" loading="lazy" /></a>
+    <figcaption>Barra superior com o menu do usuário aberto.</figcaption>
+  </figure>
+  <h3>Alterar sua senha</h3>
+  <ol class="steps">
+    <li>Menu <strong>Conta → Alterar senha</strong> (ou menu do seu nome → <strong>Alterar senha</strong>).</li>
+    <li>Informe a senha atual, a nova senha (mínimo 8 caracteres, diferente da atual) e a confirmação.</li>
+    <li>Clique em <strong>Salvar nova senha</strong>.</li>
+  </ol>
+  <figure>
+    <a href="img/guia-colaborador/13-alterar-senha.png"><img src="img/guia-colaborador/13-alterar-senha.png" alt="Tela Alterar senha com senha atual, nova senha e confirmação" loading="lazy" /></a>
+    <figcaption>Tela <b>Alterar senha</b>.</figcaption>
+  </figure>
+  <div class="warn">O item <b>Painel operacional</b> também aparece para você no grupo Gestão. Ele é uma visão geral das esteiras e não é necessário para apontar. <b>Busca rápida</b> e <b>Alertas</b> ainda não têm efeito — veja <a href="#GUIA-COL-009">GUIA-COL-009</a>.</div>
+</section>
 
-  <!-- 3 -->
-  <section class="section" id="s3">
-    <h2><span class="num">3</span> Minhas Atividades</h2>
-    <p>Caminho: menu lateral → <strong>Minhas Atividades</strong> <code>/app/minhas-atividades</code></p>
-    <p>
-      Esta é a tela principal do colaborador. Ela lista todas as atividades designadas para
-      você nas esteiras ativas.
-    </p>
+<!-- 3 -->
+<section id="fila">
+  <h2>3. Ver o trabalho do dia — Minha fila</h2>
+  <p class="where">Onde: menu <b>Colaborador → Minha fila</b>.</p>
+  <p>A fila mostra as atividades que a gestão <strong>planejou e publicou</strong> para o seu nome na data escolhida. Rascunho de planejamento não aparece aqui.</p>
+  <ol class="steps">
+    <li>A tela abre em <strong>hoje</strong>. Use <strong>Dia anterior</strong>, <strong>Próximo dia</strong>, o calendário ou <strong>Hoje</strong> para trocar a data.</li>
+    <li>Confira os números do dia: <strong>Atividades de hoje</strong>, <strong>Minutos planejados</strong>, <strong>Atenção à sequência</strong> e <strong>Atrasadas</strong>. Eles se referem à data exibida.</li>
+    <li>Comece pelos cartões com o selo <strong>Próxima atividade recomendada</strong>.</li>
+  </ol>
+  <figure>
+    <a href="img/guia-colaborador/02-minha-fila.png"><img src="img/guia-colaborador/02-minha-fila.png" alt="Tela Minha fila com seletor de data, números do dia e cartões de atividade" loading="lazy" /></a>
+    <figcaption>Minha fila: seletor de data, números do dia e cartões do grupo <b>Hoje</b>.</figcaption>
+  </figure>
+  <figure>
+    <a href="img/guia-colaborador/03-minha-fila-cartoes.png"><img src="img/guia-colaborador/03-minha-fila-cartoes.png" alt="Cartões da fila: um com o selo Próxima atividade recomendada e outro com Etapa anterior pendente" loading="lazy" /></a>
+    <figcaption>O primeiro cartão está livre para começar. O segundo mostra <b>Etapa anterior pendente: Forrar teto</b> — ainda dá para apontar, com justificativa (seção 5).</figcaption>
+  </figure>
+  <h3>Como ler o cartão</h3>
+  <ul>
+    <li><strong>Número no quadrado azul</strong>: a ordem dada pelo planejamento (a tela pode exibir os cartões em outra ordem).</li>
+    <li><strong>Selo de tempo</strong>: o tempo previsto no planejamento.</li>
+    <li><strong>Grupos</strong>: <em>Atrasadas</em> (planejadas para dias anteriores da mesma semana e ainda abertas), <em>Hoje</em> e <em>Concluídas</em>. Um grupo só aparece quando tem cartões.</li>
+    <li><strong>Abrir Esteira</strong>: abre o detalhe da esteira.</li>
+  </ul>
+  <div class="info">A fila <b>não atualiza sozinha</b>. Depois de apontar, feche a gaveta ou clique em <b>Atualizar</b>.</div>
+  <div class="warn">“Não há atividades planejadas para você neste dia.” ou “Você ainda não possui atividades planejadas para este dia.” — confira a data; se estiver certa, peça à gestão para <b>publicar</b> o planejamento da semana. “Sua conta não está vinculada a um colaborador operacional…” — peça o vínculo à administração.</div>
+</section>
 
-    <h3>O que você vê em cada card</h3>
-    <div class="table-wrap">
-      <table>
-        <thead><tr><th>Campo</th><th>O que significa</th></tr></thead>
-        <tbody>
-          <tr><td>Nome da atividade</td><td>O passo que você precisa executar</td></tr>
-          <tr><td>Esteira</td><td>Veículo / OS ao qual pertence</td></tr>
-          <tr><td>Tarefa</td><td>Macro-bloco de trabalho (ex.: Desmontagem, Pintura)</td></tr>
-          <tr><td>Setor</td><td>Área técnica (ex.: Funilaria, Elétrica)</td></tr>
-          <tr><td>Seu papel</td><td>Responsável principal ou Apoio</td></tr>
-          <tr><td>Tempo previsto</td><td>Estimativa de horas planejada pelo gestor</td></tr>
-          <tr><td>Status</td><td>Em andamento, Não iniciado, Concluído, etc.</td></tr>
-          <tr><td>Prazo</td><td>Data-limite, se houver</td></tr>
-        </tbody>
-      </table>
-    </div>
+<!-- 4 -->
+<section id="apontar-fila">
+  <h2>4. Apontar horas pela fila</h2>
+  <p class="where">Onde: <b>Minha fila</b> → botão <b>Apontar horas</b> do cartão.</p>
+  <ol class="steps">
+    <li>No cartão, clique em <strong>Apontar horas</strong>. Abre a gaveta <strong>Registrar tempo</strong> já com a esteira e a atividade.</li>
+    <li>Confira a <strong>Data em que o trabalho foi realizado</strong>. Ela começa em <strong>hoje</strong>; use <strong>Ontem</strong> ou o calendário se precisar. <strong>Data futura não é aceita.</strong></li>
+    <li>Informe o <strong>Tempo (minutos)</strong> — no mínimo 1.</li>
+    <li>Informe a <strong>Quantidade executada</strong> — unidades concluídas <em>neste</em> apontamento. Use <strong>0</strong> se não concluiu nenhuma unidade. O campo não pode ficar vazio.</li>
+    <li>Se aparecer <strong>Justificativa operacional *</strong>, escolha um motivo (seção 5).</li>
+    <li>Use <strong>Descrição (opcional)</strong> para uma nota curta.</li>
+    <li>Clique em <strong>Salvar apontamento</strong>.</li>
+  </ol>
+  <figure class="narrow">
+    <a href="img/guia-colaborador/04-registrar-tempo.png"><img src="img/guia-colaborador/04-registrar-tempo.png" alt="Gaveta Registrar tempo com data de hoje, 45 minutos, quantidade 1 e descrição preenchida" loading="lazy" /></a>
+    <figcaption>Formulário preenchido: hoje, 45 minutos, 1 unidade e uma descrição.</figcaption>
+  </figure>
+  <figure class="narrow">
+    <a href="img/guia-colaborador/05-apontamento-registrado.png"><img src="img/guia-colaborador/05-apontamento-registrado.png" alt="Aviso Apontamento registrado com sucesso e a lista de atividades da gaveta" loading="lazy" /></a>
+    <figcaption>Depois de salvar: aviso <b>“Apontamento registrado com sucesso.”</b> e volta à lista da gaveta. Feche a gaveta para a fila se atualizar.</figcaption>
+  </figure>
+  <div class="ok">Você pode apontar a mesma atividade várias vezes, em dias diferentes. Passar do tempo previsto <b>não</b> bloqueia o apontamento nesta tela e <b>não</b> conclui a atividade.</div>
+  <div class="warn">O botão <b>Salvar apontamento</b> fica apagado enquanto faltar o tempo (mínimo 1), a quantidade ou a justificativa exigida. Os números <b>Previsto / Realizado / Pendente</b> da gaveta podem não fechar a conta em atividades com mais de uma unidade — veja <a href="#GUIA-COL-002">GUIA-COL-002</a>. O papel (Principal/Apoio) mostrado na gaveta aberta pela fila pode estar errado — veja <a href="#GUIA-COL-003">GUIA-COL-003</a>.</div>
+</section>
 
-    <h3>Cor dos indicadores de prazo</h3>
-    <div class="table-wrap">
-      <table>
-        <thead><tr><th>Badge</th><th>Significado</th></tr></thead>
-        <tbody>
-          <tr>
-            <td><span class="pill pill-red">Em atraso</span></td>
-            <td>A data-limite já passou</td>
-          </tr>
-          <tr>
-            <td><span class="pill pill-green">Finalizada</span></td>
-            <td>Atividade concluída</td>
-          </tr>
-          <tr>
-            <td><span class="pill pill-gray">Normal</span></td>
-            <td>Dentro do prazo</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+<!-- 5 -->
+<section id="sequencia">
+  <h2>5. Quando o sistema pede justificativa</h2>
+  <p>Na área web (fila e barra superior), a justificativa é obrigatória em dois casos. Em nenhum deles o apontamento é bloqueado: você escolhe o motivo e segue.</p>
+  <div class="tw"><table>
+    <thead><tr><th>Caso</th><th>O que aparece</th></tr></thead>
+    <tbody>
+      <tr><td>Há atividade anterior ainda pendente na esteira</td><td>faixa <strong>Fora de sequência — confirme o apontamento.</strong> com a quantidade de atividades pendentes</td></tr>
+      <tr><td>Você não está alocado na atividade</td><td>aviso “Você não está alocado nesta atividade. Para apontar horas, informe uma justificativa (apontamento por exceção).”</td></tr>
+    </tbody>
+  </table></div>
+  <ol class="steps">
+    <li>Em <strong>Justificativa operacional *</strong>, escolha o motivo da lista (a lista é mantida pela gestão).</li>
+    <li>Se o motivo pedir <strong>Complemento</strong>, escreva-o.</li>
+    <li>Salve normalmente.</li>
+  </ol>
+  <figure class="narrow">
+    <a href="img/guia-colaborador/06-fora-de-sequencia.png"><img src="img/guia-colaborador/06-fora-de-sequencia.png" alt="Formulário com faixa Fora de sequência e justificativa Atividade anterior pendente de outro colaborador selecionada" loading="lazy" /></a>
+    <figcaption>Apontamento fora de sequência com a justificativa escolhida. O registro fica marcado como <b>Fora de sequência</b> no histórico.</figcaption>
+  </figure>
+  <div class="info">Na área web <b>não</b> há justificativa por ultrapassar o tempo previsto. Essa exigência existe apenas no totem da fábrica (<a href="#totem">seção 10</a>).</div>
+</section>
 
-    <div class="callout info">
-      <span class="callout-icon">ℹ</span>
-      <span>Para abrir o apontamento, basta clicar no card da atividade.</span>
-    </div>
-  </section>
+<!-- 6 -->
+<section id="concluir">
+  <h2>6. Concluir uma atividade</h2>
+  <p>Concluir é uma decisão sua: atingir o tempo previsto não conclui nada. Há dois caminhos:</p>
+  <div class="tw"><table>
+    <thead><tr><th>Situação</th><th>Como fazer</th></tr></thead>
+    <tbody>
+      <tr><td>Você ainda tem tempo a registrar</td><td>no formulário, clique em <strong>Salvar apontamento e concluir atividade</strong>. Mensagem: “Apontamento salvo e atividade concluída.”</td></tr>
+      <tr><td>O tempo já foi todo registrado</td><td>barra superior → <strong>Apontar horas</strong> → no cartão da atividade, <strong>Concluir atividade</strong> → confirme. Mensagem: “Atividade concluída.”</td></tr>
+    </tbody>
+  </table></div>
+  <div class="warn">O botão <b>Concluir atividade</b> só aparece para atividades em que você está alocado. Fora da sua alocação, use <b>Salvar apontamento e concluir atividade</b>, com justificativa. Reabrir uma atividade concluída é ação da gestão.</div>
+</section>
 
-  <!-- 4 -->
-  <section class="section" id="s4">
-    <h2><span class="num">4</span> Fazer um Apontamento</h2>
-    <p>Caminho: Minhas Atividades → clique na atividade <code>/app/apontamento/:id</code></p>
+<!-- 7 -->
+<section id="outra">
+  <h2>7. Apontar em atividade fora da sua fila</h2>
+  <p class="where">Onde: barra superior → <b>Apontar horas</b> → aba <b>Esteira</b>.</p>
+  <ol class="steps">
+    <li>Clique em <strong>Apontar horas</strong> na barra superior. A lista <strong>Minhas atividades</strong> traz as atividades em que você está alocado ou que estão no seu planejamento de hoje.</li>
+    <li>Use <strong>Pesquisar</strong> (esteira, cliente, veículo, placa, setor, tarefa ou atividade).</li>
+    <li>Se a atividade não aparecer, marque <strong>Buscar outras atividades</strong> e digite pelo menos 2 caracteres. Os resultados extras aparecem no bloco <strong>Fora da sua alocação</strong>.</li>
+    <li>Clique em <strong>Apontar</strong> no cartão e preencha o formulário. Para atividades fora da sua alocação, a <strong>justificativa é obrigatória</strong>.</li>
+  </ol>
+  <figure class="narrow">
+    <a href="img/guia-colaborador/07-apontar-horas-lista.png"><img src="img/guia-colaborador/07-apontar-horas-lista.png" alt="Gaveta Apontar horas com campo Pesquisar, opção Buscar outras atividades e lista Minhas atividades" loading="lazy" /></a>
+    <figcaption>Gaveta <b>Apontar horas</b>: cada cartão mostra Previsto, Realizado e Pendente, além de <b>Apontar</b> e <b>Concluir atividade</b>.</figcaption>
+  </figure>
+  <figure class="narrow">
+    <a href="img/guia-colaborador/08-fora-da-alocacao.png"><img src="img/guia-colaborador/08-fora-da-alocacao.png" alt="Bloco Fora da sua alocação após pesquisar 7070 com Buscar outras atividades marcado" loading="lazy" /></a>
+    <figcaption>Pesquisa “7070” com <b>Buscar outras atividades</b> marcado: atividades da esteira em que você não está alocado aparecem como <b>Fora da sua alocação</b>.</figcaption>
+  </figure>
+  <div class="info">Só aparecem atividades de esteiras <b>A iniciar</b> ou <b>Em andamento</b>, que não estejam concluídas nem dispensadas.</div>
+</section>
 
-    <ol class="steps">
-      <li>
-        <span><strong>Minutos trabalhados</strong> — informe quantos minutos você dedicou
-        nesta sessão (ex.: <code>90</code>).</span>
-      </li>
-      <li>
-        <span><strong>Quantidade executada</strong> — quantas unidades você processou
-        (ex.: <code>3</code> capas costuradas). Deixe <code>1</code> se a atividade não tem
-        contagem de unidades.</span>
-      </li>
-      <li>
-        <span><strong>Data de realização</strong> — preenchida automaticamente com hoje;
-        altere se o trabalho foi feito em outro dia.</span>
-      </li>
-      <li>
-        <span><strong>Observação</strong> <em>(opcional)</em> — anote qualquer ocorrência
-        relevante.</span>
-      </li>
-      <li>
-        <span><strong>Justificativa</strong> <em>(aparece quando necessário)</em> — se o
-        tempo excede o previsto ou há outra condição especial, selecione a categoria mais
-        adequada e, se necessário, descreva em texto livre.</span>
-      </li>
-      <li>Clique em <strong>Salvar apontamento</strong>.</li>
-    </ol>
+<!-- 8 -->
+<section id="extra">
+  <h2>8. Registrar Extra Esteira</h2>
+  <p>Use para o tempo que não pertence a nenhuma atividade de esteira (limpeza, treinamento, apoio a outro setor…).</p>
+  <ol class="steps">
+    <li>Barra superior → <strong>Apontar horas</strong> → aba <strong>Extra esteira</strong>.</li>
+    <li>Em <strong>Descrição do apontamento</strong>, escolha o motivo da lista.</li>
+    <li>Confira a data, informe o <strong>Tempo (minutos)</strong> (mínimo 1) e, se quiser, uma <strong>Observação</strong>.</li>
+    <li>Clique em <strong>Salvar apontamento</strong>. Mensagem: “Apontamento extra esteira registrado com sucesso.”</li>
+  </ol>
+  <figure class="narrow">
+    <a href="img/guia-colaborador/09-extra-esteira.png"><img src="img/guia-colaborador/09-extra-esteira.png" alt="Aba Extra esteira com motivo, data, 15 minutos e a lista Últimos apontamentos extra esteira" loading="lazy" /></a>
+    <figcaption>Aba <b>Extra esteira</b>. Abaixo do formulário, <b>Últimos apontamentos extra esteira</b> mostra o que você já lançou.</figcaption>
+  </figure>
+  <div class="warn">O Extra Esteira <b>não aparece</b> na Minha fila nem na Minha jornada. Para conferir, use o bloco <b>Últimos apontamentos extra esteira</b> desta aba — veja <a href="#GUIA-COL-005">GUIA-COL-005</a>. Lista de motivos vazia (“Não há descrições ativas configuradas.”)? Peça à gestão para cadastrar.</div>
+</section>
 
-    <div class="callout success">
-      <span class="callout-icon">✓</span>
-      <span>
-        Uma mensagem verde confirma o registro. Você pode fazer múltiplos apontamentos na
-        mesma atividade ao longo dos dias — não precisa apontar tudo de uma vez.
-      </span>
-    </div>
-  </section>
-
-  <!-- 5 -->
-  <section class="section" id="s5">
-    <h2><span class="num">5</span> Minha Fila</h2>
-    <p>Caminho: menu lateral → <strong>Minha Fila</strong> <code>/app/minha-fila</code></p>
-    <p>
-      Exibe suas atividades organizadas <strong>por data de trabalho</strong>, com navegação
-      de dia anterior / dia seguinte.
-    </p>
-    <ul style="padding-left:20px; margin-bottom:14px; line-height:2;">
-      <li>Use esta tela para ver o que está previsto para hoje ou para uma data específica.</li>
-      <li>
-        Clique no botão de apontamento rápido (ícone de relógio) em qualquer atividade para
-        abrir o drawer lateral sem sair da fila.
-      </li>
-      <li>
-        Atividades <strong>bloqueadas por sequência</strong> aparecem com indicador de aviso
-        — você não pode apontar até que a atividade anterior esteja concluída.
-      </li>
+<!-- 9 -->
+<section id="jornada">
+  <h2>9. Conferir o que lançou — Minha jornada</h2>
+  <p class="where">Onde: menu <b>Colaborador → Minha jornada</b>.</p>
+  <ol class="steps">
+    <li>Abra <strong>Período e filtros</strong>.</li>
+    <li>Em <strong>Recorte temporal</strong>, escolha <em>Últimos 7 dias</em> (padrão), <em>Últimos 15 dias</em>, <em>Últimos 30 dias</em>, <em>Mês atual (UTC)</em> ou <em>Intervalo personalizado</em> (informe <strong>De</strong> e <strong>Até</strong>; o início não pode ser depois do fim).</li>
+    <li>Se quiser, escolha uma <strong>Esteira (opcional)</strong>.</li>
+    <li>Confira <strong>Minutos apontados (período)</strong> e a lista <strong>Apontamentos no período</strong> no fim da página.</li>
+  </ol>
+  <figure>
+    <a href="img/guia-colaborador/10-minha-jornada-periodo.png"><img src="img/guia-colaborador/10-minha-jornada-periodo.png" alt="Minha jornada com Período e filtros aberto, números do período e colunas Pendentes, Em andamento e Concluídas" loading="lazy" /></a>
+    <figcaption>Minha jornada com <b>Período e filtros</b> aberto. A linha <b>Janela</b> mostra as datas consideradas.</figcaption>
+  </figure>
+  <figure>
+    <a href="img/guia-colaborador/11-minha-jornada-apontamentos.png"><img src="img/guia-colaborador/11-minha-jornada-apontamentos.png" alt="Lista Apontamentos no período com um registro marcado Fora de sequência" loading="lazy" /></a>
+    <figcaption><b>Apontamentos no período</b>: até 20 registros, do mais recente para o mais antigo. O selo <b>Fora de sequência</b> marca o apontamento feito com justificativa de sequência.</figcaption>
+  </figure>
+  <div class="warn"><b>Leia com cuidado:</b>
+    <ul>
+      <li>As colunas seguem a situação da <b>esteira</b>, não da atividade: uma atividade já concluída pode continuar em <b>Em andamento</b> com o botão <b>Apontar</b> (o registro será recusado) — <a href="#GUIA-COL-004">GUIA-COL-004</a>.</li>
+      <li><b>Pendente (em aberto)</b> é quantidade de atividades, não tempo.</li>
+      <li>O <b>Previsto</b> considera uma unidade por atividade.</li>
+      <li>A lista não mostra a justificativa nem a descrição dos apontamentos — <a href="#GUIA-COL-006">GUIA-COL-006</a>.</li>
+      <li>O <b>Apontar</b> desta tela abre uma página sem justificativa e sem concluir. Prefira <b>Apontar horas</b> da barra superior — <a href="#GUIA-COL-007">GUIA-COL-007</a>.</li>
     </ul>
-  </section>
+  </div>
+</section>
 
-  <!-- 6 -->
-  <section class="section" id="s6">
-    <h2><span class="num">6</span> Jornada</h2>
-    <p>Caminho: menu lateral → <strong>Jornada</strong> <code>/app/jornada</code></p>
-    <p>Mostra o histórico dos seus apontamentos agrupados por período:</p>
-    <div class="table-wrap">
-      <table>
-        <thead><tr><th>Período</th><th>Abrangência</th></tr></thead>
-        <tbody>
-          <tr><td>Hoje</td><td>Apenas o dia atual</td></tr>
-          <tr><td>Esta semana</td><td>Segunda a hoje</td></tr>
-          <tr><td>Últimos 7 dias</td><td>Janela móvel</td></tr>
-          <tr><td>Últimos 30 dias</td><td>Janela móvel</td></tr>
-          <tr><td>Este mês</td><td>Do dia 1 até hoje</td></tr>
-        </tbody>
-      </table>
-    </div>
-    <p>
-      Para cada atividade você vê: esteira, tarefa, setor, minutos acumulados, status atual
-      e prazo. Use esta tela para conferir se não esqueceu de apontar alguma sessão.
-    </p>
-  </section>
+<!-- 10 -->
+<section id="totem">
+  <h2>10. Totem da fábrica (Modo Fábrica)</h2>
+  <p class="where">Onde: equipamento da fábrica já aberto em <b>SGP · Modo Fábrica</b> (endereço <code>/app/kiosk</code>). Não há menu lateral.</p>
+  <h3>10.1 Entrar</h3>
+  <ol class="steps">
+    <li>Em <strong>Quem é você?</strong>, toque no seu cartão (use <strong>Buscar colaborador…</strong> se a lista for longa).</li>
+    <li>Digite seu <strong>PIN de 4 dígitos</strong>. Ao completar o 4º dígito, o sistema entra sozinho. Errou? Use o botão de apagar.</li>
+    <li>No primeiro acesso ou depois que a gestão redefinir seu PIN: digite o PIN provisório informado pela gestão e, em seguida, <strong>crie</strong> e <strong>confirme</strong> um PIN novo de 4 dígitos (não é aceito repetir o provisório).</li>
+  </ol>
+  <figure>
+    <a href="img/guia-colaborador/14-totem-quem-e-voce.png"><img src="img/guia-colaborador/14-totem-quem-e-voce.png" alt="Tela Quem é você do totem com cartões de colaboradores fictícios" loading="lazy" /></a>
+    <figcaption>Seleção do colaborador. Cartões apagados indicam quem não pode entrar (sem PIN ou bloqueado).</figcaption>
+  </figure>
+  <figure>
+    <a href="img/guia-colaborador/15-totem-pin.png"><img src="img/guia-colaborador/15-totem-pin.png" alt="Teclado de PIN com dois dígitos digitados" loading="lazy" /></a>
+    <figcaption>Teclado de PIN: cada dígito acende um ponto.</figcaption>
+  </figure>
+  <figure>
+    <a href="img/guia-colaborador/16-totem-criar-pin.png"><img src="img/guia-colaborador/16-totem-criar-pin.png" alt="Tela Crie seu PIN de 4 dígitos" loading="lazy" /></a>
+    <figcaption>Criação do PIN pessoal depois do PIN provisório.</figcaption>
+  </figure>
+  <h3>10.2 Apontar e concluir</h3>
+  <ol class="steps">
+    <li>A fila abre na <strong>Próxima atividade recomendada</strong>. Use as setas (ou arraste) para trocar de atividade, ou o botão de lista para ver todas.</li>
+    <li>Confira a <strong>data</strong>, toque em <strong>15 / 30 / 45 / 60 min</strong> ou digite em <strong>outro</strong>.</li>
+    <li>Se quiser, ajuste <strong>Evolução da atividade (nesta sessão)</strong> — é só sua leitura de avanço; não conclui nada.</li>
+    <li>Se for o último trabalho, ligue <strong>Concluir atividade ao registrar</strong>.</li>
+    <li>Toque em <strong>Registrar apontamento</strong>. Aparece “Apontamento registrado!” e o totem volta à fila.</li>
+  </ol>
+  <figure>
+    <a href="img/guia-colaborador/17-totem-fila.png"><img src="img/guia-colaborador/17-totem-fila.png" alt="Cartão da atividade no totem com realizado, planejado, botões de tempo, evolução e Concluir atividade ao registrar" loading="lazy" /></a>
+    <figcaption>Cartão da atividade no totem: realizado e planejado, botões de tempo, evolução da sessão e <b>Concluir atividade ao registrar</b>.</figcaption>
+  </figure>
+  <figure>
+    <a href="img/guia-colaborador/18-totem-acima-do-previsto.png"><img src="img/guia-colaborador/18-totem-acima-do-previsto.png" alt="Faixa Tempo acima do previsto e campo Justificativa operacional obrigatório" loading="lazy" /></a>
+    <figcaption>No totem, se o tempo já apontado mais o atual passar do planejado, aparece <b>Tempo acima do previsto</b> e a justificativa passa a ser obrigatória. O mesmo vale para atividade fora de sequência.</figcaption>
+  </figure>
+  <figure>
+    <a href="img/guia-colaborador/19-totem-registrado.png"><img src="img/guia-colaborador/19-totem-registrado.png" alt="Confirmação Apontamento registrado com a data de realização" loading="lazy" /></a>
+    <figcaption>Confirmação na tela (não há aviso sonoro).</figcaption>
+  </figure>
+  <div class="info">Já apontou todo o tempo e só quer concluir? Deixe o tempo em zero, ligue <b>Concluir atividade ao registrar</b> e registre. O totem <b>não tem campo de quantidade executada</b>.</div>
+  <h3>10.3 Outra atividade e Extra Esteira</h3>
+  <ul>
+    <li><strong>+ Outra atividade</strong>: para apontar em atividade que não está na sua fila. Busque (mínimo 2 caracteres), informe data, minutos e <strong>justificativa</strong> (sempre obrigatória), confira o resumo e toque em <strong>Confirmar apontamento</strong>. Não conclui a atividade.</li>
+    <li><strong>+ Extra esteira</strong>: escolha a <strong>Descrição</strong>, a data e os minutos, confira e confirme.</li>
+  </ul>
+  <figure>
+    <a href="img/guia-colaborador/20-totem-extra-esteira.png"><img src="img/guia-colaborador/20-totem-extra-esteira.png" alt="Fluxo Extra esteira no totem" loading="lazy" /></a>
+    <figcaption>Extra Esteira no totem.</figcaption>
+  </figure>
+  <div class="warn"><b>Toque em Sair ao terminar.</b> Enquanto a sessão estiver aberta, qualquer pessoa no equipamento registra trabalho no seu nome. A sessão também expira por inatividade.</div>
+</section>
 
-  <!-- 7 -->
-  <section class="section" id="s7">
-    <h2><span class="num">7</span> SGP+ Produção — Tablet / Totem (Kiosk)</h2>
-    <p>
-      Caminho: endereço especial do Kiosk fornecido pelo gestor
-      <code>/app/kiosk</code>
-    </p>
-    <p>
-      O tablet fixo na fábrica roda o <strong>Modo Kiosk</strong> — interface touch-first
-      projetada para ser usada sem teclado.
-    </p>
+<!-- 11 -->
+<section id="navegador-fabrica">
+  <h2>11. Navegador da fábrica (SGP+ Produção)</h2>
+  <p class="where">Onde: endereço <code>/app/producao</code>, aberto pela gestão em um computador da fábrica.</p>
+  <ol class="steps">
+    <li>Escolha seu nome na lista (há busca e botão <strong>Atualizar</strong>) e digite o PIN.</li>
+    <li>Em <strong>Minhas atividades</strong>, filtre por <strong>Todas</strong>, <strong>Pendentes</strong> ou <strong>Concluídas</strong>.</li>
+    <li>Clique em <strong>Apontar horas</strong> no cartão, preencha (aqui há <strong>quantidade executada</strong>) e salve.</li>
+  </ol>
+  <figure>
+    <a href="img/guia-colaborador/21-navegador-fabrica.png"><img src="img/guia-colaborador/21-navegador-fabrica.png" alt="Tela Minhas atividades do SGP+ Produção com filtros e cartões" loading="lazy" /></a>
+    <figcaption>SGP+ Produção no navegador. O botão <b>Concluir etapa</b> aparece desativado.</figcaption>
+  </figure>
+  <div class="warn">No navegador da fábrica <b>não</b> é possível concluir atividade, usar Outra atividade nem Extra Esteira. Para isso, use o totem ou a área web — <a href="#GUIA-COL-008">GUIA-COL-008</a>.</div>
+</section>
 
-    <h3>Fluxo no Kiosk</h3>
-    <div class="flow">Grade de colaboradores → Toque no seu avatar
-        ↓
-Tela de PIN → Digite seu PIN (4+ dígitos)
-        ↓
-Cards de atividades → Toque na atividade que quer apontar
-        ↓
-Formulário → Deslize o slider de progresso,
-             ajuste o tempo, toque em Salvar
-        ↓
-Volta para a grade (outros colaboradores podem usar)</div>
+<!-- 12 -->
+<section id="erros">
+  <h2>12. Erros comuns e como sair deles</h2>
+  <div class="tw"><table>
+    <thead><tr><th>Você vê</th><th>Por quê</th><th>O que fazer</th></tr></thead>
+    <tbody>
+      <tr><td>A atividade não aparece na fila</td><td>não foi planejada para você nesta data, ou o planejamento não foi publicado</td><td>confira a data; use <b>Apontar horas</b> da barra superior (seção 7); fale com a gestão</td></tr>
+      <tr><td>“A data de realização não pode ser futura.”</td><td>data posterior a hoje</td><td>use Hoje, Ontem ou uma data passada</td></tr>
+      <tr><td>“Esta esteira ainda não foi liberada para produção.” / “…está em planejamento…”</td><td>a esteira ainda não está <b>A iniciar</b> ou <b>Em andamento</b></td><td>aguarde a liberação pela gestão</td></tr>
+      <tr><td>“Esta atividade já está concluída operacionalmente…”</td><td>a atividade foi concluída</td><td>clique em <b>Atualizar</b>; se faltou tempo, peça à gestão para reabrir</td></tr>
+      <tr><td>“Esta atividade foi dispensada…”</td><td>a gestão dispensou a atividade</td><td>não aponte nela; confirme com a gestão</td></tr>
+      <tr><td>“Selecione uma justificativa operacional…” / “Esta justificativa exige complemento.”</td><td>justificativa obrigatória neste caso</td><td>escolha o motivo e preencha o complemento</td></tr>
+      <tr><td>Apontei tempo errado</td><td>colaborador não corrige nem remove apontamento pela tela</td><td>peça a correção à gestão (<a href="#GUIA-COL-010">GUIA-COL-010</a>)</td></tr>
+      <tr><td>Totem: “PIN não configurado. Solicite ao gestor.” / “Acesso bloqueado…”</td><td>sem PIN ou bloqueado por tentativas erradas</td><td>peça à gestão para <b>Redefinir PIN</b></td></tr>
+      <tr><td>Totem: “PIN inválido. Tente novamente.”</td><td>PIN errado</td><td>digite de novo; várias tentativas erradas bloqueiam o acesso</td></tr>
+      <tr><td>“Contexto operacional ausente” / conta sem colaborador</td><td>seu usuário não está ligado a um colaborador</td><td>peça o vínculo à administração</td></tr>
+    </tbody>
+  </table></div>
+</section>
 
-    <h3>Primeiro login — troca obrigatória de PIN</h3>
-    <ol class="steps">
-      <li>Digite o PIN temporário fornecido pelo gestor.</li>
-      <li>O sistema leva para a tela <strong>Criar novo PIN</strong>.</li>
-      <li>Digite um PIN de sua escolha (mínimo 4 dígitos) e confirme.</li>
-      <li>Pronto — use o novo PIN nas próximas sessões.</li>
-    </ol>
-    <div class="callout warning">
-      <span class="callout-icon">⚠</span>
-      <span>
-        <strong>PIN bloqueado?</strong> Tentativas incorretas múltiplas bloqueiam o acesso.
-        Peça ao gestor para desbloquear e resetar o PIN no painel de administração de
-        colaboradores.
-      </span>
-    </div>
+<!-- 13 -->
+<section id="divergencias">
+  <h2>13. Divergências, ressalvas e decisões pendentes</h2>
+  <p>Este capítulo registra o que o guia anterior orientava de forma incompatível com o sistema, comportamentos confusos observados na execução com dados fictícios e pontos que dependem de decisão. <strong>Nenhum item abaixo é funcionalidade entregue.</strong></p>
 
-    <h3>Card de atividade no Kiosk</h3>
-    <div class="table-wrap">
-      <table>
-        <thead><tr><th>Elemento</th><th>O que fazer</th></tr></thead>
-        <tbody>
-          <tr><td>Anel de progresso</td><td>Mostra o % já concluído na atividade</td></tr>
-          <tr><td>Slider (0 – 100%)</td><td>Arraste para indicar o progresso atual da sessão</td></tr>
-          <tr><td>Botões de tempo (15 / 30 / 45 / 60 min)</td><td>Toque no tempo mais próximo desta sessão</td></tr>
-          <tr><td>Campo de minutos</td><td>Ou digite manualmente</td></tr>
-          <tr><td>Quantidade executada</td><td>Ajuste quantas unidades fez nesta sessão</td></tr>
-          <tr><td>Justificativa</td><td>Aparece automaticamente se o tempo excede o previsto</td></tr>
-          <tr><td>Botão Salvar</td><td>Confirma o apontamento</td></tr>
-        </tbody>
-      </table>
-    </div>
+  <div class="div-item" id="GUIA-COL-001">
+    <h3>GUIA-COL-001 — “Minhas Atividades” não está mais no menu</h3>
+    <dl>
+      <dt>Orientação / tela</dt><dd>Guia anterior: “menu lateral → Minhas Atividades” como tela principal do colaborador.</dd>
+      <dt>Perfil</dt><dd>Colaborador</dd>
+      <dt>Evidência</dt><dd><code>src/lib/shell/app-nav-config.ts</code> (<code>COLABORADOR_NAV_ITEMS</code> = Minha fila, Chamados, Minha jornada); a rota <code>/app/minhas-atividades</code> ainda existe em <code>src/routes/AppRoutes.tsx</code>.</dd>
+      <dt>Comportamento observado</dt><dd>O menu mostra Minha fila e Minha jornada; Minhas Atividades só abre digitando o endereço.</dd>
+      <dt>Impacto operacional</dt><dd>Colaborador procura um item que não existe.</dd>
+      <dt>Risco de manter o texto antigo</dt><dd>Alto: instrução impossível de seguir.</dd>
+      <dt>Decisão necessária</dt><dd>Aposentar a rota <code>/app/minhas-atividades</code> ou devolvê-la ao menu. Este guia já usa Minha fila.</dd>
+    </dl>
+  </div>
 
-    <h3>Bloqueio de sequência</h3>
-    <p>
-      Se uma atividade depende de outra que ainda não foi concluída, ela aparece com o aviso
-      <strong>"Aguardando atividades anteriores"</strong>. Você ainda pode apontar, mas
-      precisará selecionar uma justificativa para execução fora de sequência.
-    </p>
-  </section>
+  <div class="div-item" id="GUIA-COL-002">
+    <h3>GUIA-COL-002 — Previsto, Realizado e Pendente da gaveta não fecham a conta</h3>
+    <dl>
+      <dt>Orientação / tela</dt><dd>Gaveta <b>Apontar horas</b>, cartão da atividade.</dd>
+      <dt>Perfil</dt><dd>Colaborador e gestor (a gaveta é a mesma)</dd>
+      <dt>Evidência</dt><dd><code>server/src/modules/my-activities/my-activities.service.ts</code> (<code>mapCandidateRow</code>: Pendente = previsto × quantidade − realizado); <code>src/features/shell/QuickTimeEntryDrawer.tsx</code> exibe <code>plannedMinutes</code> (uma unidade). Captura 05: atividade de 2 un. × 2 h mostra Previsto 2 h, Realizado 1 h 45 min, Pendente 2 h 15 min.</dd>
+      <dt>Comportamento observado</dt><dd>Em atividades com mais de uma unidade, o Previsto exibido é de uma unidade, mas o Pendente usa o total. O Realizado considera apenas os seus apontamentos.</dd>
+      <dt>Impacto operacional</dt><dd>Colaborador pode achar que já passou do previsto (ou que falta mais do que falta).</dd>
+      <dt>Risco de manter o texto atual</dt><dd>Médio: leitura incorreta de quanto falta.</dd>
+      <dt>Decisão necessária</dt><dd>Definir se o cartão deve mostrar o previsto total (tempo por unidade × quantidade) e se o realizado deve ser individual ou da atividade.</dd>
+    </dl>
+  </div>
 
-  <!-- 8 -->
-  <section class="section" id="s8">
-    <h2><span class="num">8</span> SGP+ Produção — Interface Web (navegador)</h2>
-    <p>
-      Caminho: endereço especial de produção fornecido pelo gestor
-      <code>/app/producao</code>
-    </p>
-    <p>Funciona de forma similar ao Kiosk, mas acessível no navegador de qualquer computador.</p>
-    <ol class="steps">
-      <li>Acesse <code>/app/producao</code>.</li>
-      <li>Selecione seu nome na lista de colaboradores (campo de busca disponível).</li>
-      <li>Digite seu PIN.</li>
-      <li>Você entra na sua <strong>fila de atividades de produção</strong>.</li>
-      <li>Clique no botão de apontamento em qualquer atividade.</li>
-      <li>Preencha o formulário e clique em <strong>Salvar</strong>.</li>
-    </ol>
-    <div class="callout info">
-      <span class="callout-icon">ℹ</span>
-      <span>
-        O filtro no topo da fila permite ver: <strong>Todas</strong>,
-        <strong>Pendentes</strong> ou <strong>Concluídas</strong>.
-      </span>
-    </div>
-  </section>
+  <div class="div-item" id="GUIA-COL-003">
+    <h3>GUIA-COL-003 — Papel “Apoio” exibido para quem é Principal (gaveta aberta pela fila)</h3>
+    <dl>
+      <dt>Orientação / tela</dt><dd>Minha fila → Apontar horas → cabeçalho do formulário (“Setor · Papel”).</dd>
+      <dt>Perfil</dt><dd>Colaborador</dd>
+      <dt>Evidência</dt><dd><code>server/src/modules/my-activities/my-activities.repository.ts</code> — <code>listTimeEntryCandidatesFromPublishedPlan</code> devolve <code>false AS is_primary</code>. Captura 04: “Costura · Apoio” para a responsável principal; a lista da barra superior (captura 05) mostra “Costura · Principal” para a mesma atividade.</dd>
+      <dt>Comportamento observado</dt><dd>O papel muda conforme o caminho de abertura.</dd>
+      <dt>Impacto operacional</dt><dd>Baixo; não altera o registro, só a informação exibida.</dd>
+      <dt>Risco de manter</dt><dd>Baixo: confusão sobre responsabilidade.</dd>
+      <dt>Decisão necessária</dt><dd>Corrigir a origem do papel no candidato vindo do plano publicado.</dd>
+    </dl>
+  </div>
 
-  <!-- 9 -->
-  <section class="section" id="s9">
-    <h2><span class="num">9</span> Dúvidas frequentes</h2>
+  <div class="div-item" id="GUIA-COL-004">
+    <h3>GUIA-COL-004 — Minha jornada agrupa pela situação da esteira</h3>
+    <dl>
+      <dt>Orientação / tela</dt><dd>Minha jornada → colunas Pendentes / Em andamento / Concluídas.</dd>
+      <dt>Perfil</dt><dd>Colaborador</dd>
+      <dt>Evidência</dt><dd><code>src/features/colaborador/JornadaPage.tsx</code> (<code>canApontar</code> usa <code>operationalBucket</code> da esteira; o rótulo “Concluída” é exibido sempre que não há Apontar). Captura 10: “Corte do tecido XPTO”, já concluída, aparece em Em andamento com Apontar; “Costurar capas”, de esteira aguardando planejamento, aparece com “Concluída”.</dd>
+      <dt>Comportamento observado</dt><dd>Atividade concluída continua com Apontar (recusado ao salvar); atividade não concluída mostra “Concluída”.</dd>
+      <dt>Impacto operacional</dt><dd>Médio: o colaborador não consegue confirmar conclusões pela jornada.</dd>
+      <dt>Risco de manter</dt><dd>Médio.</dd>
+      <dt>Decisão necessária</dt><dd>Definir se as colunas devem refletir a situação da atividade e trocar o rótulo “Concluída” por um texto neutro (ex.: “Apontamento indisponível”).</dd>
+    </dl>
+  </div>
 
-    <h3>Esqueci de apontar ontem — o que faço?</h3>
-    <p>
-      Na tela de apontamento, altere o campo <strong>Data de realização</strong> para o dia
-      correto antes de salvar.
-    </p>
+  <div class="div-item" id="GUIA-COL-005">
+    <h3>GUIA-COL-005 — Extra Esteira não aparece na Minha jornada</h3>
+    <dl>
+      <dt>Orientação / tela</dt><dd>Minha jornada (totais e lista).</dd>
+      <dt>Perfil</dt><dd>Colaborador</dd>
+      <dt>Evidência</dt><dd>Captura 10: Minutos apontados (período) = 3 h 45 min, sem os 20 min de Extra Esteira registrados no mesmo período (captura 09). Para a gestão, a Jornada por colaborador mostra o bloco Extra Esteira (Guia do Gestor, captura 11).</dd>
+      <dt>Comportamento observado</dt><dd>O colaborador só vê seus lançamentos extra na gaveta (últimos registros).</dd>
+      <dt>Impacto operacional</dt><dd>Colaborador acha que o lançamento falhou e lança de novo (risco de duplicidade).</dd>
+      <dt>Risco de manter</dt><dd>Médio.</dd>
+      <dt>Decisão necessária</dt><dd>Corresponde ao item 7 da lista de ajustes de 07/10/2026 (“Extra Esteira não exibido”), ainda não implementado nesta rodada. Definir onde o colaborador deve ver o Extra Esteira.</dd>
+    </dl>
+  </div>
 
-    <h3>Apontei o tempo errado — posso corrigir?</h3>
-    <p>
-      Fale com o gestor. Gestores com permissão especial podem editar ou remover apontamentos.
-    </p>
+  <div class="div-item" id="GUIA-COL-006">
+    <h3>GUIA-COL-006 — Justificativa e descrição do apontamento não são exibidas</h3>
+    <dl>
+      <dt>Orientação / tela</dt><dd>Minha jornada → Apontamentos no período.</dd>
+      <dt>Perfil</dt><dd>Colaborador</dd>
+      <dt>Evidência</dt><dd>Captura 11: o registro fora de sequência mostra apenas o selo; motivo, complemento e descrição não aparecem na lista.</dd>
+      <dt>Comportamento observado</dt><dd>Não há onde o colaborador releia a justificativa que informou.</dd>
+      <dt>Impacto operacional</dt><dd>Baixo a médio: dificulta conferência.</dd>
+      <dt>Risco de manter</dt><dd>Baixo.</dd>
+      <dt>Decisão necessária</dt><dd>Corresponde ao item 8 da lista de ajustes (“justificativas não exibidas”). Definir quais campos o colaborador pode ver.</dd>
+    </dl>
+  </div>
 
-    <h3>A atividade não aparece em Minhas Atividades</h3>
-    <p>
-      Você ainda não foi designado(a) para ela. Peça ao gestor de esteira para verificar a
-      designação.
-    </p>
+  <div class="div-item" id="GUIA-COL-007">
+    <h3>GUIA-COL-007 — Página “Apontamento” (via Minha jornada) sem justificativa e sem concluir</h3>
+    <dl>
+      <dt>Orientação / tela</dt><dd>Minha jornada → Apontar → página <code>/app/apontamento/:id</code>.</dd>
+      <dt>Perfil</dt><dd>Colaborador</dd>
+      <dt>Evidência</dt><dd><code>src/features/colaborador/ApontamentoPage.tsx</code> não contém campo de justificativa nem opção de conclusão.</dd>
+      <dt>Comportamento observado</dt><dd>Se a atividade exigir justificativa (fora de sequência ou fora da alocação), o registro é recusado e não há como informá-la nessa página.</dd>
+      <dt>Impacto operacional</dt><dd>Médio: bloqueio sem saída na própria tela.</dd>
+      <dt>Risco de manter o texto antigo</dt><dd>Alto: o guia anterior dizia que a justificativa “aparece quando necessário” nessa tela.</dd>
+      <dt>Decisão necessária</dt><dd>Unificar o botão Apontar da jornada com a gaveta da barra superior ou acrescentar a justificativa à página.</dd>
+    </dl>
+  </div>
 
-    <h3>O Kiosk não aceita meu PIN</h3>
-    <p>
-      Confirme se não há letras ou espaços — o PIN é só numérico. Se o problema persistir,
-      o gestor pode resetar o PIN no painel administrativo.
-    </p>
+  <div class="div-item" id="GUIA-COL-008">
+    <h3>GUIA-COL-008 — Totem e navegador da fábrica têm recursos e regras de PIN diferentes</h3>
+    <dl>
+      <dt>Orientação / tela</dt><dd>Guia anterior: Kiosk com “PIN 4+ dígitos” e “SGP+ Produção funciona de forma similar ao Kiosk”.</dd>
+      <dt>Perfil</dt><dd>Colaborador (produção)</dd>
+      <dt>Evidência</dt><dd><code>src/features/kiosk/KioskPinPad.tsx</code> (<code>PIN_LENGTH = 4</code>); <code>server/src/modules/production/production.schemas.ts</code> (<code>^\d{4,8}$</code>). Captura 21: <b>Concluir etapa</b> desativado no navegador; sem Extra Esteira e sem Outra atividade.</dd>
+      <dt>Comportamento observado</dt><dd>PIN com mais de 4 dígitos funciona no navegador, mas não é digitável no totem. O navegador não conclui atividade.</dd>
+      <dt>Impacto operacional</dt><dd>Médio: colaborador que criou PIN longo fica sem acesso ao totem.</dd>
+      <dt>Risco de manter o texto antigo</dt><dd>Alto.</dd>
+      <dt>Decisão necessária</dt><dd>Padronizar o tamanho do PIN e decidir se o navegador da fábrica deve concluir atividade e lançar Extra Esteira.</dd>
+    </dl>
+  </div>
 
-    <h3>Minha conta foi bloqueada por tentativas</h3>
-    <p>
-      Fale com o gestor para desbloquear via painel de administração de colaboradores.
-    </p>
-  </section>
+  <div class="div-item" id="GUIA-COL-009">
+    <h3>GUIA-COL-009 — Busca rápida e Alertas sem efeito</h3>
+    <dl>
+      <dt>Orientação / tela</dt><dd>Barra superior (campo Busca rápida) e item Alertas do menu do usuário.</dd>
+      <dt>Perfil</dt><dd>Todos</dd>
+      <dt>Evidência</dt><dd><code>src/components/AppHeader.tsx</code> (item “Alertas”); campo “Busca rápida…” visível nas capturas 02 e 12.</dd>
+      <dt>Comportamento observado</dt><dd>Elementos reservados para entrega futura; clicar não produz efeito.</dd>
+      <dt>Impacto operacional</dt><dd>Baixo.</dd>
+      <dt>Risco de manter</dt><dd>Baixo: o usuário pode achar que é falha.</dd>
+      <dt>Decisão necessária</dt><dd>Ocultar até a entrega ou implementar.</dd>
+    </dl>
+  </div>
 
-  <footer class="doc-footer">
-    <span>SGP — Sistema de Gestão de Produção · Multivacia / ARGOS</span>
-    <span>Versão do manual: outubro / 2026</span>
-  </footer>
+  <div class="div-item" id="GUIA-COL-010">
+    <h3>GUIA-COL-010 — Colaborador não corrige nem remove o próprio apontamento pela tela</h3>
+    <dl>
+      <dt>Orientação / tela</dt><dd>Guia anterior: “Apontei o tempo errado — fale com o gestor”. Manual completo: o autor pode remover o próprio lançamento.</dd>
+      <dt>Perfil</dt><dd>Colaborador</dd>
+      <dt>Evidência</dt><dd><code>src/routes/AppRoutes.tsx</code>: a tela <code>/app/gestao/apontamento/:stepNodeId</code> exige <code>time_entries.create_on_behalf</code>, <code>time_entries.edit_any</code> ou <code>time_entries.delete_any</code>; o perfil COLABORADOR não tem nenhuma delas por padrão.</dd>
+      <dt>Comportamento observado</dt><dd>Não há caminho na interface para o colaborador remover o próprio apontamento.</dd>
+      <dt>Impacto operacional</dt><dd>Toda correção depende da gestão.</dd>
+      <dt>Risco de manter</dt><dd>Baixo (o guia orienta procurar a gestão).</dd>
+      <dt>Decisão necessária</dt><dd>Confirmar se o colaborador deve poder remover o próprio lançamento pela interface.</dd>
+    </dl>
+  </div>
+</section>
+
+<footer>
+  SGP+ — Sistema de Gestão da Produção · Guia Prático do Colaborador · revisão 07/10/2026.<br />
+  Capturas geradas em ambiente local com dados fictícios (pessoas, OS, clientes e placas inventados). <a class="top" href="#entrar">Voltar ao início ↑</a>
+</footer>
 
 </div>
 </body>
