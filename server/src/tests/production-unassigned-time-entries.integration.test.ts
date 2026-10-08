@@ -162,6 +162,37 @@ describe.skipIf(!hasDb)('production unassigned time entries + candidates (integr
       expect(found).toBeDefined()
       expect(found?.isAssignedToMe).toBe(false)
     })
+
+    it('pesquisa "Esteira & atividade" (q com &) — mesma regra de /me/time-entry-candidates', async () => {
+      const conv = await serviceCreateConveyor(
+        pool,
+        minimalConveyorBody(`UOA-Amp-${Date.now()}`),
+      )
+      await setConveyorProductionStatusForIntegration(pool, conv.id)
+      const code = `7070${Date.now().toString().slice(-6)}`
+      await pool.query(`UPDATE conveyors SET code = $2 WHERE id = $1::uuid`, [conv.id, code])
+
+      const cookie = productionSessionCookie(SEED_COLLABORATOR_MARIA_ID)
+      const search = async (q: string) => {
+        const res = await request(app)
+          .get('/api/v1/production/me/time-entry-candidates')
+          .set('Cookie', cookie)
+          .query({ q, includeUnassigned: 'true', limit: 20 })
+        expect(res.status).toBe(200)
+        return (res.body.data as Array<{ conveyorId: string }>).filter(
+          (i) => i.conveyorId === conv.id,
+        )
+      }
+
+      expect(await search(`${code} & Etapa UOA`)).toHaveLength(1)
+      // Sem diferenciar maiúsculas/acentos e com espaços extras ao redor do &.
+      expect(await search(`  ${code}   &   ÉTAPA uoa  `)).toHaveLength(1)
+      expect(await search(`${code} &`)).toHaveLength(1)
+      // Termo direito casa só o nome da atividade (não o setor "Área UOA").
+      expect(await search(`${code} & Área`)).toEqual([])
+      // Sem &, a pesquisa livre por OS segue como antes.
+      expect(await search(code)).toHaveLength(1)
+    })
   })
 
   describe('POST /api/v1/production/time-entries/unassigned-exception', () => {
