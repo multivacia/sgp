@@ -1,68 +1,63 @@
 # SESSION_CHECKPOINT — Continuidade entre sessões
 
-> Estado transitório. Validar Git e código antes de retomar.
+> Arquivo de estado transitório.
+> Deve ser sobrescrito/atualizado quando houver handoff entre chats ou contexto alto.
+> Não usar como fonte da verdade sem validar Git e código.
+> Manter compacto; alvo recomendado: até ~120 linhas.
 
 ## Identificação
 
-- TASK_ID: `manual-usuario-sgp-cap12-jornada-gerencial`
-- Atualizado em: `2026-10-03 21:26 UTC`
-- Repositório: `multivacia/sgp`
-- Branch: `docs/manual-usuario-sgp-cap12-jornada-gerencial`
-- SHA base: `1ea1465fc2a173335212963135884b7b2eb9c415` (tip de `origin/docs/manual-usuario-sgp-cap11-minha-jornada`, igual ao esperado)
-- Tip final: obtido pela referência da branch (`git rev-parse origin/docs/manual-usuario-sgp-cap12-jornada-gerencial`); não pode constar dentro de si
-- Estado: concluído e publicado; working tree limpo.
+- TASK_ID: `ajustes-tati-2026-10-07`
+- Atualizado em: `2026-10-07 23:59 UTC`
+- Branch: `ccr-8b9d5816-zloyfa` (base = tip `origin/develop` `ecb26da7`)
+- HEAD: ver `git log -1` (commit local do item 1)
+- Working tree: limpo após commit; **não publicado** (sem push/PR)
 
-## Objetivo e escopo
+## Objetivo atual
 
-Enriquecer somente o capítulo 12 de `MANUAL_USUARIO_SGP.md`, auditando o código atual da Jornada por colaborador, e corrigir a linha de situação do cabeçalho.
-Sem alteração da aplicação, PR, merge, rebase, force-push ou exclusão de branches.
+Prompt `docs/ai/prompts/ajustes-tati-2026-10-07.md` (10 itens). Rodada 1: **apenas o item 1** (Guias Práticos de Colaborador e Gestor).
+
+## Estado em uma frase
+
+Item 1 concluído localmente: guias reescritos com 40 capturas fictícias e os capítulos de divergências `GUIA-COL-001…010` e `GUIA-GES-001…010`. Itens 2 a 10 pendentes.
 
 ## Concluído
 
-- Base do capítulo 11 reconferida por `git fetch`: tip igual ao esperado, sem divergência.
-- Jornada Gerencial auditada no código: tela, seleção múltipla, serviço, consultas, exportação, permissões e tela de correção.
-- Capítulo 12 escrito com os seis blocos, 410 linhas, 3 marcadores de imagem, sem termos técnicos proibidos.
-- Linha de situação do cabeçalho corrigida: concluídos 1–3, 5, 7–13, 20, 21; pendentes 4, 6, 14–19.
-- Capítulo 21 complementado com duas divergências novas e três linhas de ajuste de texto.
-- Matriz técnica reconferida: nenhuma correção necessária, arquivo não alterado.
-- Validações Git e editoriais executadas e registradas no retorno.
+- `docs/manual/colaborador.html` e `docs/manual/gestor-esteira.html` reescritos.
+- `docs/manual/img/guia-colaborador/` (21) e `docs/manual/img/guia-gestor/` (19).
+- Retorno: `docs/ai/returns/ajustes-tati-2026-10-07-retorno.md`.
 
-## Achados que não devem ser esquecidos
+## Decisões já tomadas
 
-- **Defeito aberto (confirmado também no caminho gerencial):** a consulta de atividades por colaborador não seleciona a quantidade prevista; o mapeamento assume 1 unidade. Subestima previsto e pendências e **infla a cobertura**; propaga para a exportação. Registrado nos capítulos 12 e 21.
-- Jornada Gerencial **não tem botão Atualizar** e não recarrega após correção; a consulta só é refeita ao mudar seleção/período/esteira ou recarregar a página.
-- **Volta do Apontamento gerencial vai ao Dashboard** quando aberto pela jornada: só a origem "esteira" é reconhecida.
-- Total de pendências de tempo existe no contrato mas **não é exibido na tela**; lista limitada a 48. O total está na exportação.
-- **Em aberto** e **Em risco** se sobrepõem: alocação em atraso aparece nas duas listas.
-- Contagem por situação no painel de atraso omite *em planejamento* e *cancelada*.
-- Cobertura ≠ acumulado ÷ previsto dos cartões: universos diferentes (só alocadas × todas).
-- Extra Esteira ignora o filtro de esteira e fica fora do realizado e da cobertura; até 3 descrições.
-- Histórico fixo em 20 linhas no conjunto; exportação sem limite de linhas.
-- Tetos distintos: tela 20 colaboradores; contrato de exportação 50 — pela interface o efetivo é 20.
-- "Mês atual (UTC)" segue com rótulo incorreto (VAL-017); cálculo em São Paulo.
-- Previsto inclui alocações de esteiras finalizadas/canceladas e atividades concluídas/dispensadas.
+- Guias canônicos = os dois HTML escritos à mão (não o manual integral).
+- Uso da branch designada pela sessão em vez de `fix/ajustes-tati-2026-10-07` (restrição do ambiente).
+
+## Pendências
+
+- Autorização humana para push/PR do item 1.
+- Itens 2 a 10 do prompt.
+- Decidir `GUIA-GES-001` (permissão `time_entries.create_on_behalf` ausente nas migrations).
 
 ## Próxima ação exata
 
-Nenhuma pendência nesta atividade. Em atividades futuras e separadas:
+- Após a autorização: push da branch e PR para `develop`; depois, o item 2 (pesquisa `esteira & atividade` em Apontar horas).
 
-1. Decisão humana sobre a correção do defeito de quantidade prevista (código).
-2. Decisão humana sobre VAL-017 e sobre o retorno do Apontamento gerencial.
-3. **Capítulo 6 — Esteiras**, a partir desta branch publicada.
+## Riscos / ressalvas
+
+- Os itens 7, 8 e 9 aparecem nos guias só como ressalvas (`GUIA-COL-005/006`, `GUIA-GES-004/005`); atualizar os guias depois das correções.
+- `npx eslint .` tem 94 erros preexistentes, fora do escopo.
+
+## Não repetir
+
+- Não reauditar o manual integral (fora do escopo).
+- Não usar dados reais nas capturas.
 
 ## Referências úteis
 
-- `docs/ai/returns/manual-usuario-sgp-cap12-jornada-gerencial-retorno.md`
-- `docs/manual/source/MANUAL_USUARIO_SGP.md`, capítulos 12 e 21
-- `docs/manual/source/MANUAL_FUNCIONAL_SGP.md`, JOG-001/003, 45.7, 45.8, VAL-017
-- `src/features/gestor/JornadaColaboradorGestorPage.tsx`; `server/src/modules/operational-journey/`
-
-## Não repetir / limites
-
-Não repetir auditoria completa sem mudança da base. Não editar retornos históricos.
-Preservar `main`, `develop`, `homol` e toda a cadeia documental anterior.
-Fonte de verdade: código no tip confirmado, não checkpoint ou relatório antigo.
+- Retorno: `docs/ai/returns/ajustes-tati-2026-10-07-retorno.md`
+- Prompt: `docs/ai/prompts/ajustes-tati-2026-10-07.md`
 
 ## Uso de contexto / sessão
 
-Uso/tokens disponíveis: INDISPONÍVEL — a sessão não fornece métrica confiável.
+- Percentual confiável disponível: `INDISPONÍVEL`
+- Observação: não estimar percentuais quando a ferramenta não expuser a métrica.

@@ -3,739 +3,559 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Manual do Gestor de Esteira — SGP</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700&family=Open+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+  <title>Guia Prático do Gestor — SGP+</title>
   <style>
     :root {
-      --gold:        #c9a227;
-      --gold-dim:    #a07e18;
-      --navy:        #101824;
-      --void:        #050a12;
-      --blue-bright: #3e7baa;
-      --emerald:     #34d399;
-      --surface:     #141e2b;
-      --surface-2:   #1a2637;
-      --border:      rgba(255,255,255,0.08);
-      --text:        #e2e8f0;
-      --text-muted:  #94a3b8;
+      --gold: #c9a227;
+      --void: #050a12;
+      --blue: #5b9bd5;
+      --emerald: #34d399;
+      --amber: #fbbf24;
+      --red: #f87171;
+      --surface: #111a26;
+      --surface-2: #182434;
+      --border: rgba(255,255,255,0.09);
+      --text: #e2e8f0;
+      --muted: #94a3b8;
     }
-
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
+    html { scroll-behavior: smooth; }
     body {
       background: var(--void);
       color: var(--text);
-      font-family: 'Open Sans', sans-serif;
+      font-family: 'Open Sans', 'Segoe UI', Roboto, Arial, sans-serif;
       font-size: 15px;
-      line-height: 1.7;
+      line-height: 1.65;
     }
-
-    .page-wrap {
-      max-width: 860px;
-      margin: 0 auto;
-      padding: 48px 24px 80px;
+    .page { max-width: 920px; margin: 0 auto; padding: 40px 20px 80px; }
+    header.doc { border-bottom: 1px solid var(--border); padding-bottom: 24px; margin-bottom: 32px; }
+    .badge {
+      display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: .08em;
+      text-transform: uppercase; color: var(--gold); border: 1px solid rgba(201,162,39,.35);
+      background: rgba(201,162,39,.08); border-radius: 4px; padding: 3px 10px; margin-bottom: 12px;
     }
-
-    /* ── Header ── */
-    .doc-header {
-      border-bottom: 1px solid var(--border);
-      padding-bottom: 28px;
-      margin-bottom: 48px;
-    }
-    .doc-header .badge {
-      display: inline-block;
-      font-family: 'Montserrat', sans-serif;
-      font-size: 11px;
-      font-weight: 700;
-      letter-spacing: .08em;
-      text-transform: uppercase;
-      color: var(--gold);
-      border: 1px solid rgba(201,162,39,.35);
-      background: rgba(201,162,39,.08);
-      border-radius: 4px;
-      padding: 3px 10px;
-      margin-bottom: 14px;
-    }
-    .doc-header h1 {
-      font-family: 'Montserrat', sans-serif;
-      font-size: 2rem;
-      font-weight: 700;
-      color: #fff;
-      line-height: 1.2;
-    }
-    .doc-header .subtitle {
-      margin-top: 10px;
-      color: var(--text-muted);
-      font-size: 14px;
-      max-width: 640px;
-    }
-
-    /* ── ToC ── */
-    .toc {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 20px 24px;
-      margin-bottom: 48px;
-    }
-    .toc-title {
-      font-family: 'Montserrat', sans-serif;
-      font-size: 12px;
-      font-weight: 700;
-      letter-spacing: .08em;
-      text-transform: uppercase;
-      color: var(--text-muted);
-      margin-bottom: 12px;
-    }
-    .toc ol {
-      padding-left: 20px;
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 4px 24px;
-    }
-    @media (max-width: 560px) { .toc ol { grid-template-columns: 1fr; } }
-    .toc a { color: var(--blue-bright); text-decoration: none; font-size: 14px; }
-    .toc a:hover { color: var(--gold); text-decoration: underline; }
-
-    /* ── Sections ── */
-    .section { margin-bottom: 52px; }
-
+    h1 { font-family: 'Montserrat', 'Segoe UI', Arial, sans-serif; font-size: 1.9rem; color: #fff; line-height: 1.2; }
+    .subtitle { margin-top: 8px; color: var(--muted); font-size: 14px; }
+    .meta { margin-top: 10px; color: var(--muted); font-size: 12px; }
+    nav.toc { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 18px 22px; margin-bottom: 40px; }
+    nav.toc p { font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
+    nav.toc ol { padding-left: 20px; columns: 2; column-gap: 28px; }
+    @media (max-width: 640px) { nav.toc ol { columns: 1; } }
+    nav.toc a { color: var(--blue); text-decoration: none; font-size: 14px; }
+    nav.toc a:hover { color: var(--gold); text-decoration: underline; }
+    section { margin-bottom: 48px; }
     h2 {
-      font-family: 'Montserrat', sans-serif;
-      font-size: 1.15rem;
-      font-weight: 700;
-      color: var(--gold);
-      border-bottom: 1px solid rgba(201,162,39,.2);
-      padding-bottom: 8px;
-      margin-bottom: 20px;
-      scroll-margin-top: 24px;
+      font-family: 'Montserrat', 'Segoe UI', Arial, sans-serif; font-size: 1.2rem; color: var(--gold);
+      border-bottom: 1px solid rgba(201,162,39,.22); padding-bottom: 8px; margin-bottom: 16px; scroll-margin-top: 16px;
     }
-    h2 .num {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      width: 26px;
-      height: 26px;
-      background: rgba(201,162,39,.15);
-      border-radius: 6px;
-      font-size: 12px;
-      margin-right: 8px;
-      vertical-align: middle;
+    h3 { font-size: .95rem; color: #cbd5e1; margin: 22px 0 8px; scroll-margin-top: 16px; }
+    p { margin-bottom: 12px; }
+    ol.steps, ul { margin: 0 0 14px 22px; }
+    ol.steps li, ul li { margin-bottom: 6px; }
+    strong { color: #fff; }
+    .where { font-size: 13px; color: var(--muted); margin-bottom: 12px; }
+    .where b { color: var(--text); }
+    .ok, .warn, .info, .ref {
+      border-radius: 8px; padding: 12px 16px; margin: 0 0 16px; font-size: 14px; border-left: 3px solid;
     }
-
-    h3 {
-      font-family: 'Montserrat', sans-serif;
-      font-size: .9rem;
-      font-weight: 600;
-      color: #cbd5e1;
-      margin: 24px 0 10px;
+    .ok { background: rgba(52,211,153,.07); border-color: var(--emerald); }
+    .warn { background: rgba(251,191,36,.07); border-color: var(--amber); }
+    .info { background: rgba(91,155,213,.08); border-color: var(--blue); }
+    .ref { background: rgba(248,113,113,.06); border-color: var(--red); }
+    .ref a, .info a, .warn a { color: var(--blue); }
+    figure { margin: 6px 0 20px; }
+    figure a { display: block; }
+    figure img {
+      display: block; max-width: 100%; height: auto; border: 1px solid var(--border); border-radius: 8px;
+      background: #0b1320;
     }
-
-    p { margin-bottom: 14px; }
-
-    code {
-      font-family: 'Courier New', monospace;
-      font-size: 13px;
-      background: rgba(62,123,170,.18);
-      color: #93c5fd;
-      padding: 2px 6px;
-      border-radius: 4px;
-    }
-
-    .table-wrap { overflow-x: auto; margin-bottom: 18px; }
-    table { width: 100%; border-collapse: collapse; font-size: 14px; }
-    thead th {
-      background: var(--surface-2);
-      color: var(--text-muted);
-      font-weight: 600;
-      font-size: 12px;
-      letter-spacing: .04em;
-      text-transform: uppercase;
-      padding: 10px 14px;
-      text-align: left;
-      border-bottom: 1px solid var(--border);
-    }
-    tbody td {
-      padding: 10px 14px;
-      border-bottom: 1px solid var(--border);
-      vertical-align: top;
-    }
-    tbody tr:last-child td { border-bottom: none; }
-    tbody tr:hover { background: rgba(255,255,255,.025); }
-
-    .flow {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 20px 24px;
-      margin-bottom: 18px;
-      font-family: 'Courier New', monospace;
-      font-size: 13px;
-      color: #94a3b8;
-      line-height: 1.8;
-      white-space: pre-wrap;
-    }
-
-    .callout {
-      border-radius: 8px;
-      padding: 14px 18px;
-      margin-bottom: 18px;
-      font-size: 14px;
-      display: flex;
-      gap: 10px;
-      align-items: flex-start;
-    }
-    .callout.info  { background: rgba(62,123,170,.12);  border-left: 3px solid var(--blue-bright); color: #93c5fd; }
-    .callout.warning { background: rgba(245,158,11,.08); border-left: 3px solid #f59e0b; color: #fde68a; }
-    .callout.success { background: rgba(52,211,153,.08); border-left: 3px solid var(--emerald); color: #6ee7b7; }
-    .callout-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
-
-    .steps { counter-reset: step; list-style: none; padding: 0; }
-    .steps li {
-      counter-increment: step;
-      display: flex;
-      gap: 14px;
-      margin-bottom: 12px;
-      align-items: flex-start;
-    }
-    .steps li::before {
-      content: counter(step);
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      min-width: 26px;
-      height: 26px;
-      background: rgba(201,162,39,.15);
-      border: 1px solid rgba(201,162,39,.3);
-      border-radius: 50%;
-      font-family: 'Montserrat', sans-serif;
-      font-size: 12px;
-      font-weight: 700;
-      color: var(--gold);
-      flex-shrink: 0;
-      margin-top: 1px;
-    }
-
-    /* ── Hierarchy tree ── */
-    .hierarchy {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 18px 22px;
-      font-family: 'Courier New', monospace;
-      font-size: 13px;
-      color: #94a3b8;
-      line-height: 2;
-      margin-bottom: 18px;
-    }
-    .hierarchy .hl { color: var(--gold); font-weight: 700; }
-
-    /* ── Status badge ── */
-    .status-badge {
-      display: inline-block;
-      font-size: 12px;
-      font-weight: 600;
-      border-radius: 20px;
-      padding: 2px 10px;
-      white-space: nowrap;
-    }
-    .s-elaboracao  { background: rgba(148,163,184,.12); color: #94a3b8; border: 1px solid rgba(148,163,184,.2); }
-    .s-planejamento { background: rgba(62,123,170,.15);  color: #93c5fd; border: 1px solid rgba(62,123,170,.25); }
-    .s-andamento   { background: rgba(201,162,39,.12);  color: #fbbf24; border: 1px solid rgba(201,162,39,.25); }
-    .s-finalizada  { background: rgba(52,211,153,.1);   color: #6ee7b7; border: 1px solid rgba(52,211,153,.2); }
-    .s-cancelada   { background: rgba(239,68,68,.1);    color: #fca5a5; border: 1px solid rgba(239,68,68,.2); }
-
-    .doc-footer {
-      margin-top: 64px;
-      padding-top: 24px;
-      border-top: 1px solid var(--border);
-      font-size: 12px;
-      color: var(--text-muted);
-      display: flex;
-      justify-content: space-between;
-      flex-wrap: wrap;
-      gap: 8px;
-    }
+    figure.narrow img { max-width: min(480px, 100%); }
+    figcaption { font-size: 12.5px; color: var(--muted); margin-top: 6px; }
+    .tw { overflow-x: auto; margin-bottom: 16px; }
+    table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+    th { background: var(--surface-2); color: var(--muted); font-size: 11.5px; text-transform: uppercase; letter-spacing: .04em; text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--border); }
+    td { padding: 9px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+    .div-item { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px 18px; margin-bottom: 16px; scroll-margin-top: 16px; }
+    .div-item h3 { margin-top: 0; color: #fff; }
+    .div-item dl { display: grid; grid-template-columns: 190px 1fr; gap: 6px 14px; font-size: 13.5px; }
+    @media (max-width: 640px) { .div-item dl { grid-template-columns: 1fr; } }
+    .div-item dt { color: var(--muted); }
+    .div-item dd, .div-item dt { min-width: 0; overflow-wrap: anywhere; }
+    code { font-family: Consolas, 'Courier New', monospace; font-size: 12.5px; background: rgba(91,155,213,.14); color: #a5c8f0; padding: 1px 5px; border-radius: 4px; }
+    footer { border-top: 1px solid var(--border); padding-top: 18px; color: var(--muted); font-size: 12px; }
+    a.top { font-size: 12px; color: var(--muted); text-decoration: none; }
   </style>
 </head>
 <body>
-<div class="page-wrap">
+<div class="page">
 
-  <!-- Header -->
-  <header class="doc-header">
-    <div class="badge">SGP · Manual do Usuário</div>
-    <h1>Manual do Gestor de Esteira</h1>
-    <p class="subtitle">
-      Para gestores responsáveis por criar, configurar e acompanhar esteiras individuais
-      (OS / veículos).
-    </p>
-  </header>
+<header class="doc">
+  <span class="badge">SGP+ · Guia prático</span>
+  <h1>Guia Prático do Gestor</h1>
+  <p class="subtitle">Para quem cria e acompanha esteiras, planeja a semana da fábrica, corrige apontamentos e libera o acesso dos colaboradores ao Modo Fábrica.</p>
+  <p class="meta">Revisão: 07/10/2026 · conferido contra o SGP+ v1.9.9 com o perfil padrão <b>Gestor</b> · todas as telas usam dados fictícios. O manual completo continua em <b>? Ajuda → Manual do usuário</b>.</p>
+</header>
 
-  <!-- ToC -->
-  <nav class="toc" aria-label="Índice">
-    <div class="toc-title">Neste manual</div>
-    <ol>
-      <li><a href="#s1">Suas responsabilidades</a></li>
-      <li><a href="#s2">Login e navegação</a></li>
-      <li><a href="#s3">Backlog</a></li>
-      <li><a href="#s4">Criar nova esteira</a></li>
-      <li><a href="#s5">Estrutura da esteira</a></li>
-      <li><a href="#s6">Designar colaboradores e equipes</a></li>
-      <li><a href="#s7">Acompanhar o progresso</a></li>
-      <li><a href="#s8">Ciclo de vida</a></li>
-      <li><a href="#s9">Plano operacional</a></li>
-      <li><a href="#s10">Evolução de esteiras</a></li>
-      <li><a href="#s11">Planejamento semanal</a></li>
-      <li><a href="#s12">Dashboard gerencial</a></li>
-      <li><a href="#s13">SGP+ Produção — visão do gestor</a></li>
-      <li><a href="#s14">Equipes</a></li>
-      <li><a href="#s15">Dúvidas frequentes</a></li>
-    </ol>
-  </nav>
+<nav class="toc" aria-label="Índice">
+  <p>Neste guia</p>
+  <ol>
+    <li><a href="#menu">Entrar e conhecer o menu</a></li>
+    <li><a href="#painel">Acompanhar as esteiras — Painel operacional</a></li>
+    <li><a href="#criar">Criar uma esteira</a></li>
+    <li><a href="#ciclo">Fazer a esteira avançar ou voltar</a></li>
+    <li><a href="#atividades">Concluir, reabrir e dispensar atividades</a></li>
+    <li><a href="#planejamento">Planejar e publicar a semana</a></li>
+    <li><a href="#agenda">Agenda da semana</a></li>
+    <li><a href="#acompanhar">Acompanhar resultados</a></li>
+    <li><a href="#corrigir">Corrigir ou remover apontamentos</a></li>
+    <li><a href="#pin">Liberar o Modo Fábrica (PIN)</a></li>
+    <li><a href="#equipes">Equipes</a></li>
+    <li><a href="#config">Configurações operacionais</a></li>
+    <li><a href="#erros">Erros comuns e como sair deles</a></li>
+    <li><a href="#divergencias">Divergências, ressalvas e decisões pendentes</a></li>
+  </ol>
+</nav>
 
-  <!-- 1 -->
-  <section class="section" id="s1">
-    <h2><span class="num">1</span> Suas responsabilidades no SGP</h2>
-    <ul style="padding-left:20px; line-height:2.1;">
-      <li>Criar a esteira para cada veículo / OS.</li>
-      <li>Definir a estrutura de tarefas, setores e atividades.</li>
-      <li>Designar colaboradores e equipes para cada atividade.</li>
-      <li>Acompanhar o progresso e gerenciar o ciclo de vida da esteira.</li>
-      <li>Visualizar relatórios de evolução e eficiência.</li>
+<!-- 1 -->
+<section id="menu">
+  <h2>1. Entrar e conhecer o menu</h2>
+  <p>Entre com e-mail e senha, como qualquer usuário. O menu mostra apenas o que o seu perfil permite. Com o perfil padrão <strong>Gestor</strong>:</p>
+  <div class="tw"><table>
+    <thead><tr><th>Grupo</th><th>Itens</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Gestão</strong></td><td>Painel operacional · Nova esteira · Por documento · Dashboard · Planejamento · Agenda da semana · Evolução das Esteiras · Equipes</td></tr>
+      <tr><td><strong>Cadastros operacionais</strong></td><td>Colaboradores · Saúde operacional · Configurações operacionais</td></tr>
+      <tr><td><strong>Estrutura e administração</strong></td><td>Matrizes de operação · Jornada por colaborador</td></tr>
+      <tr><td><strong>Colaborador</strong> e <strong>Conta</strong></td><td>Minha fila · Minha jornada · Alterar senha</td></tr>
+    </tbody>
+  </table></div>
+  <div class="info">Usuários, Permissões por papel, Trilha administrativa, Configurações do sistema e a visão <b>Gerencial</b> do Dashboard pertencem a outros perfis (Administrador ou Super administrador) na configuração padrão. Se precisar de algo que não aparece, peça a liberação à administração.</div>
+</section>
+
+<!-- 2 -->
+<section id="painel">
+  <h2>2. Acompanhar as esteiras — Painel operacional</h2>
+  <p class="where">Onde: <b>Gestão → Painel operacional</b> (é a tela inicial da gestão).</p>
+  <ol class="steps">
+    <li>Leia os cartões do topo: <strong>Rascunho</strong>, <strong>Aguard. planejamento</strong>, <strong>Em planejamento</strong>, <strong>Em execução</strong>, <strong>Em atraso</strong> e <strong>Finalizadas</strong>.</li>
+    <li>Use <strong>Buscar</strong>, <strong>Situação</strong> e <strong>Prioridade</strong> para filtrar a lista.</li>
+    <li>Clique na esteira para abrir o detalhe.</li>
+  </ol>
+  <figure>
+    <a href="img/guia-gestor/01-painel-operacional.png"><img src="img/guia-gestor/01-painel-operacional.png" alt="Painel Operacional de Esteiras com cartões por situação e filtros" loading="lazy" /></a>
+    <figcaption>Painel operacional com os cartões por situação e os botões <b>Nova Esteira Manual</b> e <b>Nova esteira por documento</b>.</figcaption>
+  </figure>
+  <div class="warn">Os cartões somam todas as esteiras carregadas; <b>os filtros da lista não alteram os cartões</b>. “Em execução” reúne esteiras <b>A iniciar</b> e <b>Em andamento</b> sem atraso de prazo.</div>
+</section>
+
+<!-- 3 -->
+<section id="criar">
+  <h2>3. Criar uma esteira</h2>
+  <p class="where">Onde: <b>Gestão → Nova esteira</b> (montagem manual ou a partir de matriz) ou <b>Gestão → Por documento</b> (a partir do PDF da OS).</p>
+  <h3>3.1 Dados básicos</h3>
+  <ol class="steps">
+    <li>Preencha <strong>Nome *</strong> — único campo obrigatório. Os demais (Cliente, Veículo, Placa, Modelo/versão, Início e Fim previstos, Responsável, Prioridade, Observações) são opcionais.</li>
+    <li><strong>Tempo total previsto</strong> é calculado pela estrutura; não se digita.</li>
+  </ol>
+  <figure>
+    <a href="img/guia-gestor/02-nova-esteira.png"><img src="img/guia-gestor/02-nova-esteira.png" alt="Nova esteira — passo Dados básicos com nome e cliente preenchidos" loading="lazy" /></a>
+    <figcaption>Passo <b>Dados básicos</b>. O trilho <b>Dados básicos → Estrutura → Revisão</b> pode ser clicado a qualquer momento.</figcaption>
+  </figure>
+  <h3>3.2 Estrutura e alocação</h3>
+  <ol class="steps">
+    <li>Clique em <strong>Estrutura</strong>.</li>
+    <li>Para montar do zero: <strong>+ Adicionar tarefa manual</strong>. Para partir de um modelo: em <strong>Escolher base</strong>, busque a matriz e use <strong>Usar esta base</strong>.</li>
+    <li>Clique em <strong>Expandir</strong> e preencha o nome da tarefa, do setor e de cada atividade, com <strong>Qtd</strong> (quantidade prevista) e <strong>Min/un.</strong> (minutos por unidade). Previsto da atividade = Qtd × Min/un.</li>
+    <li>Use <strong>+ Atividade neste setor</strong> e <strong>+ Setor nesta tarefa</strong> para crescer a estrutura.</li>
+    <li>No <strong>+</strong> abaixo de cada atividade, aloque colaboradores ou equipes. O primeiro colaborador vira <strong>responsável principal</strong>; equipe é sempre apoio.</li>
+  </ol>
+  <figure>
+    <a href="img/guia-gestor/02b-nova-esteira-estrutura.png"><img src="img/guia-gestor/02b-nova-esteira-estrutura.png" alt="Passo Estrutura com uma tarefa manual expandida mostrando setor, atividade, Qtd, Min/un e o botão de alocação" loading="lazy" /></a>
+    <figcaption>Passo <b>Estrutura</b>: tarefa manual expandida, com setor, atividade, <b>Qtd</b>, <b>Min/un.</b> e o <b>+</b> de alocação.</figcaption>
+  </figure>
+  <h3>3.3 Revisar e criar</h3>
+  <ol class="steps">
+    <li>Clique em <strong>Revisão</strong> e confira o cartão <strong>Antes de criar</strong>. Corrija as pendências listadas.</li>
+    <li>Clique em <strong>Criar esteira</strong>. A esteira nasce em <strong>Rascunho / Em elaboração</strong>, invisível para a produção.</li>
+  </ol>
+  <div class="warn">Ao usar matriz, toda atividade entra com <b>quantidade 1</b>, mesmo que a matriz preveja mais. Confira a <b>Qtd</b> antes de criar. Alocar alguém na estrutura <b>não</b> coloca a atividade na fila dele: isso só acontece pelo planejamento publicado (seção 6).</div>
+  <div class="info">Para mudar dados, estrutura ou alocações depois de criada, abra a esteira e use <b>Alterar esta esteira</b>. O detalhe da esteira não altera alocação — <a href="#GUIA-GES-002">GUIA-GES-002</a>.</div>
+</section>
+
+<!-- 4 -->
+<section id="ciclo">
+  <h2>4. Fazer a esteira avançar ou voltar</h2>
+  <p class="where">Onde: detalhe da esteira → botões abaixo do nome.</p>
+  <div class="tw"><table>
+    <thead><tr><th>Situação atual</th><th>Botão de avanço</th><th>Vai para</th></tr></thead>
+    <tbody>
+      <tr><td>Rascunho / Em elaboração</td><td><strong>Enviar para planejamento</strong></td><td>Aguardando planejamento</td></tr>
+      <tr><td>Aguardando planejamento</td><td><strong>Aceitar e iniciar planejamento</strong></td><td>Em planejamento</td></tr>
+      <tr><td>Em planejamento</td><td><strong>Liberar para produção</strong></td><td>A iniciar</td></tr>
+      <tr><td>A iniciar</td><td>— (automático no 1º apontamento)</td><td>Em andamento</td></tr>
+      <tr><td>Em andamento</td><td><strong>Finalizar esteira</strong></td><td>Finalizada</td></tr>
+    </tbody>
+  </table></div>
+  <figure>
+    <a href="img/guia-gestor/06-esteira-ciclo-de-vida.png"><img src="img/guia-gestor/06-esteira-ciclo-de-vida.png" alt="Cabeçalho do detalhe de uma esteira Aguardando planejamento com os botões Aceitar e iniciar planejamento e Cancelar esteira" loading="lazy" /></a>
+    <figcaption>Esteira <b>Aguardando planejamento</b>: o próximo passo é <b>Aceitar e iniciar planejamento</b>.</figcaption>
+  </figure>
+  <figure>
+    <a href="img/guia-gestor/03-esteira-detalhe.png"><img src="img/guia-gestor/03-esteira-detalhe.png" alt="Detalhe de uma esteira Em andamento com Finalizar, Cancelar, Voltar para planejamento e Voltar para backlog" loading="lazy" /></a>
+    <figcaption>Esteira <b>Em andamento</b>: <b>Finalizar esteira</b>, <b>Cancelar esteira</b>, <b>Voltar para planejamento</b> e <b>Voltar para backlog</b>.</figcaption>
+  </figure>
+  <ul>
+    <li><strong>Apontamento só é aceito em A iniciar e Em andamento.</strong></li>
+    <li><strong>Voltar para planejamento</strong> (de A iniciar ou Em andamento) e <strong>Voltar para backlog</strong> (de Em planejamento, A iniciar ou Em andamento) pedem <strong>motivo</strong> (3 a 500 caracteres) e preservam apontamentos e estrutura. Enquanto a esteira estiver fora de A iniciar/Em andamento, ninguém aponta nela.</li>
+    <li>O avanço não verifica conteúdo: o sistema não exige estrutura, responsável nem planejamento publicado. A conferência é sua.</li>
+  </ul>
+  <div class="ref"><b>Atenção:</b> <b>Cancelar esteira</b> e <b>Finalizar esteira</b> agem com um clique, <b>sem confirmação e sem motivo</b>, e não há volta pela tela — <a href="#GUIA-GES-006">GUIA-GES-006</a>.</div>
+</section>
+
+<!-- 5 -->
+<section id="atividades">
+  <h2>5. Concluir, reabrir e dispensar atividades</h2>
+  <p class="where">Onde: detalhe da esteira → bloco <b>Estrutura operacional</b>.</p>
+  <figure>
+    <a href="img/guia-gestor/05-esteira-atividade-equipe.png"><img src="img/guia-gestor/05-esteira-atividade-equipe.png" alt="Estrutura operacional com uma atividade concluída e botão Reabrir atividade, e outra com Concluir atividade e Dispensar" loading="lazy" /></a>
+    <figcaption>Cada atividade mostra responsáveis, <b>Planejado</b> (Qtd × Min/un.), <b>Apontado</b>, <b>Saldo</b>, lançamentos e o link <b>Apontamento gerencial neste passo</b>.</figcaption>
+  </figure>
+  <div class="tw"><table>
+    <thead><tr><th>Ação</th><th>Quando usar</th><th>O que acontece</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Concluir atividade</strong></td><td>o trabalho terminou e ninguém concluiu</td><td>pede confirmação; a atividade deixa de aceitar apontamento e sai da fila</td></tr>
+      <tr><td><strong>Reabrir atividade</strong></td><td>houve retrabalho ou faltou tempo a registrar</td><td>a atividade volta a aceitar apontamento e reaparece na fila, sem republicar o plano</td></tr>
+      <tr><td><strong>Dispensar</strong></td><td>a atividade não será executada</td><td>pede motivo da lista de dispensa; preserva o histórico; não aceita apontamento</td></tr>
+      <tr><td><strong>Restaurar</strong> (em atividade dispensada)</td><td>a dispensa foi um engano</td><td>pede confirmação; o planejamento cancelado não é reativado</td></tr>
+    </tbody>
+  </table></div>
+  <div class="warn">Dispensar não é o mesmo que remover da estrutura: remover se faz em <b>Alterar esta esteira</b>. Uma atividade dispensada pode reaparecer no backlog do Planejamento; não a planeje.</div>
+</section>
+
+<!-- 6 -->
+<section id="planejamento">
+  <h2>6. Planejar e publicar a semana</h2>
+  <p class="where">Onde: <b>Gestão → Planejamento</b>. É o planejamento <b>publicado</b> que alimenta a Minha fila e o Modo Fábrica dos colaboradores.</p>
+  <ol class="steps">
+    <li>Escolha a semana com <strong>‹</strong> e <strong>›</strong> (sempre de segunda a sexta). O selo mostra o estado: <strong>Rascunho</strong>, <strong>Publicado vigente</strong> ou <strong>Revisão em planejamento</strong>.</li>
+    <li>Em <strong>Backlog operacional</strong>, encontre a atividade (busca por esteira ou atividade) e clique em <strong>Adicionar ao plano</strong> — ou arraste o cartão para a célula colaborador × dia.</li>
+    <li>Na janela, escolha o <strong>Colaborador</strong>, o <strong>Dia</strong> e confira os <strong>Minutos planejados</strong> (vem preenchido com o que falta na atividade).</li>
+    <li>Ajuste no quadro: arraste para mover, <strong>↑ / ↓</strong> para reordenar, <strong>✕</strong> para remover do plano.</li>
+    <li>Clique em <strong>Salvar rascunho</strong> (ou <strong>Salvar alterações</strong>, se a semana já tiver versão publicada).</li>
+    <li>Clique em <strong>Publicar plano</strong>. Só depois disso as atividades chegam à fila dos colaboradores.</li>
+  </ol>
+  <figure>
+    <a href="img/guia-gestor/07-planejamento.png"><img src="img/guia-gestor/07-planejamento.png" alt="Planejamento da Semana com seletor de semana, selo Publicado vigente e botões Salvar alterações e Publicar plano" loading="lazy" /></a>
+    <figcaption>Topo do <b>Planejamento</b>: semana, selo de estado, exportações, <b>Salvar alterações</b> e <b>Publicar plano</b>.</figcaption>
+  </figure>
+  <figure>
+    <a href="img/guia-gestor/07b-planejamento-grade.png"><img src="img/guia-gestor/07b-planejamento-grade.png" alt="Backlog operacional com botões Adicionar ao plano e a grade colaborador por dia com capacidade" loading="lazy" /></a>
+    <figcaption><b>Backlog operacional</b> à esquerda e a grade colaborador × dia, com o planejado e a capacidade de cada célula.</figcaption>
+  </figure>
+  <div class="warn">
+    <ul>
+      <li>Mover, reordenar e remover <b>só valem depois de salvar</b>. Sair da tela sem salvar descarta as alterações.</li>
+      <li>Cada atividade entra <b>uma única vez</b> no plano (um colaborador, um dia).</li>
+      <li>Passar da capacidade do dia gera aviso, mas <b>não bloqueia</b> salvar nem publicar.</li>
+      <li>Revisão salva e não publicada não chega à fábrica; a fila continua com a última versão publicada.</li>
+      <li>Publicar o plano não muda a situação da esteira, e vice-versa.</li>
     </ul>
-  </section>
+  </div>
+  <div class="info"><b>Exportar Excel</b> e <b>Exportar visão semanal</b> geram planilhas da semana carregada; <b>Imprimir tickets da semana</b> imprime os tickets das atividades planejadas.</div>
+</section>
 
-  <!-- 2 -->
-  <section class="section" id="s2">
-    <h2><span class="num">2</span> Login e navegação</h2>
-    <ol class="steps">
-      <li>Acesse o SGP no navegador e entre com e-mail e senha.</li>
-      <li>Na primeira vez, o sistema pedirá troca de senha.</li>
-      <li>O menu lateral dá acesso a todas as funcionalidades.</li>
-    </ol>
+<!-- 7 -->
+<section id="agenda">
+  <h2>7. Agenda da semana</h2>
+  <p class="where">Onde: <b>Gestão → Agenda da semana</b> (selo <b>Novo</b>).</p>
+  <p>É outra forma de montar a mesma semana: a grade é por colaborador e dia, e você arrasta atividades do backlog para as células. <strong>O plano é o mesmo do Planejamento</strong> — salvar e publicar em uma tela vale para a outra.</p>
+  <figure>
+    <a href="img/guia-gestor/08-agenda-semana.png"><img src="img/guia-gestor/08-agenda-semana.png" alt="Agenda da Semana com planejado, realizado, equipe no plano e a grade da semana" loading="lazy" /></a>
+    <figcaption>Agenda da semana: planejado, realizado, equipe no plano e a grade da semana.</figcaption>
+  </figure>
+  <div class="warn">Não edite a mesma semana nas duas telas ao mesmo tempo: salve e publique em uma antes de abrir a outra.</div>
+</section>
 
-    <h3>Principais seções do menu</h3>
-    <div class="table-wrap">
-      <table>
-        <thead><tr><th>Seção</th><th>O que encontra</th></tr></thead>
-        <tbody>
-          <tr><td>Backlog</td><td>Todas as esteiras ativas com KPIs e filtros</td></tr>
-          <tr><td>Nova Esteira</td><td>Assistente de criação</td></tr>
-          <tr><td>Evolução de Esteiras</td><td>Relatório previsto vs. realizado</td></tr>
-          <tr><td>Planejamento Semanal</td><td>Distribuição de atividades na semana</td></tr>
-          <tr><td>Dashboard</td><td>Indicadores gerenciais</td></tr>
-          <tr><td>Equipes</td><td>Cadastro e gestão de equipes</td></tr>
-          <tr><td>Colaboradores</td><td>Lista e saúde operacional</td></tr>
-        </tbody>
-      </table>
-    </div>
-  </section>
+<!-- 8 -->
+<section id="acompanhar">
+  <h2>8. Acompanhar resultados</h2>
+  <h3 id="evolucao">8.1 Evolução das Esteiras — previsto × realizado</h3>
+  <p class="where">Onde: <b>Gestão → Evolução das Esteiras</b>.</p>
+  <ol class="steps">
+    <li>Filtre por <strong>Período</strong> (limita os apontamentos), <strong>Esteira</strong> e <strong>Status</strong>. <strong>Filtros</strong> abre Colaborador e “Somente com tempo excedido”.</li>
+    <li>Abra a esteira pela seta <strong>›</strong> para descer até tarefa, setor, atividade e apontamentos.</li>
+    <li>Para o PDF: marque a esteira na coluna <strong>Seleção</strong> e clique em <strong>Gerar PDF</strong> (abre a impressão do navegador).</li>
+  </ol>
+  <figure>
+    <a href="img/guia-gestor/09-evolucao-esteiras.png"><img src="img/guia-gestor/09-evolucao-esteiras.png" alt="Evolução das Esteiras com filtros, Gerar PDF e o resumo geral" loading="lazy" /></a>
+    <figcaption>Evolução das Esteiras: filtros, <b>Gerar PDF</b> e o <b>Resumo geral</b>.</figcaption>
+  </figure>
+  <div class="info">A tela não tem botão Atualizar: recarregue a página para buscar dados novos. Os botões “Imprimir” e “Imprimir Fichas” citados no guia anterior não existem nesta tela; o ticket de uma atividade é impresso na linha da atividade (<b>Imprimir ticket</b>).</div>
 
-  <!-- 3 -->
-  <section class="section" id="s3">
-    <h2><span class="num">3</span> Backlog</h2>
-    <p>Caminho: menu lateral → <strong>Backlog</strong> <code>/app/backlog</code></p>
-    <p>
-      Visão consolidada de todas as esteiras. Cada card mostra: nome / OS / veículo, status
-      operacional, progresso geral (%) e indicadores de atraso.
-    </p>
-    <p>Use os filtros para encontrar esteiras por status, prazo ou palavra-chave.</p>
-  </section>
+  <h3 id="dashboard">8.2 Dashboard</h3>
+  <p class="where">Onde: <b>Gestão → Dashboard</b>.</p>
+  <p>Mostra números consolidados de todas as esteiras. Use <strong>Cards</strong> ou <strong>Gráficos</strong> e clique em <strong>Atualizar</strong> para buscar números novos — a tela não se atualiza sozinha.</p>
+  <figure>
+    <a href="img/guia-gestor/10-dashboard.png"><img src="img/guia-gestor/10-dashboard.png" alt="Dashboard na visão Operacional com resumo e esteiras por bucket" loading="lazy" /></a>
+    <figcaption>Dashboard, visão <b>Operacional</b> (a única do perfil Gestor padrão).</figcaption>
+  </figure>
+  <div class="warn">Há relato de cards que não refletem alterações recentes. O comportamento não foi reproduzido nesta revisão — <a href="#GUIA-GES-005">GUIA-GES-005</a>. Até a correção, use <b>Atualizar</b> e confira pelo Painel operacional.</div>
 
-  <!-- 4 -->
-  <section class="section" id="s4">
-    <h2><span class="num">4</span> Criar Nova Esteira</h2>
-    <p>Caminho: menu lateral → <strong>Nova Esteira</strong> <code>/app/nova-esteira</code></p>
-    <p>Há três pontos de partida:</p>
+  <h3 id="jornada">8.3 Jornada por colaborador</h3>
+  <p class="where">Onde: <b>Estrutura e administração → Jornada por colaborador</b>.</p>
+  <ol class="steps">
+    <li>Em <strong>Colaboradores</strong>, clique em <strong>+</strong> e escolha uma ou mais pessoas.</li>
+    <li>Escolha o <strong>Recorte temporal</strong> e, se quiser, a <strong>Esteira</strong>.</li>
+    <li>Leia alocações, previsto, minutos apontados no período e acumulados, e o bloco <strong>Extra Esteira (período)</strong>.</li>
+    <li><strong>Exportar Excel</strong> gera resumo, apontamentos do período e Extra Esteira.</li>
+  </ol>
+  <figure>
+    <a href="img/guia-gestor/11-jornada-por-colaborador.png"><img src="img/guia-gestor/11-jornada-por-colaborador.png" alt="Jornada por colaborador com uma colaboradora selecionada, recorte de 7 dias, totais e Extra Esteira" loading="lazy" /></a>
+    <figcaption>Jornada por colaborador: totais do período e o bloco <b>Extra Esteira</b>, que o colaborador não vê na própria jornada.</figcaption>
+  </figure>
 
-    <h3>4.1 Composição Manual</h3>
-    <p>Você monta a estrutura do zero usando o assistente passo a passo.</p>
-    <p><strong>Etapa 1 — Dados iniciais:</strong> nome da esteira / veículo, número da OS, prazo (opcional) e observações.</p>
-    <p><strong>Etapa 2 — Montagem da estrutura:</strong> adicione Tarefas (ex.: Desmontagem, Pintura) e, dentro de cada uma, atividades com nome, setor técnico, tempo previsto, quantidade prevista e ordem de execução.</p>
-    <p><strong>Etapa 3 — Revisão e criação:</strong> revise toda a estrutura, corrija pendências sinalizadas e clique em <strong>Criar Esteira</strong>.</p>
+  <h3 id="saude">8.4 Saúde operacional</h3>
+  <p class="where">Onde: <b>Cadastros operacionais → Saúde operacional</b>.</p>
+  <p>Sinais determinísticos por colaborador (sobrecarga, baixa ocupação, sem apontamento recente) numa janela de 7, 15 ou 30 dias. Não é avaliação de desempenho.</p>
+  <figure>
+    <a href="img/guia-gestor/15-saude-operacional.png"><img src="img/guia-gestor/15-saude-operacional.png" alt="Saúde operacional dos colaboradores com contadores e tabela" loading="lazy" /></a>
+    <figcaption>Saúde operacional dos colaboradores.</figcaption>
+  </figure>
+</section>
 
-    <h3>4.2 A partir de um Documento (Pipeline R6)</h3>
-    <p>Caminho: menu lateral → <strong>Importar OS</strong> <code>/app/importar-os</code></p>
-    <ol class="steps">
-      <li>Faça upload do PDF da OS (formato Bravo).</li>
-      <li>O sistema lê o documento e propõe automaticamente a estrutura hierárquica.</li>
-      <li>Revise o draft — aceite, ajuste ou remova atividades conforme necessário.</li>
-      <li>Confirme para criar a esteira.</li>
-    </ol>
+<!-- 9 -->
+<section id="corrigir">
+  <h2>9. Corrigir ou remover apontamentos</h2>
+  <p class="where">Onde: detalhe da esteira → <b>Apontamento gerencial neste passo</b>, ou Jornada por colaborador → <b>Apontamento gerencial</b>.</p>
+  <ol class="steps">
+    <li>Em <strong>Lançamentos no passo</strong>, localize o apontamento.</li>
+    <li><strong>Editar…</strong>: escolha <strong>Minutos</strong> ou <strong>Quantidade</strong> (um por vez), informe o novo valor e o <strong>Motivo da correção (obrigatório)</strong>; clique em <strong>Salvar</strong>.</li>
+    <li><strong>Remover…</strong>: informe o motivo e confirme.</li>
+  </ol>
+  <figure>
+    <a href="img/guia-gestor/12-apontamento-gerencial.png"><img src="img/guia-gestor/12-apontamento-gerencial.png" alt="Tela Apontamento gerencial com lista Lançamentos no passo e ações Editar e Remover" loading="lazy" /></a>
+    <figcaption>Apontamento gerencial com o perfil Gestor padrão: só a lista <b>Lançamentos no passo</b> (sem <b>Novo lançamento</b> — veja <a href="#GUIA-GES-001">GUIA-GES-001</a>).</figcaption>
+  </figure>
+  <figure class="narrow">
+    <a href="img/guia-gestor/12b-corrigir-apontamento.png"><img src="img/guia-gestor/12b-corrigir-apontamento.png" alt="Janela Corrigir apontamento com escolha entre Minutos e Quantidade e motivo obrigatório" loading="lazy" /></a>
+    <figcaption>Janela <b>Corrigir apontamento</b>.</figcaption>
+  </figure>
+  <div class="warn">A <b>data</b> e a <b>justificativa</b> não são editáveis: se a data estiver errada, remova e peça um novo lançamento. Correções e remoções ficam na Trilha administrativa. A lista não mostra a justificativa nem a observação do apontamento — <a href="#GUIA-GES-004">GUIA-GES-004</a>.</div>
+</section>
 
-    <h3>4.3 A partir da Matriz de Operações</h3>
-    <p>Caminho: menu lateral → <strong>Matrizes de Operação</strong> <code>/app/matrizes-operacao</code></p>
-    <p>
-      A Matriz de Operações é um catálogo reutilizável de tarefas e atividades. No assistente
-      de Nova Esteira, escolha <strong>"A partir de uma matriz"</strong>, selecione a matriz e
-      ajuste o que for necessário para este veículo específico.
-    </p>
-  </section>
+<!-- 10 -->
+<section id="pin">
+  <h2>10. Liberar o Modo Fábrica (PIN)</h2>
+  <p class="where">Onde: <b>Cadastros operacionais → Colaboradores</b> → <b>Ações</b> → <b>Editar…</b> → bloco <b>PIN do Modo Fábrica</b>.</p>
+  <ol class="steps">
+    <li>Localize o colaborador e abra <strong>Ações → Editar…</strong>.</li>
+    <li>No bloco <strong>PIN do Modo Fábrica</strong>, clique em <strong>Redefinir PIN</strong> e confirme.</li>
+    <li>Informe ao colaborador o PIN provisório indicado na confirmação. No próximo acesso ao totem, ele cria um PIN próprio de 4 dígitos.</li>
+  </ol>
+  <figure>
+    <a href="img/guia-gestor/13-colaboradores.png"><img src="img/guia-gestor/13-colaboradores.png" alt="Lista de colaboradores operacionais com filtros e coluna de ações" loading="lazy" /></a>
+    <figcaption>Lista de <b>Colaboradores operacionais</b>.</figcaption>
+  </figure>
+  <figure>
+    <a href="img/guia-gestor/13c-colaborador-pin-redefinido.png"><img src="img/guia-gestor/13c-colaborador-pin-redefinido.png" alt="Editar colaborador com o bloco PIN do Modo Fábrica em Aguardando troca e a mensagem PIN redefinido" loading="lazy" /></a>
+    <figcaption>Após <b>Redefinir PIN</b>: estado <b>Aguardando troca</b> e a mensagem “PIN redefinido. Próximo acesso exigirá nova senha.”</figcaption>
+  </figure>
+  <div class="info">A mesma ação desbloqueia quem errou o PIN várias vezes. Para impedir alguém de entrar no Modo Fábrica, <b>inative</b> o colaborador. Não existem as ações “Desbloquear” e “Ativar/Inativar acesso de produção” citadas no guia anterior — <a href="#GUIA-GES-008">GUIA-GES-008</a>.</div>
+</section>
 
-  <!-- 5 -->
-  <section class="section" id="s5">
-    <h2><span class="num">5</span> Estrutura da Esteira</h2>
-    <p>Caminho: Backlog → clique na esteira → aba <strong>Estrutura</strong></p>
+<!-- 11 -->
+<section id="equipes">
+  <h2>11. Equipes</h2>
+  <p class="where">Onde: <b>Gestão → Equipes → Nova equipe</b>.</p>
+  <ol class="steps">
+    <li>Clique em <strong>Nova equipe</strong>, informe o <strong>Nome</strong> e, se quiser, a <strong>Descrição</strong>; mantenha <strong>Equipe ativa</strong> marcada e clique em <strong>Criar equipe</strong>.</li>
+    <li>No detalhe da equipe, associe os colaboradores ativos como membros.</li>
+    <li>Use a equipe na alocação das atividades (seção 3.2) ou como padrão na matriz de operação.</li>
+  </ol>
+  <figure>
+    <a href="img/guia-gestor/14-equipe-nova.png"><img src="img/guia-gestor/14-equipe-nova.png" alt="Formulário de nova equipe" loading="lazy" /></a>
+    <figcaption>Criação de equipe.</figcaption>
+  </figure>
+  <div class="warn">Alocar uma equipe <b>não</b> cria uma alocação individual para cada membro: a equipe entra como uma alocação de apoio. Os membros enxergam a atividade na gaveta <b>Apontar horas</b>, mas a fila depende do planejamento publicado para o nome de cada um.</div>
+</section>
 
-    <h3>Hierarquia</h3>
-    <div class="hierarchy">
-<span class="hl">Esteira</span> (veículo / OS)
-└── <span class="hl">Tarefa</span> (macro-bloco, ex.: Desmontagem)
-    └── <span class="hl">Atividade / Passo</span> (unidade que o colaborador executa e aponta)
-        ├── Setor técnico
-        ├── Tempo previsto
-        └── Quantidade prevista</div>
+<!-- 12 -->
+<section id="config">
+  <h2>12. Configurações operacionais</h2>
+  <p class="where">Onde: <b>Cadastros operacionais → Configurações operacionais</b>.</p>
+  <div class="tw"><table>
+    <thead><tr><th>Aba</th><th>O que você mantém</th><th>Onde aparece</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Setores</strong> / <strong>Funções operacionais</strong></td><td>cadastros usados em colaboradores</td><td>Colaboradores</td></tr>
+      <tr><td><strong>Capacidade operacional</strong></td><td>horas por dia (padrão e ajustes por colaborador)</td><td>Planejamento, Agenda, Minha fila, Saúde operacional</td></tr>
+      <tr><td><strong>Descrições de apontamentos</strong></td><td>motivos de <strong>Extra Esteira</strong></td><td>gaveta Apontar horas e totem</td></tr>
+      <tr><td><strong>Justificativas operacionais</strong></td><td>motivos para fora de sequência, fora da alocação e acima do previsto</td><td>apontamentos web e totem</td></tr>
+      <tr><td><strong>Motivos de dispensa</strong></td><td>motivos para dispensar atividade</td><td>detalhe da esteira</td></tr>
+    </tbody>
+  </table></div>
+  <figure>
+    <a href="img/guia-gestor/16-config-descricoes-extra.png"><img src="img/guia-gestor/16-config-descricoes-extra.png" alt="Configurações operacionais na aba Descrições de apontamentos" loading="lazy" /></a>
+    <figcaption>Aba <b>Descrições de apontamentos</b>: sem descrições ativas, o colaborador não consegue lançar Extra Esteira.</figcaption>
+  </figure>
+</section>
 
-    <h3>Ações disponíveis na estrutura</h3>
-    <div class="table-wrap">
-      <table>
-        <thead><tr><th>Ação</th><th>Quando usar</th></tr></thead>
-        <tbody>
-          <tr><td>Adicionar atividade</td><td>Pode ser feito mesmo com a esteira em andamento</td></tr>
-          <tr><td>Editar quantidade prevista</td><td>Ajustar o multiplicador de unidades após criação</td></tr>
-          <tr><td>Abortar passo</td><td>Cancelar atividade sem excluir histórico — exige motivo</td></tr>
-          <tr><td>Restaurar passo abortado</td><td>Reverter um cancelamento</td></tr>
-          <tr><td>Concluir passo manualmente</td><td>Marcar como concluído quando o colaborador não apontou pelo sistema</td></tr>
-          <tr><td>Reabrir passo concluído</td><td>Quando há necessidade de retrabalho</td></tr>
-        </tbody>
-      </table>
-    </div>
-  </section>
+<!-- 13 -->
+<section id="erros">
+  <h2>13. Erros comuns e como sair deles</h2>
+  <div class="tw"><table>
+    <thead><tr><th>Situação</th><th>Causa provável</th><th>O que fazer</th></tr></thead>
+    <tbody>
+      <tr><td>Colaborador diz que a fila está vazia</td><td>semana salva mas não publicada; atividade em outro dia; esteira fora de A iniciar/Em andamento</td><td>publique o plano; confira dia e situação da esteira</td></tr>
+      <tr><td>A atividade não aparece no Backlog operacional</td><td>esteira em rascunho ou aguardando planejamento; atividade já planejada em alguma semana; atividade concluída</td><td>avance a esteira; procure a atividade no quadro</td></tr>
+      <tr><td>“Cada Atividade só pode aparecer uma vez no plano.”</td><td>a atividade já está no plano</td><td>mova o cartão existente em vez de adicionar de novo</td></tr>
+      <tr><td><b>Publicar plano</b> desativado</td><td>há alterações não salvas, o plano está vazio ou já está publicado</td><td>salve primeiro; distribua ao menos uma atividade</td></tr>
+      <tr><td>Totem não mostra o colaborador ou recusa o PIN</td><td>colaborador inativo, sem PIN ou bloqueado</td><td>ative o colaborador; use <b>Redefinir PIN</b></td></tr>
+      <tr><td>Colaborador não consegue lançar Extra Esteira</td><td>sem descrições ativas</td><td>cadastre em Configurações operacionais → Descrições de apontamentos</td></tr>
+      <tr><td>“O apontamento foi alterado por outro usuário…”</td><td>outra pessoa corrigiu antes</td><td>recarregue e refaça a correção</td></tr>
+    </tbody>
+  </table></div>
+</section>
 
-  <!-- 6 -->
-  <section class="section" id="s6">
-    <h2><span class="num">6</span> Designar Colaboradores e Equipes</h2>
+<!-- 14 -->
+<section id="divergencias">
+  <h2>14. Divergências, ressalvas e decisões pendentes</h2>
+  <p>Este capítulo registra o que o guia anterior orientava de forma incompatível com o sistema, comportamentos confusos observados na execução com dados fictícios e pontos que dependem de decisão. <strong>Nenhum item abaixo é funcionalidade entregue.</strong></p>
 
-    <h3>Por atividade individual — Avatar Strip</h3>
-    <ol class="steps">
-      <li>Na aba de estrutura da esteira, localize a atividade desejada.</li>
-      <li>Clique no ícone <strong>"+"</strong> ao lado dos avatares.</li>
-      <li>No popover de busca, selecione o colaborador ou equipe.</li>
-      <li>A designação é salva imediatamente.</li>
-    </ol>
+  <div class="div-item" id="GUIA-GES-001">
+    <h3>GUIA-GES-001 — Lançar horas em nome do colaborador depende de permissão que não existe na base</h3>
+    <dl>
+      <dt>Orientação / tela</dt><dd>Guia anterior: “gestores com permissão time_entries.create_on_behalf podem criar apontamentos em nome de colaboradores”. Tela Apontamento gerencial → Novo lançamento.</dd>
+      <dt>Perfil</dt><dd>Gestor e Administrador</dd>
+      <dt>Evidência</dt><dd><code>server/src/modules/conveyors/conveyorAssignments.routes.ts</code> exige <code>time_entries.create_on_behalf</code>; nenhuma migration em <code>server/migrations/</code> cria essa permissão (<code>0053</code> cria só <code>edit_any</code> e <code>delete_any</code> e diz “Não inclui create_on_behalf”). Captura 12: sem bloco Novo lançamento.</dd>
+      <dt>Comportamento observado</dt><dd>Em base criada pelas migrations, nenhum perfil consegue lançar em nome de outro.</dd>
+      <dt>Impacto operacional</dt><dd>Lançamentos esquecidos dependem do próprio colaborador.</dd>
+      <dt>Risco de manter o texto antigo</dt><dd>Alto: orienta um caminho indisponível.</dd>
+      <dt>Decisão necessária</dt><dd>Decidir se a capacidade deve existir e quais perfis a recebem. Exige migration de permissão (não feita nesta rodada). Conferir se o ambiente real já tem a permissão cadastrada manualmente.</dd>
+    </dl>
+  </div>
 
-    <h3>Papéis de designação</h3>
-    <div class="table-wrap">
-      <table>
-        <thead><tr><th>Papel</th><th>Significado</th></tr></thead>
-        <tbody>
-          <tr><td>Responsável</td><td>Principal executor da atividade</td></tr>
-          <tr><td>Apoio</td><td>Colaborador auxiliar</td></tr>
-        </tbody>
-      </table>
-    </div>
+  <div class="div-item" id="GUIA-GES-002">
+    <h3>GUIA-GES-002 — Alocação não é feita no detalhe da esteira</h3>
+    <dl>
+      <dt>Orientação / tela</dt><dd>Guia anterior: “aba Estrutura → ícone + ao lado dos avatares → a designação é salva imediatamente” e “Ver carga de trabalho”.</dd>
+      <dt>Perfil</dt><dd>Gestor</dd>
+      <dt>Evidência</dt><dd>O frontend só lê alocações (<code>src/services/conveyors/conveyorStepAssignmentsApiService.ts</code>, apenas GET); “Ver carga de trabalho” não existe em <code>src/</code>. Captura 05: o detalhe mostra responsáveis sem controle de edição.</dd>
+      <dt>Comportamento observado</dt><dd>Alocação é feita na Nova esteira ou em <b>Alterar esta esteira</b>.</dd>
+      <dt>Impacto operacional</dt><dd>Gestor procura um controle inexistente.</dd>
+      <dt>Risco de manter o texto antigo</dt><dd>Alto.</dd>
+      <dt>Decisão necessária</dt><dd>Confirmar se a alocação rápida pelo detalhe deve voltar. Este guia orienta pelo caminho atual.</dd>
+    </dl>
+  </div>
 
-    <div class="callout info">
-      <span class="callout-icon">ℹ</span>
-      <span>
-        Clique em <strong>"Ver carga de trabalho"</strong> para ver a distribuição de horas
-        por colaborador em toda a esteira.
-      </span>
-    </div>
-  </section>
+  <div class="div-item" id="GUIA-GES-003">
+    <h3>GUIA-GES-003 — Previsto por unidade × previsto total em telas diferentes</h3>
+    <dl>
+      <dt>Orientação / tela</dt><dd>Detalhe da esteira (tabela de pendência), Jornada por colaborador, gaveta Apontar horas.</dd>
+      <dt>Perfil</dt><dd>Gestor</dd>
+      <dt>Evidência</dt><dd>Atividade fictícia de 2 un. × 2 h: o bloco da atividade mostra “2 un. × 2 h/un. = 4 h” (captura 05), mas a tabela de pendência do detalhe mostra previsto estrutural de 2 h com pendência de 3 h, e a Jornada por colaborador soma 2 h no previsto estrutural (captura 11).</dd>
+      <dt>Comportamento observado</dt><dd>Algumas telas usam o tempo de uma unidade; outras, o total.</dd>
+      <dt>Impacto operacional</dt><dd>Leituras de saldo e cobertura divergentes entre telas.</dd>
+      <dt>Risco de manter</dt><dd>Médio.</dd>
+      <dt>Decisão necessária</dt><dd>Definir a regra única de previsto (por unidade ou total) para todas as telas.</dd>
+    </dl>
+  </div>
 
-  <!-- 7 -->
-  <section class="section" id="s7">
-    <h2><span class="num">7</span> Acompanhar o Progresso</h2>
+  <div class="div-item" id="GUIA-GES-004">
+    <h3>GUIA-GES-004 — Lançamentos no passo não mostram justificativa nem observação</h3>
+    <dl>
+      <dt>Orientação / tela</dt><dd>Apontamento gerencial → Lançamentos no passo. Guia anterior: “o painel analítico da atividade registra a justificativa usada”.</dd>
+      <dt>Perfil</dt><dd>Gestor</dd>
+      <dt>Evidência</dt><dd>Captura 12: cada linha mostra colaborador, minutos, quantidade e data; um lançamento fora de sequência, com justificativa registrada, aparece sem ela.</dd>
+      <dt>Comportamento observado</dt><dd>A justificativa não é exibida nessa lista.</dd>
+      <dt>Impacto operacional</dt><dd>Gestor não confere o motivo de exceções.</dd>
+      <dt>Risco de manter o texto antigo</dt><dd>Médio.</dd>
+      <dt>Decisão necessária</dt><dd>Corresponde ao item 8 da lista de ajustes de 07/10/2026 (“justificativas não exibidas”), ainda não implementado nesta rodada.</dd>
+    </dl>
+  </div>
 
-    <h3>Tela de detalhe da esteira</h3>
-    <p>Caminho: Backlog → clique na esteira</p>
-    <ul style="padding-left:20px; line-height:2;">
-      <li>Status geral e % de conclusão</li>
-      <li>Lista de tarefas com progresso individual</li>
-      <li>Lista de atividades: status, colaboradores, tempo previsto × executado</li>
-      <li>Histórico de eventos operacionais (timeline)</li>
-    </ul>
+  <div class="div-item" id="GUIA-GES-005">
+    <h3>GUIA-GES-005 — Cards do Dashboard que não atualizam (não reproduzido)</h3>
+    <dl>
+      <dt>Orientação / tela</dt><dd>Dashboard, visão Operacional.</dd>
+      <dt>Perfil</dt><dd>Gestor</dd>
+      <dt>Evidência</dt><dd>Relato do item 9 da lista de ajustes. Nesta revisão a tela foi aberta depois dos lançamentos fictícios e mostrou os valores esperados (captura 10); o cenário de alteração com a tela aberta não foi reproduzido.</dd>
+      <dt>Comportamento observado</dt><dd>Comportamento não comprovado nesta rodada.</dd>
+      <dt>Impacto operacional</dt><dd>Decisão tomada sobre números desatualizados.</dd>
+      <dt>Risco de manter</dt><dd>Médio.</dd>
+      <dt>Decisão necessária</dt><dd>Diagnóstico técnico do item 9 em rodada própria.</dd>
+    </dl>
+  </div>
 
-    <h3>Painel analítico de passo</h3>
-    <p>
-      Clique em qualquer atividade para abrir o painel lateral com todos os apontamentos
-      (data, minutos, colaborador, observação) e histórico de designações.
-    </p>
+  <div class="div-item" id="GUIA-GES-006">
+    <h3>GUIA-GES-006 — Cancelar e Finalizar esteira sem confirmação nem motivo</h3>
+    <dl>
+      <dt>Orientação / tela</dt><dd>Detalhe da esteira → Cancelar esteira / Finalizar esteira. Guia anterior: “toda transição exige registro de motivo”.</dd>
+      <dt>Perfil</dt><dd>Gestor</dd>
+      <dt>Evidência</dt><dd><code>src/features/esteiras/EsteiraDetalhePage.tsx</code> (<code>handlePatchStatus</code> chama a API direto, sem confirmação); só as voltas (planejamento/backlog) pedem motivo.</dd>
+      <dt>Comportamento observado</dt><dd>Um clique muda a situação; Finalizada e Cancelada não têm ação de volta na tela.</dd>
+      <dt>Impacto operacional</dt><dd>Clique acidental encerra a esteira e bloqueia apontamentos.</dd>
+      <dt>Risco de manter o texto antigo</dt><dd>Alto.</dd>
+      <dt>Decisão necessária</dt><dd>Exigir confirmação (e motivo) para cancelar/finalizar e definir como reverter.</dd>
+    </dl>
+  </div>
 
-    <h3>Apontamento pelo Gestor</h3>
-    <p>
-      Gestores com permissão <code>time_entries.create_on_behalf</code> podem criar
-      apontamentos em nome de colaboradores via
-      <code>/app/gestao/apontamento/:stepNodeId</code>.
-    </p>
-  </section>
+  <div class="div-item" id="GUIA-GES-007">
+    <h3>GUIA-GES-007 — Plano Operacional da Esteira não auditado nesta revisão</h3>
+    <dl>
+      <dt>Orientação / tela</dt><dd>Guia anterior: “aba Plano Operacional → Gerar plano → Aprove o plano”. Tela atual: bloco <b>Plano Operacional da Esteira</b> com <b>Criar plano operacional</b>.</dd>
+      <dt>Perfil</dt><dd>Gestor</dd>
+      <dt>Evidência</dt><dd><code>src/features/esteiras/conveyor-operational-plan/ConveyorOperationalPlanEmptyState.tsx</code>; o fluxo não foi executado com dados fictícios.</dd>
+      <dt>Comportamento observado</dt><dd>Os nomes dos botões do guia anterior não correspondem à tela; o fluxo completo não foi comprovado.</dd>
+      <dt>Impacto operacional</dt><dd>Esteira com plano próprio sai do Backlog operacional e vai para “Esteiras aguardando encaixe”.</dd>
+      <dt>Risco de manter o texto antigo</dt><dd>Alto: o texto foi retirado deste guia.</dd>
+      <dt>Decisão necessária</dt><dd>Definir se o Plano Operacional da Esteira faz parte da rotina do gestor e auditá-lo em rodada própria antes de documentar.</dd>
+    </dl>
+  </div>
 
-  <!-- 8 -->
-  <section class="section" id="s8">
-    <h2><span class="num">8</span> Ciclo de Vida da Esteira</h2>
+  <div class="div-item" id="GUIA-GES-008">
+    <h3>GUIA-GES-008 — Ações de PIN do guia anterior não existem; PIN provisório fixo</h3>
+    <dl>
+      <dt>Orientação / tela</dt><dd>Guia anterior: “Resetar PIN”, “Desbloquear”, “Ativar / Inativar acesso de produção”.</dd>
+      <dt>Perfil</dt><dd>Gestor</dd>
+      <dt>Evidência</dt><dd><code>src/features/gestor/ColaboradoresPage.tsx</code>: só <b>Redefinir PIN</b>; a confirmação informa o PIN provisório fixo 1234. Capturas 13b/13c.</dd>
+      <dt>Comportamento observado</dt><dd>Redefinir PIN também desbloqueia; para tirar o acesso, inativa-se o colaborador. Todos os PINs redefinidos ficam iguais até a troca.</dd>
+      <dt>Impacto operacional</dt><dd>Entre a redefinição e o primeiro acesso, qualquer pessoa que conheça o PIN padrão entra como o colaborador.</dd>
+      <dt>Risco de manter o texto antigo</dt><dd>Médio.</dd>
+      <dt>Decisão necessária</dt><dd>Avaliar PIN provisório aleatório por colaborador.</dd>
+    </dl>
+  </div>
 
-    <h3>Status disponíveis</h3>
-    <div class="table-wrap">
-      <table>
-        <thead><tr><th>Status</th><th>Significado</th></tr></thead>
-        <tbody>
-          <tr>
-            <td><span class="status-badge s-elaboracao">Em Elaboração</span></td>
-            <td>Rascunho — estrutura ainda sendo montada</td>
-          </tr>
-          <tr>
-            <td><span class="status-badge s-planejamento">Aguardando Planejamento</span></td>
-            <td>Estrutura pronta, aguarda plano</td>
-          </tr>
-          <tr>
-            <td><span class="status-badge s-planejamento">Em Planejamento</span></td>
-            <td>Plano operacional sendo elaborado</td>
-          </tr>
-          <tr>
-            <td><span class="status-badge s-elaboracao">A Iniciar</span></td>
-            <td>Pronta para início, aguarda liberação</td>
-          </tr>
-          <tr>
-            <td><span class="status-badge s-andamento">Em Andamento</span></td>
-            <td>Trabalho em execução</td>
-          </tr>
-          <tr>
-            <td><span class="status-badge s-finalizada">Finalizada</span></td>
-            <td>Concluída</td>
-          </tr>
-          <tr>
-            <td><span class="status-badge s-cancelada">Cancelada</span></td>
-            <td>Encerrada sem conclusão</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+  <div class="div-item" id="GUIA-GES-009">
+    <h3>GUIA-GES-009 — Itens do guia anterior que mudaram de nome ou local</h3>
+    <dl>
+      <dt>Orientação / tela</dt><dd>“Backlog” → hoje <b>Painel operacional</b>; “Importar OS” → <b>Por documento</b>; “Planejamento Semanal” → <b>Planejamento</b>; “Evolução de Esteiras: Imprimir / Imprimir Fichas” → <b>Gerar PDF</b> e <b>Imprimir ticket</b> por atividade.</dd>
+      <dt>Perfil</dt><dd>Gestor</dd>
+      <dt>Evidência</dt><dd><code>src/lib/shell/app-nav-config.ts</code>; capturas 01, 07 e 09.</dd>
+      <dt>Comportamento observado</dt><dd>Nomes atuais conforme o menu.</dd>
+      <dt>Impacto operacional</dt><dd>Baixo depois da atualização do guia.</dd>
+      <dt>Risco de manter o texto antigo</dt><dd>Médio.</dd>
+      <dt>Decisão necessária</dt><dd>Nenhuma além de manter o guia alinhado ao menu.</dd>
+    </dl>
+  </div>
 
-    <h3>Transições de retorno (auditadas)</h3>
-    <div class="callout warning">
-      <span class="callout-icon">⚠</span>
-      <span>
-        Toda transição de retorno exige <strong>registro de motivo</strong> e fica no
-        histórico de eventos da esteira.
-      </span>
-    </div>
-    <div class="table-wrap">
-      <table>
-        <thead><tr><th>De</th><th>Para</th><th>Motivo</th></tr></thead>
-        <tbody>
-          <tr>
-            <td><span class="status-badge s-andamento">Em Andamento</span></td>
-            <td><span class="status-badge s-planejamento">Em Planejamento</span></td>
-            <td>Para revisar o plano operacional</td>
-          </tr>
-          <tr>
-            <td><span class="status-badge s-planejamento">Em Planejamento</span></td>
-            <td><span class="status-badge s-elaboracao">Em Elaboração</span></td>
-            <td>Para revisar a estrutura de atividades</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-    <p>
-      Use os botões de ação no topo da tela de detalhe da esteira para avançar ou retornar
-      o status (disponíveis conforme o status atual e suas permissões).
-    </p>
-  </section>
+  <div class="div-item" id="GUIA-GES-010">
+    <h3>GUIA-GES-010 — Semana exibida no formato AAAA-MM-DD</h3>
+    <dl>
+      <dt>Orientação / tela</dt><dd>Planejamento e Agenda da semana — seletor de semana.</dd>
+      <dt>Perfil</dt><dd>Gestor</dd>
+      <dt>Evidência</dt><dd>Capturas 07 e 08: “2026-10-05 → 2026-10-09”. O manual completo descreve dd/mm/aaaa.</dd>
+      <dt>Comportamento observado</dt><dd>Datas em formato técnico.</dd>
+      <dt>Impacto operacional</dt><dd>Baixo.</dd>
+      <dt>Risco de manter</dt><dd>Baixo.</dd>
+      <dt>Decisão necessária</dt><dd>Padronizar a exibição em dd/mm/aaaa.</dd>
+    </dl>
+  </div>
+</section>
 
-  <!-- 9 -->
-  <section class="section" id="s9">
-    <h2><span class="num">9</span> Plano Operacional</h2>
-    <p>Caminho: tela de detalhe da esteira → aba <strong>Plano Operacional</strong></p>
-
-    <h3>Gerar o plano</h3>
-    <ol class="steps">
-      <li>Clique em <strong>"Gerar plano"</strong>.</li>
-      <li>O sistema propõe uma distribuição baseada na carga e disponibilidade.</li>
-      <li>Revise — ajuste datas e responsáveis se necessário.</li>
-      <li>Aprove o plano — o checklist de aprovação confirma a ação.</li>
-    </ol>
-
-    <h3>Gerenciar o plano existente</h3>
-    <ul style="padding-left:20px; line-height:2;">
-      <li>Veja itens agrupados por data de execução.</li>
-      <li>Edite datas ou responsáveis de itens individuais.</li>
-      <li>Rejeite itens que não devem ser planejados.</li>
-    </ul>
-  </section>
-
-  <!-- 10 -->
-  <section class="section" id="s10">
-    <h2><span class="num">10</span> Evolução de Esteiras</h2>
-    <p>
-      Caminho: menu lateral → <strong>Evolução de Esteiras</strong>
-      <code>/app/gestao/evolucao-esteiras</code>
-    </p>
-    <p>
-      Relatório hierárquico com <strong>previsto × realizado × excedido</strong> para todas
-      as esteiras.
-    </p>
-
-    <h3>Filtros</h3>
-    <ul style="padding-left:20px; line-height:2;">
-      <li>Status da esteira</li>
-      <li>Colaborador designado</li>
-      <li>Período de referência</li>
-    </ul>
-
-    <h3>Colunas do relatório</h3>
-    <div class="table-wrap">
-      <table>
-        <thead><tr><th>Coluna</th><th>Significado</th></tr></thead>
-        <tbody>
-          <tr><td>Previsto</td><td>Soma de tempo previsto × quantidade prevista</td></tr>
-          <tr><td>Realizado</td><td>Soma de todos os apontamentos (minutos)</td></tr>
-          <tr><td>Excedido</td><td>Realizado − Previsto (quando positivo)</td></tr>
-          <tr><td>Eficiência</td><td>Realizado ÷ Previsto × 100%</td></tr>
-          <tr><td>% Conclusão</td><td>Progresso médio das atividades</td></tr>
-        </tbody>
-      </table>
-    </div>
-
-    <div class="callout info">
-      <span class="callout-icon">ℹ</span>
-      <span>
-        Clique em <strong>"Imprimir"</strong> para a visualização otimizada para papel. Use
-        <strong>"Imprimir Fichas"</strong> para gerar etiquetas térmicas das atividades
-        selecionadas — útil para uso físico na fábrica.
-      </span>
-    </div>
-  </section>
-
-  <!-- 11 -->
-  <section class="section" id="s11">
-    <h2><span class="num">11</span> Planejamento Semanal</h2>
-    <p>
-      Caminho: menu lateral → <strong>Planejamento Semanal</strong>
-      <code>/app/planejamento-semanal</code>
-    </p>
-    <p>
-      Visão de todas as atividades planejadas para a semana, agrupadas por dia. Permite
-      visualizar a carga, redistribuir atividades entre dias e identificar lacunas ou
-      sobrecargas.
-    </p>
-  </section>
-
-  <!-- 12 -->
-  <section class="section" id="s12">
-    <h2><span class="num">12</span> Dashboard Gerencial</h2>
-    <p>Caminho: menu lateral → <strong>Dashboard</strong> <code>/app/dashboard</code></p>
-    <div class="table-wrap">
-      <table>
-        <thead><tr><th>Visão</th><th>O que mostra</th></tr></thead>
-        <tbody>
-          <tr>
-            <td>Operacional</td>
-            <td>Progresso das esteiras ativas, atividades em atraso, carga por colaborador</td>
-          </tr>
-          <tr>
-            <td>Executiva</td>
-            <td>Indicadores de eficiência, throughput e tendências</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-    <p>O acesso a cada visão depende das permissões do seu perfil.</p>
-  </section>
-
-  <!-- 13 -->
-  <section class="section" id="s13">
-    <h2><span class="num">13</span> SGP+ Produção — Visão do Gestor</h2>
-    <p>
-      O Modo Fábrica <code>/app/producao</code> e o Kiosk <code>/app/kiosk</code> são
-      acessados pelos colaboradores. O gestor gerencia o acesso via painel administrativo.
-    </p>
-
-    <h3>Gerenciar PINs de colaboradores</h3>
-    <p>Caminho: menu lateral → <strong>Colaboradores</strong> → selecione um colaborador</p>
-    <div class="table-wrap">
-      <table>
-        <thead><tr><th>Ação</th><th>Quando usar</th></tr></thead>
-        <tbody>
-          <tr><td>Resetar PIN</td><td>Colaborador esqueceu o PIN ou está bloqueado</td></tr>
-          <tr><td>Desbloquear</td><td>Após tentativas incorretas consecutivas</td></tr>
-          <tr><td>Ativar / Inativar acesso de produção</td><td>Controlar quem aparece no Kiosk / Modo Fábrica</td></tr>
-        </tbody>
-      </table>
-    </div>
-    <div class="callout info">
-      <span class="callout-icon">ℹ</span>
-      <span>
-        Após o reset, o colaborador receberá um PIN temporário e será obrigado a criar um
-        novo PIN no próximo login de produção.
-      </span>
-    </div>
-
-    <h3>Saúde Operacional dos Colaboradores</h3>
-    <p>
-      Caminho: <strong>Colaboradores → Saúde Operacional</strong>
-      <code>/app/colaboradores/saude-operacional</code>
-    </p>
-    <p>
-      Visão consolidada de todas as atividades por colaborador — útil para identificar
-      gargalos ou colaboradores sobrecarregados.
-    </p>
-  </section>
-
-  <!-- 14 -->
-  <section class="section" id="s14">
-    <h2><span class="num">14</span> Equipes</h2>
-    <p>Caminho: menu lateral → <strong>Equipes</strong> <code>/app/equipes</code></p>
-    <p>
-      Crie equipes nomeadas e vincule colaboradores. Ao designar uma equipe para uma
-      atividade, todos os membros ficam automaticamente designados.
-    </p>
-    <h3>Criar uma equipe</h3>
-    <ol class="steps">
-      <li>Clique em <strong>"Nova Equipe"</strong>.</li>
-      <li>Defina nome e descrição.</li>
-      <li>Adicione colaboradores como membros.</li>
-      <li>Salve.</li>
-    </ol>
-  </section>
-
-  <!-- 15 -->
-  <section class="section" id="s15">
-    <h2><span class="num">15</span> Dúvidas frequentes</h2>
-
-    <h3>Posso criar uma esteira sem definir toda a estrutura de uma vez?</h3>
-    <p>
-      Sim. Salve como rascunho (status <em>Em Elaboração</em>) e complete a estrutura depois.
-      Atividades também podem ser adicionadas com a esteira já em andamento.
-    </p>
-
-    <h3>Como corrigir um apontamento feito por um colaborador?</h3>
-    <p>
-      Com a permissão <code>time_entries.edit_any</code>, acesse o painel analítico da
-      atividade e edite ou remova o apontamento. A operação fica registrada na auditoria.
-    </p>
-
-    <h3>A esteira foi concluída mas precisa ser reaberta para retrabalho</h3>
-    <p>
-      Use a transição de retorno com registro de motivo. O sistema mantém todo o histórico.
-    </p>
-
-    <h3>Como evitar recriar a mesma estrutura em cada esteira?</h3>
-    <p>
-      Configure uma <strong>Matriz de Operações</strong>
-      <code>/app/matrizes-operacao</code> com as tarefas e atividades padrão e reutilize-a
-      na criação de cada nova esteira.
-    </p>
-
-    <h3>O Kiosk não mostra um colaborador</h3>
-    <p>
-      O colaborador pode estar inativo ou sem credencial de produção configurada. Verifique
-      em <strong>Colaboradores</strong> e ative o acesso de produção se necessário.
-    </p>
-
-    <h3>Como saber se um colaborador apontou fora de sequência?</h3>
-    <p>
-      O painel analítico da atividade registra a justificativa usada. A informação também
-      aparece no histórico de eventos da esteira.
-    </p>
-  </section>
-
-  <footer class="doc-footer">
-    <span>SGP — Sistema de Gestão de Produção · Multivacia / ARGOS</span>
-    <span>Versão do manual: outubro / 2026</span>
-  </footer>
+<footer>
+  SGP+ — Sistema de Gestão da Produção · Guia Prático do Gestor · revisão 07/10/2026.<br />
+  Capturas geradas em ambiente local com dados fictícios (pessoas, OS, clientes e placas inventados). <a class="top" href="#menu">Voltar ao início ↑</a>
+</footer>
 
 </div>
 </body>
