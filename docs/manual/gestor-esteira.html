@@ -93,7 +93,8 @@
   <span class="badge">SGP+ · Guia prático</span>
   <h1>Guia Prático do Gestor</h1>
   <p class="subtitle">Para quem cria e acompanha esteiras, planeja a semana da fábrica, corrige apontamentos e libera o acesso dos colaboradores ao Modo Fábrica.</p>
-  <p class="meta">Revisão: 07/10/2026 · conferido contra o SGP+ v1.9.9 com o perfil padrão <b>Gestor</b> · todas as telas usam dados fictícios. O manual completo continua em <b>? Ajuda → Manual do usuário</b>.</p>
+  <p class="meta">Revisão: 08/10/2026 · conferido contra o SGP+ v1.9.9 com os ajustes de 07/10/2026 e o perfil padrão <b>Gestor</b> · todas as telas usam dados fictícios. O manual completo continua em <b>? Ajuda → Manual do usuário</b>.</p>
+  <p class="meta"><b>Material validado contra a branch de integração; disponibilidade em produção depende de publicação.</b></p>
 </header>
 
 <nav class="toc" aria-label="Índice">
@@ -237,7 +238,7 @@
   <h2>6. Planejar e publicar a semana</h2>
   <p class="where">Onde: <b>Gestão → Planejamento</b>. É o planejamento <b>publicado</b> que alimenta a Minha fila e o Modo Fábrica dos colaboradores.</p>
   <ol class="steps">
-    <li>Escolha a semana com <strong>‹</strong> e <strong>›</strong> (sempre de segunda a sexta). O selo mostra o estado: <strong>Rascunho</strong>, <strong>Publicado vigente</strong> ou <strong>Revisão em planejamento</strong>.</li>
+    <li>Escolha a semana com <strong>‹</strong> e <strong>›</strong> (sempre de segunda a sexta) ou digite um dia em <strong>Ir para a data</strong>. O selo mostra o estado: <strong>Rascunho</strong>, <strong>Publicado vigente</strong> ou <strong>Revisão em planejamento</strong>.</li>
     <li>Em <strong>Backlog operacional</strong>, encontre a atividade (busca por esteira ou atividade) e clique em <strong>Adicionar ao plano</strong> — ou arraste o cartão para a célula colaborador × dia.</li>
     <li>Na janela, escolha o <strong>Colaborador</strong>, o <strong>Dia</strong> e confira os <strong>Minutos planejados</strong> (vem preenchido com o que falta na atividade).</li>
     <li>Ajuste no quadro: arraste para mover, <strong>↑ / ↓</strong> para reordenar, <strong>✕</strong> para remover do plano.</li>
@@ -246,11 +247,11 @@
   </ol>
   <figure>
     <a href="img/guia-gestor/07-planejamento.png"><img src="img/guia-gestor/07-planejamento.png" alt="Planejamento da Semana com seletor de semana, selo Publicado vigente e botões Salvar alterações e Publicar plano" loading="lazy" /></a>
-    <figcaption>Topo do <b>Planejamento</b>: semana, selo de estado, exportações, <b>Salvar alterações</b> e <b>Publicar plano</b>.</figcaption>
+    <figcaption>Topo do <b>Planejamento</b>: semana, <b>Ir para a data</b>, selo de estado, exportações, <b>Salvar alterações</b>, <b>Publicar plano</b> e a barra <b>Pesquisa por período</b>.</figcaption>
   </figure>
   <figure>
     <a href="img/guia-gestor/07b-planejamento-grade.png"><img src="img/guia-gestor/07b-planejamento-grade.png" alt="Backlog operacional com botões Adicionar ao plano e a grade colaborador por dia com capacidade" loading="lazy" /></a>
-    <figcaption><b>Backlog operacional</b> à esquerda e a grade colaborador × dia, com o planejado e a capacidade de cada célula.</figcaption>
+    <figcaption>Filtros do quadro, resumo e desvios da semana, <b>Backlog operacional</b> à esquerda e a grade colaborador × dia, com o planejado e a capacidade de cada célula.</figcaption>
   </figure>
   <div class="warn">
     <ul>
@@ -261,7 +262,40 @@
       <li>Publicar o plano não muda a situação da esteira, e vice-versa.</li>
     </ul>
   </div>
-  <div class="info"><b>Exportar Excel</b> e <b>Exportar visão semanal</b> geram planilhas da semana carregada; <b>Imprimir tickets da semana</b> imprime os tickets das atividades planejadas.</div>
+  <div class="info"><b>Exportar Excel</b> e <b>Exportar visão semanal</b> geram planilhas <b>só da semana carregada</b>; <b>Imprimir tickets da semana</b> imprime os tickets das atividades planejadas. Para várias semanas, use a Pesquisa por período e a Exportação para IA (abaixo).</div>
+
+  <h3 id="periodo">6.1 Pesquisa por período (várias semanas)</h3>
+  <p class="where">Onde: <b>Planejamento</b> → barra <b>Pesquisa por período</b>, logo abaixo dos botões.</p>
+  <ol class="steps">
+    <li>Informe <strong>De</strong> e <strong>Até</strong> (datas planejadas). O período pode atravessar semanas; com só uma das datas, vai até 92 dias.</li>
+    <li>Abaixo aparece o painel <strong>Pesquisa por período — data planejada de … a …</strong>: “X de Y itens · horas”, uma etiqueta para cada semana com a situação do plano e a lista com data, colaborador (ou equipe), esteira, atividade, tempo, situação da atividade e plano.</li>
+    <li>Clique em <strong>Ver semana</strong> em um item para abrir o quadro daquela semana. O período continua aplicado.</li>
+    <li>Os filtros do quadro (colaborador, esteira, situação, busca) também filtram o painel. <strong>Limpar período</strong> encerra a pesquisa.</li>
+  </ol>
+  <figure>
+    <a href="img/guia-gestor/07c-planejamento-periodo.png"><img src="img/guia-gestor/07c-planejamento-periodo.png" alt="Pesquisa por período de 06/10/2026 a 15/10/2026 com 8 itens em duas semanas publicadas e botões Ver semana" loading="lazy" /></a>
+    <figcaption>Período de 06/10 a 15/10/2026: 8 itens de duas semanas, cada um com <b>Ver semana</b>. Note o item da <b>Equipe Bancos</b>, planejado sem colaborador.</figcaption>
+  </figure>
+  <div class="warn">A pesquisa é <b>só de consulta</b>: mover, adicionar e remover continuam no quadro semanal. Para cada semana vale o plano que o quadro mostraria (rascunho/revisão em edição; sem rascunho, o publicado). “Com capacidade excedida” vale só para a semana do quadro. Data inicial depois da final: o sistema avisa e não pesquisa.</div>
+
+  <h3 id="exportar-ia">6.2 Exportar para IA</h3>
+  <p>Gera uma planilha Excel para entregar a uma IA (ou analisar) e pedir sugestão de encaixe do backlog. <strong>O SGP+ não envia nada a nenhuma IA</strong>: só gera o arquivo.</p>
+  <ol class="steps">
+    <li>Com a Pesquisa por período preenchida, o botão é <strong>Exportar para IA (período)</strong>. Sem período, é <strong>Exportar para IA (semana)</strong> e usa a semana exibida.</li>
+    <li>Clique no botão. Se houver alterações não salvas no quadro, o sistema <strong>salva o rascunho antes</strong> de gerar a planilha.</li>
+    <li>Abra o arquivo baixado (ex.: <code>planejamento-ia-periodo-2026-10-06-a-2026-10-15.xlsx</code>).</li>
+  </ol>
+  <div class="tw"><table>
+    <thead><tr><th>Aba</th><th>Conteúdo</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Prompt para IA</strong></td><td>instruções prontas (não alterar o já planejado; respeitar capacidade, dias úteis, prazos, prioridade, sequência e responsáveis; não inventar dados), formato de resposta e dicionário das abas</td></tr>
+      <tr><td><strong>Backlog</strong></td><td>o que ainda pode ser planejado hoje (independe do período): origem <em>Backlog</em> ou <em>Aguardando encaixe</em>, OS, cliente, prioridade, prazo (e se está vencido), atividade, tempos previsto/realizado/pendente e alocados</td></tr>
+      <tr><td><strong>Planejado</strong></td><td>itens já planejados no recorte, com semana, situação do plano, data, colaborador ou equipe, atividade e tempo</td></tr>
+      <tr><td><strong>Carga dos colaboradores</strong></td><td>por colaborador: dias úteis, capacidade, horas planejadas, saldo e ocupação (calculados por fórmula) e situação</td></tr>
+      <tr><td><strong>Carga por dia</strong></td><td>o mesmo, por colaborador e dia útil</td></tr>
+    </tbody>
+  </table></div>
+  <div class="warn"><b>Itens planejados só para equipe</b> (sem colaborador) aparecem na aba <b>Planejado</b> como “Não atribuído”, mas <b>não somam na carga individual</b> de ninguém. Exemplo conferido: Planejado com 405 min, dos quais 45 min só de equipe → as abas de carga somam 360 min. Colaborador sem capacidade cadastrada aparece como “Capacidade não cadastrada” (nada é inventado).</div>
 </section>
 
 <!-- 7 -->
@@ -284,34 +318,48 @@
   <ol class="steps">
     <li>Filtre por <strong>Período</strong> (limita os apontamentos), <strong>Esteira</strong> e <strong>Status</strong>. <strong>Filtros</strong> abre Colaborador e “Somente com tempo excedido”.</li>
     <li>Abra a esteira pela seta <strong>›</strong> para descer até tarefa, setor, atividade e apontamentos.</li>
-    <li>Para o PDF: marque a esteira na coluna <strong>Seleção</strong> e clique em <strong>Gerar PDF</strong> (abre a impressão do navegador).</li>
+    <li>Para o PDF: marque as esteiras na coluna <strong>Seleção</strong>, escolha a <strong>Orientação do PDF</strong> (<strong>Retrato</strong>, padrão, ou <strong>Paisagem</strong>) e clique em <strong>Gerar PDF</strong>.</li>
+    <li>Abre a janela de impressão do navegador: escolha <strong>Salvar como PDF</strong> (ou a impressora) e confirme. O cabeçalho da tabela se repete a cada página; os apontamentos analíticos trazem a justificativa.</li>
   </ol>
   <figure>
     <a href="img/guia-gestor/09-evolucao-esteiras.png"><img src="img/guia-gestor/09-evolucao-esteiras.png" alt="Evolução das Esteiras com filtros, Gerar PDF e o resumo geral" loading="lazy" /></a>
-    <figcaption>Evolução das Esteiras: filtros, <b>Gerar PDF</b> e o <b>Resumo geral</b>.</figcaption>
+    <figcaption>Evolução das Esteiras: filtros, <b>Orientação do PDF</b>, <b>Gerar PDF</b> e o <b>Resumo geral</b>.</figcaption>
   </figure>
-  <div class="info">A tela não tem botão Atualizar: recarregue a página para buscar dados novos. Os botões “Imprimir” e “Imprimir Fichas” citados no guia anterior não existem nesta tela; o ticket de uma atividade é impresso na linha da atividade (<b>Imprimir ticket</b>).</div>
+  <figure class="narrow">
+    <a href="img/guia-gestor/09b-pdf-retrato.png"><img src="img/guia-gestor/09b-pdf-retrato.png" alt="Primeira página do PDF da Evolução das Esteiras em Retrato" loading="lazy" /></a>
+    <figcaption>PDF em <b>Retrato</b> (1ª página).</figcaption>
+  </figure>
+  <figure>
+    <a href="img/guia-gestor/09c-pdf-paisagem.png"><img src="img/guia-gestor/09c-pdf-paisagem.png" alt="Primeira página do PDF da Evolução das Esteiras em Paisagem" loading="lazy" /></a>
+    <figcaption>PDF em <b>Paisagem</b> (1ª página): colunas mais largas. Uma esteira que não cabe no resto da página passa inteira para a seguinte.</figcaption>
+  </figure>
+  <div class="warn">O PDF foi conferido no Chromium (Chrome/Edge), em Retrato e Paisagem, sem página em branco e sem corte. <b>Confira no navegador usado na fábrica</b> antes de adotar; o tamanho do papel é o da impressora/diálogo.</div>
+  <div class="info">A tela não tem botão Atualizar: recarregue a página para buscar dados novos. <b>Gerar PDF</b> é o relatório das esteiras selecionadas; <b>Imprimir ticket</b>, na linha de uma atividade, imprime o ticket operacional daquela atividade (impressora térmica). Os botões “Imprimir” e “Imprimir Fichas” do guia anterior não existem.</div>
 
   <h3 id="dashboard">8.2 Dashboard</h3>
   <p class="where">Onde: <b>Gestão → Dashboard</b>.</p>
-  <p>Mostra números consolidados de todas as esteiras. Use <strong>Cards</strong> ou <strong>Gráficos</strong> e clique em <strong>Atualizar</strong> para buscar números novos — a tela não se atualiza sozinha.</p>
+  <p>Mostra números consolidados de todas as esteiras. Use <strong>Cards</strong> ou <strong>Gráficos</strong>. Quando você registra um apontamento (ou conclusão, ou Extra Esteira) pelo botão <strong>Apontar horas</strong> do cabeçalho com o Dashboard aberto, os cards <strong>atualizam sozinhos</strong> logo após salvar. Não há atualização contínua: para ver lançamentos feitos por outras pessoas ou em outro computador, clique em <strong>Atualizar</strong>.</p>
   <figure>
     <a href="img/guia-gestor/10-dashboard.png"><img src="img/guia-gestor/10-dashboard.png" alt="Dashboard na visão Operacional com resumo e esteiras por bucket" loading="lazy" /></a>
-    <figcaption>Dashboard, visão <b>Operacional</b> (a única do perfil Gestor padrão).</figcaption>
+    <figcaption>Dashboard, visão <b>Operacional</b> (a única do perfil Gestor padrão). Conferido: “Minutos apontados (acumulado)” passou de 3 h 30 min para 3 h 55 min logo após um apontamento de 25 min pelo cabeçalho, sem clicar em Atualizar.</figcaption>
   </figure>
-  <div class="warn">Há relato de cards que não refletem alterações recentes. O comportamento não foi reproduzido nesta revisão — <a href="#GUIA-GES-005">GUIA-GES-005</a>. Até a correção, use <b>Atualizar</b> e confira pelo Painel operacional.</div>
+  <div class="info">O card “Alocações em STEPs” conta também alocações de atividades inativas/esteiras finalizadas; a carga por colaborador considera só as ativas. Veja <a href="#GUIA-GES-005">GUIA-GES-005</a>.</div>
 
   <h3 id="jornada">8.3 Jornada por colaborador</h3>
   <p class="where">Onde: <b>Estrutura e administração → Jornada por colaborador</b>.</p>
   <ol class="steps">
     <li>Em <strong>Colaboradores</strong>, clique em <strong>+</strong> e escolha uma ou mais pessoas.</li>
     <li>Escolha o <strong>Recorte temporal</strong> e, se quiser, a <strong>Esteira</strong>.</li>
-    <li>Leia alocações, previsto, minutos apontados no período e acumulados, e o bloco <strong>Extra Esteira (período)</strong>.</li>
+    <li>Leia alocações, previsto estrutural, minutos apontados no período e acumulados, o bloco <strong>Extra Esteira</strong> e, mais abaixo, os apontamentos com <strong>Justificativa</strong> e <strong>Observação</strong> e a seção <strong>Extra Esteira no período</strong> com cada lançamento.</li>
     <li><strong>Exportar Excel</strong> gera resumo, apontamentos do período e Extra Esteira.</li>
   </ol>
   <figure>
-    <a href="img/guia-gestor/11-jornada-por-colaborador.png"><img src="img/guia-gestor/11-jornada-por-colaborador.png" alt="Jornada por colaborador com uma colaboradora selecionada, recorte de 7 dias, totais e Extra Esteira" loading="lazy" /></a>
-    <figcaption>Jornada por colaborador: totais do período e o bloco <b>Extra Esteira</b>, que o colaborador não vê na própria jornada.</figcaption>
+    <a href="img/guia-gestor/11-jornada-por-colaborador.png"><img src="img/guia-gestor/11-jornada-por-colaborador.png" alt="Jornada por colaborador com Ana Exemplo selecionada, recorte de 7 dias, totais e Extra Esteira de 50 minutos" loading="lazy" /></a>
+    <figcaption>Jornada por colaborador: totais do período e o bloco <b>Extra Esteira</b>. O colaborador vê os mesmos lançamentos na própria Minha jornada.</figcaption>
+  </figure>
+  <figure>
+    <a href="img/guia-gestor/11b-jornada-extra-esteira.png"><img src="img/guia-gestor/11b-jornada-extra-esteira.png" alt="Seção Extra Esteira no período com dois lançamentos" loading="lazy" /></a>
+    <figcaption><b>Extra Esteira no período</b>: cada lançamento, com data, minutos e observação. O histórico continua mesmo se o motivo for retirado do catálogo.</figcaption>
   </figure>
 
   <h3 id="saude">8.4 Saúde operacional</h3>
@@ -333,14 +381,14 @@
     <li><strong>Remover…</strong>: informe o motivo e confirme.</li>
   </ol>
   <figure>
-    <a href="img/guia-gestor/12-apontamento-gerencial.png"><img src="img/guia-gestor/12-apontamento-gerencial.png" alt="Tela Apontamento gerencial com lista Lançamentos no passo e ações Editar e Remover" loading="lazy" /></a>
-    <figcaption>Apontamento gerencial com o perfil Gestor padrão: só a lista <b>Lançamentos no passo</b> (sem <b>Novo lançamento</b> — veja <a href="#GUIA-GES-001">GUIA-GES-001</a>).</figcaption>
+    <a href="img/guia-gestor/12-apontamento-gerencial.png"><img src="img/guia-gestor/12-apontamento-gerencial.png" alt="Tela Apontamento gerencial com lista Lançamentos no passo mostrando justificativa e observação e as ações Editar e Remover" loading="lazy" /></a>
+    <figcaption>Apontamento gerencial com o perfil Gestor padrão: a lista <b>Lançamentos no passo</b> mostra a justificativa e a observação de cada lançamento. Não há <b>Novo lançamento</b> — veja <a href="#GUIA-GES-001">GUIA-GES-001</a>.</figcaption>
   </figure>
   <figure class="narrow">
     <a href="img/guia-gestor/12b-corrigir-apontamento.png"><img src="img/guia-gestor/12b-corrigir-apontamento.png" alt="Janela Corrigir apontamento com escolha entre Minutos e Quantidade e motivo obrigatório" loading="lazy" /></a>
     <figcaption>Janela <b>Corrigir apontamento</b>.</figcaption>
   </figure>
-  <div class="warn">A <b>data</b> e a <b>justificativa</b> não são editáveis: se a data estiver errada, remova e peça um novo lançamento. Correções e remoções ficam na Trilha administrativa. A lista não mostra a justificativa nem a observação do apontamento — <a href="#GUIA-GES-004">GUIA-GES-004</a>.</div>
+  <div class="warn">Só <b>Minutos</b> ou <b>Quantidade</b> são editáveis (um por vez). A <b>data</b> e a <b>justificativa</b> não: se a data estiver errada, remova e peça ao colaborador um novo lançamento. O gestor padrão <b>não</b> lança horas em nome do colaborador (<a href="#GUIA-GES-001">GUIA-GES-001</a>). Correções e remoções ficam registradas na Trilha administrativa.</div>
 </section>
 
 <!-- 10 -->
@@ -411,6 +459,8 @@
       <tr><td><b>Publicar plano</b> desativado</td><td>há alterações não salvas, o plano está vazio ou já está publicado</td><td>salve primeiro; distribua ao menos uma atividade</td></tr>
       <tr><td>Totem não mostra o colaborador ou recusa o PIN</td><td>colaborador inativo, sem PIN ou bloqueado</td><td>ative o colaborador; use <b>Redefinir PIN</b></td></tr>
       <tr><td>Colaborador não consegue lançar Extra Esteira</td><td>sem descrições ativas</td><td>cadastre em Configurações operacionais → Descrições de apontamentos</td></tr>
+      <tr><td>Exportar para IA não mostra várias semanas</td><td>a Pesquisa por período está vazia (o botão diz “(semana)”)</td><td>preencha De/Até na Pesquisa por período</td></tr>
+      <tr><td>Card do Dashboard não mudou após lançamento de outra pessoa</td><td>a atualização automática vale para o que você lança pelo cabeçalho</td><td>clique em <b>Atualizar</b></td></tr>
       <tr><td>“O apontamento foi alterado por outro usuário…”</td><td>outra pessoa corrigiu antes</td><td>recarregue e refaça a correção</td></tr>
     </tbody>
   </table></div>
@@ -419,11 +469,27 @@
 <!-- 14 -->
 <section id="divergencias">
   <h2>14. Divergências, ressalvas e decisões pendentes</h2>
-  <p>Este capítulo registra o que o guia anterior orientava de forma incompatível com o sistema, comportamentos confusos observados na execução com dados fictícios e pontos que dependem de decisão. <strong>Nenhum item abaixo é funcionalidade entregue.</strong></p>
+  <p>Este capítulo registra o que o guia anterior orientava de forma incompatível com o sistema, comportamentos confusos observados na execução com dados fictícios e pontos que dependem de decisão. Cada item traz a <strong>situação em 08/10/2026</strong>: <strong>Resolvido no sistema</strong> (ajustes de 07/10/2026, conferido na tela), <strong>Limitação real</strong> (o sistema funciona assim hoje; o guia orienta) ou <strong>Aguardando decisão</strong>.</p>
+  <div class="tw"><table>
+    <thead><tr><th>ID</th><th>Assunto</th><th>Situação em 08/10/2026</th></tr></thead>
+    <tbody>
+      <tr><td><a href="#GUIA-GES-001">GUIA-GES-001</a></td><td>Lançar em nome do colaborador</td><td>Limitação real — <b>aguardando decisão</b> (exige migration)</td></tr>
+      <tr><td><a href="#GUIA-GES-002">GUIA-GES-002</a></td><td>Alocação fora do detalhe</td><td>Limitação real — guia corrigido</td></tr>
+      <tr><td><a href="#GUIA-GES-003">GUIA-GES-003</a></td><td>Previsto por unidade × total</td><td>Limitação real — aguardando decisão</td></tr>
+      <tr><td><a href="#GUIA-GES-004">GUIA-GES-004</a></td><td>Justificativa/observação nos lançamentos</td><td><strong>Resolvido no sistema</strong></td></tr>
+      <tr><td><a href="#GUIA-GES-005">GUIA-GES-005</a></td><td>Cards do Dashboard após apontamento</td><td><strong>Resolvido no sistema</strong></td></tr>
+      <tr><td><a href="#GUIA-GES-006">GUIA-GES-006</a></td><td>Cancelar/Finalizar sem confirmação</td><td>Limitação real — risco documentado</td></tr>
+      <tr><td><a href="#GUIA-GES-007">GUIA-GES-007</a></td><td>Plano Operacional da Esteira</td><td><b>Não validado</b> — fora do roteiro; aguardando decisão</td></tr>
+      <tr><td><a href="#GUIA-GES-008">GUIA-GES-008</a></td><td>PIN provisório fixo</td><td>Limitação real — aguardando decisão</td></tr>
+      <tr><td><a href="#GUIA-GES-009">GUIA-GES-009</a></td><td>Nomes de menu, PDF × ticket</td><td>Limitação real — guia corrigido</td></tr>
+      <tr><td><a href="#GUIA-GES-010">GUIA-GES-010</a></td><td>Semana em AAAA-MM-DD</td><td>Limitação real (baixo impacto)</td></tr>
+    </tbody>
+  </table></div>
 
   <div class="div-item" id="GUIA-GES-001">
     <h3>GUIA-GES-001 — Lançar horas em nome do colaborador depende de permissão que não existe na base</h3>
     <dl>
+      <dt>Situação em 08/10/2026</dt><dd><b>Limitação real — aguardando decisão.</b> Reconferido em 08/10: <code>create_on_behalf</code> continua sem migration nem seed; a rota da API a exige; o perfil Gestor padrão tem só <code>edit_any</code>/<code>delete_any</code> (0053). Tela sem “Novo lançamento” (captura 12). Nenhuma migration foi criada nesta revisão.</dd>
       <dt>Orientação / tela</dt><dd>Guia anterior: “gestores com permissão time_entries.create_on_behalf podem criar apontamentos em nome de colaboradores”. Tela Apontamento gerencial → Novo lançamento.</dd>
       <dt>Perfil</dt><dd>Gestor e Administrador</dd>
       <dt>Evidência</dt><dd><code>server/src/modules/conveyors/conveyorAssignments.routes.ts</code> exige <code>time_entries.create_on_behalf</code>; nenhuma migration em <code>server/migrations/</code> cria essa permissão (<code>0053</code> cria só <code>edit_any</code> e <code>delete_any</code> e diz “Não inclui create_on_behalf”). Captura 12: sem bloco Novo lançamento.</dd>
@@ -437,6 +503,7 @@
   <div class="div-item" id="GUIA-GES-002">
     <h3>GUIA-GES-002 — Alocação não é feita no detalhe da esteira</h3>
     <dl>
+      <dt>Situação em 08/10/2026</dt><dd><b>Limitação real — guia corrigido.</b> Reconferido em 08/10: o frontend só consulta alocações (GET) no detalhe; o guia orienta a alocação em Nova esteira / Alterar esta esteira.</dd>
       <dt>Orientação / tela</dt><dd>Guia anterior: “aba Estrutura → ícone + ao lado dos avatares → a designação é salva imediatamente” e “Ver carga de trabalho”.</dd>
       <dt>Perfil</dt><dd>Gestor</dd>
       <dt>Evidência</dt><dd>O frontend só lê alocações (<code>src/services/conveyors/conveyorStepAssignmentsApiService.ts</code>, apenas GET); “Ver carga de trabalho” não existe em <code>src/</code>. Captura 05: o detalhe mostra responsáveis sem controle de edição.</dd>
@@ -450,6 +517,7 @@
   <div class="div-item" id="GUIA-GES-003">
     <h3>GUIA-GES-003 — Previsto por unidade × previsto total em telas diferentes</h3>
     <dl>
+      <dt>Situação em 08/10/2026</dt><dd><b>Limitação real — aguardando decisão.</b> Reconferido em 08/10 com atividade de 2 un. × 1 h: o bloco da atividade mostra “2 un. × 1 h = 2 h”, a tabela de pendência do detalhe mostra Previsto estrutural 1 h, e a Minha jornada/Jornada por colaborador somam 9 h 15 min (por unidade) onde o total seria 10 h 15 min.</dd>
       <dt>Orientação / tela</dt><dd>Detalhe da esteira (tabela de pendência), Jornada por colaborador, gaveta Apontar horas.</dd>
       <dt>Perfil</dt><dd>Gestor</dd>
       <dt>Evidência</dt><dd>Atividade fictícia de 2 un. × 2 h: o bloco da atividade mostra “2 un. × 2 h/un. = 4 h” (captura 05), mas a tabela de pendência do detalhe mostra previsto estrutural de 2 h com pendência de 3 h, e a Jornada por colaborador soma 2 h no previsto estrutural (captura 11).</dd>
@@ -461,8 +529,9 @@
   </div>
 
   <div class="div-item" id="GUIA-GES-004">
-    <h3>GUIA-GES-004 — Lançamentos no passo não mostram justificativa nem observação</h3>
+    <h3>GUIA-GES-004 — Lançamentos no passo não mostravam justificativa nem observação (resolvido)</h3>
     <dl>
+      <dt>Situação em 08/10/2026</dt><dd><b>Resolvido no sistema (ajustes de 07/10/2026).</b> Conferido em 08/10: Lançamentos no passo mostram “Justificativa (fora de sequência): … — complemento” e “Observação: …” (captura 12); o mesmo vale para a Jornada por colaborador e o PDF da Evolução. O texto abaixo é o registro original.</dd>
       <dt>Orientação / tela</dt><dd>Apontamento gerencial → Lançamentos no passo. Guia anterior: “o painel analítico da atividade registra a justificativa usada”.</dd>
       <dt>Perfil</dt><dd>Gestor</dd>
       <dt>Evidência</dt><dd>Captura 12: cada linha mostra colaborador, minutos, quantidade e data; um lançamento fora de sequência, com justificativa registrada, aparece sem ela.</dd>
@@ -474,8 +543,9 @@
   </div>
 
   <div class="div-item" id="GUIA-GES-005">
-    <h3>GUIA-GES-005 — Cards do Dashboard que não atualizam (não reproduzido)</h3>
+    <h3>GUIA-GES-005 — Cards do Dashboard que não atualizavam após apontamento (resolvido)</h3>
     <dl>
+      <dt>Situação em 08/10/2026</dt><dd><b>Resolvido no sistema (ajustes de 07/10/2026), para o cenário testado.</b> Conferido em 08/10: com o Dashboard aberto, um apontamento de 25 min pelo botão do cabeçalho mudou “Minutos apontados (acumulado)” de 3 h 30 min para 3 h 55 min, com uma nova consulta e nenhuma consulta repetida enquanto a tela ficou parada. Lançamentos de outras pessoas exigem <b>Atualizar</b>. Observação residual, não alterada: o card “Alocações em STEPs” conta alocações de atividades inativas/esteiras finalizadas.</dd>
       <dt>Orientação / tela</dt><dd>Dashboard, visão Operacional.</dd>
       <dt>Perfil</dt><dd>Gestor</dd>
       <dt>Evidência</dt><dd>Relato do item 9 da lista de ajustes. Nesta revisão a tela foi aberta depois dos lançamentos fictícios e mostrou os valores esperados (captura 10); o cenário de alteração com a tela aberta não foi reproduzido.</dd>
@@ -489,6 +559,7 @@
   <div class="div-item" id="GUIA-GES-006">
     <h3>GUIA-GES-006 — Cancelar e Finalizar esteira sem confirmação nem motivo</h3>
     <dl>
+      <dt>Situação em 08/10/2026</dt><dd><b>Limitação real — risco documentado.</b> Reconferido no código em 08/10: <code>handlePatchStatus</code> chama a API direto, sem confirmação nem motivo. O guia alerta na seção 4. Fluxo não alterado.</dd>
       <dt>Orientação / tela</dt><dd>Detalhe da esteira → Cancelar esteira / Finalizar esteira. Guia anterior: “toda transição exige registro de motivo”.</dd>
       <dt>Perfil</dt><dd>Gestor</dd>
       <dt>Evidência</dt><dd><code>src/features/esteiras/EsteiraDetalhePage.tsx</code> (<code>handlePatchStatus</code> chama a API direto, sem confirmação); só as voltas (planejamento/backlog) pedem motivo.</dd>
@@ -502,6 +573,7 @@
   <div class="div-item" id="GUIA-GES-007">
     <h3>GUIA-GES-007 — Plano Operacional da Esteira não auditado nesta revisão</h3>
     <dl>
+      <dt>Situação em 08/10/2026</dt><dd><b>Não validado — aguardando decisão.</b> O fluxo não faz parte das jornadas críticas deste guia e não foi executado nesta revisão. Evidência atual: o detalhe mostra “Esta esteira ainda não possui Plano Operacional. Crie um plano…”; o Backlog operacional avisa que “Esteiras com Plano Operacional enviado à fábrica aparecem em Aguardando encaixe”. Se for adotado na rotina, precisa de auditoria própria antes de entrar no guia.</dd>
       <dt>Orientação / tela</dt><dd>Guia anterior: “aba Plano Operacional → Gerar plano → Aprove o plano”. Tela atual: bloco <b>Plano Operacional da Esteira</b> com <b>Criar plano operacional</b>.</dd>
       <dt>Perfil</dt><dd>Gestor</dd>
       <dt>Evidência</dt><dd><code>src/features/esteiras/conveyor-operational-plan/ConveyorOperationalPlanEmptyState.tsx</code>; o fluxo não foi executado com dados fictícios.</dd>
@@ -515,6 +587,7 @@
   <div class="div-item" id="GUIA-GES-008">
     <h3>GUIA-GES-008 — Ações de PIN do guia anterior não existem; PIN provisório fixo</h3>
     <dl>
+      <dt>Situação em 08/10/2026</dt><dd><b>Limitação real — aguardando decisão.</b> Reconferido em 08/10: a confirmação de <b>Redefinir PIN</b> informa PIN 1234; o servidor usa o mesmo valor fixo (<code>PRODUCTION_DEFAULT_INITIAL_PIN</code>).</dd>
       <dt>Orientação / tela</dt><dd>Guia anterior: “Resetar PIN”, “Desbloquear”, “Ativar / Inativar acesso de produção”.</dd>
       <dt>Perfil</dt><dd>Gestor</dd>
       <dt>Evidência</dt><dd><code>src/features/gestor/ColaboradoresPage.tsx</code>: só <b>Redefinir PIN</b>; a confirmação informa o PIN provisório fixo 1234. Capturas 13b/13c.</dd>
@@ -528,6 +601,7 @@
   <div class="div-item" id="GUIA-GES-009">
     <h3>GUIA-GES-009 — Itens do guia anterior que mudaram de nome ou local</h3>
     <dl>
+      <dt>Situação em 08/10/2026</dt><dd><b>Limitação real — guia corrigido.</b> Menu do perfil Gestor conferido em 08/10 (igual à tabela da seção 1); a seção 8.1 distingue <b>Gerar PDF</b> (relatório) de <b>Imprimir ticket</b> (atividade).</dd>
       <dt>Orientação / tela</dt><dd>“Backlog” → hoje <b>Painel operacional</b>; “Importar OS” → <b>Por documento</b>; “Planejamento Semanal” → <b>Planejamento</b>; “Evolução de Esteiras: Imprimir / Imprimir Fichas” → <b>Gerar PDF</b> e <b>Imprimir ticket</b> por atividade.</dd>
       <dt>Perfil</dt><dd>Gestor</dd>
       <dt>Evidência</dt><dd><code>src/lib/shell/app-nav-config.ts</code>; capturas 01, 07 e 09.</dd>
@@ -541,6 +615,7 @@
   <div class="div-item" id="GUIA-GES-010">
     <h3>GUIA-GES-010 — Semana exibida no formato AAAA-MM-DD</h3>
     <dl>
+      <dt>Situação em 08/10/2026</dt><dd><b>Limitação real (baixo impacto).</b> Reconferido em 08/10 (captura 07): o seletor de semana continua “2026-10-05 → 2026-10-09”; a Pesquisa por período e Ir para a data usam dd/mm/aaaa.</dd>
       <dt>Orientação / tela</dt><dd>Planejamento e Agenda da semana — seletor de semana.</dd>
       <dt>Perfil</dt><dd>Gestor</dd>
       <dt>Evidência</dt><dd>Capturas 07 e 08: “2026-10-05 → 2026-10-09”. O manual completo descreve dd/mm/aaaa.</dd>
@@ -553,7 +628,7 @@
 </section>
 
 <footer>
-  SGP+ — Sistema de Gestão da Produção · Guia Prático do Gestor · revisão 07/10/2026.<br />
+  SGP+ — Sistema de Gestão da Produção · Guia Prático do Gestor · revisão 08/10/2026 · material validado contra a branch de integração; disponibilidade em produção depende de publicação.<br />
   Capturas geradas em ambiente local com dados fictícios (pessoas, OS, clientes e placas inventados). <a class="top" href="#menu">Voltar ao início ↑</a>
 </footer>
 

@@ -93,7 +93,8 @@
   <span class="badge">SGP+ · Guia prático</span>
   <h1>Guia Prático do Colaborador</h1>
   <p class="subtitle">Para quem executa atividades e registra o tempo trabalhado — pelo navegador (com e-mail e senha) ou pelo totem da fábrica (com PIN).</p>
-  <p class="meta">Revisão: 07/10/2026 · conferido contra o SGP+ v1.9.9 · todas as telas usam dados fictícios. O manual completo continua em <b>? Ajuda → Manual do usuário</b>.</p>
+  <p class="meta">Revisão: 08/10/2026 · conferido contra o SGP+ v1.9.9 com os ajustes de 07/10/2026 · todas as telas usam dados fictícios. O manual completo continua em <b>? Ajuda → Manual do usuário</b>.</p>
+  <p class="meta"><b>Material validado contra a branch de integração; disponibilidade em produção depende de publicação.</b></p>
 </header>
 
 <nav class="toc" aria-label="Índice">
@@ -173,23 +174,35 @@
   <p class="where">Onde: menu <b>Colaborador → Minha fila</b>.</p>
   <p>A fila mostra as atividades que a gestão <strong>planejou e publicou</strong> para o seu nome na data escolhida. Rascunho de planejamento não aparece aqui.</p>
   <ol class="steps">
-    <li>A tela abre em <strong>hoje</strong>. Use <strong>Dia anterior</strong>, <strong>Próximo dia</strong>, o calendário ou <strong>Hoje</strong> para trocar a data.</li>
+    <li>A tela abre em <strong>Por dia</strong>, na data de <strong>hoje</strong>. Use <strong>Dia anterior</strong>, <strong>Próximo dia</strong>, o calendário ou <strong>Hoje</strong> para trocar a data.</li>
     <li>Confira os números do dia: <strong>Atividades de hoje</strong>, <strong>Minutos planejados</strong>, <strong>Atenção à sequência</strong> e <strong>Atrasadas</strong>. Eles se referem à data exibida.</li>
     <li>Comece pelos cartões com o selo <strong>Próxima atividade recomendada</strong>.</li>
   </ol>
   <figure>
     <a href="img/guia-colaborador/02-minha-fila.png"><img src="img/guia-colaborador/02-minha-fila.png" alt="Tela Minha fila com seletor de data, números do dia e cartões de atividade" loading="lazy" /></a>
-    <figcaption>Minha fila: seletor de data, números do dia e cartões do grupo <b>Hoje</b>.</figcaption>
+    <figcaption>Minha fila em <b>Por dia</b>: seletor de data, números do dia e cartões do grupo <b>Hoje</b>.</figcaption>
   </figure>
   <figure>
     <a href="img/guia-colaborador/03-minha-fila-cartoes.png"><img src="img/guia-colaborador/03-minha-fila-cartoes.png" alt="Cartões da fila: um com o selo Próxima atividade recomendada e outro com Etapa anterior pendente" loading="lazy" /></a>
     <figcaption>O primeiro cartão está livre para começar. O segundo mostra <b>Etapa anterior pendente: Forrar teto</b> — ainda dá para apontar, com justificativa (seção 5).</figcaption>
   </figure>
+  <h3>Ver vários dias de uma vez — Por período</h3>
+  <ol class="steps">
+    <li>Clique em <strong>Por período</strong>.</li>
+    <li>Informe <strong>De (data planejada)</strong> e <strong>Até (data planejada)</strong>. O período pode atravessar semanas. Se deixar uma das datas vazia, o sistema considera até 92 dias a partir da outra.</li>
+    <li>Confira a frase “Exibindo atividades com data planejada de … a …” e os números do período: <strong>Atividades no período</strong>, <strong>Minutos planejados (período)</strong>, <strong>Atenção à sequência</strong> e <strong>Atrasadas</strong>.</li>
+    <li>Para voltar a um dia só, clique em <strong>Por dia</strong>. <strong>Limpar datas</strong> apaga o período.</li>
+  </ol>
+  <figure>
+    <a href="img/guia-colaborador/03b-minha-fila-periodo.png"><img src="img/guia-colaborador/03b-minha-fila-periodo.png" alt="Minha fila em Por período de 05/10/2026 a 16/10/2026 com 5 atividades e 8 h 15 min planejados" loading="lazy" /></a>
+    <figcaption><b>Por período</b> de 05/10 a 16/10/2026: atividades de duas semanas na mesma lista.</figcaption>
+  </figure>
+  <div class="warn">O período considera a <b>data planejada</b> no planejamento <b>publicado</b> de cada semana (máximo de 92 dias). Data inicial depois da final: “Período inválido: a data inicial deve ser anterior ou igual à data final.” — corrija as datas.</div>
   <h3>Como ler o cartão</h3>
   <ul>
     <li><strong>Número no quadrado azul</strong>: a ordem dada pelo planejamento (a tela pode exibir os cartões em outra ordem).</li>
     <li><strong>Selo de tempo</strong>: o tempo previsto no planejamento.</li>
-    <li><strong>Grupos</strong>: <em>Atrasadas</em> (planejadas para dias anteriores da mesma semana e ainda abertas), <em>Hoje</em> e <em>Concluídas</em>. Um grupo só aparece quando tem cartões.</li>
+    <li><strong>Grupos</strong>: <em>Atrasadas</em> (planejadas para dias anteriores e ainda abertas), <em>Hoje</em> (em <em>Por período</em>: <em>No período (a partir de hoje)</em>) e <em>Concluídas</em>. Um grupo só aparece quando tem cartões.</li>
     <li><strong>Abrir Esteira</strong>: abre o detalhe da esteira.</li>
   </ul>
   <div class="info">A fila <b>não atualiza sozinha</b>. Depois de apontar, feche a gaveta ou clique em <b>Atualizar</b>.</div>
@@ -205,26 +218,26 @@
     <li>Confira a <strong>Data em que o trabalho foi realizado</strong>. Ela começa em <strong>hoje</strong>; use <strong>Ontem</strong> ou o calendário se precisar. <strong>Data futura não é aceita.</strong></li>
     <li>Informe o <strong>Tempo (minutos)</strong> — no mínimo 1.</li>
     <li>Informe a <strong>Quantidade executada</strong> — unidades concluídas <em>neste</em> apontamento. Use <strong>0</strong> se não concluiu nenhuma unidade. O campo não pode ficar vazio.</li>
-    <li>Se aparecer <strong>Justificativa operacional *</strong>, escolha um motivo (seção 5).</li>
+    <li><strong>Justificativa operacional</strong>: normalmente é <em>(opcional)</em>. Quando vier marcada com <strong>*</strong>, é obrigatória — escolha um motivo (seção 5).</li>
     <li>Use <strong>Descrição (opcional)</strong> para uma nota curta.</li>
     <li>Clique em <strong>Salvar apontamento</strong>.</li>
   </ol>
   <figure class="narrow">
-    <a href="img/guia-colaborador/04-registrar-tempo.png"><img src="img/guia-colaborador/04-registrar-tempo.png" alt="Gaveta Registrar tempo com data de hoje, 45 minutos, quantidade 1 e descrição preenchida" loading="lazy" /></a>
-    <figcaption>Formulário preenchido: hoje, 45 minutos, 1 unidade e uma descrição.</figcaption>
+    <a href="img/guia-colaborador/04-registrar-tempo.png"><img src="img/guia-colaborador/04-registrar-tempo.png" alt="Gaveta Registrar tempo com data de hoje, 15 minutos, quantidade 1, justificativa opcional e descrição preenchida" loading="lazy" /></a>
+    <figcaption>Formulário preenchido: hoje, 15 minutos, 1 unidade e uma descrição. A justificativa está como <b>(opcional)</b>.</figcaption>
   </figure>
   <figure class="narrow">
     <a href="img/guia-colaborador/05-apontamento-registrado.png"><img src="img/guia-colaborador/05-apontamento-registrado.png" alt="Aviso Apontamento registrado com sucesso e a lista de atividades da gaveta" loading="lazy" /></a>
     <figcaption>Depois de salvar: aviso <b>“Apontamento registrado com sucesso.”</b> e volta à lista da gaveta. Feche a gaveta para a fila se atualizar.</figcaption>
   </figure>
   <div class="ok">Você pode apontar a mesma atividade várias vezes, em dias diferentes. Passar do tempo previsto <b>não</b> bloqueia o apontamento nesta tela e <b>não</b> conclui a atividade.</div>
-  <div class="warn">O botão <b>Salvar apontamento</b> fica apagado enquanto faltar o tempo (mínimo 1), a quantidade ou a justificativa exigida. Os números <b>Previsto / Realizado / Pendente</b> da gaveta podem não fechar a conta em atividades com mais de uma unidade — veja <a href="#GUIA-COL-002">GUIA-COL-002</a>. O papel (Principal/Apoio) mostrado na gaveta aberta pela fila pode estar errado — veja <a href="#GUIA-COL-003">GUIA-COL-003</a>.</div>
+  <div class="warn">O botão <b>Salvar apontamento</b> fica apagado enquanto faltar o tempo (mínimo 1), a quantidade ou a justificativa exigida. Na gaveta, <b>Previsto</b> é o tempo de <b>uma unidade</b>, <b>Realizado</b> é só o que <b>você</b> apontou e <b>Pendente</b> usa o previsto total da atividade — em atividades com mais de uma unidade a conta não fecha; veja <a href="#GUIA-COL-002">GUIA-COL-002</a>. O papel (Principal/Apoio) mostrado na gaveta aberta pela fila pode estar errado — veja <a href="#GUIA-COL-003">GUIA-COL-003</a>.</div>
 </section>
 
 <!-- 5 -->
 <section id="sequencia">
   <h2>5. Quando o sistema pede justificativa</h2>
-  <p>Na área web (fila e barra superior), a justificativa é obrigatória em dois casos. Em nenhum deles o apontamento é bloqueado: você escolhe o motivo e segue.</p>
+  <p>Na área web (fila e barra superior), o campo <strong>Justificativa operacional</strong> sempre aparece. Ele é <strong>opcional</strong>, exceto nos dois casos abaixo, em que vira obrigatório (<strong>*</strong>). Em nenhum deles o apontamento é bloqueado: você escolhe o motivo e segue.</p>
   <div class="tw"><table>
     <thead><tr><th>Caso</th><th>O que aparece</th></tr></thead>
     <tbody>
@@ -239,9 +252,9 @@
   </ol>
   <figure class="narrow">
     <a href="img/guia-colaborador/06-fora-de-sequencia.png"><img src="img/guia-colaborador/06-fora-de-sequencia.png" alt="Formulário com faixa Fora de sequência e justificativa Atividade anterior pendente de outro colaborador selecionada" loading="lazy" /></a>
-    <figcaption>Apontamento fora de sequência com a justificativa escolhida. O registro fica marcado como <b>Fora de sequência</b> no histórico.</figcaption>
+    <figcaption>Apontamento fora de sequência com a justificativa escolhida. O registro fica marcado como <b>Fora de sequência</b> e a justificativa aparece depois na <b>Minha jornada</b> (seção 9).</figcaption>
   </figure>
-  <div class="info">Na área web <b>não</b> há justificativa por ultrapassar o tempo previsto. Essa exigência existe apenas no totem da fábrica (<a href="#totem">seção 10</a>).</div>
+  <div class="info">Mesmo sem obrigação, você pode escolher um motivo da lista (por exemplo, quando trabalhou em uma situação especial). Ele também fica visível na Minha jornada e para a gestão. Na área web <b>não</b> há justificativa por ultrapassar o tempo previsto. Essa exigência existe apenas no totem da fábrica (<a href="#totem">seção 10</a>).</div>
 </section>
 
 <!-- 6 -->
@@ -264,7 +277,7 @@
   <p class="where">Onde: barra superior → <b>Apontar horas</b> → aba <b>Esteira</b>.</p>
   <ol class="steps">
     <li>Clique em <strong>Apontar horas</strong> na barra superior. A lista <strong>Minhas atividades</strong> traz as atividades em que você está alocado ou que estão no seu planejamento de hoje.</li>
-    <li>Use <strong>Pesquisar</strong> (esteira, cliente, veículo, placa, setor, tarefa ou atividade).</li>
+    <li>Use o campo <strong>Pesquisar</strong> (veja abaixo como pesquisar).</li>
     <li>Se a atividade não aparecer, marque <strong>Buscar outras atividades</strong> e digite pelo menos 2 caracteres. Os resultados extras aparecem no bloco <strong>Fora da sua alocação</strong>.</li>
     <li>Clique em <strong>Apontar</strong> no cartão e preencha o formulário. Para atividades fora da sua alocação, a <strong>justificativa é obrigatória</strong>.</li>
   </ol>
@@ -272,9 +285,23 @@
     <a href="img/guia-colaborador/07-apontar-horas-lista.png"><img src="img/guia-colaborador/07-apontar-horas-lista.png" alt="Gaveta Apontar horas com campo Pesquisar, opção Buscar outras atividades e lista Minhas atividades" loading="lazy" /></a>
     <figcaption>Gaveta <b>Apontar horas</b>: cada cartão mostra Previsto, Realizado e Pendente, além de <b>Apontar</b> e <b>Concluir atividade</b>.</figcaption>
   </figure>
+  <h3>Como pesquisar: “esteira &amp; atividade”</h3>
+  <div class="tw"><table>
+    <thead><tr><th>Você digita</th><th>O sistema procura</th></tr></thead>
+    <tbody>
+      <tr><td><code>7070 &amp; XPTO</code></td><td>antes do <strong>&amp;</strong>: a esteira/OS (número, nome, cliente, veículo ou placa). Depois do <strong>&amp;</strong>: <strong>só o nome da atividade</strong> dessa esteira. Resultado: as atividades com “XPTO” no nome da OS 7070.</td></tr>
+      <tr><td><code>7070 &amp; banco</code></td><td>as atividades da OS 7070 com “banco” no nome.</td></tr>
+      <tr><td>texto sem <strong>&amp;</strong> (ex.: <code>XPTO</code>, <code>7071</code>, uma placa)</td><td>busca livre em OS, esteira, cliente, veículo, placa, setor e atividade.</td></tr>
+    </tbody>
+  </table></div>
   <figure class="narrow">
-    <a href="img/guia-colaborador/08-fora-da-alocacao.png"><img src="img/guia-colaborador/08-fora-da-alocacao.png" alt="Bloco Fora da sua alocação após pesquisar 7070 com Buscar outras atividades marcado" loading="lazy" /></a>
-    <figcaption>Pesquisa “7070” com <b>Buscar outras atividades</b> marcado: atividades da esteira em que você não está alocado aparecem como <b>Fora da sua alocação</b>.</figcaption>
+    <a href="img/guia-colaborador/07b-pesquisa-esteira-atividade.png"><img src="img/guia-colaborador/07b-pesquisa-esteira-atividade.png" alt="Pesquisa 7070 &amp; XPTO na gaveta Apontar horas mostrando só atividades XPTO da OS 7070" loading="lazy" /></a>
+    <figcaption>Pesquisa <b>7070 &amp; XPTO</b>. Aqui aparecem duas atividades porque a terceira (“Corte do tecido XPTO”) já foi concluída — atividade concluída não aparece na gaveta.</figcaption>
+  </figure>
+  <div class="info">Com <b>&amp;</b>, maiúsculas, acentos e espaços ao redor do <b>&amp;</b> não importam (<code>7070&amp;BANCÓ</code> funciona). <b>Sem &amp;</b>, a busca diferencia acentos: digite como está escrito (ex.: “Tapeçaria”, não “tapecaria”).</div>
+  <figure class="narrow">
+    <a href="img/guia-colaborador/08-fora-da-alocacao.png"><img src="img/guia-colaborador/08-fora-da-alocacao.png" alt="Bloco Fora da sua alocação após pesquisar 7071 com Buscar outras atividades marcado" loading="lazy" /></a>
+    <figcaption>Pesquisa “7071” com <b>Buscar outras atividades</b> marcado: atividades da esteira em que você não está alocado aparecem como <b>Fora da sua alocação</b>.</figcaption>
   </figure>
   <div class="info">Só aparecem atividades de esteiras <b>A iniciar</b> ou <b>Em andamento</b>, que não estejam concluídas nem dispensadas.</div>
 </section>
@@ -290,10 +317,11 @@
     <li>Clique em <strong>Salvar apontamento</strong>. Mensagem: “Apontamento extra esteira registrado com sucesso.”</li>
   </ol>
   <figure class="narrow">
-    <a href="img/guia-colaborador/09-extra-esteira.png"><img src="img/guia-colaborador/09-extra-esteira.png" alt="Aba Extra esteira com motivo, data, 15 minutos e a lista Últimos apontamentos extra esteira" loading="lazy" /></a>
+    <a href="img/guia-colaborador/09-extra-esteira.png"><img src="img/guia-colaborador/09-extra-esteira.png" alt="Aba Extra esteira com motivo Treinamento interno, data de hoje, 30 minutos e a lista Últimos apontamentos extra esteira" loading="lazy" /></a>
     <figcaption>Aba <b>Extra esteira</b>. Abaixo do formulário, <b>Últimos apontamentos extra esteira</b> mostra o que você já lançou.</figcaption>
   </figure>
-  <div class="warn">O Extra Esteira <b>não aparece</b> na Minha fila nem na Minha jornada. Para conferir, use o bloco <b>Últimos apontamentos extra esteira</b> desta aba — veja <a href="#GUIA-COL-005">GUIA-COL-005</a>. Lista de motivos vazia (“Não há descrições ativas configuradas.”)? Peça à gestão para cadastrar.</div>
+  <div class="ok">Para conferir o que lançou: bloco <b>Últimos apontamentos extra esteira</b> desta aba ou a seção <b>Extra Esteira no período</b> da <b>Minha jornada</b> (seção 9). O Extra Esteira não aparece na Minha fila e não soma nos minutos apontados em esteiras.</div>
+  <div class="warn">Lista de motivos vazia (“Não há descrições ativas configuradas.”)? Peça à gestão para cadastrar.</div>
 </section>
 
 <!-- 9 -->
@@ -301,26 +329,29 @@
   <h2>9. Conferir o que lançou — Minha jornada</h2>
   <p class="where">Onde: menu <b>Colaborador → Minha jornada</b>.</p>
   <ol class="steps">
-    <li>Abra <strong>Período e filtros</strong>.</li>
-    <li>Em <strong>Recorte temporal</strong>, escolha <em>Últimos 7 dias</em> (padrão), <em>Últimos 15 dias</em>, <em>Últimos 30 dias</em>, <em>Mês atual (UTC)</em> ou <em>Intervalo personalizado</em> (informe <strong>De</strong> e <strong>Até</strong>; o início não pode ser depois do fim).</li>
+    <li><strong>Período e filtros</strong> já vem aberto. A linha <strong>Janela</strong> mostra as datas consideradas.</li>
+    <li>Em <strong>Recorte temporal</strong>, escolha <em>Últimos 7 dias</em> (padrão), <em>Últimos 15 dias</em>, <em>Últimos 30 dias</em>, <em>Mês atual (UTC)</em> ou <em>Intervalo personalizado</em>. No intervalo, as datas são opcionais: sem data final, vai até hoje; sem data inicial, desde o primeiro registro. O início não pode ser depois do fim.</li>
     <li>Se quiser, escolha uma <strong>Esteira (opcional)</strong>.</li>
-    <li>Confira <strong>Minutos apontados (período)</strong> e a lista <strong>Apontamentos no período</strong> no fim da página.</li>
+    <li>Confira os números do topo (inclusive <strong>Extra Esteira (período)</strong>) e, no fim da página, as seções <strong>Apontamentos no período</strong> e <strong>Extra Esteira no período</strong>.</li>
   </ol>
   <figure>
-    <a href="img/guia-colaborador/10-minha-jornada-periodo.png"><img src="img/guia-colaborador/10-minha-jornada-periodo.png" alt="Minha jornada com Período e filtros aberto, números do período e colunas Pendentes, Em andamento e Concluídas" loading="lazy" /></a>
+    <a href="img/guia-colaborador/10-minha-jornada-periodo.png"><img src="img/guia-colaborador/10-minha-jornada-periodo.png" alt="Minha jornada com Período e filtros aberto, resumo com Extra Esteira (período), números do período e colunas Pendentes, Em andamento e Concluídas" loading="lazy" /></a>
     <figcaption>Minha jornada com <b>Período e filtros</b> aberto. A linha <b>Janela</b> mostra as datas consideradas.</figcaption>
   </figure>
   <figure>
-    <a href="img/guia-colaborador/11-minha-jornada-apontamentos.png"><img src="img/guia-colaborador/11-minha-jornada-apontamentos.png" alt="Lista Apontamentos no período com um registro marcado Fora de sequência" loading="lazy" /></a>
-    <figcaption><b>Apontamentos no período</b>: até 20 registros, do mais recente para o mais antigo. O selo <b>Fora de sequência</b> marca o apontamento feito com justificativa de sequência.</figcaption>
+    <a href="img/guia-colaborador/11-minha-jornada-apontamentos.png"><img src="img/guia-colaborador/11-minha-jornada-apontamentos.png" alt="Lista Apontamentos no período com observações e um registro Fora de sequência com a justificativa" loading="lazy" /></a>
+    <figcaption><b>Apontamentos no período</b>: até 20 registros, do mais recente para o mais antigo. Cada um mostra a <b>Justificativa</b> (quando houver) e a <b>Observação</b> (o texto da descrição). O selo <b>Fora de sequência</b> marca o apontamento feito com justificativa de sequência.</figcaption>
+  </figure>
+  <figure>
+    <a href="img/guia-colaborador/11b-minha-jornada-extra-esteira.png"><img src="img/guia-colaborador/11b-minha-jornada-extra-esteira.png" alt="Seção Extra Esteira no período com dois lançamentos e o total de 50 minutos" loading="lazy" /></a>
+    <figcaption><b>Extra Esteira no período</b>: total e lançamentos (web e Modo Fábrica). Não entra nos minutos apontados em esteiras. Um lançamento continua aparecendo mesmo se a gestão retirar aquele motivo da lista.</figcaption>
   </figure>
   <div class="warn"><b>Leia com cuidado:</b>
     <ul>
       <li>As colunas seguem a situação da <b>esteira</b>, não da atividade: uma atividade já concluída pode continuar em <b>Em andamento</b> com o botão <b>Apontar</b> (o registro será recusado) — <a href="#GUIA-COL-004">GUIA-COL-004</a>.</li>
       <li><b>Pendente (em aberto)</b> é quantidade de atividades, não tempo.</li>
-      <li>O <b>Previsto</b> considera uma unidade por atividade.</li>
-      <li>A lista não mostra a justificativa nem a descrição dos apontamentos — <a href="#GUIA-COL-006">GUIA-COL-006</a>.</li>
-      <li>O <b>Apontar</b> desta tela abre uma página sem justificativa e sem concluir. Prefira <b>Apontar horas</b> da barra superior — <a href="#GUIA-COL-007">GUIA-COL-007</a>.</li>
+      <li>O <b>Previsto</b> considera uma unidade por atividade (em atividade de 2 unidades, mostra o tempo de uma).</li>
+      <li>O <b>Apontar</b> desta tela abre uma página sem justificativa e sem concluir: se a atividade exigir justificativa, o registro é recusado (“Selecione uma justificativa operacional para este apontamento.”). <b>Use Apontar horas da barra superior</b> — <a href="#GUIA-COL-007">GUIA-COL-007</a>.</li>
     </ul>
   </div>
 </section>
@@ -403,6 +434,9 @@
     <thead><tr><th>Você vê</th><th>Por quê</th><th>O que fazer</th></tr></thead>
     <tbody>
       <tr><td>A atividade não aparece na fila</td><td>não foi planejada para você nesta data, ou o planejamento não foi publicado</td><td>confira a data; use <b>Apontar horas</b> da barra superior (seção 7); fale com a gestão</td></tr>
+      <tr><td>“Período inválido: a data inicial deve ser anterior ou igual à data final.”</td><td>datas do período invertidas (Minha fila, Minha jornada)</td><td>corrija De/Até</td></tr>
+      <tr><td>“Selecione uma justificativa operacional para este apontamento.” na página aberta pela Minha jornada</td><td>a página não tem campo de justificativa</td><td>use <b>Apontar horas</b> da barra superior (<a href="#GUIA-COL-007">GUIA-COL-007</a>)</td></tr>
+      <tr><td>Pesquisa não encontra a atividade</td><td>acento diferente (sem &amp;), atividade concluída, ou atividade fora da sua alocação</td><td>use <code>OS &amp; atividade</code>; marque <b>Buscar outras atividades</b></td></tr>
       <tr><td>“A data de realização não pode ser futura.”</td><td>data posterior a hoje</td><td>use Hoje, Ontem ou uma data passada</td></tr>
       <tr><td>“Esta esteira ainda não foi liberada para produção.” / “…está em planejamento…”</td><td>a esteira ainda não está <b>A iniciar</b> ou <b>Em andamento</b></td><td>aguarde a liberação pela gestão</td></tr>
       <tr><td>“Esta atividade já está concluída operacionalmente…”</td><td>a atividade foi concluída</td><td>clique em <b>Atualizar</b>; se faltou tempo, peça à gestão para reabrir</td></tr>
@@ -419,11 +453,32 @@
 <!-- 13 -->
 <section id="divergencias">
   <h2>13. Divergências, ressalvas e decisões pendentes</h2>
-  <p>Este capítulo registra o que o guia anterior orientava de forma incompatível com o sistema, comportamentos confusos observados na execução com dados fictícios e pontos que dependem de decisão. <strong>Nenhum item abaixo é funcionalidade entregue.</strong></p>
+  <p>Este capítulo registra o que o guia anterior orientava de forma incompatível com o sistema, comportamentos confusos observados na execução com dados fictícios e pontos que dependem de decisão. Cada item traz a <strong>situação em 08/10/2026</strong>:</p>
+  <ul>
+    <li><strong>Resolvido no sistema</strong> — corrigido pelos ajustes de 07/10/2026 e conferido na tela; o guia já descreve o comportamento novo.</li>
+    <li><strong>Limitação real</strong> — o sistema funciona assim hoje; o guia orienta como conviver com isso.</li>
+    <li><strong>Aguardando decisão</strong> — depende de definição da gestão/produto.</li>
+  </ul>
+  <div class="tw"><table>
+    <thead><tr><th>ID</th><th>Assunto</th><th>Situação em 08/10/2026</th></tr></thead>
+    <tbody>
+      <tr><td><a href="#GUIA-COL-001">GUIA-COL-001</a></td><td>Menu sem “Minhas Atividades”</td><td>Limitação real — guia corrigido</td></tr>
+      <tr><td><a href="#GUIA-COL-002">GUIA-COL-002</a></td><td>Previsto/Realizado/Pendente da gaveta</td><td>Limitação real — aguardando decisão</td></tr>
+      <tr><td><a href="#GUIA-COL-003">GUIA-COL-003</a></td><td>Papel “Apoio” pela fila</td><td>Limitação real — aguardando correção</td></tr>
+      <tr><td><a href="#GUIA-COL-004">GUIA-COL-004</a></td><td>Colunas da Minha jornada</td><td>Limitação real — aguardando decisão</td></tr>
+      <tr><td><a href="#GUIA-COL-005">GUIA-COL-005</a></td><td>Extra Esteira na Minha jornada</td><td><strong>Resolvido no sistema</strong></td></tr>
+      <tr><td><a href="#GUIA-COL-006">GUIA-COL-006</a></td><td>Justificativa e observação na Minha jornada</td><td><strong>Resolvido no sistema</strong></td></tr>
+      <tr><td><a href="#GUIA-COL-007">GUIA-COL-007</a></td><td>Página Apontamento sem justificativa</td><td>Limitação real — usar a gaveta</td></tr>
+      <tr><td><a href="#GUIA-COL-008">GUIA-COL-008</a></td><td>Totem × navegador da fábrica</td><td>Limitação real — aguardando decisão</td></tr>
+      <tr><td><a href="#GUIA-COL-009">GUIA-COL-009</a></td><td>Busca rápida e Alertas</td><td>Limitação real (sem efeito)</td></tr>
+      <tr><td><a href="#GUIA-COL-010">GUIA-COL-010</a></td><td>Correção pelo colaborador</td><td>Limitação real — correção pela gestão</td></tr>
+    </tbody>
+  </table></div>
 
   <div class="div-item" id="GUIA-COL-001">
     <h3>GUIA-COL-001 — “Minhas Atividades” não está mais no menu</h3>
     <dl>
+      <dt>Situação em 08/10/2026</dt><dd><b>Limitação real — guia corrigido.</b> Menu conferido em 08/10 (perfil Colaborador: Minha fila, Minha jornada, Alterar senha). O guia usa Minha fila. A rota antiga continua acessível só pelo endereço; aposentá-la é decisão de produto.</dd>
       <dt>Orientação / tela</dt><dd>Guia anterior: “menu lateral → Minhas Atividades” como tela principal do colaborador.</dd>
       <dt>Perfil</dt><dd>Colaborador</dd>
       <dt>Evidência</dt><dd><code>src/lib/shell/app-nav-config.ts</code> (<code>COLABORADOR_NAV_ITEMS</code> = Minha fila, Chamados, Minha jornada); a rota <code>/app/minhas-atividades</code> ainda existe em <code>src/routes/AppRoutes.tsx</code>.</dd>
@@ -437,6 +492,7 @@
   <div class="div-item" id="GUIA-COL-002">
     <h3>GUIA-COL-002 — Previsto, Realizado e Pendente da gaveta não fecham a conta</h3>
     <dl>
+      <dt>Situação em 08/10/2026</dt><dd><b>Limitação real — aguardando decisão.</b> Reconferido em 08/10: atividade de 2 un. × 1 h/un. mostra Previsto 1 h, Realizado 1 h 45 min (só os seus apontamentos) e Pendente 15 min (2 h − 1 h 45 min). O guia explica a leitura na seção 4.</dd>
       <dt>Orientação / tela</dt><dd>Gaveta <b>Apontar horas</b>, cartão da atividade.</dd>
       <dt>Perfil</dt><dd>Colaborador e gestor (a gaveta é a mesma)</dd>
       <dt>Evidência</dt><dd><code>server/src/modules/my-activities/my-activities.service.ts</code> (<code>mapCandidateRow</code>: Pendente = previsto × quantidade − realizado); <code>src/features/shell/QuickTimeEntryDrawer.tsx</code> exibe <code>plannedMinutes</code> (uma unidade). Captura 05: atividade de 2 un. × 2 h mostra Previsto 2 h, Realizado 1 h 45 min, Pendente 2 h 15 min.</dd>
@@ -450,6 +506,7 @@
   <div class="div-item" id="GUIA-COL-003">
     <h3>GUIA-COL-003 — Papel “Apoio” exibido para quem é Principal (gaveta aberta pela fila)</h3>
     <dl>
+      <dt>Situação em 08/10/2026</dt><dd><b>Limitação real — aguardando correção.</b> Reconferido em 08/10: a mesma atividade aparece como “Costura · Apoio” na gaveta aberta pela fila e “Costura · Principal” na lista da barra superior. Não altera o registro.</dd>
       <dt>Orientação / tela</dt><dd>Minha fila → Apontar horas → cabeçalho do formulário (“Setor · Papel”).</dd>
       <dt>Perfil</dt><dd>Colaborador</dd>
       <dt>Evidência</dt><dd><code>server/src/modules/my-activities/my-activities.repository.ts</code> — <code>listTimeEntryCandidatesFromPublishedPlan</code> devolve <code>false AS is_primary</code>. Captura 04: “Costura · Apoio” para a responsável principal; a lista da barra superior (captura 05) mostra “Costura · Principal” para a mesma atividade.</dd>
@@ -463,6 +520,7 @@
   <div class="div-item" id="GUIA-COL-004">
     <h3>GUIA-COL-004 — Minha jornada agrupa pela situação da esteira</h3>
     <dl>
+      <dt>Situação em 08/10/2026</dt><dd><b>Limitação real — aguardando decisão.</b> Reconferido em 08/10 (captura 10): “Corte do tecido XPTO”, já concluída, continua em Em andamento com Apontar; “Costurar capas”, de esteira Aguardando planejamento e não concluída, aparece com o rótulo “Concluída”.</dd>
       <dt>Orientação / tela</dt><dd>Minha jornada → colunas Pendentes / Em andamento / Concluídas.</dd>
       <dt>Perfil</dt><dd>Colaborador</dd>
       <dt>Evidência</dt><dd><code>src/features/colaborador/JornadaPage.tsx</code> (<code>canApontar</code> usa <code>operationalBucket</code> da esteira; o rótulo “Concluída” é exibido sempre que não há Apontar). Captura 10: “Corte do tecido XPTO”, já concluída, aparece em Em andamento com Apontar; “Costurar capas”, de esteira aguardando planejamento, aparece com “Concluída”.</dd>
@@ -474,8 +532,9 @@
   </div>
 
   <div class="div-item" id="GUIA-COL-005">
-    <h3>GUIA-COL-005 — Extra Esteira não aparece na Minha jornada</h3>
+    <h3>GUIA-COL-005 — Extra Esteira não aparecia na Minha jornada (resolvido)</h3>
     <dl>
+      <dt>Situação em 08/10/2026</dt><dd><b>Resolvido no sistema (ajustes de 07/10/2026).</b> Conferido em 08/10: chip <b>Extra Esteira (período)</b> no topo e seção <b>Extra Esteira no período</b> com os lançamentos (capturas 10 e 11b). Lançamento continua visível mesmo se o motivo for retirado do catálogo (testado em 07/10). O texto abaixo é o registro original.</dd>
       <dt>Orientação / tela</dt><dd>Minha jornada (totais e lista).</dd>
       <dt>Perfil</dt><dd>Colaborador</dd>
       <dt>Evidência</dt><dd>Captura 10: Minutos apontados (período) = 3 h 45 min, sem os 20 min de Extra Esteira registrados no mesmo período (captura 09). Para a gestão, a Jornada por colaborador mostra o bloco Extra Esteira (Guia do Gestor, captura 11).</dd>
@@ -487,8 +546,9 @@
   </div>
 
   <div class="div-item" id="GUIA-COL-006">
-    <h3>GUIA-COL-006 — Justificativa e descrição do apontamento não são exibidas</h3>
+    <h3>GUIA-COL-006 — Justificativa e descrição do apontamento não eram exibidas (resolvido)</h3>
     <dl>
+      <dt>Situação em 08/10/2026</dt><dd><b>Resolvido no sistema (ajustes de 07/10/2026).</b> Conferido em 08/10: a lista mostra “Justificativa (fora de sequência): … — complemento” e “Observação: …” (captura 11). O texto abaixo é o registro original.</dd>
       <dt>Orientação / tela</dt><dd>Minha jornada → Apontamentos no período.</dd>
       <dt>Perfil</dt><dd>Colaborador</dd>
       <dt>Evidência</dt><dd>Captura 11: o registro fora de sequência mostra apenas o selo; motivo, complemento e descrição não aparecem na lista.</dd>
@@ -502,6 +562,7 @@
   <div class="div-item" id="GUIA-COL-007">
     <h3>GUIA-COL-007 — Página “Apontamento” (via Minha jornada) sem justificativa e sem concluir</h3>
     <dl>
+      <dt>Situação em 08/10/2026</dt><dd><b>Limitação real — guia orienta usar a gaveta.</b> Reconferido em 08/10: a página não tem justificativa nem conclusão; ao registrar em atividade fora de sequência, o sistema recusa com “Selecione uma justificativa operacional para este apontamento.”</dd>
       <dt>Orientação / tela</dt><dd>Minha jornada → Apontar → página <code>/app/apontamento/:id</code>.</dd>
       <dt>Perfil</dt><dd>Colaborador</dd>
       <dt>Evidência</dt><dd><code>src/features/colaborador/ApontamentoPage.tsx</code> não contém campo de justificativa nem opção de conclusão.</dd>
@@ -515,6 +576,7 @@
   <div class="div-item" id="GUIA-COL-008">
     <h3>GUIA-COL-008 — Totem e navegador da fábrica têm recursos e regras de PIN diferentes</h3>
     <dl>
+      <dt>Situação em 08/10/2026</dt><dd><b>Limitação real — aguardando decisão.</b> Código do totem e do SGP+ Produção sem alteração desde a captura (07/10); PIN do totem = 4 dígitos, navegador aceita 4 a 8; <b>Concluir etapa</b> continua desativado (“Disponível na próxima etapa”).</dd>
       <dt>Orientação / tela</dt><dd>Guia anterior: Kiosk com “PIN 4+ dígitos” e “SGP+ Produção funciona de forma similar ao Kiosk”.</dd>
       <dt>Perfil</dt><dd>Colaborador (produção)</dd>
       <dt>Evidência</dt><dd><code>src/features/kiosk/KioskPinPad.tsx</code> (<code>PIN_LENGTH = 4</code>); <code>server/src/modules/production/production.schemas.ts</code> (<code>^\d{4,8}$</code>). Captura 21: <b>Concluir etapa</b> desativado no navegador; sem Extra Esteira e sem Outra atividade.</dd>
@@ -528,6 +590,7 @@
   <div class="div-item" id="GUIA-COL-009">
     <h3>GUIA-COL-009 — Busca rápida e Alertas sem efeito</h3>
     <dl>
+      <dt>Situação em 08/10/2026</dt><dd><b>Limitação real.</b> Reconferido no código em 08/10: o campo Busca rápida é somente leitura (“Busca visual (mock)”) e Alertas não executa ação (“Notificações (mock)”).</dd>
       <dt>Orientação / tela</dt><dd>Barra superior (campo Busca rápida) e item Alertas do menu do usuário.</dd>
       <dt>Perfil</dt><dd>Todos</dd>
       <dt>Evidência</dt><dd><code>src/components/AppHeader.tsx</code> (item “Alertas”); campo “Busca rápida…” visível nas capturas 02 e 12.</dd>
@@ -541,6 +604,7 @@
   <div class="div-item" id="GUIA-COL-010">
     <h3>GUIA-COL-010 — Colaborador não corrige nem remove o próprio apontamento pela tela</h3>
     <dl>
+      <dt>Situação em 08/10/2026</dt><dd><b>Limitação real — correção pela gestão.</b> Reconferido em 08/10: a tela de correção exige permissões gerenciais (<code>time_entries.edit_any</code>/<code>delete_any</code>, concedidas a Gestor e Administrador pela migration 0053); o perfil Colaborador não as tem.</dd>
       <dt>Orientação / tela</dt><dd>Guia anterior: “Apontei o tempo errado — fale com o gestor”. Manual completo: o autor pode remover o próprio lançamento.</dd>
       <dt>Perfil</dt><dd>Colaborador</dd>
       <dt>Evidência</dt><dd><code>src/routes/AppRoutes.tsx</code>: a tela <code>/app/gestao/apontamento/:stepNodeId</code> exige <code>time_entries.create_on_behalf</code>, <code>time_entries.edit_any</code> ou <code>time_entries.delete_any</code>; o perfil COLABORADOR não tem nenhuma delas por padrão.</dd>
@@ -553,7 +617,7 @@
 </section>
 
 <footer>
-  SGP+ — Sistema de Gestão da Produção · Guia Prático do Colaborador · revisão 07/10/2026.<br />
+  SGP+ — Sistema de Gestão da Produção · Guia Prático do Colaborador · revisão 08/10/2026 · material validado contra a branch de integração; disponibilidade em produção depende de publicação.<br />
   Capturas geradas em ambiente local com dados fictícios (pessoas, OS, clientes e placas inventados). <a class="top" href="#entrar">Voltar ao início ↑</a>
 </footer>
 

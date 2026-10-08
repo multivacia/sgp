@@ -7,12 +7,15 @@
 
 ## Identificação
 
-- TASK_ID: `ajustes-tati-2026-10-07` (integração: `ajustes-tati-2026-10-07-integracao`)
-- Atualizado em: `2026-10-08 01:20 UTC`
-- Branch: `integration/ajustes-tati-2026-10-07`
-- Base: `origin/develop` @ `ecb26da78c4a4dbfefcfab7f5de494a31445555d`
+- TASK_ID: `guias-praticos-auditoria-final-2026-10-08` (anterior: `ajustes-tati-2026-10-07`)
+- Atualizado em: `2026-10-08 ~17:30 UTC`
+- Branch: `docs/guias-praticos-auditoria-final-2026-10-08` (a partir de `origin/integration/ajustes-tati-2026-10-07` @ `f15483d6`)
 - HEAD: ver `git log -1`
 - Working tree: `clean` após commit
+
+## Última atividade (08/10)
+
+Guias Práticos auditados contra a integração: 20/20 ressalvas classificadas (4 resolvidas no sistema, 15 limitações reais, GES-007 não validado), 17 capturas atualizadas + 7 novas, sem alteração de código. Status: pronto para validação da Tati com ressalvas de produto. Retorno: `docs/ai/returns/guias-praticos-auditoria-final-2026-10-08-retorno.md`.
 
 ## Objetivo atual
 
