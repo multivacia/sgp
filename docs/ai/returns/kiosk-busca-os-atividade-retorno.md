@@ -6,7 +6,7 @@
 - **Status final:** CONCLUÍDO (backend + testes). Validação manual de ponta a ponta com banco **não executada** (ver Ressalvas).
 - **Branch:** `fix/kiosk-busca-os-atividade` (criada a partir de `origin/develop`)
 - **SHA inicial (base):** `a4a3d5d636164dba020498397a65f6f2e66e280e` (tip de `origin/develop` após `git fetch --prune`; igual à base conhecida)
-- **SHA final:** ver commit `fix(kiosk): ...` no topo da branch (informado na resposta da sessão)
+- **SHA final:** `f4d38a42a441b8f82146d1d82c35e0bbef3378d3` (commit da correção; este retorno é atualizado no commit seguinte, somente docs)
 
 ## Governança lida
 
