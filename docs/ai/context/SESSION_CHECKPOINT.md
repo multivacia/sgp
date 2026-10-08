@@ -8,7 +8,7 @@
 ## Identificação
 
 - TASK_ID: `ajustes-tati-2026-10-07` (integração: `ajustes-tati-2026-10-07-integracao`)
-- Atualizado em: `2026-10-08 UTC`
+- Atualizado em: `2026-10-08 01:20 UTC`
 - Branch: `integration/ajustes-tati-2026-10-07`
 - Base: `origin/develop` @ `ecb26da78c4a4dbfefcfab7f5de494a31445555d`
 - HEAD: ver `git log -1`
@@ -25,7 +25,7 @@ Integrar, para validação com a Tati, as duas frentes desenvolvidas em paralelo
 
 ## Estado em uma frase
 
-Três commits aplicados por cherry-pick (ordem: `2c7e458e`, `f6f1d6a1`, `f8eab69e`); conflitos só em docs de contexto, resolvidos por conteúdo. Sem PR, sem merge em `develop`, sem deploy.
+Três commits aplicados por cherry-pick (ordem: `2c7e458e`, `f6f1d6a1`, `f8eab69e`); conflitos só em docs de contexto, resolvidos por conteúdo. Build/typecheck/testes validados contra a baseline `develop` (sem falha nova) e inspeção funcional local feita; branch publicada por push normal. Sem PR, sem merge em `develop`, sem deploy.
 
 ## Concluído
 
@@ -54,7 +54,7 @@ Três commits aplicados por cherry-pick (ordem: `2c7e458e`, `f6f1d6a1`, `f8eab69
 
 ## Riscos / ressalvas
 
-- `npx eslint .` e alguns testes têm falhas preexistentes (ver retorno de integração).
+- Falhas preexistentes idênticas em `develop`: ESLint 146 problemas; vitest frontend 5 (`ApontamentoPage`/`ApontamentoGestorPage`); servidor 4 (`env`, `my-activities-time-entry-candidates`, `my-work-queue.service`, `operational-planning.weekly-view.http`).
 - A suíte de integração do servidor altera dados do banco: nunca rodar contra banco compartilhado.
 
 ## Não repetir
