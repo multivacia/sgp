@@ -14,6 +14,11 @@ import {
   type MyWorkQueueRawRow,
 } from './my-work-queue.repository.js'
 import { applyWorkQueuePrioritization } from './work-queue-prioritization.js'
+import { consolidateWorkQueueRowsByActivity } from './work-queue-consolidation.js'
+import {
+  sumCollaboratorRealizedMinutesByStep,
+  summarizeCollaboratorPlannedSteps,
+} from '../operational-planning/planned-activity.repository.js'
 import { mapWorkQueueSequenceForCollaborator } from './work-queue-sequence-for-collaborator.js'
 import { resolveIsNextRecommended } from './work-queue-sequence-presentation.js'
 import { resolveWorkQueuePeriod } from './work-queue-period.js'
@@ -75,6 +80,31 @@ export function groupWorkQueueItem(
 }
 
 /**
+ * Fila do Kiosk com futuras: atrasadas, depois hoje, depois futuras (ordem estável dentro de
+ * cada faixa). Atividade futura não é recomendada enquanto houver atrasada ou de hoje em aberto.
+ */
+export function orderKioskQueueByDateBucket(
+  items: MyWorkQueueItemApi[],
+  today: string,
+): MyWorkQueueItemApi[] {
+  const bucket = (item: MyWorkQueueItemApi): number =>
+    item.plannedDate < today ? 0 : item.plannedDate === today ? 1 : 2
+  const ordered = items
+    .map((item, index) => ({ item, index }))
+    .sort((a, b) => bucket(a.item) - bucket(b.item) || a.index - b.index)
+    .map((entry) => entry.item)
+  const hasCurrent = ordered.some(
+    (item) => !item.isActivityCompleted && item.plannedDate <= today,
+  )
+  if (!hasCurrent) return ordered
+  return ordered.map((item) =>
+    item.plannedDate > today && item.isNextRecommended
+      ? { ...item, isNextRecommended: false }
+      : item,
+  )
+}
+
+/**
  * Retorna a fila de trabalho para um collaboratorId já resolvido.
  * Pode ser chamada diretamente pelo endpoint production (sem resolução via userId).
  */
@@ -91,15 +121,34 @@ export async function serviceGetWorkQueueForCollaborator(
      * Quando presente, `date` passa a ser "hoje" (America/Sao_Paulo) e `includePastDue` é ignorado.
      */
     period?: { from: string; to: string } | null
+    /**
+     * Fila do Kiosk (TASK apontamento-somente-planejado): todas as atividades planejadas para
+     * o colaborador em qualquer semana (atrasadas, hoje e futuras), em aberto. `date` = hoje.
+     */
+    allOpenPlanned?: boolean
   },
 ): Promise<MyWorkQueueResponseApi> {
-  const period = input.period ?? null
-  const date = period ? operationalToday() : input.date?.trim() || todayIsoLocal()
+  const allOpenPlanned = input.allOpenPlanned === true
+  const period = allOpenPlanned ? null : (input.period ?? null)
+  const date =
+    period || allOpenPlanned ? operationalToday() : input.date?.trim() || todayIsoLocal()
   const includePastDue = input.includePastDue ?? true
   const { collaboratorId } = input
 
   let raw: MyWorkQueueRawRow[]
-  if (period) {
+  if (allOpenPlanned) {
+    raw = await listMyWorkQueueRows(pool, {
+      workPlanId: null,
+      collaboratorId,
+      date,
+      includePastDue: false,
+      allOpenPlanned: true,
+      listOptions: { ...input.listOptions, planItemStatuses: ['PLANNED'] },
+    })
+    if (raw.length === 0) {
+      return emptyResponse(date)
+    }
+  } else if (period) {
     const plans = await findPublishedWorkPlansInRange(
       pool,
       mondayOfWeekContaining(period.from),
@@ -163,7 +212,16 @@ export async function serviceGetWorkQueueForCollaborator(
     overload: todayMinutes > capacity.resolvedDailyMinutes,
   }
 
-  const conveyorIds = [...new Set(raw.map((row) => row.conveyor_id))]
+  // Um cartão por atividade: data mais antiga e minutos somados de todos os dias do
+  // colaborador; apontado = apontamentos do próprio colaborador. Totais acima usam `raw`.
+  const stepIds = [...new Set(raw.map((row) => row.activity_node_id))]
+  const [plannedSummaries, realizedByStep] = await Promise.all([
+    summarizeCollaboratorPlannedSteps(pool, collaboratorId, stepIds),
+    sumCollaboratorRealizedMinutesByStep(pool, collaboratorId, stepIds),
+  ])
+  const cards = consolidateWorkQueueRowsByActivity(raw, plannedSummaries)
+
+  const conveyorIds = [...new Set(cards.map((row) => row.conveyor_id))]
   const nodesByConveyor = new Map<string, SequenceAnalysisNode[]>()
   const plannedByConveyor = new Map<string, Map<string, Set<string>>>()
   await Promise.all(
@@ -177,7 +235,7 @@ export async function serviceGetWorkQueueForCollaborator(
     }),
   )
 
-  const mappedItems = raw.map((row): MyWorkQueueItemApi => {
+  const mappedItems = cards.map((row): MyWorkQueueItemApi => {
     const isActivityCompleted = row.activity_operational_status === 'COMPLETED'
     const isActivityAborted = row.activity_operational_status === 'ABORTED'
     const closedForPointing = isActivityCompleted || isActivityAborted
@@ -203,6 +261,7 @@ export async function serviceGetWorkQueueForCollaborator(
       plannedDate: row.planned_date,
       plannedOrder: row.planned_order,
       plannedMinutes: row.planned_minutes,
+      realizedMinutes: realizedByStep.get(row.activity_node_id) ?? 0,
       status: row.status,
       group: groupWorkQueueItem(row, date),
       conveyorId: row.conveyor_id,
@@ -269,7 +328,9 @@ export async function serviceGetWorkQueueForCollaborator(
     }
   })
 
-  const items = applyWorkQueuePrioritization(mappedItems)
+  const items = allOpenPlanned
+    ? orderKioskQueueByDateBucket(applyWorkQueuePrioritization(mappedItems), date)
+    : applyWorkQueuePrioritization(mappedItems)
 
   const summary = {
     plannedItemsToday: scopeRows.length,

@@ -1,6 +1,5 @@
 import type pg from 'pg'
-import { mondayOfWeekContaining } from '../operational-planning/operational-planning.week.js'
-import { findPublishedWorkPlanForWeek } from '../my-work-queue/my-work-queue.repository.js'
+import { PLANNED_ITEMS_CTE } from '../operational-planning/planned-activity.repository.js'
 import { foldSearchText, sqlFold } from '../../shared/accentInsensitiveSearch.js'
 
 export type MyActivityRawRow = {
@@ -144,268 +143,47 @@ function scopedCandidateSearchSql(conveyorParam: number, activityParam: number):
 }
 
 /**
- * STEPs apontáveis: esteira ativa (não concluída), STEP ativo e não concluído operacionalmente;
- * alocação direta ou via time (membro ativo). Uma linha por STEP (prioriza assignee COLLABORATOR).
+ * Candidatos de apontamento pela regra canônica (TASK apontamento-somente-planejado):
+ * só atividades com item planejado válido (plano publicado vigente, qualquer semana),
+ * STEP em aberto (nem COMPLETED nem ABORTED), esteira A_INICIAR/EM_ANDAMENTO.
+ *
+ * - `scope = 'mine'`: planejadas para o colaborador. Data = menor data dele; minutos = soma
+ *   dos itens dele (todos os dias).
+ * - `scope = 'others'`: planejadas só para outros colaboradores (nenhum item dele).
+ *   Data = menor data; minutos = soma de todos os itens.
+ *
+ * Uma linha por atividade; realizado = apontamentos do próprio colaborador.
+ * `planned_quantity` = 1: os minutos do plano já são o total planejado.
  */
-export async function listTimeEntryCandidatesForCollaborator(
-  pool: pg.Pool,
-  collaboratorId: string,
-  options: TimeEntryCandidateSearch & { limit: number },
-): Promise<TimeEntryCandidateRawRow[]> {
-  const q = options.q?.trim() || null
-  const conveyorQ = normalizeSearchTerm(options.conveyorQ)
-  const activityQ = normalizeSearchTerm(options.activityQ)
-  const limit = options.limit
-  const r = await pool.query<TimeEntryCandidateRawRow>(
-    `
-    WITH ranked AS (
-      SELECT
-        cna.id::text AS assignee_id,
-        cv.id::text AS conveyor_id,
-        cv.code AS conveyor_code,
-        cv.name AS conveyor_name,
-        cv.client_name AS client_name,
-        cv.vehicle AS vehicle_label,
-        cv.plate AS plate,
-        step.id::text AS step_node_id,
-        step.name AS step_name,
-        area.name AS area_name,
-        opt.name AS option_name,
-        cna.is_primary,
-        cna.assignment_type::text AS assignment_type,
-        step.planned_minutes::text AS planned_minutes,
-        step.planned_quantity::text AS planned_quantity,
-        (
-          SELECT COALESCE(SUM(cte.minutes), 0)::text
-          FROM conveyor_time_entries cte
-          WHERE cte.deleted_at IS NULL
-            AND cte.conveyor_node_id = step.id
-            AND cte.collaborator_id = $1::uuid
-        ) AS realized_minutes,
-        opt.order_index::text AS opt_order_index,
-        area.order_index::text AS area_order_index,
-        step.order_index::text AS step_order_index,
-        NULL::text AS planned_date,
-        ROW_NUMBER() OVER (
-          PARTITION BY step.id
-          ORDER BY
-            CASE WHEN cna.assignment_type = 'COLLABORATOR' THEN 0 ELSE 1 END,
-            cna.id
-        ) AS rn
-      FROM conveyor_node_assignees cna
-      INNER JOIN conveyor_nodes step
-        ON step.id = cna.conveyor_node_id
-        AND step.deleted_at IS NULL
-        AND step.is_active = TRUE
-        AND step.node_type = 'STEP'
-        AND ((step.operational_status IS DISTINCT FROM 'COMPLETED' AND step.operational_status IS DISTINCT FROM 'ABORTED'))
-      INNER JOIN conveyors cv
-        ON cv.id = cna.conveyor_id
-        AND cv.deleted_at IS NULL
-        AND cv.operational_status IN ('A_INICIAR', 'EM_ANDAMENTO')
-      INNER JOIN conveyor_nodes area
-        ON area.id = step.parent_id
-        AND area.deleted_at IS NULL
-        AND area.is_active = TRUE
-        AND area.node_type = 'AREA'
-      INNER JOIN conveyor_nodes opt
-        ON opt.id = area.parent_id
-        AND opt.deleted_at IS NULL
-        AND opt.is_active = TRUE
-        AND opt.node_type = 'OPTION'
-      WHERE cna.deleted_at IS NULL
-        AND (
-          (
-            cna.assignment_type = 'COLLABORATOR'
-            AND cna.collaborator_id = $1::uuid
-          )
-          OR (
-            cna.assignment_type = 'TEAM'
-            AND EXISTS (
-              SELECT 1
-              FROM team_members tm
-              WHERE tm.team_id = cna.team_id
-                AND tm.collaborator_id = $1::uuid
-                AND tm.is_active = TRUE
-            )
-          )
-        )
-        AND (
-          $2::text IS NULL
-          OR trim($2) = ''
-          OR cv.name ILIKE '%' || $2 || '%'
-          OR COALESCE(cv.code, '') ILIKE '%' || $2 || '%'
-          OR COALESCE(cv.client_name, '') ILIKE '%' || $2 || '%'
-          OR COALESCE(cv.vehicle, '') ILIKE '%' || $2 || '%'
-          OR COALESCE(cv.plate, '') ILIKE '%' || $2 || '%'
-          OR area.name ILIKE '%' || $2 || '%'
-          OR step.name ILIKE '%' || $2 || '%'
-        )${scopedCandidateSearchSql(4, 5)}
-    )
-    SELECT
-      assignee_id,
-      conveyor_id,
-      conveyor_code,
-      conveyor_name,
-      client_name,
-      vehicle_label,
-      plate,
-      step_node_id,
-      step_name,
-      area_name,
-      option_name,
-      is_primary,
-      assignment_type,
-      planned_minutes,
-      planned_quantity,
-      realized_minutes,
-      opt_order_index,
-      area_order_index,
-      step_order_index,
-      planned_date
-    FROM ranked
-    WHERE rn = 1
-    ORDER BY
-      opt_order_index::int,
-      area_order_index::int,
-      step_order_index::int
-    LIMIT $3::int
-    `,
-    [collaboratorId, q, limit, conveyorQ, activityQ],
-  )
-  return r.rows
-}
-
-/**
- * STEPs em aberto nas quais o colaborador não tem alocação (direta nem via time).
- * Usado em conjunto com `listTimeEntryCandidatesForCollaborator` quando `includeUnassigned=true`.
- */
-export async function listTimeEntryUnassignedOpenStepsForCollaborator(
-  pool: pg.Pool,
-  collaboratorId: string,
-  options: TimeEntryCandidateSearch & { limit: number },
-): Promise<TimeEntryCandidateRawRow[]> {
-  const q = options.q?.trim() || null
-  const conveyorQ = normalizeSearchTerm(options.conveyorQ)
-  const activityQ = normalizeSearchTerm(options.activityQ)
-  const limit = options.limit
-  const r = await pool.query<TimeEntryCandidateRawRow>(
-    `
-    SELECT
-      ''::text AS assignee_id,
-      cv.id::text AS conveyor_id,
-      cv.code AS conveyor_code,
-      cv.name AS conveyor_name,
-      cv.client_name AS client_name,
-      cv.vehicle AS vehicle_label,
-      cv.plate AS plate,
-      step.id::text AS step_node_id,
-      step.name AS step_name,
-      area.name AS area_name,
-      opt.name AS option_name,
-      false AS is_primary,
-      'COLLABORATOR'::text AS assignment_type,
-      step.planned_minutes::text AS planned_minutes,
-      step.planned_quantity::text AS planned_quantity,
-      (
-        SELECT COALESCE(SUM(cte.minutes), 0)::text
-        FROM conveyor_time_entries cte
-        WHERE cte.deleted_at IS NULL
-          AND cte.conveyor_node_id = step.id
-          AND cte.collaborator_id = $1::uuid
-      ) AS realized_minutes,
-      opt.order_index::text AS opt_order_index,
-      area.order_index::text AS area_order_index,
-      step.order_index::text AS step_order_index,
-      NULL::text AS planned_date
-    FROM conveyor_nodes step
-    INNER JOIN conveyors cv
-      ON cv.id = step.conveyor_id
-      AND cv.deleted_at IS NULL
-        AND cv.operational_status IN ('A_INICIAR', 'EM_ANDAMENTO')
-    INNER JOIN conveyor_nodes area
-      ON area.id = step.parent_id
-      AND area.deleted_at IS NULL
-      AND area.is_active = TRUE
-      AND area.node_type = 'AREA'
-    INNER JOIN conveyor_nodes opt
-      ON opt.id = area.parent_id
-      AND opt.deleted_at IS NULL
-      AND opt.is_active = TRUE
-      AND opt.node_type = 'OPTION'
-    WHERE step.deleted_at IS NULL
-      AND step.is_active = TRUE
-      AND step.node_type = 'STEP'
-      AND ((step.operational_status IS DISTINCT FROM 'COMPLETED' AND step.operational_status IS DISTINCT FROM 'ABORTED'))
-      AND NOT EXISTS (
-        SELECT 1
-        FROM conveyor_node_assignees cna
-        WHERE cna.conveyor_node_id = step.id
-          AND cna.deleted_at IS NULL
-          AND cna.conveyor_id = step.conveyor_id
-          AND (
-            (
-              cna.assignment_type = 'COLLABORATOR'
-              AND cna.collaborator_id = $1::uuid
-            )
-            OR (
-              cna.assignment_type = 'TEAM'
-              AND EXISTS (
-                SELECT 1
-                FROM team_members tm
-                WHERE tm.team_id = cna.team_id
-                  AND tm.collaborator_id = $1::uuid
-                  AND tm.is_active = TRUE
-              )
-            )
-          )
-      )
-      AND (
-        $2::text IS NULL
-        OR trim($2) = ''
-        OR cv.name ILIKE '%' || $2 || '%'
-        OR COALESCE(cv.code, '') ILIKE '%' || $2 || '%'
-        OR COALESCE(cv.client_name, '') ILIKE '%' || $2 || '%'
-        OR COALESCE(cv.vehicle, '') ILIKE '%' || $2 || '%'
-        OR COALESCE(cv.plate, '') ILIKE '%' || $2 || '%'
-        OR area.name ILIKE '%' || $2 || '%'
-        OR opt.name ILIKE '%' || $2 || '%'
-        OR step.name ILIKE '%' || $2 || '%'
-      )${scopedCandidateSearchSql(4, 5)}
-    ORDER BY
-      opt.order_index::int,
-      area.order_index::int,
-      step.order_index::int
-    LIMIT $3::int
-    `,
-    [collaboratorId, q, limit, conveyorQ, activityQ],
-  )
-  return r.rows
-}
-
-/**
- * STEPs apontáveis alocados no plano semanal publicado vigente (hoje + atrasadas na semana).
- * Complementa `listTimeEntryCandidatesForCollaborator` quando a alocação operacional difere da estrutural.
- */
-export async function listTimeEntryCandidatesFromPublishedPlan(
+export async function listPlannedTimeEntryCandidates(
   pool: pg.Pool,
   input: TimeEntryCandidateSearch & {
     collaboratorId: string
-    date: string
+    scope: 'mine' | 'others'
     limit: number
   },
 ): Promise<TimeEntryCandidateRawRow[]> {
-  const date = input.date.trim()
-  const plan = await findPublishedWorkPlanForWeek(pool, mondayOfWeekContaining(date))
-  if (!plan) return []
-
   const q = input.q?.trim() || null
   const conveyorQ = normalizeSearchTerm(input.conveyorQ)
   const activityQ = normalizeSearchTerm(input.activityQ)
-  const limit = input.limit
-
+  const havingSql =
+    input.scope === 'mine'
+      ? 'HAVING bool_or(valid_items.assigned_collaborator_id = $1::uuid)'
+      : 'HAVING NOT bool_or(valid_items.assigned_collaborator_id = $1::uuid)'
+  const mineFilter = input.scope === 'mine' ? ' FILTER (WHERE valid_items.assigned_collaborator_id = $1::uuid)' : ''
   const r = await pool.query<TimeEntryCandidateRawRow>(
     `
+    WITH ${PLANNED_ITEMS_CTE},
+    planned_steps AS (
+      SELECT
+        valid_items.activity_node_id,
+        MIN(valid_items.planned_date)${mineFilter} AS first_date,
+        MIN(valid_items.planned_order)${mineFilter} AS first_order,
+        SUM(valid_items.planned_minutes)${mineFilter} AS planned_minutes
+      FROM valid_items
+      GROUP BY valid_items.activity_node_id
+      ${havingSql}
+    )
     SELECT
       COALESCE(
         (
@@ -415,7 +193,7 @@ export async function listTimeEntryCandidatesFromPublishedPlan(
             AND cna.conveyor_id = cv.id
             AND cna.conveyor_node_id = step.id
             AND cna.assignment_type = 'COLLABORATOR'
-            AND cna.collaborator_id = $2::uuid
+            AND cna.collaborator_id = $1::uuid
           ORDER BY cna.is_primary DESC, cna.order_index, cna.id
           LIMIT 1
         ),
@@ -431,37 +209,46 @@ export async function listTimeEntryCandidatesFromPublishedPlan(
       step.name AS step_name,
       area.name AS area_name,
       opt.name AS option_name,
-      false AS is_primary,
+      COALESCE(
+        (
+          SELECT cna.is_primary
+          FROM conveyor_node_assignees cna
+          WHERE cna.deleted_at IS NULL
+            AND cna.conveyor_id = cv.id
+            AND cna.conveyor_node_id = step.id
+            AND cna.assignment_type = 'COLLABORATOR'
+            AND cna.collaborator_id = $1::uuid
+          ORDER BY cna.is_primary DESC, cna.order_index, cna.id
+          LIMIT 1
+        ),
+        false
+      ) AS is_primary,
       'COLLABORATOR'::text AS assignment_type,
-      COALESCE(i.planned_minutes, step.planned_minutes)::text AS planned_minutes,
-      step.planned_quantity::text AS planned_quantity,
+      ps.planned_minutes::text AS planned_minutes,
+      '1'::text AS planned_quantity,
       (
         SELECT COALESCE(SUM(cte.minutes), 0)::text
         FROM conveyor_time_entries cte
         WHERE cte.deleted_at IS NULL
           AND cte.conveyor_node_id = step.id
-          AND cte.collaborator_id = $2::uuid
+          AND cte.collaborator_id = $1::uuid
       ) AS realized_minutes,
       opt.order_index::text AS opt_order_index,
       area.order_index::text AS area_order_index,
       step.order_index::text AS step_order_index,
-      i.planned_date::text AS planned_date
-    FROM operational_work_plan_items i
-    INNER JOIN operational_work_plans p
-      ON p.id = i.work_plan_id
-      AND p.deleted_at IS NULL
-      AND p.status = 'PUBLISHED'
-    INNER JOIN conveyors cv
-      ON cv.id = i.conveyor_id
-      AND cv.deleted_at IS NULL
-      AND cv.operational_status IN ('A_INICIAR', 'EM_ANDAMENTO')
+      ps.first_date::text AS planned_date
+    FROM planned_steps ps
     INNER JOIN conveyor_nodes step
-      ON step.id = i.activity_node_id
-      AND step.conveyor_id = cv.id
+      ON step.id = ps.activity_node_id
       AND step.deleted_at IS NULL
       AND step.is_active = TRUE
       AND step.node_type = 'STEP'
-      AND ((step.operational_status IS DISTINCT FROM 'COMPLETED' AND step.operational_status IS DISTINCT FROM 'ABORTED'))
+      AND step.operational_status IS DISTINCT FROM 'COMPLETED'
+      AND step.operational_status IS DISTINCT FROM 'ABORTED'
+    INNER JOIN conveyors cv
+      ON cv.id = step.conveyor_id
+      AND cv.deleted_at IS NULL
+      AND cv.operational_status IN ('A_INICIAR', 'EM_ANDAMENTO')
     INNER JOIN conveyor_nodes area
       ON area.id = step.parent_id
       AND area.deleted_at IS NULL
@@ -472,50 +259,26 @@ export async function listTimeEntryCandidatesFromPublishedPlan(
       AND opt.deleted_at IS NULL
       AND opt.is_active = TRUE
       AND opt.node_type = 'OPTION'
-    WHERE i.work_plan_id = $1::uuid
-      AND i.deleted_at IS NULL
-      AND i.status = 'PLANNED'
-      AND i.assigned_collaborator_id = $2::uuid
-      AND i.planned_date >= $5::date
-      AND i.planned_date <= $6::date
-      AND (
-        i.planned_date = $3::date
-        OR (
-          i.planned_date < $3::date
-          AND (step.operational_status IS DISTINCT FROM 'COMPLETED' AND step.operational_status IS DISTINCT FROM 'ABORTED')
-        )
-      )
-      AND (
-        $4::text IS NULL
-        OR trim($4) = ''
-        OR cv.name ILIKE '%' || $4 || '%'
-        OR COALESCE(cv.code, '') ILIKE '%' || $4 || '%'
-        OR COALESCE(cv.client_name, '') ILIKE '%' || $4 || '%'
-        OR COALESCE(cv.vehicle, '') ILIKE '%' || $4 || '%'
-        OR COALESCE(cv.plate, '') ILIKE '%' || $4 || '%'
-        OR area.name ILIKE '%' || $4 || '%'
-        OR step.name ILIKE '%' || $4 || '%'
-      )${scopedCandidateSearchSql(8, 9)}
+    WHERE (
+        $2::text IS NULL
+        OR trim($2) = ''
+        OR cv.name ILIKE '%' || $2 || '%'
+        OR COALESCE(cv.code, '') ILIKE '%' || $2 || '%'
+        OR COALESCE(cv.client_name, '') ILIKE '%' || $2 || '%'
+        OR COALESCE(cv.vehicle, '') ILIKE '%' || $2 || '%'
+        OR COALESCE(cv.plate, '') ILIKE '%' || $2 || '%'
+        OR area.name ILIKE '%' || $2 || '%'
+        OR step.name ILIKE '%' || $2 || '%'
+      )${scopedCandidateSearchSql(4, 5)}
     ORDER BY
-      CASE WHEN i.planned_date < $3::date THEN 0 ELSE 1 END ASC,
-      i.planned_date ASC,
-      i.planned_order ASC,
-      opt.order_index::int,
-      area.order_index::int,
-      step.order_index::int
-    LIMIT $7::int
+      ps.first_date ASC,
+      ps.first_order ASC NULLS LAST,
+      opt.order_index,
+      area.order_index,
+      step.order_index
+    LIMIT $3::int
     `,
-    [
-      plan.id,
-      input.collaboratorId,
-      date,
-      q,
-      plan.weekStartDate,
-      plan.weekEndDate,
-      limit,
-      conveyorQ,
-      activityQ,
-    ],
+    [input.collaboratorId, q, input.limit, conveyorQ, activityQ],
   )
   return r.rows
 }

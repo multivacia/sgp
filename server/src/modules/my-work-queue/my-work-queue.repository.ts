@@ -1,4 +1,5 @@
 import type pg from 'pg'
+import { PLANNED_ITEMS_CTE } from '../operational-planning/planned-activity.repository.js'
 
 export type MyWorkQueuePlanRow = {
   id: string
@@ -76,7 +77,8 @@ const WORK_PLAN_ITEM_STATUSES = new Set(['PLANNED', 'MOVED', 'CANCELLED'])
 
 function planItemStatusFilterSql(planItemStatuses: readonly string[] | undefined): string {
   if (!planItemStatuses?.length) {
-    return `AND i.status <> 'CANCELLED'`
+    // TASK apontamento-somente-planejado: só itens PLANNED (MOVED e CANCELLED saem).
+    return `AND i.status = 'PLANNED'`
   }
   for (const status of planItemStatuses) {
     if (!WORK_PLAN_ITEM_STATUSES.has(status)) {
@@ -128,7 +130,8 @@ export async function findPublishedWorkPlansInRange(
 export async function listMyWorkQueueRows(
   pool: pg.Pool,
   input: {
-    workPlanId: string
+    /** `null` somente com `allOpenPlanned`. */
+    workPlanId: string | null
     collaboratorId: string
     date: string
     includePastDue: boolean
@@ -138,6 +141,13 @@ export async function listMyWorkQueueRows(
      * "dia + atrasadas" (`date`/`includePastDue`); `date` segue como referência de "hoje".
      */
     periodRange?: { from: string; to: string }
+    /**
+     * Fila do Kiosk (TASK apontamento-somente-planejado): todos os itens planejados válidos do
+     * colaborador em planos publicados vigentes de **qualquer semana**, com atividade em aberto
+     * e esteira A_INICIAR/EM_ANDAMENTO. Ignora `workPlanId`, `periodRange`, `includePastDue`
+     * e os limites de semana.
+     */
+    allOpenPlanned?: boolean
   },
 ): Promise<MyWorkQueueRawRow[]> {
   const listOptions = input.listOptions
@@ -149,7 +159,11 @@ export async function listMyWorkQueueRows(
     queryParams.push(value)
     return `$${queryParams.length}`
   }
-  const dateScopeSql = input.periodRange
+  const dateScopeSql = input.allOpenPlanned
+    ? `AND step.operational_status IS DISTINCT FROM 'COMPLETED'
+      AND step.operational_status IS DISTINCT FROM 'ABORTED'
+      AND cv.operational_status IN ('A_INICIAR', 'EM_ANDAMENTO')`
+    : input.periodRange
     ? `AND i.planned_date >= ${param(input.periodRange.from)}::date
       AND i.planned_date <= ${param(input.periodRange.to)}::date`
     : `AND (
@@ -160,8 +174,11 @@ export async function listMyWorkQueueRows(
           AND (step.operational_status IS DISTINCT FROM 'COMPLETED' AND step.operational_status IS DISTINCT FROM 'ABORTED')
         )
       )`
+  const planScopeSql = input.allOpenPlanned
+    ? `$1::text IS NULL AND i.work_plan_id IN (SELECT vigente_plans.id FROM vigente_plans)`
+    : `i.work_plan_id = $1::uuid`
   const weekBoundsSql =
-    weekStart && weekEnd
+    !input.allOpenPlanned && weekStart && weekEnd
       ? `AND i.planned_date >= ${param(weekStart)}::date AND i.planned_date <= ${param(weekEnd)}::date`
       : ''
 
@@ -186,6 +203,7 @@ export async function listMyWorkQueueRows(
     is_assigned_to_me: boolean
   }>(
     `
+    ${input.allOpenPlanned ? `WITH ${PLANNED_ITEMS_CTE}` : ''}
     SELECT
       p.id::text AS work_plan_id,
       i.id::text AS work_plan_item_id,
@@ -251,7 +269,7 @@ export async function listMyWorkQueueRows(
       AND opt.deleted_at IS NULL
       AND opt.is_active = TRUE
       AND opt.node_type = 'OPTION'
-    WHERE i.work_plan_id = $1::uuid
+    WHERE ${planScopeSql}
       AND i.deleted_at IS NULL
       ${statusFilterSql}
       AND i.assigned_collaborator_id = $2::uuid

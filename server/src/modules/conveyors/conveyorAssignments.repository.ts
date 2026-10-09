@@ -280,38 +280,6 @@ export async function maxAssigneeOrderIndexForStep(
   return r.rows[0]?.max ?? -1
 }
 
-/** Item ativo no plano publicado vigente da semana para colaborador + STEP. */
-export async function findPublishedPlanItemIdForCollaboratorOnStep(
-  pool: pg.Pool,
-  input: {
-    conveyorId: string
-    stepNodeId: string
-    collaboratorId: string
-    weekStartDate: string
-  },
-): Promise<string | null> {
-  const r = await pool.query<{ id: string }>(
-    `
-    SELECT i.id::text
-    FROM operational_work_plan_items i
-    INNER JOIN operational_work_plans p
-      ON p.id = i.work_plan_id
-      AND p.deleted_at IS NULL
-      AND p.status = 'PUBLISHED'
-      AND p.week_start_date = $4::date
-    WHERE i.deleted_at IS NULL
-      AND i.status = 'PLANNED'
-      AND i.conveyor_id = $1::uuid
-      AND i.activity_node_id = $2::uuid
-      AND i.assigned_collaborator_id = $3::uuid
-    ORDER BY p.published_at DESC NULLS LAST, p.updated_at DESC
-    LIMIT 1
-    `,
-    [input.conveyorId, input.stepNodeId, input.collaboratorId, input.weekStartDate],
-  )
-  return r.rows[0]?.id ?? null
-}
-
 /** Uma linha por alocação — para enriquecer GET detalhe (agrupar por `conveyor_node_id`). */
 export type ConveyorNodeAssigneeDetailRow = {
   conveyor_node_id: string

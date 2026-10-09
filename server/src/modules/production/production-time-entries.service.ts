@@ -28,57 +28,29 @@ import { serviceCreateConveyorOperationalEvent } from '../conveyors/operational-
 import { lockConveyorAndStepForUpdate } from '../conveyors/lockConveyorAndStepForUpdate.js'
 import { resolveProductionStepAssigneeId } from './production-plan-assignee.js'
 import {
+  requiresExcessTimeJustification,
+  resolveCollaboratorExcessCheck,
+  TIME_ENTRY_EXCEEDED_PLANNED_JUSTIFICATION_MESSAGE,
+  TIME_ENTRY_NOT_PLANNED_MESSAGE,
+} from '../operational-planning/planned-activity.service.js'
+import { findStepPlanningForCollaborator } from '../operational-planning/planned-activity.repository.js'
+import {
   pickStandardJustificationSnapshot,
   resolveTimeEntryJustification,
   TIME_ENTRY_JUSTIFICATION_REQUIRED_MESSAGE,
   type ResolvedStandardJustification,
 } from '../../shared/timeEntryJustificationResolver.js'
-import { sumRealizedMinutesByStepForConveyor } from '../conveyors/conveyorNodeWorkload.repository.js'
 import { resolveTimeEntryEntryAt } from '../../shared/operationalWorkDate.js'
 
-export const TIME_ENTRY_EXCEEDED_PLANNED_JUSTIFICATION_MESSAGE =
-  'Informe uma justificativa para apontar acima do tempo previsto da atividade.'
+export { TIME_ENTRY_EXCEEDED_PLANNED_JUSTIFICATION_MESSAGE }
 
-async function resolveProductionExcessCheckPlannedMinutes(
-  pool: pg.Pool,
-  input: {
-    conveyorId: string
-    stepNodeId: string
-    collaboratorId: string
-  },
-): Promise<number | null> {
-  const r = await pool.query<{ planned_minutes: number | null }>(
-    `
-    SELECT i.planned_minutes
-    FROM operational_work_plan_items i
-    INNER JOIN operational_work_plans p
-      ON p.id = i.work_plan_id
-      AND p.deleted_at IS NULL
-      AND p.status = 'PUBLISHED'
-    WHERE i.deleted_at IS NULL
-      AND i.status = 'PLANNED'
-      AND i.conveyor_id = $1::uuid
-      AND i.activity_node_id = $2::uuid
-      AND i.assigned_collaborator_id = $3::uuid
-    ORDER BY i.planned_date DESC, i.planned_order ASC
-    LIMIT 1
-    `,
-    [input.conveyorId, input.stepNodeId, input.collaboratorId],
-  )
-  const raw = r.rows[0]?.planned_minutes
-  if (raw == null || !Number.isFinite(raw) || raw <= 0) return null
-  return Math.floor(raw)
-}
-
+/** Mantido por compatibilidade; a regra canônica está em `requiresExcessTimeJustification`. */
 export function productionRequiresExcessTimeJustification(input: {
   plannedMinutes: number | null
   realizedMinutes: number
   minutesNovo: number
 }): boolean {
-  if (!Number.isInteger(input.minutesNovo) || input.minutesNovo <= 0) return false
-  const planned = input.plannedMinutes
-  if (planned == null || !Number.isFinite(planned) || planned <= 0) return false
-  return input.realizedMinutes + input.minutesNovo > planned
+  return requiresExcessTimeJustification(input)
 }
 
 export type CreateProductionTimeEntryInput = {
@@ -234,20 +206,26 @@ export async function serviceCreateProductionTimeEntry(
   /** Conclusão kiosk sem novo tempo: ver JSDoc de `serviceCreateProductionTimeEntry`. */
   const isCompletionOnly = markAsDone && input.minutes === 0
 
+  // Regra canônica (TASK apontamento-somente-planejado): planejamento do colaborador em
+  // qualquer semana; previsto e realizado do próprio colaborador (todos os dias).
+  const planning = await findStepPlanningForCollaborator(pool, {
+    conveyorId: input.conveyorId,
+    stepNodeId: input.stepNodeId,
+    collaboratorId: input.collaboratorId,
+  })
+  if (!planning.plannedForAnyone) {
+    throw new AppError(TIME_ENTRY_NOT_PLANNED_MESSAGE, 422, ErrorCodes.TIME_ENTRY_NOT_PLANNED)
+  }
+
   let excessStandard: ResolvedStandardJustification | null = null
-  if (!isCompletionOnly && input.minutes > 0) {
-    const plannedMinutes = await resolveProductionExcessCheckPlannedMinutes(pool, {
-      conveyorId: input.conveyorId,
+  if (planning.plannedForCollaborator && !isCompletionOnly && input.minutes > 0) {
+    const excess = await resolveCollaboratorExcessCheck(pool, {
       stepNodeId: input.stepNodeId,
       collaboratorId: input.collaboratorId,
-    })
-    const realizedByStep = await sumRealizedMinutesByStepForConveyor(pool, input.conveyorId)
-    const realizedMinutes = realizedByStep.get(input.stepNodeId) ?? 0
-    const requiresExcessJustification = productionRequiresExcessTimeJustification({
-      plannedMinutes,
-      realizedMinutes,
+      plannedMinutesForCollaborator: planning.plannedMinutesForCollaborator,
       minutesNovo: input.minutes,
     })
+    const requiresExcessJustification = excess.required
     if (requiresExcessJustification && !oosStandard) {
       const resolved = await resolveTimeEntryJustification(pool, {
         required: true,
