@@ -36,6 +36,7 @@ import {
   candidateNeedsJustification,
   candidateNeedsOutOfSequenceJustification,
   candidateRequiresOperationalJustification,
+  candidateRequiresExcessJustification,
   emptyJustificationValue,
   EXTRA_TIME_ENTRY_DESCRIPTION_PLACEHOLDER,
   QUICK_TIME_ENTRY_ERRORS,
@@ -312,12 +313,17 @@ export function QuickTimeEntryDrawer({
   const formRequiresOperationalJustification = selected
     ? candidateRequiresOperationalJustification(selected)
     : false
+  const formMinutes = Number.parseInt(minutesStr, 10)
+  const formRequiresExcessJustification = selected
+    ? candidateRequiresExcessJustification(selected, formMinutes)
+    : false
   const justificationValidationError = selected
     ? validateTimeEntryForm({
         candidate: selected,
         operationalJustification,
         useFallback: justificationUseFallback,
         requiresComplement: justificationRequiresComplement,
+        minutes: formMinutes,
       })
     : null
   const canSubmitForm =
@@ -371,6 +377,7 @@ export function QuickTimeEntryDrawer({
         operationalJustification,
         useFallback: justificationUseFallback,
         requiresComplement: justificationRequiresComplement,
+        minutes: formMinutes,
       })
     if (validationError) {
       setSubmitError(validationError)
@@ -1001,11 +1008,15 @@ export function QuickTimeEntryDrawer({
                         value={operationalJustification.justificationId ?? ''}
                         complement={operationalJustification.justificationComplement}
                         legacyText={operationalJustification.legacyText}
-                        required={formRequiresOperationalJustification}
+                        required={
+                          formRequiresOperationalJustification || formRequiresExcessJustification
+                        }
                         preferredCategory={
                           formNeedsJustification
                             ? null
-                            : formNeedsOutOfSequence
+                            : formRequiresExcessJustification
+                              ? resolvePreferredJustificationCategory({ requiresExcessTime: true })
+                              : formNeedsOutOfSequence
                               ? resolvePreferredJustificationCategory({
                                   hasPreviousPendingStep: selected?.hasPreviousPendingStep,
                                   isOutOfSequence: selected?.isOutOfSequence,

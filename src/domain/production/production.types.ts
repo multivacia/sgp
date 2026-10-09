@@ -160,6 +160,9 @@ export type ProductionUnassignedTimeEntryPayload = {
   outOfSequenceJustification?: string | null
   outOfSequenceJustificationId?: string | null
   outOfSequenceJustificationComplement?: string | null
+  /** Justificativa por excesso de tempo previsto (atividade planejada para o colaborador). */
+  justificationId?: string | null
+  justificationComplement?: string | null
   /** Data/hora de realização (ISO com fuso). Ausente = agora. Ver `buildEntryAtForWorkDate`. */
   entryAt?: string
 }

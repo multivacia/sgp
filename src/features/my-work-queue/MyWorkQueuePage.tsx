@@ -102,8 +102,17 @@ function QueueCard(props: {
             <span className="inline-flex size-8 items-center justify-center rounded-xl border border-sgp-blue-bright/25 bg-sgp-blue-bright/10 font-heading text-sm font-bold text-sgp-blue-bright">
               {item.plannedOrder + 1}
             </span>
-            <span className={`rounded-md px-2 py-0.5 text-[11px] font-bold ${badgeClass('neutral')}`}>
+            <span
+              className={`rounded-md px-2 py-0.5 text-[11px] font-bold ${badgeClass('neutral')}`}
+              title="Planejado para você nesta atividade, somando todos os dias"
+            >
               {plannedMinutes}
+            </span>
+            <span
+              className={`rounded-md px-2 py-0.5 text-[11px] font-bold ${badgeClass('neutral')}`}
+              data-testid="queue-card-realized"
+            >
+              Apontado: {formatHumanMinutes(item.realizedMinutes ?? 0)}
             </span>
             {item.isOverdue ? (
               <span className={`rounded-md px-2 py-0.5 text-[11px] font-bold ${badgeClass('danger')}`}>

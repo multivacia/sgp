@@ -4,6 +4,7 @@ import { validateJustificationSelectValue } from '../../components/operational/J
 import {
   candidateNeedsJustification as candidateNeedsExceptionJustification,
   candidateNeedsOutOfSequenceJustification,
+  candidateRequiresExcessJustification,
   type JustificationFieldValue,
 } from '../shell/quickTimeEntryDrawerLogic'
 import { buildEntryAtForWorkDate, validateWorkDate } from '../../domain/operational/workDate'
@@ -51,6 +52,14 @@ export function candidateNeedsOperationalJustification(c: TimeEntryCandidateItem
   return candidateNeedsExceptionJustification(c) || candidateNeedsOutOfSequenceJustification(c)
 }
 
+/** Excesso de tempo previsto do próprio colaborador (mesma regra da web). */
+export function candidateNeedsExcessJustification(
+  c: TimeEntryCandidateItem,
+  minutes: number,
+): boolean {
+  return candidateRequiresExcessJustification(c, minutes)
+}
+
 export function canSubmitKioskOutraAtividadeForm(input: {
   candidate: TimeEntryCandidateItem | null
   minutes: number
@@ -62,7 +71,8 @@ export function canSubmitKioskOutraAtividadeForm(input: {
   if (!isValidKioskOutraAtividadeMinutes(input.minutes)) return false
   if (input.workDate !== undefined && validateWorkDate(input.workDate) !== null) return false
   if (
-    candidateNeedsOperationalJustification(input.candidate) &&
+    (candidateNeedsOperationalJustification(input.candidate) ||
+      candidateNeedsExcessJustification(input.candidate, input.minutes)) &&
     justificationValidationError(input.operationalJustification)
   ) {
     return false
@@ -130,6 +140,16 @@ export function buildKioskUnassignedTimeEntryPayload(input: {
 
   if (needsException) appendJustification(payload, 'exception', input.operationalJustification)
   if (needsOos) appendJustification(payload, 'outOfSequence', input.operationalJustification)
+  if (
+    !needsException &&
+    !needsOos &&
+    candidateNeedsExcessJustification(input.candidate, input.minutes) &&
+    input.operationalJustification.justificationId
+  ) {
+    payload.justificationId = input.operationalJustification.justificationId
+    const complement = input.operationalJustification.justificationComplement.trim()
+    if (complement) payload.justificationComplement = complement
+  }
 
   return payload
 }
