@@ -3,7 +3,7 @@
 - **TASK_ID:** `apontamento-somente-planejado`
 - **Data/hora:** 2026-10-08, ~21:20 a ~22:30 (America/Sao_Paulo)
 - **Objetivo:** implementar o prompt aprovado `docs/ai/prompts/apontamento-somente-planejado.md` — só atividade planejada recebe apontamento (web, Kiosk e gestor), excesso de tempo com previsto/realizado do próprio colaborador, Minha fila sem movidos e com um cartão por atividade, manual atualizado.
-- **Status final:** implementado e publicado na branch; **aguardando revisão humana e PR para `develop`**. Sem merge, sem deploy.
+- **Status final:** implementado e **promovido para `develop`** por fast-forward (`a4a3d5d..bd88ccf`), com autorização explícita do Gustavo em 08/10/2026 22:21 para homologação. Sem deploy, sem promoção para `main`.
 - **Branch:** `fix/apontamento-somente-planejado`
 - **SHA inicial:** `a4a3d5d` (`origin/develop`). Referências no início: `origin/main` `c611d10`, `origin/homol` `6b768c8`.
 - **SHA final:** ver `git log -1` da branch (commit deste retorno).
@@ -90,12 +90,13 @@ Banco PostgreSQL 16 local, migrations e seed aplicados.
 - PR não aberto automaticamente: a CLI do GitHub nesta sessão não está autenticada. Branch publicada para abrir o PR.
 
 ## Próximo passo recomendado
-Abrir o PR `fix/apontamento-somente-planejado` → `develop`, revisar e rodar a homologação (item 13 da página de homologação + casos do teste de aceite).
+Homologar na develop (item 13 da página de homologação + casos do teste de aceite) e comunicar os gestores sobre a nova regra antes de levar para `homol`/`main`.
 
 ## git status
 Limpo após o commit deste retorno.
 
 ## Commit / push / PR
-Commits na branch `fix/apontamento-somente-planejado`, publicada em `origin`. PR: abrir em https://github.com/multivacia/sgp/pull/new/fix/apontamento-somente-planejado
+Commits na branch `fix/apontamento-somente-planejado`, publicada em `origin`.
+Promoção: `origin/develop` avançada por fast-forward de `a4a3d5d` para `bd88ccf` (validado com `git merge-base --is-ancestor`; sem `--force`, sem commit de merge), com autorização explícita do Gustavo. Este registro foi acrescentado em commit posterior, levado à develop também por fast-forward. Sem PR (promoção direta autorizada).
 
 Uso/tokens disponíveis: INDISPONÍVEL — a sessão não fornece métrica confiável.

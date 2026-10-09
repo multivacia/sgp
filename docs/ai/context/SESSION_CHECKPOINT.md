@@ -15,7 +15,7 @@
 
 ## Última atividade (08/10, noite)
 
-`apontamento-somente-planejado`: só atividade planejada (plano publicado vigente, qualquer semana) recebe apontamento na web, no Kiosk e pelo gestor; pesquisa de outras atividades = planejadas para colegas, com justificativa; excesso de tempo com previsto/realizado do próprio colaborador; fila do Kiosk com atrasadas/hoje/futuras; Minha fila sem movidos, um cartão por atividade. Manual caps. 7, 10, 13 atualizados. Aguardando revisão humana do PR para `develop`. Retorno: `docs/ai/returns/apontamento-somente-planejado-retorno.md`.
+`apontamento-somente-planejado`: só atividade planejada (plano publicado vigente, qualquer semana) recebe apontamento na web, no Kiosk e pelo gestor; pesquisa de outras atividades = planejadas para colegas, com justificativa; excesso de tempo com previsto/realizado do próprio colaborador; fila do Kiosk com atrasadas/hoje/futuras; Minha fila sem movidos, um cartão por atividade. Manual caps. 7, 10, 13 atualizados. Promovido para `develop` por fast-forward (autorizado); em homologação. Retorno: `docs/ai/returns/apontamento-somente-planejado-retorno.md`.
 
 ## Atividade anterior (08/10)
 
