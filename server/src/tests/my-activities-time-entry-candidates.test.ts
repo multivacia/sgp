@@ -75,7 +75,7 @@ function mockSequenceNodes() {
   vi.spyOn(seqRepo, 'listPlannedCollaboratorsByActivityNode').mockResolvedValue(new Map())
 }
 
-describe('serviceListTimeEntryCandidates — alocação estrutural vs plano semanal', () => {
+describe('serviceListTimeEntryCandidates — somente atividades planejadas', () => {
   afterEach(() => {
     vi.restoreAllMocks()
   })
@@ -92,34 +92,15 @@ describe('serviceListTimeEntryCandidates — alocação estrutural vs plano sema
     expect(result.unavailableReason).toContain('colaborador operacional vinculado')
   })
 
-  it('inclui atividade atribuída apenas pela estrutura', async () => {
-    vi.spyOn(activitiesRepo, 'listTimeEntryCandidatesForCollaborator').mockResolvedValue([
-      candidateRow(STEP_STRUCTURAL),
-    ])
-    vi.spyOn(activitiesRepo, 'listTimeEntryCandidatesFromPublishedPlan').mockResolvedValue([])
-    mockSequenceNodes()
+  function mockPlanned(mine: TimeEntryCandidateRawRow[], others: TimeEntryCandidateRawRow[] = []) {
+    return vi
+      .spyOn(activitiesRepo, 'listPlannedTimeEntryCandidates')
+      .mockImplementation(async (_pool, input) => (input.scope === 'mine' ? mine : others))
+  }
 
-    const result = await serviceListTimeEntryCandidates({} as pg.Pool, {
-      collaboratorId: COLLABORATOR_ID,
-      q: null,
-      limit: 50,
-      includeUnassigned: false,
-    })
-
-    expect(result.items).toHaveLength(1)
-    expect(result.items[0]?.stepNodeId).toBe(STEP_STRUCTURAL)
-    expect(result.items[0]?.isAssignedToMe).toBe(true)
-    expect(result.items[0]?.requiresJustification).toBe(false)
-  })
-
-  it('inclui atividade atribuída apenas pelo plano semanal publicado', async () => {
-    vi.spyOn(activitiesRepo, 'listTimeEntryCandidatesForCollaborator').mockResolvedValue([])
-    vi.spyOn(activitiesRepo, 'listTimeEntryCandidatesFromPublishedPlan').mockResolvedValue([
-      candidateRow(STEP_PLAN_ONLY, {
-        assignee_id: '',
-        is_primary: false,
-        planned_date: '2026-07-02',
-      }),
+  it('lista padrão: somente atividades planejadas para o colaborador', async () => {
+    const spy = mockPlanned([
+      candidateRow(STEP_PLAN_ONLY, { assignee_id: '', is_primary: false, planned_date: '2026-07-02' }),
     ])
     mockSequenceNodes()
 
@@ -135,43 +116,66 @@ describe('serviceListTimeEntryCandidates — alocação estrutural vs plano sema
     expect(result.items[0]?.isAssignedToMe).toBe(true)
     expect(result.items[0]?.requiresJustification).toBe(false)
     expect(result.items[0]?.plannedDate).toBe('2026-07-02')
+    expect(spy).toHaveBeenCalledTimes(1)
+    expect(spy.mock.calls[0]?.[1]).toMatchObject({ scope: 'mine', collaboratorId: COLLABORATOR_ID })
   })
 
-  it('não duplica atividade presente na estrutura e no plano', async () => {
-    vi.spyOn(activitiesRepo, 'listTimeEntryCandidatesForCollaborator').mockResolvedValue([
-      candidateRow(STEP_BOTH, { is_primary: true }),
-    ])
-    vi.spyOn(activitiesRepo, 'listTimeEntryCandidatesFromPublishedPlan').mockResolvedValue([
-      candidateRow(STEP_BOTH, {
-        assignee_id: 'assignee-structural',
-        is_primary: false,
-        planned_date: '2026-07-02',
-      }),
-    ])
+  it('pesquisa de outras atividades (>= 2 caracteres) traz planejadas para outros, com justificativa', async () => {
+    const spy = mockPlanned(
+      [candidateRow(STEP_PLAN_ONLY)],
+      [candidateRow(STEP_STRUCTURAL, { assignee_id: '', is_primary: false })],
+    )
     mockSequenceNodes()
 
     const result = await serviceListTimeEntryCandidates({} as pg.Pool, {
       collaboratorId: COLLABORATOR_ID,
-      q: null,
+      q: 'At',
       limit: 50,
-      includeUnassigned: false,
+      includeUnassigned: true,
+    })
+
+    expect(spy).toHaveBeenCalledTimes(2)
+    expect(result.items.map((i) => i.stepNodeId)).toEqual([STEP_PLAN_ONLY, STEP_STRUCTURAL])
+    const other = result.items.find((i) => i.stepNodeId === STEP_STRUCTURAL)
+    expect(other?.isAssignedToMe).toBe(false)
+    expect(other?.requiresJustification).toBe(true)
+  })
+
+  it('pesquisa com menos de 2 caracteres não consulta atividades de outros', async () => {
+    const spy = mockPlanned([], [candidateRow(STEP_STRUCTURAL)])
+    mockSequenceNodes()
+
+    const result = await serviceListTimeEntryCandidates({} as pg.Pool, {
+      collaboratorId: COLLABORATOR_ID,
+      q: 'A',
+      limit: 50,
+      includeUnassigned: true,
+    })
+
+    expect(result.items).toHaveLength(0)
+    expect(spy).toHaveBeenCalledTimes(1)
+  })
+
+  it('não duplica atividade que é do colaborador e também aparece na pesquisa', async () => {
+    mockPlanned([candidateRow(STEP_BOTH, { is_primary: true })], [candidateRow(STEP_BOTH)])
+    mockSequenceNodes()
+
+    const result = await serviceListTimeEntryCandidates({} as pg.Pool, {
+      collaboratorId: COLLABORATOR_ID,
+      q: 'Atividade',
+      limit: 50,
+      includeUnassigned: true,
     })
 
     expect(result.items).toHaveLength(1)
-    expect(result.items[0]?.stepNodeId).toBe(STEP_BOTH)
+    expect(result.items[0]?.isAssignedToMe).toBe(true)
     expect(result.items[0]?.roleInStep).toBe('primary')
   })
 
   it('marca atividade planejada em data anterior como atrasada', async () => {
     vi.useFakeTimers()
-    vi.setSystemTime(new Date('2026-07-02T12:00:00'))
-    vi.spyOn(activitiesRepo, 'listTimeEntryCandidatesForCollaborator').mockResolvedValue([])
-    vi.spyOn(activitiesRepo, 'listTimeEntryCandidatesFromPublishedPlan').mockResolvedValue([
-      candidateRow(STEP_PLAN_ONLY, {
-        assignee_id: '',
-        planned_date: '2026-07-01',
-      }),
-    ])
+    vi.setSystemTime(new Date('2026-07-02T15:00:00Z'))
+    mockPlanned([candidateRow(STEP_PLAN_ONLY, { assignee_id: '', planned_date: '2026-07-01' })])
     mockSequenceNodes()
 
     const result = await serviceListTimeEntryCandidates({} as pg.Pool, {
@@ -188,10 +192,7 @@ describe('serviceListTimeEntryCandidates — alocação estrutural vs plano sema
 
   it('resolve collaboratorId a partir de user_id no controller (via serviço)', async () => {
     vi.spyOn(authRepo, 'findCollaboratorIdByAppUserId').mockResolvedValue(COLLABORATOR_ID)
-    vi.spyOn(activitiesRepo, 'listTimeEntryCandidatesForCollaborator').mockResolvedValue([])
-    vi.spyOn(activitiesRepo, 'listTimeEntryCandidatesFromPublishedPlan').mockResolvedValue([
-      candidateRow(STEP_PLAN_ONLY, { assignee_id: '', planned_date: '2026-07-02' }),
-    ])
+    mockPlanned([candidateRow(STEP_PLAN_ONLY, { assignee_id: '', planned_date: '2026-07-02' })])
     mockSequenceNodes()
 
     const collaboratorId = await authRepo.findCollaboratorIdByAppUserId({} as pg.Pool, USER_ID)

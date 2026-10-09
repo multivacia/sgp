@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import { describe, expect, it, beforeAll, afterAll } from 'vitest'
 import request from 'supertest'
+import { cleanupSeededPlanItems, seedPublishedPlanItem } from './plannedActivityTestHelpers.js'
 import { createApp } from '../app.js'
 import { createLogger } from '../plugins/logger.js'
 import { closePool, getPool } from '../plugins/db.js'
@@ -104,6 +105,7 @@ describe.skipIf(!hasDb)('conveyor assignees + time entries HTTP (integração)',
   })
 
   afterAll(async () => {
+    await cleanupSeededPlanItems(pool)
     await closePool()
   })
 
@@ -151,6 +153,27 @@ describe.skipIf(!hasDb)('conveyor assignees + time entries HTTP (integração)',
 
   function timeEntriesPath(conveyorId: string, stepId: string) {
     return `/api/v1/conveyors/${conveyorId}/steps/${stepId}/time-entries`
+  }
+
+  /** Regra apontamento-somente-planejado: planeja a atividade para o colaborador. */
+  async function planFor(conveyorId: string, stepId: string, collaboratorId = COLAB_SEED) {
+    await seedPublishedPlanItem(pool, {
+      conveyorId,
+      stepNodeId: stepId,
+      collaboratorId,
+      createdByUserId: GOV_ADMIN_USER_ID,
+    })
+  }
+
+  /** Planeja a atividade para outro colaborador (Maria aponta como exceção). */
+  async function planForOther(conveyorId: string, stepId: string) {
+    const other = randomUUID()
+    await pool.query(
+      `INSERT INTO collaborators (id, full_name, status, is_active)
+       VALUES ($1::uuid, $2, 'ACTIVE', true)`,
+      [other, `Colab Outro HTTP ${other.slice(0, 8)}`],
+    )
+    await planFor(conveyorId, stepId, other)
   }
 
   it('POST múltiplos assignees e GET lista ordenada', async () => {
@@ -372,6 +395,7 @@ describe.skipIf(!hasDb)('conveyor assignees + time entries HTTP (integração)',
       collaboratorId: COLAB_SEED,
       isPrimary: true,
     })
+    await planFor(created.id, stepId)
 
     const cookie = await sessionCookieForUser(
       pool,
@@ -477,6 +501,7 @@ describe.skipIf(!hasDb)('conveyor assignees + time entries HTTP (integração)',
       minimalConveyorBody(`HTTP na ${randomUUID().slice(0, 8)}`),
     )
     const stepId = await firstNodeId(created.id, 'STEP')
+    await planForOther(created.id, stepId)
     const res = await request(app)
       .post(timeEntriesPath(created.id, stepId))
       .set(
@@ -495,6 +520,7 @@ describe.skipIf(!hasDb)('conveyor assignees + time entries HTTP (integração)',
     )
     await setConveyorProductionStatusForIntegration(pool, created.id)
     const stepId = await firstNodeId(created.id, 'STEP')
+    await planForOther(created.id, stepId)
     const res = await request(app)
       .post(timeEntriesPath(created.id, stepId))
       .set(
@@ -526,6 +552,7 @@ describe.skipIf(!hasDb)('conveyor assignees + time entries HTTP (integração)',
     )
     await setConveyorProductionStatusForIntegration(pool, created.id)
     const stepId = await firstNodeId(created.id, 'STEP')
+    await planForOther(created.id, stepId)
     const justificationId = await activeJustificationId()
     const res = await request(app)
       .post(timeEntriesPath(created.id, stepId))
@@ -597,6 +624,8 @@ describe.skipIf(!hasDb)('conveyor assignees + time entries HTTP (integração)',
       collaboratorId: COLAB_SEED,
       isPrimary: true,
     })
+    await planFor(created.id, firstStep)
+    await planFor(created.id, secondStep)
     const justificationId = await activeJustificationId()
     const res = await request(app)
       .post(timeEntriesPath(created.id, secondStep))
@@ -690,6 +719,7 @@ describe.skipIf(!hasDb)('conveyor assignees + time entries HTTP (integração)',
       collaboratorId: COLAB_SEED,
       isPrimary: true,
     })
+    await planFor(created.id, stepId)
     const justificationId = await activeJustificationId()
     const res = await request(app)
       .post(timeEntriesPath(created.id, stepId))
@@ -714,6 +744,7 @@ describe.skipIf(!hasDb)('conveyor assignees + time entries HTTP (integração)',
     )
     await setConveyorProductionStatusForIntegration(pool, created.id)
     const stepId = await firstNodeId(created.id, 'STEP')
+    await planForOther(created.id, stepId)
     const ids = await pool.query<{ id: string }>(
       `SELECT id::text AS id FROM operational_time_entry_justifications
        WHERE is_active = true

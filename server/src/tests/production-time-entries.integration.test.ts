@@ -1,5 +1,6 @@
 import { describe, expect, it, beforeAll, afterAll } from 'vitest'
 import request from 'supertest'
+import { cleanupSeededPlanItems, seedPublishedPlanItem } from './plannedActivityTestHelpers.js'
 import { createApp } from '../app.js'
 import { createLogger } from '../plugins/logger.js'
 import { closePool, getPool } from '../plugins/db.js'
@@ -326,9 +327,17 @@ describe.skipIf(!hasDb)('production time entries (integração)', () => {
       collaboratorId: SEED_COLLABORATOR_MARIA_ID,
       isPrimary: true,
     })
+    // Regra apontamento-somente-planejado: a atividade precisa estar planejada para Maria.
+    await seedPublishedPlanItem(pool, {
+      conveyorId,
+      stepNodeId: assignedStepId,
+      collaboratorId: SEED_COLLABORATOR_MARIA_ID,
+      createdByUserId: TE_ADMIN_USER_ID,
+    })
   })
 
   afterAll(async () => {
+    await cleanupSeededPlanItems(pool)
     await closePool()
   })
 
@@ -428,6 +437,12 @@ describe.skipIf(!hasDb)('production time entries (integração)', () => {
         collaboratorId: SEED_COLLABORATOR_MARIA_ID,
         isPrimary: true,
       })
+      await seedPublishedPlanItem(pool, {
+        conveyorId: conv.id,
+        stepNodeId: stepId,
+        collaboratorId: SEED_COLLABORATOR_MARIA_ID,
+        createdByUserId: TE_ADMIN_USER_ID,
+      })
       await seedOperationalWorkPlanItemsForSteps(pool, {
         createdByUserId: TE_ADMIN_USER_ID,
         conveyorId: conv.id,
@@ -466,6 +481,12 @@ describe.skipIf(!hasDb)('production time entries (integração)', () => {
         conveyorNodeId: stepId,
         collaboratorId: SEED_COLLABORATOR_MARIA_ID,
         isPrimary: true,
+      })
+      await seedPublishedPlanItem(pool, {
+        conveyorId: conv.id,
+        stepNodeId: stepId,
+        collaboratorId: SEED_COLLABORATOR_MARIA_ID,
+        createdByUserId: TE_ADMIN_USER_ID,
       })
       await seedOperationalWorkPlanItemsForSteps(pool, {
         createdByUserId: TE_ADMIN_USER_ID,
@@ -549,7 +570,7 @@ describe.skipIf(!hasDb)('production time entries (integração)', () => {
       expect(res.body.error?.code).toBe(ErrorCodes.TIME_ENTRY_UNASSIGNED_REQUIRES_JUSTIFICATION)
     })
 
-    it('step sem alocação → 422 para colaborador não alocado', async () => {
+    it('atividade não planejada para ninguém → 422 TIME_ENTRY_NOT_PLANNED', async () => {
       const cookie = productionSessionCookie(SEED_COLLABORATOR_MARIA_ID)
       const conv = await serviceCreateConveyor(pool, {
         ...minimalConveyorBody(`TE-Unassigned-${Date.now()}`),
@@ -599,6 +620,12 @@ describe.skipIf(!hasDb)('production time entries (integração)', () => {
         collaboratorId: SEED_COLLABORATOR_MARIA_ID,
         isPrimary: true,
       })
+      await seedPublishedPlanItem(pool, {
+        conveyorId: conv.id,
+        stepNodeId: assigned,
+        collaboratorId: SEED_COLLABORATOR_MARIA_ID,
+        createdByUserId: TE_ADMIN_USER_ID,
+      })
 
       await request(app)
         .post('/api/v1/production/time-entries')
@@ -615,7 +642,7 @@ describe.skipIf(!hasDb)('production time entries (integração)', () => {
         .set('Cookie', cookie)
         .send({ conveyorId: conv.id, stepNodeId: unassigned, minutes: 20 })
       expect(res.status).toBe(422)
-      expect(res.body.error?.code).toBe(ErrorCodes.TIME_ENTRY_UNASSIGNED_REQUIRES_JUSTIFICATION)
+      expect(res.body.error?.code).toBe(ErrorCodes.TIME_ENTRY_NOT_PLANNED)
     })
 
     it('step fora da esteira informada → 422', async () => {
@@ -805,11 +832,29 @@ describe.skipIf(!hasDb)('production time entries (integração)', () => {
         collaboratorId: SEED_COLLABORATOR_MARIA_ID,
         isPrimary: true,
       })
+
+      await seedPublishedPlanItem(pool, {
+
+        conveyorId: conv.id,
+
+        stepNodeId: firstStep,
+
+        collaboratorId: SEED_COLLABORATOR_MARIA_ID,
+
+        createdByUserId: TE_ADMIN_USER_ID,
+
+      })
       await serviceCreateConveyorNodeAssignee(pool, {
         conveyorId: conv.id,
         conveyorNodeId: secondStep,
         collaboratorId: SEED_COLLABORATOR_MARIA_ID,
         isPrimary: true,
+      })
+      await seedPublishedPlanItem(pool, {
+        conveyorId: conv.id,
+        stepNodeId: secondStep,
+        collaboratorId: SEED_COLLABORATOR_MARIA_ID,
+        createdByUserId: TE_ADMIN_USER_ID,
       })
 
       await seedOperationalWorkPlanItemsForSteps(pool, {
@@ -889,11 +934,29 @@ describe.skipIf(!hasDb)('production time entries (integração)', () => {
         collaboratorId: SEED_COLLABORATOR_MARIA_ID,
         isPrimary: true,
       })
+
+      await seedPublishedPlanItem(pool, {
+
+        conveyorId: conv.id,
+
+        stepNodeId: steps.rows[0]!.id,
+
+        collaboratorId: SEED_COLLABORATOR_MARIA_ID,
+
+        createdByUserId: TE_ADMIN_USER_ID,
+
+      })
       await serviceCreateConveyorNodeAssignee(pool, {
         conveyorId: conv.id,
         conveyorNodeId: secondStep,
         collaboratorId: SEED_COLLABORATOR_MARIA_ID,
         isPrimary: true,
+      })
+      await seedPublishedPlanItem(pool, {
+        conveyorId: conv.id,
+        stepNodeId: secondStep,
+        collaboratorId: SEED_COLLABORATOR_MARIA_ID,
+        createdByUserId: TE_ADMIN_USER_ID,
       })
 
       await seedOperationalWorkPlanItemsForSteps(pool, {
@@ -956,6 +1019,18 @@ describe.skipIf(!hasDb)('production time entries (integração)', () => {
         conveyorNodeId: stepId,
         collaboratorId: SEED_COLLABORATOR_MARIA_ID,
         isPrimary: true,
+      })
+
+      await seedPublishedPlanItem(pool, {
+
+        conveyorId: conv.id,
+
+        stepNodeId: stepId,
+
+        collaboratorId: SEED_COLLABORATOR_MARIA_ID,
+
+        createdByUserId: TE_ADMIN_USER_ID,
+
       })
 
       const cookie = productionSessionCookie(SEED_COLLABORATOR_MARIA_ID)
@@ -1036,6 +1111,12 @@ describe.skipIf(!hasDb)('production time entries (integração)', () => {
           collaboratorId: SEED_COLLABORATOR_MARIA_ID,
           isPrimary: true,
         })
+        await seedPublishedPlanItem(pool, {
+          conveyorId: conv.id,
+          stepNodeId: sid,
+          collaboratorId: SEED_COLLABORATOR_MARIA_ID,
+          createdByUserId: TE_ADMIN_USER_ID,
+        })
       }
 
       const cookie = productionSessionCookie(SEED_COLLABORATOR_MARIA_ID)
@@ -1061,6 +1142,18 @@ describe.skipIf(!hasDb)('production time entries (integração)', () => {
         conveyorNodeId: stepId,
         collaboratorId: SEED_COLLABORATOR_MARIA_ID,
         isPrimary: true,
+      })
+
+      await seedPublishedPlanItem(pool, {
+
+        conveyorId: conv.id,
+
+        stepNodeId: stepId,
+
+        collaboratorId: SEED_COLLABORATOR_MARIA_ID,
+
+        createdByUserId: TE_ADMIN_USER_ID,
+
       })
 
       await pool.query(
@@ -1096,6 +1189,12 @@ describe.skipIf(!hasDb)('production time entries (integração)', () => {
         conveyorNodeId: stepId,
         collaboratorId: SEED_COLLABORATOR_MARIA_ID,
         isPrimary: true,
+      })
+      await seedPublishedPlanItem(pool, {
+        conveyorId: conv.id,
+        stepNodeId: stepId,
+        collaboratorId: SEED_COLLABORATOR_MARIA_ID,
+        createdByUserId: TE_ADMIN_USER_ID,
       })
       await seedOperationalWorkPlanItemsForSteps(pool, {
         createdByUserId: TE_ADMIN_USER_ID,
@@ -1388,11 +1487,29 @@ describe.skipIf(!hasDb)('production time entries (integração)', () => {
         collaboratorId: SEED_COLLABORATOR_MARIA_ID,
         isPrimary: true,
       })
+
+      await seedPublishedPlanItem(pool, {
+
+        conveyorId: conv.id,
+
+        stepNodeId: steps.rows[0]!.id,
+
+        collaboratorId: SEED_COLLABORATOR_MARIA_ID,
+
+        createdByUserId: TE_ADMIN_USER_ID,
+
+      })
       await serviceCreateConveyorNodeAssignee(pool, {
         conveyorId: conv.id,
         conveyorNodeId: secondStep,
         collaboratorId: SEED_COLLABORATOR_MARIA_ID,
         isPrimary: true,
+      })
+      await seedPublishedPlanItem(pool, {
+        conveyorId: conv.id,
+        stepNodeId: secondStep,
+        collaboratorId: SEED_COLLABORATOR_MARIA_ID,
+        createdByUserId: TE_ADMIN_USER_ID,
       })
       await seedOperationalWorkPlanItemsForSteps(pool, {
         createdByUserId: TE_ADMIN_USER_ID,

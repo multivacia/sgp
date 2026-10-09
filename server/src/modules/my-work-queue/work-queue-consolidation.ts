@@ -16,14 +16,15 @@ export function consolidateWorkQueueRowsByActivity(
   rows: readonly MyWorkQueueRawRow[],
   summaries: ReadonlyMap<string, CollaboratorPlannedStepSummary>,
 ): MyWorkQueueRawRow[] {
+  const key = (row: MyWorkQueueRawRow) => `${row.conveyor_id}:${row.activity_node_id}`
   const byStep = new Map<string, MyWorkQueueRawRow>()
   for (const row of rows) {
-    const current = byStep.get(row.activity_node_id)
-    if (!current || isEarlier(row, current)) byStep.set(row.activity_node_id, row)
+    const current = byStep.get(key(row))
+    if (!current || isEarlier(row, current)) byStep.set(key(row), row)
   }
   const out: MyWorkQueueRawRow[] = []
   for (const row of rows) {
-    const representative = byStep.get(row.activity_node_id)
+    const representative = byStep.get(key(row))
     if (representative !== row) continue
     const summary = summaries.get(row.activity_node_id)
     const firstDate =

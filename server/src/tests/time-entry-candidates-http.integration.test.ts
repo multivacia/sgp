@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import request from 'supertest'
+import { cleanupSeededPlanItems, seedPublishedPlanItem } from './plannedActivityTestHelpers.js'
 import { createApp } from '../app.js'
 import { createLogger } from '../plugins/logger.js'
 import { closePool, getPool } from '../plugins/db.js'
@@ -98,6 +99,7 @@ describe.skipIf(!hasDb)('GET /api/v1/me/time-entry-candidates (integração)', (
   })
 
   afterAll(async () => {
+    await cleanupSeededPlanItems(getPool())
     await closePool()
   })
 
@@ -153,6 +155,12 @@ describe.skipIf(!hasDb)('GET /api/v1/me/time-entry-candidates (integração)', (
       conveyorNodeId: stepId,
       collaboratorId: COLAB_SEED,
       isPrimary: true,
+    })
+    await seedPublishedPlanItem(pool, {
+      conveyorId: created.id,
+      stepNodeId: stepId,
+      collaboratorId: COLAB_SEED,
+      createdByUserId: GOV_ADMIN_USER_ID,
     })
 
     const cookieMaria = await sessionCookieForUser(pool, MARIA_APP_USER_ID, MARIA_EMAIL)
@@ -236,6 +244,12 @@ describe.skipIf(!hasDb)('GET /api/v1/me/time-entry-candidates (integração)', (
       collaboratorId: COLAB_SEED,
       isPrimary: true,
     })
+    await seedPublishedPlanItem(pool, {
+      conveyorId: created2.id,
+      stepNodeId: step2,
+      collaboratorId: COLAB_SEED,
+      createdByUserId: GOV_ADMIN_USER_ID,
+    })
 
     const bad = await request(app)
       .post(
@@ -285,6 +299,12 @@ describe.skipIf(!hasDb)('GET /api/v1/me/time-entry-candidates (integração)', (
           conveyorNodeId: st.id,
           collaboratorId: COLAB_SEED,
           isPrimary: true,
+        })
+        await seedPublishedPlanItem(pool, {
+          conveyorId: created.id,
+          stepNodeId: st.id,
+          collaboratorId: COLAB_SEED,
+          createdByUserId: GOV_ADMIN_USER_ID,
         })
       }
       return created.id
