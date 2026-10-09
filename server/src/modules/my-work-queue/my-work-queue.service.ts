@@ -208,6 +208,7 @@ export async function serviceGetWorkQueueForCollaborator(
       conveyorId: row.conveyor_id,
       conveyorOperationalStatus: row.conveyor_operational_status,
       conveyorTitle: row.conveyor_title,
+      conveyorCode: row.conveyor_code ?? null,
       clientName: row.client_name,
       vehicleDescription: row.vehicle_description,
       licensePlate: row.license_plate,
