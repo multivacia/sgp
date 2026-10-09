@@ -688,8 +688,8 @@ export function QuickTimeEntryDrawer({
                         <span>
                           <span className="font-semibold text-slate-100">Buscar outras atividades</span>
                           <span className="mt-0.5 block text-[11px] leading-snug text-slate-500">
-                            Inclui atividades em aberto fora da sua alocação. Use pelo menos 2 caracteres na
-                            pesquisa. Será necessária uma justificativa ao apontar.
+                            Inclui atividades em aberto planejadas para outros colaboradores. Use pelo menos 2
+                            caracteres na pesquisa. Será necessária uma justificativa ao apontar.
                           </span>
                         </span>
                       </label>
@@ -948,8 +948,8 @@ export function QuickTimeEntryDrawer({
                     {formNeedsJustification ? (
                       <div className="mt-4 rounded-xl border border-amber-500/25 bg-amber-500/[0.07] px-3 py-2.5 text-xs text-amber-50/95">
                         <p className="font-semibold text-amber-100">
-                          Você não está alocado nesta atividade. Para apontar horas, informe uma justificativa
-                          (apontamento por exceção).
+                          Esta atividade está planejada para outro colaborador. Para apontar horas, informe uma
+                          justificativa (apontamento por exceção).
                         </p>
                       </div>
                     ) : null}

@@ -493,14 +493,36 @@ Atividade `ABORTED` bloqueia novos apontamentos.
 
 Permite apontamento com justificativa quando a sequência anterior ainda está aberta.
 
-## APO-008 — Sem alocação
+## APO-008 — Somente atividade planejada (TASK `apontamento-somente-planejado`, 08/10/2026)
 
-O sistema pode registrar apontamento por exceção quando não há alocação válida, desde que o fluxo aceite e exista justificativa.
+Só recebe apontamento a atividade com **item planejado válido**: `operational_work_plan_items` não excluído, `status = PLANNED`, no plano **publicado vigente** da sua semana (o mais recente publicado daquela semana), em **qualquer semana**. Alocação estrutural (`conveyor_node_assignees`, direta ou via time) **não** é mais fonte de apontamento.
 
-Origem:
-`UNASSIGNED_EXCEPTION`
+| Situação | Lista padrão | Pesquisa de outras atividades (≥ 2 caracteres) | Gravação |
+|---|---|---|---|
+| planejada para o colaborador | aparece | aparece | `ASSIGNED`, sem justificativa de exceção; reutiliza ou cria alocação de apoio (`is_primary = false`) |
+| planejada só para outro colaborador | não aparece | aparece | `UNASSIGNED_EXCEPTION`, justificativa obrigatória; não cria alocação |
+| não planejada para ninguém | não aparece | não aparece | recusada: `TIME_ENTRY_NOT_PLANNED` (422), em todos os caminhos, inclusive o lançamento do gestor em nome de outro |
 
-Isso não cria uma alocação normal.
+Mensagem da recusa:
+“Esta atividade não está planejada. Fale com o gestor para incluí-la no planejamento.”
+
+Restrição do banco: `uq_operational_work_plan_items_plan_activity_active` permite **um item ativo por atividade em cada plano semanal** — dentro de uma semana a atividade tem um colaborador e um dia. Atividade "em vários dias" só ocorre entre semanas diferentes.
+
+Evidência: `server/src/modules/operational-planning/planned-activity.repository.ts`, `planned-activity.service.ts`; `conveyorAssignments.service.ts` (web e on-behalf); `production-time-entries.service.ts` e `production-unassigned-time-entries.service.ts` (Kiosk); `my-activities.repository.ts` (`listPlannedTimeEntryCandidates`).
+
+Histórico: apontamentos já gravados como `UNASSIGNED_EXCEPTION` sob a regra anterior (sem alocação) continuam exibidos como estão.
+
+## APO-008A — Excesso de tempo previsto
+
+Vale para atividade **planejada para o colaborador**, na web e no Kiosk (fila e Outra atividade).
+
+- Previsto: soma de `planned_minutes` de todos os itens planejados válidos do colaborador na atividade.
+- Realizado: soma dos apontamentos do **próprio** colaborador na atividade.
+- Exige justificativa quando realizado + novo apontamento > previsto. Sem previsto, não exige.
+- Atividade planejada só para outro colaborador: não exige (a justificativa de exceção basta).
+- Justificativa de fora de sequência já informada dispensa a de excesso.
+
+Código: `TIME_ENTRY_EXCEEDED_PLANNED_REQUIRES_JUSTIFICATION`. Na web a justificativa vai em `justificationId`; no Outra atividade, em `justificationId` do corpo.
 
 ## APO-009 — Primeiro apontamento
 
@@ -717,6 +739,8 @@ O colaborador alvo:
 
 Exige motivo.
 
+Desde a TASK `apontamento-somente-planejado` (08/10/2026), a atividade precisa estar planejada para alguém (APO-008); caso contrário, `TIME_ENTRY_NOT_PLANNED`. As demais regras deste fluxo permanecem como estavam, inclusive a exigência de alocação estrutural do colaborador alvo.
+
 ---
 
 # 10. Minha Fila
@@ -732,6 +756,17 @@ Permite navegar por data de trabalho.
 ## FIL-003 — Sequência
 
 Atividade com predecessor aberto deve ser apresentada como exceção, e não como bloqueio absoluto.
+
+## FIL-003A — Cartões, movidos e totais (TASK `apontamento-somente-planejado`)
+
+- Somente itens `PLANNED` do plano publicado vigente; itens `MOVED` e `CANCELLED` saem.
+- **Um cartão por atividade**: entra se tiver ao menos um item no recorte; a data do cartão é a menor data entre todos os itens válidos do colaborador na atividade, **mesmo fora do recorte** (o grupo segue essa data).
+- Cartão: `plannedMinutes` = soma de todos os itens do colaborador; `realizedMinutes` (novo) = apontado pelo próprio colaborador.
+- Totais do recorte (`plannedMinutesToday`, capacidade, `plannedVsCapacity`) continuam somando **só os itens dentro do intervalo**.
+- Atividade planejada para o colaborador não exige justificativa de exceção (`requiresUnassignedJustification = false`).
+- Recorte inalterado: atrasadas só da semana exibida; futuras só no período; concluídas e dispensadas em **Concluídas**.
+
+Evidência: `my-work-queue.service.ts`, `work-queue-consolidation.ts`, `my-work-queue.repository.ts`.
 
 ## FIL-004 — Planejamento
 
@@ -863,9 +898,17 @@ Fora de sequência:
 - apresenta aviso;
 - permite continuar com justificativa.
 
+## KSK-004A — Fila (TASK `apontamento-somente-planejado`)
+
+A fila do Kiosk lista as atividades planejadas para o colaborador em **qualquer semana** (atrasadas, hoje e futuras), em aberto, com esteira `A_INICIAR`/`EM_ANDAMENTO`, um cartão por atividade (menor data). Ordem: atrasadas, hoje, futuras. Atividade futura não é recomendada enquanto houver atrasada ou de hoje em aberto. O cartão mostra a data planejada e a faixa (Atrasada, Hoje, Futura). Previsto = soma dos itens do colaborador; realizado e pendente = do próprio colaborador.
+
+Para o mesmo colaborador, a lista padrão do Apontar horas (web) e a fila do Kiosk trazem o mesmo conjunto de atividades. A fila do Kiosk deixa de ser equivalente à Minha fila (recortes diferentes).
+
+Evidência: `production-work-queue.service.ts`; `my-work-queue.service.ts` (`allOpenPlanned`, `orderKioskQueueByDateBucket`).
+
 ## KSK-005 — Excesso de tempo
 
-Exige justificativa quando o novo apontamento ultrapassa o planejado.
+Exige justificativa quando o novo apontamento ultrapassa o planejado. Desde 08/10/2026 segue APO-008A: previsto e realizado do próprio colaborador, somando todos os dias.
 
 ## KSK-006 — Conclusão da atividade
 
@@ -875,7 +918,7 @@ Pode haver confirmação adicional quando o percentual informado para a sessão 
 
 ## KSK-007 — Outra atividade
 
-Funcionalidade não documentada.
+Pesquisa (≥ 2 caracteres) e apontamento em atividade planejada para outro colaborador, com justificativa de exceção; segue APO-008 e APO-008A.
 
 Permite localizar atividade fora da fila normal.
 

@@ -1642,7 +1642,7 @@ Nas telas de **Apontamento gerencial** a palavra **passo** aparece no lugar de *
 ### Registrar horas em uma atividade
 
 1. Clique em **Apontar horas**, na barra superior. A gaveta abre na aba **Esteira**, com o título **Apontar horas**.
-2. Localize a atividade. A lista vem separada em **Minhas atividades** — aquelas em que você está alocado ou que estão no planejamento publicado para hoje — e, quando aplicável, **Fora da sua alocação**.
+2. Localize a atividade. A lista vem separada em **Minhas atividades** — as atividades **planejadas para você** em um planejamento publicado, de qualquer semana: atrasadas, de hoje e futuras — e, quando você pesquisa outras atividades, **Fora da sua alocação**. Uma atividade planejada em mais de uma semana aparece uma vez só, com a data mais antiga.
 3. Para procurar, use o campo **Pesquisar**. Ele encontra por esteira, código, cliente, veículo, placa, setor e nome da atividade.
 4. Clique em **Apontar** no cartão da atividade. O título muda para **Registrar tempo**.
 5. Confirme ou troque a **data em que o trabalho foi realizado**.
@@ -1668,21 +1668,25 @@ Para voltar à lista sem salvar, use **← Voltar à lista** ou **Cancelar**.
 
 ### Quando a atividade não aparece na lista
 
-A lista só oferece atividades que podem receber apontamento: a esteira precisa estar **A iniciar** ou **Em andamento**, e a atividade não pode estar concluída nem dispensada.
+Só recebe apontamento uma atividade **planejada** — que tenha sido distribuída a alguém em um planejamento **publicado**. Estar alocado na esteira, sozinho ou pelo seu time, não basta. Além disso, a esteira precisa estar **A iniciar** ou **Em andamento**, e a atividade não pode estar concluída nem dispensada.
 
-Se a atividade que você procura não aparece, marque **Buscar outras atividades**. A tela explica o efeito: *"Inclui atividades em aberto fora da sua alocação. Use pelo menos 2 caracteres na pesquisa. Será necessária uma justificativa ao apontar."*
+A lista principal traz só as atividades planejadas **para você**. Se a atividade que você procura foi planejada para um colega, marque **Buscar outras atividades** e digite pelo menos 2 caracteres. A tela explica o efeito: *"Inclui atividades em aberto planejadas para outros colaboradores. Use pelo menos 2 caracteres na pesquisa. Será necessária uma justificativa ao apontar."*
 
-Essas atividades aparecem no bloco **Fora da sua alocação**, e ao abrir o formulário o sistema avisa: *"Você não está alocado nesta atividade. Para apontar horas, informe uma justificativa (apontamento por exceção)."*
+Essas atividades aparecem no bloco **Fora da sua alocação**, e ao abrir o formulário o sistema avisa: *"Esta atividade está planejada para outro colaborador. Para apontar horas, informe uma justificativa (apontamento por exceção)."*
+
+Atividade que **não foi planejada para ninguém** não aparece em nenhuma lista e não recebe apontamento, nem pelo gestor em nome de outra pessoa. Se tentar por outro caminho, o sistema recusa com *"Esta atividade não está planejada. Fale com o gestor para incluí-la no planejamento."* Peça à gestão para incluí-la no planejamento e publicar a semana.
 
 ### Quando a justificativa é exigida
 
-Dois casos, e eles podem ocorrer juntos:
+Três casos, e eles podem ocorrer juntos:
 
-**1. Você não está alocado na atividade.** O aviso acima aparece e a justificativa passa a ser obrigatória.
+**1. A atividade está planejada para outro colaborador.** O aviso acima aparece e a justificativa passa a ser obrigatória.
 
 **2. Há atividades anteriores pendentes na esteira.** A tela mostra a faixa **Fora de sequência — confirme o apontamento**, informa quantas atividades anteriores ainda estão pendentes e lista cada uma no formato tarefa › setor › atividade.
 
-Em ambos os casos **nada é bloqueado**: você continua, informando a justificativa. O apontamento fora de sequência fica registrado no histórico da esteira como exceção.
+**3. O tempo passa do previsto para você.** Vale para atividade planejada para você, no computador e no Modo Fábrica. O previsto é a soma do tempo planejado para você nessa atividade, em todos os dias; o já apontado considera **só os seus** apontamentos. Se o tempo informado somado ao que você já apontou passar do previsto, o campo de justificativa fica obrigatório. Quando você já justificou o apontamento como exceção (caso 1) ou fora de sequência (caso 2), essa mesma justificativa vale e nada mais é pedido.
+
+Nos três casos **nada é bloqueado**: você continua, informando a justificativa. O apontamento fora de sequência fica registrado no histórico da esteira como exceção.
 
 Quando existe atividade anterior pendente mas o sistema **não** exige justificativa, aparece apenas um aviso discreto — por exemplo **"Aguardando etapa …"** ou **"Aguardando N etapas anteriores"**. Nesse caso é só informação.
 
@@ -2632,7 +2636,7 @@ Ela responde a quatro perguntas:
 
 Minha fila **não é planejamento**. Você não acrescenta, não remove e não muda a data de uma atividade por aqui — quem faz isso é a gestão, no Planejamento semanal (capítulo 8) ou na Agenda da semana (capítulo 9). O que você faz aqui é **apontar o tempo trabalhado** e **concluir** a atividade.
 
-Na área autenticada ela é a tela equivalente à fila do **Modo Fábrica** (capítulo 13). As duas nascem do mesmo planejamento publicado, mas **não mostram as mesmas informações nem oferecem as mesmas ações**. A comparação está no final do capítulo.
+As duas filas — a Minha fila e a do **Modo Fábrica** (capítulo 13) — nascem do mesmo planejamento publicado, mas **têm recortes diferentes**: a Minha fila mostra o dia ou o período escolhido; a fila do Modo Fábrica mostra tudo o que está planejado para você e ainda está em aberto, de qualquer semana. A comparação está no final do capítulo.
 
 ## Onde fica
 
@@ -2672,7 +2676,9 @@ Disso nascem as regras que explicam quase tudo o que você vai ver:
 - **Sem planejamento publicado não há fila.** Rascunho não conta. Revisão salva e não publicada não conta.
 - **Vale sempre a última versão publicada.** Quando a gestão publica de novo, a fila passa a mostrar a nova versão inteira: o que saiu desaparece, o que entrou aparece.
 - **A fila só olha uma semana por vez.** A semana é a da data que você está vendo. Pendência de outra semana não aparece aqui.
-- **A fila é nominal.** Uma atividade entra porque o planejamento escreveu o seu nome nela — não porque você está alocado na esteira. Os dois não são a mesma coisa, e a diferença aparece no cartão (veja *Fora da sua alocação*, mais adiante).
+- **A fila é nominal.** Uma atividade entra porque o planejamento escreveu o seu nome nela — não porque você está alocado na esteira. Por estar planejada para você, ela recebe apontamento sem justificativa de exceção, mesmo que você não conste como alocado na estrutura da esteira.
+- **Atividade movida no planejamento não aparece.** Quando a gestão move uma atividade para outro dia ou pessoa, o item movido sai da fila.
+- **Um cartão por atividade.** Se a mesma atividade foi planejada para você em mais de uma semana, ela aparece uma vez, com a **data mais antiga**, mesmo que essa data seja de uma semana anterior à exibida. Exemplo: planejada para você na sexta-feira da semana passada e na segunda desta semana — na fila desta semana aparece uma vez, com a data da sexta, no grupo **Atrasadas**.
 
 ### Saber por que uma atividade ainda não apareceu
 
@@ -2766,11 +2772,9 @@ Cada cartão traz, na faixa de cima, um número e os selos; no corpo, a identifi
 | **Próxima atividade recomendada** | nada impede começar agora |
 | *"Etapa anterior pendente: …"* / **Atenção à sequência** | há atividade anterior da esteira ainda aberta — "etapa" aqui é **atividade** |
 | *"Aguardando etapa …"* / *"Aguardando N etapas anteriores"* | a atividade anterior aberta é de **outra pessoa** |
-| **Fora da sua alocação** | você foi planejado para esta atividade, mas não consta como alocado nela na estrutura da esteira |
 | **Atividade** / **Tarefa ·** / **Setor ·** / **Esteira** / **Data planejada** | identificação do trabalho e onde ele fica |
 | linha discreta no pé | cliente, veículo e placa, quando a esteira tem esses dados |
 
-Quando o selo **Fora da sua alocação** aparece, o cartão também explica o efeito: *"Você foi planejado para esta Atividade, mas não está alocado nela. O apontamento exigirá justificativa."*
 
 **O número do cartão não é a ordem da tela.** A tela ordena por grupo, depois pelas atividades livres antes das que têm pendência anterior, depois por data e pela sequência da própria esteira. O número continua sendo o do planejamento. É normal os números não ficarem em ordem crescente — use a posição dos cartões e o selo de recomendação para decidir, não o número.
 
@@ -2778,7 +2782,7 @@ Quando o selo **Fora da sua alocação** aparece, o cartão também explica o ef
 
 Vale saber desde já, para não procurar o que não existe nesta tela:
 
-- **não há tempo realizado, tempo pendente nem percentual de avanço** — o cartão mostra apenas o previsto. O quanto já foi apontado você vê em **Minha jornada** (capítulo 11), na esteira (capítulo 6) ou no Modo Fábrica;
+- **não há tempo pendente nem percentual de avanço** — o cartão mostra o previsto e o **Apontado**. Os dois somam todos os dias em que a atividade foi planejada para você, e o apontado considera só os **seus** apontamentos. Os números do topo (**Minutos planejados** e o aviso de capacidade) continuam contando só o que cai na data ou no período exibido, por isso a soma dos cartões pode ser maior que esses totais;
 - **não há quantidade** no cartão. A quantidade é informada no momento do apontamento;
 - **não há impressão de ticket** e **não há reabrir** por aqui.
 
@@ -2816,15 +2820,14 @@ São os mesmos campos e as mesmas regras do capítulo 7 — a fila apenas abre o
 
 Dois casos, e somente estes dois:
 
-**1. Atividade fora da sua alocação.** O cartão já avisa com o selo **Fora da sua alocação**, e no formulário aparece *"Você não está alocado nesta atividade. Para apontar horas, informe uma justificativa (apontamento por exceção)."*
+**1. Atividade anterior ainda aberta.** Aparece a faixa **Fora de sequência — confirme o apontamento**, com a contagem — *"Existem atividades anteriores ainda pendentes nesta esteira — antes dela ainda existem 2 atividades pendentes."* — e a lista das atividades em aberto.
 
-**2. Atividade anterior ainda aberta.** Aparece a faixa **Fora de sequência — confirme o apontamento**, com a contagem — *"Existem atividades anteriores ainda pendentes nesta esteira — antes dela ainda existem 2 atividades pendentes."* — e a lista das atividades em aberto.
+**2. O tempo passa do previsto para você.** Se o tempo informado somado ao que você já apontou passar do previsto para você nessa atividade, a justificativa fica obrigatória. Se você já justificou fora de sequência, não é pedida outra.
 
 Nos dois casos **nada é bloqueado**: você continua, escolhendo um motivo na lista de **justificativa operacional**. Algumas opções pedem um **Complemento**.
 
 Quando existe atividade anterior aberta **de outra pessoa** e o sistema não exige justificativa, aparece apenas um aviso discreto — *"Aguardando etapa …"* ou *"Aguardando N etapas anteriores"*. Nesse caso é só informação.
 
-**Na Minha fila não existe justificativa por passar do tempo previsto.** Você pode apontar mais minutos do que o previsto da atividade sem nenhuma exigência adicional. Essa exigência é só do Modo Fábrica (capítulo 13).
 
 ### Concluir pela fila
 
@@ -2934,24 +2937,25 @@ Um bloqueio que **não** existe aqui: atividade com atividade anterior pendente 
 
 ### Diferenças em relação ao Modo Fábrica
 
-As duas filas leem o **mesmo planejamento publicado** e aplicam a **mesma regra de sequência**. O que muda é o resto:
+As duas filas leem o **mesmo planejamento publicado** e aplicam a **mesma regra de sequência** e de apontamento. O que muda é o recorte e a apresentação:
 
 | | Minha fila | Modo Fábrica (capítulo 13) |
 |---|---|---|
 | como você entra | e-mail e senha | colaborador e PIN |
-| data | navegação livre, inclusive datas futuras | sempre o dia corrente |
+| recorte | o dia ou o período escolhido; atrasadas só da semana exibida; futuras só se o período as abranger | tudo o que está planejado para você e em aberto, de qualquer semana: atrasadas, de hoje e futuras |
+| atividade concluída ou dispensada | aparece em **Concluídas** | não aparece |
 | organização | grupos **Atrasadas**, **Hoje** e **Concluídas** | filtros **Todas**, **Pendentes** e **Concluídas** no navegador da fábrica |
-| tempo no cartão | só o **previsto** | **previsto**, **realizado** e **pendente** |
+| tempo no cartão | **previsto** e **apontado** (seus, todos os dias) | **previsto**, **realizado** e **pendente** (seus, todos os dias) |
 | capacidade do dia | mostra o aviso de planejamento acima da capacidade | não mostra |
 | quantidade executada | sim, no apontamento | não existe no totem; existe no navegador da fábrica |
 | conclusão | junto com o apontamento, ou pela lista da gaveta | ação própria no totem |
-| justificativa por passar do previsto | **não exige** | **exige** |
+| justificativa por passar do previsto | **exige**, com o previsto e o apontado seus | **exige**, com o previsto e o apontado seus |
 | atividade dispensada | aparece em **Concluídas**, com o botão de apontar ainda clicável | aparece bloqueada, com *"Apontamento bloqueado para esta atividade"* |
 | **Extra Esteira** | pela aba **Extra esteira** da mesma gaveta | ação própria no totem |
-| apontar em atividade fora do seu planejamento | marcando **Buscar outras atividades** na gaveta | ação **Outra atividade**, no totem |
+| apontar em atividade planejada para um colega | marcando **Buscar outras atividades** na gaveta, com justificativa | ação **Outra atividade**, no totem, com justificativa |
 | atualização | manual, por **Atualizar** ou ao fechar a gaveta | fluxo próprio do totem |
 
-**Não tente usar uma como espelho da outra.** Para conferir tempo realizado e avanço, o Modo Fábrica e a **Minha jornada** (capítulo 11) são mais completos. Para enxergar atraso da semana, capacidade do dia e datas passadas, a Minha fila é a tela certa.
+**Não tente usar uma como espelho da outra.** Uma atividade atrasada de uma semana anterior, ou futura, aparece no Modo Fábrica e no **Apontar horas**, mas não na Minha fila do dia — é esperado. Para enxergar atraso da semana, capacidade do dia e datas passadas, a Minha fila é a tela certa; para ver tudo o que você pode apontar, use o Modo Fábrica ou o **Apontar horas**.
 
 [IMAGEM SUGERIDA: gaveta Execução rápida aberta a partir do cartão, com data, tempo, quantidade e o botão Salvar apontamento e concluir atividade]
 
@@ -3568,7 +3572,7 @@ Na tela de correção, lançar horas exige que o colaborador esteja **alocado na
 
 ## Para que serve
 
-O Modo Fábrica é por onde o colaborador registra produção no piso de fábrica. Ele mostra a fila do dia, deixa apontar o tempo trabalhado, concluir a atividade e registrar tempo que não pertence a nenhuma esteira — tudo em telas grandes, feitas para uso rápido e sem teclado.
+O Modo Fábrica é por onde o colaborador registra produção no piso de fábrica. Ele mostra a fila das atividades planejadas para o colaborador, deixa apontar o tempo trabalhado, concluir a atividade e registrar tempo que não pertence a nenhuma esteira — tudo em telas grandes, feitas para uso rápido e sem teclado.
 
 É um canal separado do resto do sistema: não tem menu lateral, não tem relatórios e não exige e-mail e senha. A entrada é **colaborador + PIN**.
 
@@ -3647,7 +3651,7 @@ Escolha um PIN que só você saiba: é ele que identifica o seu trabalho nos reg
 
 ### Ler a sua fila
 
-Entrou, aparece o cabeçalho com sua foto, seu nome e quantas atividades você tem. A fila vem do **planejamento da semana já publicado** pelo gestor, para a data de hoje, incluindo o que ficou em atraso de dias anteriores.
+Entrou, aparece o cabeçalho com sua foto, seu nome e quantas atividades você tem. A fila vem do **planejamento já publicado** pelo gestor e traz tudo o que está planejado para você e ainda está em aberto, de **qualquer semana**: primeiro as atrasadas, depois as de hoje, depois as futuras. Cada cartão mostra a data planejada e se a atividade está **Atrasada**, é de **Hoje** ou é **Futura**. Uma atividade futura nunca recebe o selo de próxima recomendada enquanto houver atividade atrasada ou de hoje em aberto.
 
 O totem mostra a fila de dois jeitos, alternados pelos dois botõezinhos do cabeçalho:
 
@@ -3663,7 +3667,7 @@ Cada cartão traz:
 | O que aparece | O que significa |
 |---|---|
 | Esteira, Tarefa, Setor e o nome da atividade | onde o trabalho se encaixa |
-| **Realizado: N min · Planejado: N min** | o tempo já apontado e o tempo previsto para você naquela atividade |
+| **Realizado: N min · Planejado: N min** | o tempo que **você** já apontou e o tempo previsto **para você** naquela atividade, somando todos os dias em que ela foi planejada para você |
 | **Tempo previsto: N%** | quanto do tempo previsto já foi consumido (para em 100%) |
 | etiqueta **Próxima atividade recomendada** | é por ela que a sequência sugere começar |
 | etiqueta de atenção à sequência | há atividade anterior ainda pendente |
@@ -3696,7 +3700,7 @@ Duas situações, que podem acontecer juntas. Em nenhuma delas o apontamento é 
 
 Em qualquer dos casos o botão muda para **Registrar apontamento (exceção)** e o campo **Justificativa operacional** passa a ser obrigatório. Escolha um motivo da lista; algumas opções pedem um **Complemento**. A justificativa precisa ter **no mínimo 3 caracteres**.
 
-A conta do tempo acima do previsto considera **o que já foi apontado mais o que você está apontando agora**. Se a soma passar do previsto, a justificativa é pedida — mesmo que este apontamento sozinho seja pequeno.
+A conta do tempo acima do previsto considera **o que você já apontou mais o que está apontando agora**, comparado com **o previsto para você** (somando todos os dias). Apontamentos de colegas na mesma atividade não entram na conta. Se a soma passar do previsto, a justificativa é pedida — mesmo que este apontamento sozinho seja pequeno.
 
 ### Concluir uma atividade
 
@@ -3720,14 +3724,14 @@ Fora desse caso, o tempo é obrigatório: registrar sem informar minutos e sem l
 
 ### Outra atividade
 
-Serve para apontar uma atividade que **não está na sua fila** — porque não foi planejada para você, ou porque não é sua alocação.
+Serve para pesquisar e apontar em uma atividade **planejada para um colega**. Atividade que não foi planejada para ninguém não aparece aqui e não recebe apontamento.
 
 1. No cabeçalho da fila, toque **+ Outra atividade**.
 2. Digite ao menos **2 caracteres** na busca (*"Digite ao menos 2 caracteres…"*) e escolha a atividade na lista.
 3. Confirme a **data de realização**.
 4. Informe os **Minutos** — pelos botões de atalho ou no campo **outro**. Aqui o mínimo é 1: não existe conclusão sem tempo.
 5. Use **Observação** se precisar.
-6. Preencha a **Justificativa** — ela é exigida justamente porque a atividade está fora da sua fila ou da sua alocação, e também se houver atividade anterior pendente.
+6. Preencha a **Justificativa** — ela é exigida quando a atividade está planejada para outro colaborador, quando há atividade anterior pendente e, se a atividade for sua, quando o tempo passa do previsto para você.
 7. Confira o resumo — Colaborador, Atividade, Contexto, Data, Minutos, Observação, Justificativa — e toque **Confirmar apontamento**.
 
 Registrado, aparece **"Apontamento registrado!"** e o totem volta à fila.
@@ -3771,7 +3775,7 @@ A sessão também expira sozinha: por inatividade e por tempo total de uso. Os p
 
 Sem planejamento publicado para a semana, **sua fila fica vazia** — não é falha do equipamento nem do seu acesso. É o caso mais comum de "não aparece nada para mim".
 
-Aparecem na fila as atividades planejadas para você, de hoje e as atrasadas de dias anteriores. Saem da fila as que você concluiu, as dispensadas e as de esteira que não está liberada para produção.
+Aparecem na fila as atividades planejadas para você em qualquer semana — atrasadas, de hoje e futuras. Atividade planejada em mais de uma semana aparece uma vez, com a data mais antiga. Saem da fila as que foram concluídas, as dispensadas, as movidas no planejamento e as de esteira que não está liberada para produção.
 
 ### O que muda depois de registrar
 
@@ -3857,7 +3861,8 @@ O totem ocupa a tela inteira, sem barra de navegador, e só a área das atividad
 | **"Nenhuma atividade planejada para você no momento."** e *"Confirme com o gestor se o planejamento da fábrica já foi publicado."* | no navegador da fábrica, sem plano publicado | falar com o gestor |
 | **"Nenhuma atividade para este filtro."** | no navegador, o filtro escolhido não tem itens | trocar para **Todas** |
 | **"Não foi possível carregar suas atividades."** | o **Atualizar** falhou | tocar **Atualizar** de novo; a fila anterior continua na tela |
-| a atividade existe mas não está na fila | não foi planejada para você | usar **+ Outra atividade**, com justificativa |
+| a atividade existe mas não está na fila | não foi planejada para você | se estiver planejada para um colega, usar **+ Outra atividade**, com justificativa; se não estiver planejada para ninguém, pedir ao gestor para incluí-la no planejamento |
+| **"Esta atividade não está planejada. Fale com o gestor para incluí-la no planejamento."** | a atividade não foi planejada para ninguém | pedir ao gestor para incluí-la no planejamento e publicar a semana |
 
 ### Não consigo apontar nesta atividade
 

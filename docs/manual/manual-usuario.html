@@ -3633,7 +3633,7 @@ Enquanto isso não for corrigido, <strong>não use o cartão Em atraso como font
 <h4 id="cap-7-registrar-horas-em-uma-atividade">Registrar horas em uma atividade</h4>
 <ol>
 <li>Clique em <strong>Apontar horas</strong>, na barra superior. A gaveta abre na aba <strong>Esteira</strong>, com o título <strong>Apontar horas</strong>.</li>
-<li>Localize a atividade. A lista vem separada em <strong>Minhas atividades</strong> — aquelas em que você está alocado ou que estão no planejamento publicado para hoje — e, quando aplicável, <strong>Fora da sua alocação</strong>.</li>
+<li>Localize a atividade. A lista vem separada em <strong>Minhas atividades</strong> — as atividades <strong>planejadas para você</strong> em um planejamento publicado, de qualquer semana: atrasadas, de hoje e futuras — e, quando você pesquisa outras atividades, <strong>Fora da sua alocação</strong>. Uma atividade planejada em mais de uma semana aparece uma vez só, com a data mais antiga.</li>
 <li>Para procurar, use o campo <strong>Pesquisar</strong>. Ele encontra por esteira, código, cliente, veículo, placa, setor e nome da atividade.</li>
 <li>Clique em <strong>Apontar</strong> no cartão da atividade. O título muda para <strong>Registrar tempo</strong>.</li>
 <li>Confirme ou troque a <strong>data em que o trabalho foi realizado</strong>.</li>
@@ -3683,14 +3683,16 @@ Enquanto isso não for corrigido, <strong>não use o cartão Em atraso como font
 </tbody></table>
 </div>
 <h4 id="cap-7-quando-a-atividade-nao-aparece-na-lista">Quando a atividade não aparece na lista</h4>
-<p>A lista só oferece atividades que podem receber apontamento: a esteira precisa estar <strong>A iniciar</strong> ou <strong>Em andamento</strong>, e a atividade não pode estar concluída nem dispensada.</p>
-<p>Se a atividade que você procura não aparece, marque <strong>Buscar outras atividades</strong>. A tela explica o efeito: <em>&quot;Inclui atividades em aberto fora da sua alocação. Use pelo menos 2 caracteres na pesquisa. Será necessária uma justificativa ao apontar.&quot;</em></p>
-<p>Essas atividades aparecem no bloco <strong>Fora da sua alocação</strong>, e ao abrir o formulário o sistema avisa: <em>&quot;Você não está alocado nesta atividade. Para apontar horas, informe uma justificativa (apontamento por exceção).&quot;</em></p>
+<p>Só recebe apontamento uma atividade <strong>planejada</strong> — que tenha sido distribuída a alguém em um planejamento <strong>publicado</strong>. Estar alocado na esteira, sozinho ou pelo seu time, não basta. Além disso, a esteira precisa estar <strong>A iniciar</strong> ou <strong>Em andamento</strong>, e a atividade não pode estar concluída nem dispensada.</p>
+<p>A lista principal traz só as atividades planejadas <strong>para você</strong>. Se a atividade que você procura foi planejada para um colega, marque <strong>Buscar outras atividades</strong> e digite pelo menos 2 caracteres. A tela explica o efeito: <em>&quot;Inclui atividades em aberto planejadas para outros colaboradores. Use pelo menos 2 caracteres na pesquisa. Será necessária uma justificativa ao apontar.&quot;</em></p>
+<p>Essas atividades aparecem no bloco <strong>Fora da sua alocação</strong>, e ao abrir o formulário o sistema avisa: <em>&quot;Esta atividade está planejada para outro colaborador. Para apontar horas, informe uma justificativa (apontamento por exceção).&quot;</em></p>
+<p>Atividade que <strong>não foi planejada para ninguém</strong> não aparece em nenhuma lista e não recebe apontamento, nem pelo gestor em nome de outra pessoa. Se tentar por outro caminho, o sistema recusa com <em>&quot;Esta atividade não está planejada. Fale com o gestor para incluí-la no planejamento.&quot;</em> Peça à gestão para incluí-la no planejamento e publicar a semana.</p>
 <h4 id="cap-7-quando-a-justificativa-e-exigida">Quando a justificativa é exigida</h4>
-<p>Dois casos, e eles podem ocorrer juntos:</p>
-<p><strong>1. Você não está alocado na atividade.</strong> O aviso acima aparece e a justificativa passa a ser obrigatória.</p>
+<p>Três casos, e eles podem ocorrer juntos:</p>
+<p><strong>1. A atividade está planejada para outro colaborador.</strong> O aviso acima aparece e a justificativa passa a ser obrigatória.</p>
 <p><strong>2. Há atividades anteriores pendentes na esteira.</strong> A tela mostra a faixa <strong>Fora de sequência — confirme o apontamento</strong>, informa quantas atividades anteriores ainda estão pendentes e lista cada uma no formato tarefa › setor › atividade.</p>
-<p>Em ambos os casos <strong>nada é bloqueado</strong>: você continua, informando a justificativa. O apontamento fora de sequência fica registrado no histórico da esteira como exceção.</p>
+<p><strong>3. O tempo passa do previsto para você.</strong> Vale para atividade planejada para você, no computador e no Modo Fábrica. O previsto é a soma do tempo planejado para você nessa atividade, em todos os dias; o já apontado considera <strong>só os seus</strong> apontamentos. Se o tempo informado somado ao que você já apontou passar do previsto, o campo de justificativa fica obrigatório. Quando você já justificou o apontamento como exceção (caso 1) ou fora de sequência (caso 2), essa mesma justificativa vale e nada mais é pedido.</p>
+<p>Nos três casos <strong>nada é bloqueado</strong>: você continua, informando a justificativa. O apontamento fora de sequência fica registrado no histórico da esteira como exceção.</p>
 <p>Quando existe atividade anterior pendente mas o sistema <strong>não</strong> exige justificativa, aparece apenas um aviso discreto — por exemplo <strong>&quot;Aguardando etapa …&quot;</strong> ou <strong>&quot;Aguardando N etapas anteriores&quot;</strong>. Nesse caso é só informação.</p>
 <h4 id="cap-7-registrar-e-concluir-no-mesmo-passo">Registrar e concluir no mesmo passo</h4>
 <p>No formulário, abaixo de <strong>Salvar apontamento</strong>, existe <strong>Salvar apontamento e concluir atividade</strong>. Ele grava o tempo e encerra a atividade na mesma operação.</p>
@@ -5185,7 +5187,7 @@ Enquanto isso não for corrigido, <strong>não use o cartão Em atraso como font
 <li>por onde começar.</li>
 </ul>
 <p>Minha fila <strong>não é planejamento</strong>. Você não acrescenta, não remove e não muda a data de uma atividade por aqui — quem faz isso é a gestão, no Planejamento semanal (capítulo 8) ou na Agenda da semana (capítulo 9). O que você faz aqui é <strong>apontar o tempo trabalhado</strong> e <strong>concluir</strong> a atividade.</p>
-<p>Na área autenticada ela é a tela equivalente à fila do <strong>Modo Fábrica</strong> (capítulo 13). As duas nascem do mesmo planejamento publicado, mas <strong>não mostram as mesmas informações nem oferecem as mesmas ações</strong>. A comparação está no final do capítulo.</p>
+<p>As duas filas — a Minha fila e a do <strong>Modo Fábrica</strong> (capítulo 13) — nascem do mesmo planejamento publicado, mas <strong>têm recortes diferentes</strong>: a Minha fila mostra o dia ou o período escolhido; a fila do Modo Fábrica mostra tudo o que está planejado para você e ainda está em aberto, de qualquer semana. A comparação está no final do capítulo.</p>
 <h3 id="cap-10-onde-fica">Onde fica</h3>
 <p>Menu lateral, agrupamento <strong>Colaborador</strong> → <strong>Minha fila</strong>.</p>
 <p>O título na tela é <strong>Minha fila</strong>, com a frase <em>&quot;Atividades planejadas para hoje, em ordem de execução.&quot;</em>. Logo abaixo aparece a origem do que está sendo exibido:</p>
@@ -5226,7 +5228,9 @@ Enquanto isso não for corrigido, <strong>não use o cartão Em atraso como font
 <li><strong>Sem planejamento publicado não há fila.</strong> Rascunho não conta. Revisão salva e não publicada não conta.</li>
 <li><strong>Vale sempre a última versão publicada.</strong> Quando a gestão publica de novo, a fila passa a mostrar a nova versão inteira: o que saiu desaparece, o que entrou aparece.</li>
 <li><strong>A fila só olha uma semana por vez.</strong> A semana é a da data que você está vendo. Pendência de outra semana não aparece aqui.</li>
-<li><strong>A fila é nominal.</strong> Uma atividade entra porque o planejamento escreveu o seu nome nela — não porque você está alocado na esteira. Os dois não são a mesma coisa, e a diferença aparece no cartão (veja <em>Fora da sua alocação</em>, mais adiante).</li>
+<li><strong>A fila é nominal.</strong> Uma atividade entra porque o planejamento escreveu o seu nome nela — não porque você está alocado na esteira. Por estar planejada para você, ela recebe apontamento sem justificativa de exceção, mesmo que você não conste como alocado na estrutura da esteira.</li>
+<li><strong>Atividade movida no planejamento não aparece.</strong> Quando a gestão move uma atividade para outro dia ou pessoa, o item movido sai da fila.</li>
+<li><strong>Um cartão por atividade.</strong> Se a mesma atividade foi planejada para você em mais de uma semana, ela aparece uma vez, com a <strong>data mais antiga</strong>, mesmo que essa data seja de uma semana anterior à exibida. Exemplo: planejada para você na sexta-feira da semana passada e na segunda desta semana — na fila desta semana aparece uma vez, com a data da sexta, no grupo <strong>Atrasadas</strong>.</li>
 </ul>
 <h4 id="cap-10-saber-por-que-uma-atividade-ainda-nao-apareceu">Saber por que uma atividade ainda não apareceu</h4>
 <p>Esta é a dúvida mais comum, e quase sempre a resposta é uma destas:</p>
@@ -5418,10 +5422,6 @@ Enquanto isso não for corrigido, <strong>não use o cartão Em atraso como font
 <td>a atividade anterior aberta é de <strong>outra pessoa</strong></td>
 </tr>
 <tr>
-<td><strong>Fora da sua alocação</strong></td>
-<td>você foi planejado para esta atividade, mas não consta como alocado nela na estrutura da esteira</td>
-</tr>
-<tr>
 <td><strong>Atividade</strong> / <strong>Tarefa ·</strong> / <strong>Setor ·</strong> / <strong>Esteira</strong> / <strong>Data planejada</strong></td>
 <td>identificação do trabalho e onde ele fica</td>
 </tr>
@@ -5431,12 +5431,11 @@ Enquanto isso não for corrigido, <strong>não use o cartão Em atraso como font
 </tr>
 </tbody></table>
 </div>
-<p>Quando o selo <strong>Fora da sua alocação</strong> aparece, o cartão também explica o efeito: <em>&quot;Você foi planejado para esta Atividade, mas não está alocado nela. O apontamento exigirá justificativa.&quot;</em></p>
 <p><strong>O número do cartão não é a ordem da tela.</strong> A tela ordena por grupo, depois pelas atividades livres antes das que têm pendência anterior, depois por data e pela sequência da própria esteira. O número continua sendo o do planejamento. É normal os números não ficarem em ordem crescente — use a posição dos cartões e o selo de recomendação para decidir, não o número.</p>
 <h4 id="cap-10-o-que-o-cartao-nao-mostra">O que o cartão não mostra</h4>
 <p>Vale saber desde já, para não procurar o que não existe nesta tela:</p>
 <ul>
-<li><strong>não há tempo realizado, tempo pendente nem percentual de avanço</strong> — o cartão mostra apenas o previsto. O quanto já foi apontado você vê em <strong>Minha jornada</strong> (capítulo 11), na esteira (capítulo 6) ou no Modo Fábrica;</li>
+<li><strong>não há tempo pendente nem percentual de avanço</strong> — o cartão mostra o previsto e o <strong>Apontado</strong>. Os dois somam todos os dias em que a atividade foi planejada para você, e o apontado considera só os <strong>seus</strong> apontamentos. Os números do topo (<strong>Minutos planejados</strong> e o aviso de capacidade) continuam contando só o que cai na data ou no período exibido, por isso a soma dos cartões pode ser maior que esses totais;</li>
 <li><strong>não há quantidade</strong> no cartão. A quantidade é informada no momento do apontamento;</li>
 <li><strong>não há impressão de ticket</strong> e <strong>não há reabrir</strong> por aqui.</li>
 </ul>
@@ -5467,11 +5466,10 @@ Enquanto isso não for corrigido, <strong>não use o cartão Em atraso como font
 <p>São os mesmos campos e as mesmas regras do capítulo 7 — a fila apenas abre o formulário já apontando para a atividade certa. Se quiser trocar de atividade sem fechar a gaveta, use <strong>← Voltar à lista</strong>.</p>
 <h4 id="cap-10-quando-a-fila-pede-justificativa">Quando a fila pede justificativa</h4>
 <p>Dois casos, e somente estes dois:</p>
-<p><strong>1. Atividade fora da sua alocação.</strong> O cartão já avisa com o selo <strong>Fora da sua alocação</strong>, e no formulário aparece <em>&quot;Você não está alocado nesta atividade. Para apontar horas, informe uma justificativa (apontamento por exceção).&quot;</em></p>
-<p><strong>2. Atividade anterior ainda aberta.</strong> Aparece a faixa <strong>Fora de sequência — confirme o apontamento</strong>, com a contagem — <em>&quot;Existem atividades anteriores ainda pendentes nesta esteira — antes dela ainda existem 2 atividades pendentes.&quot;</em> — e a lista das atividades em aberto.</p>
+<p><strong>1. Atividade anterior ainda aberta.</strong> Aparece a faixa <strong>Fora de sequência — confirme o apontamento</strong>, com a contagem — <em>&quot;Existem atividades anteriores ainda pendentes nesta esteira — antes dela ainda existem 2 atividades pendentes.&quot;</em> — e a lista das atividades em aberto.</p>
+<p><strong>2. O tempo passa do previsto para você.</strong> Se o tempo informado somado ao que você já apontou passar do previsto para você nessa atividade, a justificativa fica obrigatória. Se você já justificou fora de sequência, não é pedida outra.</p>
 <p>Nos dois casos <strong>nada é bloqueado</strong>: você continua, escolhendo um motivo na lista de <strong>justificativa operacional</strong>. Algumas opções pedem um <strong>Complemento</strong>.</p>
 <p>Quando existe atividade anterior aberta <strong>de outra pessoa</strong> e o sistema não exige justificativa, aparece apenas um aviso discreto — <em>&quot;Aguardando etapa …&quot;</em> ou <em>&quot;Aguardando N etapas anteriores&quot;</em>. Nesse caso é só informação.</p>
-<p><strong>Na Minha fila não existe justificativa por passar do tempo previsto.</strong> Você pode apontar mais minutos do que o previsto da atividade sem nenhuma exigência adicional. Essa exigência é só do Modo Fábrica (capítulo 13).</p>
 <h4 id="cap-10-concluir-pela-fila">Concluir pela fila</h4>
 <p>Não existe botão <strong>Concluir</strong> no cartão. A conclusão é feita dentro da gaveta de apontamento, pelo botão <strong>Salvar apontamento e concluir atividade</strong>.</p>
 <p>Isso significa que <strong>concluir pela fila sempre registra tempo</strong>: é preciso informar no mínimo 1 minuto. Se o trabalho já estava todo apontado e você só quer encerrar a atividade sem acrescentar tempo, o caminho é a esteira (capítulo 6) ou a lista de atividades da própria gaveta, por <strong>← Voltar à lista</strong>, onde as atividades alocadas a você trazem o botão <strong>Concluir atividade</strong> com a confirmação <em>&quot;Concluir esta atividade?&quot;</em>.</p>
@@ -5723,7 +5721,7 @@ Enquanto isso não for corrigido, <strong>não use o cartão Em atraso como font
 </div>
 <p>Um bloqueio que <strong>não</strong> existe aqui: atividade com atividade anterior pendente <strong>não</strong> é recusada. Ela pede justificativa e segue.</p>
 <h4 id="cap-10-diferencas-em-relacao-ao-modo-fabrica">Diferenças em relação ao Modo Fábrica</h4>
-<p>As duas filas leem o <strong>mesmo planejamento publicado</strong> e aplicam a <strong>mesma regra de sequência</strong>. O que muda é o resto:</p>
+<p>As duas filas leem o <strong>mesmo planejamento publicado</strong> e aplicam a <strong>mesma regra de sequência</strong> e de apontamento. O que muda é o recorte e a apresentação:</p>
 <div class="table-wrap">
 <table>
 <thead>
@@ -5739,9 +5737,14 @@ Enquanto isso não for corrigido, <strong>não use o cartão Em atraso como font
 <td>colaborador e PIN</td>
 </tr>
 <tr>
-<td>data</td>
-<td>navegação livre, inclusive datas futuras</td>
-<td>sempre o dia corrente</td>
+<td>recorte</td>
+<td>o dia ou o período escolhido; atrasadas só da semana exibida; futuras só se o período as abranger</td>
+<td>tudo o que está planejado para você e em aberto, de qualquer semana: atrasadas, de hoje e futuras</td>
+</tr>
+<tr>
+<td>atividade concluída ou dispensada</td>
+<td>aparece em <strong>Concluídas</strong></td>
+<td>não aparece</td>
 </tr>
 <tr>
 <td>organização</td>
@@ -5750,8 +5753,8 @@ Enquanto isso não for corrigido, <strong>não use o cartão Em atraso como font
 </tr>
 <tr>
 <td>tempo no cartão</td>
-<td>só o <strong>previsto</strong></td>
-<td><strong>previsto</strong>, <strong>realizado</strong> e <strong>pendente</strong></td>
+<td><strong>previsto</strong> e <strong>apontado</strong> (seus, todos os dias)</td>
+<td><strong>previsto</strong>, <strong>realizado</strong> e <strong>pendente</strong> (seus, todos os dias)</td>
 </tr>
 <tr>
 <td>capacidade do dia</td>
@@ -5770,8 +5773,8 @@ Enquanto isso não for corrigido, <strong>não use o cartão Em atraso como font
 </tr>
 <tr>
 <td>justificativa por passar do previsto</td>
-<td><strong>não exige</strong></td>
-<td><strong>exige</strong></td>
+<td><strong>exige</strong>, com o previsto e o apontado seus</td>
+<td><strong>exige</strong>, com o previsto e o apontado seus</td>
 </tr>
 <tr>
 <td>atividade dispensada</td>
@@ -5784,9 +5787,9 @@ Enquanto isso não for corrigido, <strong>não use o cartão Em atraso como font
 <td>ação própria no totem</td>
 </tr>
 <tr>
-<td>apontar em atividade fora do seu planejamento</td>
-<td>marcando <strong>Buscar outras atividades</strong> na gaveta</td>
-<td>ação <strong>Outra atividade</strong>, no totem</td>
+<td>apontar em atividade planejada para um colega</td>
+<td>marcando <strong>Buscar outras atividades</strong> na gaveta, com justificativa</td>
+<td>ação <strong>Outra atividade</strong>, no totem, com justificativa</td>
 </tr>
 <tr>
 <td>atualização</td>
@@ -5795,7 +5798,7 @@ Enquanto isso não for corrigido, <strong>não use o cartão Em atraso como font
 </tr>
 </tbody></table>
 </div>
-<p><strong>Não tente usar uma como espelho da outra.</strong> Para conferir tempo realizado e avanço, o Modo Fábrica e a <strong>Minha jornada</strong> (capítulo 11) são mais completos. Para enxergar atraso da semana, capacidade do dia e datas passadas, a Minha fila é a tela certa.</p>
+<p><strong>Não tente usar uma como espelho da outra.</strong> Uma atividade atrasada de uma semana anterior, ou futura, aparece no Modo Fábrica e no <strong>Apontar horas</strong>, mas não na Minha fila do dia — é esperado. Para enxergar atraso da semana, capacidade do dia e datas passadas, a Minha fila é a tela certa; para ver tudo o que você pode apontar, use o Modo Fábrica ou o <strong>Apontar horas</strong>.</p>
 <p class="image-placeholder">[IMAGEM SUGERIDA: gaveta Execução rápida aberta a partir do cartão, com data, tempo, quantidade e o botão Salvar apontamento e concluir atividade]</p>
 <p class="back-to-top"><a href="#indice">↑ Voltar ao índice</a></p>
   </section>
@@ -6729,7 +6732,7 @@ Enquanto isso não for corrigido, <strong>não use o cartão Em atraso como font
   <section class="chapter" aria-labelledby="cap-13">
 <h2 id="cap-13" class="chapter-title"><span class="num">13</span> Modo Fábrica</h2>
 <h3 id="cap-13-para-que-serve">Para que serve</h3>
-<p>O Modo Fábrica é por onde o colaborador registra produção no piso de fábrica. Ele mostra a fila do dia, deixa apontar o tempo trabalhado, concluir a atividade e registrar tempo que não pertence a nenhuma esteira — tudo em telas grandes, feitas para uso rápido e sem teclado.</p>
+<p>O Modo Fábrica é por onde o colaborador registra produção no piso de fábrica. Ele mostra a fila das atividades planejadas para o colaborador, deixa apontar o tempo trabalhado, concluir a atividade e registrar tempo que não pertence a nenhuma esteira — tudo em telas grandes, feitas para uso rápido e sem teclado.</p>
 <p>É um canal separado do resto do sistema: não tem menu lateral, não tem relatórios e não exige e-mail e senha. A entrada é <strong>colaborador + PIN</strong>.</p>
 <h3 id="cap-13-onde-fica">Onde fica</h3>
 <p>O Modo Fábrica funciona em <strong>duas formas de acesso</strong>, abertas em equipamentos preparados pela própria operação. Você não chega a elas pelo menu do sistema: o equipamento já abre na tela certa.</p>
@@ -6829,7 +6832,7 @@ Enquanto isso não for corrigido, <strong>não use o cartão Em atraso como font
 <p>Não é permitido manter o PIN provisório. Escolher o mesmo número que o gestor entregou devolve <strong>&quot;Escolha um PIN diferente do PIN inicial padrão.&quot;</strong></p>
 <p>Escolha um PIN que só você saiba: é ele que identifica o seu trabalho nos registros.</p>
 <h4 id="cap-13-ler-a-sua-fila">Ler a sua fila</h4>
-<p>Entrou, aparece o cabeçalho com sua foto, seu nome e quantas atividades você tem. A fila vem do <strong>planejamento da semana já publicado</strong> pelo gestor, para a data de hoje, incluindo o que ficou em atraso de dias anteriores.</p>
+<p>Entrou, aparece o cabeçalho com sua foto, seu nome e quantas atividades você tem. A fila vem do <strong>planejamento já publicado</strong> pelo gestor e traz tudo o que está planejado para você e ainda está em aberto, de <strong>qualquer semana</strong>: primeiro as atrasadas, depois as de hoje, depois as futuras. Cada cartão mostra a data planejada e se a atividade está <strong>Atrasada</strong>, é de <strong>Hoje</strong> ou é <strong>Futura</strong>. Uma atividade futura nunca recebe o selo de próxima recomendada enquanto houver atividade atrasada ou de hoje em aberto.</p>
 <p>O totem mostra a fila de dois jeitos, alternados pelos dois botõezinhos do cabeçalho:</p>
 <ul>
 <li><strong>Modo carrossel</strong> — uma atividade por vez, grande. Avance e volte pelas flechas <strong>Próxima atividade</strong> / <strong>Atividade anterior</strong>, ou <strong>arraste o dedo</strong> na tela. Os pontinhos indicam sua posição.</li>
@@ -6852,7 +6855,7 @@ Enquanto isso não for corrigido, <strong>não use o cartão Em atraso como font
 </tr>
 <tr>
 <td><strong>Realizado: N min · Planejado: N min</strong></td>
-<td>o tempo já apontado e o tempo previsto para você naquela atividade</td>
+<td>o tempo que <strong>você</strong> já apontou e o tempo previsto <strong>para você</strong> naquela atividade, somando todos os dias em que ela foi planejada para você</td>
 </tr>
 <tr>
 <td><strong>Tempo previsto: N%</strong></td>
@@ -6890,7 +6893,7 @@ Enquanto isso não for corrigido, <strong>não use o cartão Em atraso como font
 <p><strong>1. Atividade anterior pendente.</strong> Aparece a faixa <strong>Fora de sequência — confirme o apontamento</strong>, com a lista das atividades anteriores em aberto e o aviso <em>&quot;Existem etapas anteriores pendentes. Informe uma justificativa para apontar.&quot;</em></p>
 <p><strong>2. Tempo acima do previsto.</strong> Aparece a faixa <strong>Tempo acima do previsto — confirme o apontamento</strong>, com o aviso <em>&quot;Este apontamento ultrapassa o tempo planejado da atividade. Informe uma justificativa para registrar.&quot;</em></p>
 <p>Em qualquer dos casos o botão muda para <strong>Registrar apontamento (exceção)</strong> e o campo <strong>Justificativa operacional</strong> passa a ser obrigatório. Escolha um motivo da lista; algumas opções pedem um <strong>Complemento</strong>. A justificativa precisa ter <strong>no mínimo 3 caracteres</strong>.</p>
-<p>A conta do tempo acima do previsto considera <strong>o que já foi apontado mais o que você está apontando agora</strong>. Se a soma passar do previsto, a justificativa é pedida — mesmo que este apontamento sozinho seja pequeno.</p>
+<p>A conta do tempo acima do previsto considera <strong>o que você já apontou mais o que está apontando agora</strong>, comparado com <strong>o previsto para você</strong> (somando todos os dias). Apontamentos de colegas na mesma atividade não entram na conta. Se a soma passar do previsto, a justificativa é pedida — mesmo que este apontamento sozinho seja pequeno.</p>
 <h4 id="cap-13-concluir-uma-atividade">Concluir uma atividade</h4>
 <p>A conclusão é sempre uma decisão sua. <strong>Consumir o tempo previsto não conclui nada</strong> — quando o previsto é alcançado, o cartão apenas avisa e sugere concluir para liberar a próxima.</p>
 <p>Para concluir, ligue <strong>Concluir atividade ao registrar</strong> antes de registrar. A confirmação vira <strong>&quot;Atividade concluída. Avançando…&quot;</strong>.</p>
@@ -6904,14 +6907,14 @@ Enquanto isso não for corrigido, <strong>não use o cartão Em atraso como font
 <p>Já apontou o tempo antes e só falta encerrar a atividade? Deixe o <strong>Tempo trabalhado</strong> em zero, ligue <strong>Concluir atividade ao registrar</strong> e registre. A atividade é concluída <strong>sem criar um novo apontamento de tempo</strong>.</p>
 <p>Fora desse caso, o tempo é obrigatório: registrar sem informar minutos e sem ligar a conclusão devolve o aviso de que o tempo precisa ser maior que zero.</p>
 <h4 id="cap-13-outra-atividade">Outra atividade</h4>
-<p>Serve para apontar uma atividade que <strong>não está na sua fila</strong> — porque não foi planejada para você, ou porque não é sua alocação.</p>
+<p>Serve para pesquisar e apontar em uma atividade <strong>planejada para um colega</strong>. Atividade que não foi planejada para ninguém não aparece aqui e não recebe apontamento.</p>
 <ol>
 <li>No cabeçalho da fila, toque <strong>+ Outra atividade</strong>.</li>
 <li>Digite ao menos <strong>2 caracteres</strong> na busca (<em>&quot;Digite ao menos 2 caracteres…&quot;</em>) e escolha a atividade na lista.</li>
 <li>Confirme a <strong>data de realização</strong>.</li>
 <li>Informe os <strong>Minutos</strong> — pelos botões de atalho ou no campo <strong>outro</strong>. Aqui o mínimo é 1: não existe conclusão sem tempo.</li>
 <li>Use <strong>Observação</strong> se precisar.</li>
-<li>Preencha a <strong>Justificativa</strong> — ela é exigida justamente porque a atividade está fora da sua fila ou da sua alocação, e também se houver atividade anterior pendente.</li>
+<li>Preencha a <strong>Justificativa</strong> — ela é exigida quando a atividade está planejada para outro colaborador, quando há atividade anterior pendente e, se a atividade for sua, quando o tempo passa do previsto para você.</li>
 <li>Confira o resumo — Colaborador, Atividade, Contexto, Data, Minutos, Observação, Justificativa — e toque <strong>Confirmar apontamento</strong>.</li>
 </ol>
 <p>Registrado, aparece <strong>&quot;Apontamento registrado!&quot;</strong> e o totem volta à fila.</p>
@@ -6939,7 +6942,7 @@ Enquanto isso não for corrigido, <strong>não use o cartão Em atraso como font
 <h3 id="cap-13-o-que-esperar">O que esperar</h3>
 <h4 id="cap-13-a-fila-depende-do-planejamento-publicado">A fila depende do planejamento publicado</h4>
 <p>Sem planejamento publicado para a semana, <strong>sua fila fica vazia</strong> — não é falha do equipamento nem do seu acesso. É o caso mais comum de &quot;não aparece nada para mim&quot;.</p>
-<p>Aparecem na fila as atividades planejadas para você, de hoje e as atrasadas de dias anteriores. Saem da fila as que você concluiu, as dispensadas e as de esteira que não está liberada para produção.</p>
+<p>Aparecem na fila as atividades planejadas para você em qualquer semana — atrasadas, de hoje e futuras. Atividade planejada em mais de uma semana aparece uma vez, com a data mais antiga. Saem da fila as que foram concluídas, as dispensadas, as movidas no planejamento e as de esteira que não está liberada para produção.</p>
 <h4 id="cap-13-o-que-muda-depois-de-registrar">O que muda depois de registrar</h4>
 <div class="table-wrap">
 <table>
@@ -7227,7 +7230,12 @@ Enquanto isso não for corrigido, <strong>não use o cartão Em atraso como font
 <tr>
 <td>a atividade existe mas não está na fila</td>
 <td>não foi planejada para você</td>
-<td>usar <strong>+ Outra atividade</strong>, com justificativa</td>
+<td>se estiver planejada para um colega, usar <strong>+ Outra atividade</strong>, com justificativa; se não estiver planejada para ninguém, pedir ao gestor para incluí-la no planejamento</td>
+</tr>
+<tr>
+<td><strong>&quot;Esta atividade não está planejada. Fale com o gestor para incluí-la no planejamento.&quot;</strong></td>
+<td>a atividade não foi planejada para ninguém</td>
+<td>pedir ao gestor para incluí-la no planejamento e publicar a semana</td>
 </tr>
 </tbody></table>
 </div>
