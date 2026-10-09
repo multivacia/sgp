@@ -7,13 +7,17 @@
 
 ## Identificação
 
-- TASK_ID: `guias-praticos-auditoria-final-2026-10-08` (anterior: `ajustes-tati-2026-10-07`)
-- Atualizado em: `2026-10-08 ~17:30 UTC`
-- Branch: `docs/guias-praticos-auditoria-final-2026-10-08` (a partir de `origin/integration/ajustes-tati-2026-10-07` @ `f15483d6`)
+- TASK_ID: `apontamento-somente-planejado` (anterior: `guias-praticos-auditoria-final-2026-10-08`)
+- Atualizado em: `2026-10-09 ~01:30 UTC`
+- Branch: `fix/apontamento-somente-planejado` (a partir de `origin/develop` @ `a4a3d5d`)
 - HEAD: ver `git log -1`
 - Working tree: `clean` após commit
 
-## Última atividade (08/10)
+## Última atividade (08/10, noite)
+
+`apontamento-somente-planejado`: só atividade planejada (plano publicado vigente, qualquer semana) recebe apontamento na web, no Kiosk e pelo gestor; pesquisa de outras atividades = planejadas para colegas, com justificativa; excesso de tempo com previsto/realizado do próprio colaborador; fila do Kiosk com atrasadas/hoje/futuras; Minha fila sem movidos, um cartão por atividade. Manual caps. 7, 10, 13 atualizados. Aguardando revisão humana do PR para `develop`. Retorno: `docs/ai/returns/apontamento-somente-planejado-retorno.md`.
+
+## Atividade anterior (08/10)
 
 Guias Práticos auditados contra a integração: 20/20 ressalvas classificadas (4 resolvidas no sistema, 15 limitações reais, GES-007 não validado), 17 capturas atualizadas + 7 novas, sem alteração de código. Status: pronto para validação da Tati com ressalvas de produto. Retorno: `docs/ai/returns/guias-praticos-auditoria-final-2026-10-08-retorno.md`.
 
