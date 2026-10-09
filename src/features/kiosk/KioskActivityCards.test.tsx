@@ -188,6 +188,60 @@ describe('KioskActivityCards — atualizar atividades', () => {
   })
 })
 
+describe('KioskActivityCards — busca "Esteira/OS & atividade"', () => {
+  const secondItem: ProductionWorkQueueItem = {
+    ...workQueueItem,
+    workPlanItemId: 'wpi-2',
+    conveyorId: 'conv-2',
+    conveyorTitle: 'OS-2000',
+    conveyorCode: '2000',
+    activityNodeId: 'step-2',
+    activityTitle: 'Lixar estrutura',
+    isNextRecommended: false,
+  }
+
+  function renderWithTwo() {
+    return render(
+      <KioskActivityCards
+        collaborator={collaborator}
+        initialItems={[{ ...workQueueItem, conveyorCode: '1000' }, secondItem]}
+        onExit={() => {}}
+      />,
+    )
+  }
+
+  function typeSearch(value: string) {
+    fireEvent.change(screen.getByPlaceholderText('Buscar atividade…'), {
+      target: { value },
+    })
+  }
+
+  it('pesquisa por atividade continua funcionando', () => {
+    renderWithTwo()
+    expect(screen.getByText('2 atividades')).toBeTruthy()
+    typeSearch('costurar')
+    expect(screen.getByText('1 atividade')).toBeTruthy()
+    expect(screen.getByText('Costurar banco')).toBeTruthy()
+  })
+
+  it('pesquisa por OS (código) encontra a atividade da esteira', () => {
+    renderWithTwo()
+    typeSearch('2000')
+    expect(screen.getByText('1 atividade')).toBeTruthy()
+    expect(screen.getByText('Lixar estrutura')).toBeTruthy()
+  })
+
+  it('OS & atividade, sem diferenciar acentos/caixa', () => {
+    renderWithTwo()
+    typeSearch('1000 & CÓSTURAR')
+    expect(screen.getByText('1 atividade')).toBeTruthy()
+    expect(screen.getByText('Costurar banco')).toBeTruthy()
+    typeSearch('1000 & lixar')
+    expect(screen.getByText('0 atividades')).toBeTruthy()
+    expect(screen.getByText('Nenhuma atividade encontrada para essa busca.')).toBeTruthy()
+  })
+})
+
 describe('KioskActivityCards — rolagem do modo lista', () => {
   it('modo lista usa container rolável com min-h-0, overflow-y-auto e pan vertical', () => {
     renderKiosk()

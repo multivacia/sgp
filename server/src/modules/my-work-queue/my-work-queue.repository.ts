@@ -25,6 +25,8 @@ export type MyWorkQueueRawRow = {
   conveyor_id: string
   conveyor_operational_status: string
   conveyor_title: string
+  /** Código da esteira/OS (`conveyors.code`). */
+  conveyor_code?: string | null
   client_name: string | null
   vehicle_description: string | null
   license_plate: string | null
@@ -175,6 +177,7 @@ export async function listMyWorkQueueRows(
     conveyor_id: string
     conveyor_operational_status: string
     conveyor_title: string
+    conveyor_code: string | null
     client_name: string | null
     vehicle_description: string | null
     license_plate: string | null
@@ -196,6 +199,7 @@ export async function listMyWorkQueueRows(
       cv.id::text AS conveyor_id,
       cv.operational_status::text AS conveyor_operational_status,
       cv.name AS conveyor_title,
+      cv.code AS conveyor_code,
       cv.client_name,
       cv.vehicle AS vehicle_description,
       cv.plate AS license_plate,
@@ -280,6 +284,7 @@ export async function listMyWorkQueueRows(
     conveyor_id: row.conveyor_id,
     conveyor_operational_status: row.conveyor_operational_status,
     conveyor_title: row.conveyor_title,
+    conveyor_code: row.conveyor_code,
     client_name: row.client_name,
     vehicle_description: row.vehicle_description,
     license_plate: row.license_plate,

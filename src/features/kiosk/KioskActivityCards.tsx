@@ -8,6 +8,7 @@ import {
   findInitialKioskCarouselIndex,
   partitionKioskWorkQueue,
 } from '../../domain/production/kioskWorkQueueUi'
+import { filterKioskWorkQueueBySearch } from '../../domain/production/kioskWorkQueueSearch'
 import { resolveSequenceListBadge } from '../../domain/production/production.helpers'
 import { ApiError } from '../../lib/api/apiErrors'
 import {
@@ -40,16 +41,7 @@ export function KioskActivityCards({ collaborator, initialItems, onExit }: Props
   const [toastError, setToastError] = useState<string | null>(null)
   const touchStartX = useRef(0)
 
-  const filtered = useMemo(() => {
-    const q = search.toLowerCase().trim()
-    if (!q) return items
-    return items.filter(
-      (i) =>
-        i.activityTitle.toLowerCase().includes(q) ||
-        (i.sectorTitle?.toLowerCase().includes(q) ?? false) ||
-        (i.taskTitle?.toLowerCase().includes(q) ?? false),
-    )
-  }, [items, search])
+  const filtered = useMemo(() => filterKioskWorkQueueBySearch(items, search), [items, search])
 
   const listSections = useMemo(() => partitionKioskWorkQueue(filtered), [filtered])
 
