@@ -94,6 +94,17 @@ Complexidade por fase:
 
 Risco de regra de negócio: nenhum. Mudanças só de texto, sem banco, RBAC ou ciclo de vida. O risco real é de regressão em testes e na impressão.
 
+### Correção do Complemento 2 (base desatualizada)
+
+- **Divergência:** o Complemento 2 foi medido em `e8e45f2`, uma base 55 commits atrás de `origin/develop`. A limpeza de STEP/etapa/passo já tinha entrado pela PR #35 (`dfdaba7`, "remove pt-PT, STEP e nomes técnicos das telas e mensagens da API").
+- `origin/develop` (`b3416c1`) foi mergeada na branch (merge commit, sem reescrita de histórico) e as contagens foram refeitas.
+- **Estado real em `develop`:**
+  - "STEP" visível: só 1 caso restante, `src/features/operational-planning/FactoryIntakeItemCard.tsx:51` (`STEP: {stepStatus}`). O apontamento anterior em `MinhasAtividadesPage.tsx:107/238` já não existe.
+  - "etapa(s)" visível: ~26 linhas fora de comentários, principalmente rótulos de dashboard (`(etapas)` em `OperationalDashboardCharts.tsx`/`ExecutiveDashboardCharts.tsx`), `KioskActivityCard.tsx:448` e `MinhasAtividadesPage.tsx:174`.
+  - "passo(s)": quase todo uso restante é legítimo (assistente "Três passos", "Primeiros passos").
+  - Volume de texto quase igual: ~752 trechos em JSX, ~378 props, ~120 mensagens no backend e 118 arquivos de teste com asserção por texto.
+- **Impacto na avaliação:** a tabela de fases continua válida. A fase 3 fica menor, porque a maior inconsistência de termos já foi tratada. Falta decidir se "etapa" nos dashboards deve virar "atividade" e corrigir o caso de STEP restante.
+
 ## Relevância para o SGP+
 
 - **Limitação direta:** o STE vale somente para o **inglês**. A UI e a documentação do SGP+ são em português. Por isso, não é possível declarar conformidade com o ASD-STE100.
