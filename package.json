@@ -15,7 +15,7 @@
     "verify:server:work-queue": "npm --prefix server run test -- src/tests/my-work-queue.service.test.ts",
     "verify:server:sequence": "npm --prefix server run test -- --run src/tests/conveyorActivitySequence.logic.test.ts",
     "verify:server": "npm run verify:server:build && npm run verify:server:operational-planning && npm run verify:server:work-queue && npm run verify:server:sequence",
-    "verify:deploy": "npm run verify:frontend && npm run verify:server",
+    "verify:deploy": "npm run auditoria:textos:ci && npm run verify:frontend && npm run verify:server",
     "server:dev": "npm run dev --prefix server",
     "server:build": "npm run build --prefix server",
     "server:migrate": "npm run migrate --prefix server",
@@ -28,6 +28,7 @@
     "manual:usuario:html": "node scripts/generate-manual-usuario-html.mjs",
     "manual:usuario:html:check": "node scripts/generate-manual-usuario-html.mjs --check",
     "auditoria:textos": "node scripts/auditar-textos-tela.mjs",
+    "auditoria:textos:ci": "node scripts/auditar-textos-tela.mjs --ci",
     "test:watch": "vitest",
     "preview": "vite preview"
   },

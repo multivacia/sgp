@@ -46,6 +46,7 @@ import type { OperationalJourneyQuery } from './operational-journey.schemas.js'
 import { resolveTimeEntryJustificationText } from '../../shared/timeEntryJustificationDisplay.js'
 
 const COBERTURA_FORMULA =
+  // auditoria-textos: ignorar — fórmula técnica do campo `formula`, não exibida na tela
   'realizado_minutos_acumulados_nos_steps_alocados / previsto_estrutural_unitario_x_quantidade (escopo fechado; previsto conta uma vez por alocação colaborador × STEP; null se previsto ≤ 0)'
 
 /** Previsto estrutural da atividade: total já calculado, senão unitário × quantidade. */

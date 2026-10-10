@@ -48,7 +48,7 @@ export function resolveJourneyLoadUserMessage(
       m.includes('collaborator_id') ||
       m.includes('sem colaborador operacional') ||
       m.includes('sem colaborador associado') ||
-      m.includes('utilizador sem colaborador') ||
+      m.includes('utilizador sem colaborador') || // auditoria-textos: ignorar — reconhece mensagem legada do servidor
       (m.includes('collaborator') &&
         (m.includes('missing') ||
           m.includes('required') ||
