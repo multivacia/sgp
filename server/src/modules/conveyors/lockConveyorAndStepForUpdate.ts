@@ -90,7 +90,7 @@ export async function lockConveyorAndStepForUpdate(
   }
   if (row.node_type !== 'STEP') {
     throw new AppError(
-      'Apenas etapas (STEP) são válidas nesta operação.',
+      'Esta operação só vale para atividades.',
       404,
       ErrorCodes.NOT_FOUND,
     )

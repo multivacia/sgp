@@ -60,7 +60,7 @@ const WARNING_MESSAGES: Record<ConveyorPlanGenerationPreviewWarningCode, string>
   ITEMS_NEED_REVIEW_AFTER_GENERATION:
     'A nova geração incluirá itens que precisarão de revisão antes da aprovação.',
   NO_ACTIVE_STEPS_FOUND:
-    'Nenhuma atividade (STEP) ativa foi encontrada na estrutura da esteira.',
+    'Nenhuma atividade ativa foi encontrada na estrutura da esteira.',
   START_DATE_ADJUSTED_TO_BUSINESS_DAY:
     'A data de início informada cai em fim de semana; o planejamento começará no próximo dia útil.',
 }

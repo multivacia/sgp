@@ -9,7 +9,7 @@ import {
 } from './conveyorNodeWorkload.repository.js'
 
 const NOTES =
-  'Pendência de tempo compara o previsto estrutural do STEP com minutos apontados acumulados na base. Não identifica causa raiz. O indicador de pressão de atraso refere-se à esteira (bucket operacional), não ao STEP.'
+  'Pendência de tempo compara o previsto estrutural da atividade com os minutos apontados acumulados. Não identifica causa raiz. O indicador de pressão de atraso refere-se à esteira (situação operacional), não à atividade.'
 
 function plannedTotalNum(
   unitMinutes: number | null | undefined,

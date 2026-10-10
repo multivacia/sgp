@@ -104,7 +104,7 @@ export function MinhasAtividadesPage() {
           <div>
             <h1 className="sgp-page-title">Minhas atividades</h1>
             <p className="sgp-page-lead mt-1">
-              Alocações reais em etapas (STEP) das suas esteiras: papel na
+              Alocações reais em atividades das suas esteiras: papel na
               equipe, tempos e atalhos para detalhe e apontamento de horas.
             </p>
           </div>
@@ -235,7 +235,7 @@ export function MinhasAtividadesPage() {
             Nenhuma atividade alocada para si.
           </p>
           <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-slate-500">
-            Quando for alocado a etapas nas esteiras (equipe por STEP), elas
+            Quando você for alocado em atividades das esteiras, elas
             aparecerão aqui. Confirme no cadastro que o seu e-mail de login
             coincide com o do colaborador.
           </p>

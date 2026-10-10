@@ -47,7 +47,7 @@ const PT_PT = {
   aceder: 'acessar', aceda: 'acesse', introduza: 'digite', introduzir: 'digitar',
   planeamento: 'planejamento', planear: 'planejar', guardar: 'salvar', guardado: 'salvo',
   guardada: 'salva', 'receção': 'recepção', 'secção': 'seção', 'detetar': 'detectar',
-  'autenticar-se': 'entrar', 'passo': 'atividade/etapa (conferir contexto)',
+  'autenticar-se': 'entrar', 'âmbito': 'escopo/filtro', numa: 'em uma', consola: 'console',
 }
 // "A carregar…", "a registar" — gerúndio de Portugal (pt-BR: "Carregando…").
 const PT_PT_PROGRESSIVE =
@@ -55,7 +55,7 @@ const PT_PT_PROGRESSIVE =
 
 /** Jargão técnico que não deve aparecer em tela. */
 const TECH_WORDS =
-  /\b(STEPS?|[Ss]teps?|[Nn]odes?|[Cc]onveyors?|TASK|AREA|OPTION|ACTIVITY|payload|endpoint|undefined|null|NaN|uuid|UUID|backend|frontend|stack ?trace|query|bucket)\b/
+  /\b(STEPS?|STEPs|[Ss]teps?|[Nn]odes?|[Cc]onveyors?|TASK|AREA|OPTION|ACTIVITY|payload|endpoint|undefined|null|NaN|uuid|UUID|backend|frontend|stack ?trace|query|bucket)\b/
 const UPPER_SNAKE = /\b[A-Z]{2,}(?:_[A-Z0-9]+)+\b/ // EM_ANDAMENTO, A_INICIAR
 const LOWER_SNAKE = /\b[a-z]+(?:_[a-z0-9]+)+\b/ // conveyor_id, time_entries
 const CAMEL_ID = /\b[a-z]+(?:[A-Z][a-z0-9]+)*(?:Id|Ids|At)\b/ // stepNodeId, createdAt
@@ -87,14 +87,16 @@ function textsOf(line, isTsx) {
   for (const m of line.matchAll(/(?<![=-])>([^<>{}]*[A-Za-zÀ-ú][^<>{}]*)</g)) {
     if (!/&&|\|\||=>|[!=]==?/.test(m[1])) out.push(m[1])
   }
-  // Linha que é só texto JSX (continuação de parágrafo entre tags).
+  // Linha que é só texto JSX (continuação de parágrafo entre tags), sem as expressões {…}.
+  const prose = line.replace(/\{[^{}]*\}/g, ' ')
   if (
     isTsx &&
-    !/[=;(){}'"`<>:|]/.test(line) &&
-    !/^\s*(return|let|const|var|throw|if|else|case|break|type|export|await|default)\b/.test(line) &&
-    /[a-zà-ú]{3,}\s+[a-zà-ú]{3,}/i.test(line)
+    !/[={}'"`<>|]|;\s*$|=>|\w\(|\w\.\w|\s\?\s|\binstanceof\b/.test(prose) &&
+    !/^\s*[.#@]/.test(prose) &&
+    !/^\s*(return|let|const|var|throw|if|else|case|break|type|export|await|default|for|while|switch|try|catch|new)\b/.test(prose) &&
+    /[a-zà-ú]{3,}[\s(—–-]+[a-zà-ú]{3,}/i.test(prose)
   ) {
-    out.push(line)
+    out.push(prose)
   }
   return out
 }

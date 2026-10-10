@@ -316,7 +316,7 @@ export async function serviceCreateUser(
   const row = await findAdminUserById(pool, newId)
   if (!row) {
     throw new AppError(
-      'Utilizador criado mas não foi possível recarregar os dados.',
+      'Usuário criado, mas não foi possível recarregar os dados.',
       500,
       ErrorCodes.INTERNAL,
     )

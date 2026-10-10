@@ -571,7 +571,7 @@ export function JornadaPage() {
             <section className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] p-4 ring-1 ring-white/[0.04]">
                 <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
-                  Atividades (STEPs)
+                  Atividades
                 </p>
                 <p className="mt-1 font-heading text-2xl font-bold text-slate-50">
                   {journey.load.assignmentCount}
@@ -626,7 +626,7 @@ export function JornadaPage() {
               />
               <ActivityColumn
                 title="Concluídas"
-                hint="Alocações já no bucket de conclusão da esteira."
+                hint="Alocações já concluídas na esteira."
                 items={concluidas}
                 emptyLabel={
                   conveyorFilter
@@ -645,7 +645,7 @@ export function JornadaPage() {
                 <p className="mt-4 text-sm text-slate-500">
                   {conveyorFilter
                     ? transversalUxCopy.journeyEmptyFiltered
-                    : 'Nenhum apontamento com data nesta janela. Experimente alargar o período ou apontar numa atividade em aberto.'}
+                    : 'Nenhum apontamento com data nesta janela. Experimente ampliar o período ou apontar em uma atividade em aberto.'}
                 </p>
               ) : (
                 <ul className="mt-4 grid gap-2 sm:grid-cols-2">

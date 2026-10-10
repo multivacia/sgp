@@ -1236,8 +1236,8 @@ function EsteiraDetalheBasicoReal({ id }: { id: string | undefined }) {
           </div>
         ) : (
           <p className="relative mt-4 text-xs text-slate-500">
-            Transições de pipeline exigem a permissão{' '}
-            <span className="font-mono text-slate-400">conveyors.edit_status</span>.
+            Seu perfil não tem permissão para mudar a situação da esteira. Fale com a
+            gestão.
           </p>
         )}
       </header>
