@@ -64,7 +64,7 @@ Parâmetros de URL (todos opcionais; nenhum carrega dados de sessão ou de usuá
 | `integrado=1` | indica abertura pelo SGP+ e mostra **Voltar ao SGP+** |
 | `#cap-5`, `#sec-3-6`… | âncora de capítulo ou seção, como em qualquer link |
 
-**Publicação:** o plugin `vite-plugin-manual-usuario.ts` serve o HTML gerado em `/manual/manual-usuario.html` no `npm run dev` e o inclui, byte a byte, em `dist/manual/` no `npm run build`. Rode `npm run manual:usuario:html` antes do build quando a fonte mudar. O build usa o arquivo que estiver em `docs/manual/`.
+**Publicação:** o plugin `vite-plugin-manual-usuario.ts` serve o HTML gerado em `/manual/manual-usuario.html` (e os Guias Práticos, abaixo) no `npm run dev` e o inclui, byte a byte, em `dist/manual/` no `npm run build`. Rode `npm run manual:usuario:html` antes do build quando a fonte mudar. O build usa o arquivo que estiver em `docs/manual/`.
 
 **Mapa tela → seção:** fica em um único arquivo, `src/lib/help/manual-help.ts`. O teste `manual-help.test.ts` falha se alguma âncora mapeada deixar de existir no HTML gerado. Ao renomear um título do manual, rode o teste e ajuste o mapa. Os títulos numerados (por exemplo `16.7`) mantêm o ID; os demais derivam do texto do título.
 
@@ -72,5 +72,8 @@ Parâmetros de URL (todos opcionais; nenhum carrega dados de sessão ou de usuá
 
 ## Outros caminhos relacionados
 
-- `docs/manual/colaborador.html` e `docs/manual/gestor-esteira.html` — guias específicos por público, derivados de versões anteriores e escritos à mão. **Não** substituem o manual integral e não são gerados pelo comando acima. São o alvo das avaliações de cobertura da matriz técnica.
+- `docs/manual/colaborador.html` e `docs/manual/gestor-esteira.html` — Guias Práticos por público, derivados de versões anteriores e escritos à mão. **Não** substituem o manual integral e não são gerados pelo comando acima. São o alvo das avaliações de cobertura da matriz técnica.
+  - Têm o mesmo seletor **Claro / Escuro**, os mesmos parâmetros `tema=` e `integrado=1` e a mesma preferência guardada (`sgp.manual.tema`) do manual: o tema escolhido em um vale para os outros.
+  - **Dentro do SGP+:** menu **? Ajuda → Guia prático do colaborador / Guia prático do gestor**, em `/manual/colaborador.html` e `/manual/gestor-esteira.html`. O mesmo plugin publica os guias e as capturas de `docs/manual/img/` (dev e build); as fontes `.md` não são publicadas.
+  - Ao editar um guia, mantenha a barra do topo (`.doc-toolbar`), os dois scripts de tema e use as variáveis de cor (`--heading`, `--accent`…) em vez de cores fixas, para o tema claro continuar legível. O teste `manual-help.test.ts` confere o seletor e a existência de cada captura referenciada.
 - `docs/ai/reports/` — auditorias e fotografias históricas, entre elas `auditoria-cobertura-funcional-manual-2026-10-02/`, base da revisão de 2026-10-03.

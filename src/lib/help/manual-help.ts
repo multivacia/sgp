@@ -1,6 +1,11 @@
 import { matchPath } from 'react-router-dom'
 import type { ColorThemeId } from '../theme/theme-constants'
-import { MANUAL_PUBLIC_PATH } from './manual-paths'
+import {
+  MANUAL_PUBLIC_DIR,
+  MANUAL_PUBLIC_PATH,
+  PRACTICAL_GUIDE_FILES,
+  type PracticalGuideId,
+} from './manual-paths'
 
 /**
  * Âncora existente no HTML do Manual do Usuário (IDs gerados por
@@ -230,7 +235,52 @@ export function buildManualUrl(options: {
   theme: ManualTheme
   anchor?: ManualAnchor | null
 }): string {
-  const query = new URLSearchParams({ integrado: '1', tema: options.theme })
   const hash = options.anchor ? `#${options.anchor}` : ''
-  return `${MANUAL_PUBLIC_PATH}?${query.toString()}${hash}`
+  return `${MANUAL_PUBLIC_PATH}?${integratedQuery(options.theme)}${hash}`
+}
+
+export type PracticalGuide = {
+  id: PracticalGuideId
+  label: string
+  /** Quando presente, o guia só aparece para quem tem uma dessas permissões. */
+  anyOfPermissions?: readonly string[]
+}
+
+/** Guias Práticos oferecidos no menu "? Ajuda", na ordem de exibição. */
+export const PRACTICAL_GUIDES: readonly PracticalGuide[] = [
+  { id: 'colaborador', label: 'Guia prático do colaborador' },
+  {
+    id: 'gestor',
+    label: 'Guia prático do gestor',
+    // Mesmas permissões das telas de gestão descritas no guia (perfil COLABORADOR não tem nenhuma).
+    anyOfPermissions: [
+      'conveyors.create',
+      'conveyors.edit_status',
+      'conveyors.manage_assignments',
+      'collaborators_admin.view',
+      'teams.view',
+    ],
+  },
+]
+
+/** Guias visíveis para o usuário atual (RBAC efetivo). */
+export function visiblePracticalGuides(
+  canAny: (permissionCodes: string[]) => boolean,
+): PracticalGuide[] {
+  return PRACTICAL_GUIDES.filter(
+    (g) => !g.anyOfPermissions || canAny([...g.anyOfPermissions]),
+  )
+}
+
+/** URL de um Guia Prático aberto a partir do SGP+ (mesmas regras do manual). */
+export function buildGuideUrl(options: {
+  guide: PracticalGuideId
+  theme: ManualTheme
+}): string {
+  const file = PRACTICAL_GUIDE_FILES[options.guide]
+  return `${MANUAL_PUBLIC_DIR}/${file}?${integratedQuery(options.theme)}`
+}
+
+function integratedQuery(theme: ManualTheme): string {
+  return new URLSearchParams({ integrado: '1', tema: theme }).toString()
 }

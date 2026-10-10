@@ -71,7 +71,7 @@ describe('ApontamentoPage — data de realização', () => {
       'Data em que o trabalho foi realizado',
     )) as HTMLInputElement
     expect(dateInput.value).toBe(operationalTodayIso())
-    fireEvent.click(screen.getByRole('button', { name: 'Registar apontamento' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Registrar apontamento' }))
     await waitFor(() => expect(mocks.postConveyorStepTimeEntry).toHaveBeenCalledTimes(1))
     const body = mocks.postConveyorStepTimeEntry.mock.calls[0]![2] as { entryAt: string }
     expect(operationalDateOf(new Date(body.entryAt))).toBe(operationalTodayIso())
@@ -83,7 +83,7 @@ describe('ApontamentoPage — data de realização', () => {
     renderPage()
     await screen.findByLabelText('Data em que o trabalho foi realizado')
     fireEvent.click(screen.getByRole('button', { name: 'Ontem' }))
-    fireEvent.click(screen.getByRole('button', { name: 'Registar apontamento' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Registrar apontamento' }))
     await waitFor(() => expect(mocks.postConveyorStepTimeEntry).toHaveBeenCalledTimes(1))
     const yesterday = shiftIsoDate(operationalTodayIso(), -1)
     expect(mocks.postConveyorStepTimeEntry).toHaveBeenCalledWith(
@@ -98,7 +98,7 @@ describe('ApontamentoPage — data de realização', () => {
     renderPage()
     const dateInput = await screen.findByLabelText('Data em que o trabalho foi realizado')
     fireEvent.change(dateInput, { target: { value: shiftIsoDate(operationalTodayIso(), 1) } })
-    const btn = screen.getByRole('button', { name: 'Registar apontamento' }) as HTMLButtonElement
+    const btn = screen.getByRole('button', { name: 'Registrar apontamento' }) as HTMLButtonElement
     expect(btn.disabled).toBe(true)
   })
 })
