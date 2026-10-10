@@ -35,14 +35,31 @@ describe('HelpMenu', () => {
     const labels = screen.getAllByRole('menuitem').map((i) => i.textContent)
     expect(labels[0]).toContain('Como usar esta tela')
     expect(labels[1]).toBe('Manual do usuário')
-    expect(labels[2]).toBe('Abrir chamado')
+    expect(labels[2]).toBe('Guia prático do colaborador')
+    expect(labels[3]).toBe('Guia prático do gestor')
+    expect(labels[4]).toBe('Abrir chamado')
     expect(trigger().getAttribute('aria-expanded')).toBe('true')
   })
 
   it('omite "Abrir chamado" quando o módulo não está disponível', () => {
     renderMenu({ path: '/app/backlog' })
     fireEvent.click(trigger())
-    expect(screen.getAllByRole('menuitem')).toHaveLength(2)
+    expect(screen.getAllByRole('menuitem')).toHaveLength(4)
+  })
+
+  it('Guias Práticos abrem dentro do SGP+ com o tema atual', () => {
+    renderMenu({ path: '/app/backlog', themeId: 'light-executive' })
+    fireEvent.click(trigger())
+    expect(
+      screen
+        .getByRole('menuitem', { name: 'Guia prático do colaborador' })
+        .getAttribute('href'),
+    ).toBe('/manual/colaborador.html?integrado=1&tema=claro')
+    expect(
+      screen
+        .getByRole('menuitem', { name: 'Guia prático do gestor' })
+        .getAttribute('href'),
+    ).toBe('/manual/gestor-esteira.html?integrado=1&tema=claro')
   })
 
   it('"Como usar esta tela" leva à âncora da tela, com tema e modo integrado', () => {
@@ -86,8 +103,8 @@ describe('HelpMenu', () => {
     fireEvent.keyDown(items[0], { key: 'ArrowDown' })
     expect(document.activeElement).toBe(items[1])
     fireEvent.keyDown(items[1], { key: 'End' })
-    expect(document.activeElement).toBe(items[2])
-    fireEvent.keyDown(items[2], { key: 'ArrowDown' })
+    expect(document.activeElement).toBe(items[4])
+    fireEvent.keyDown(items[4], { key: 'ArrowDown' })
     expect(document.activeElement).toBe(items[0])
     fireEvent.mouseDown(screen.getByText('fora'))
     expect(screen.queryByRole('menu')).toBeNull()

@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import {
@@ -7,12 +7,18 @@ import {
   GESTAO_NAV_ITEMS,
 } from '../shell/app-nav-config'
 import {
+  buildGuideUrl,
   buildManualUrl,
   manualThemeFor,
   resolveScreenHelp,
   SCREEN_HELP,
 } from './manual-help'
-import { MANUAL_PUBLIC_PATH, MANUAL_SOURCE_FILE } from './manual-paths'
+import {
+  MANUAL_PUBLIC_PATH,
+  MANUAL_SOURCE_DIR,
+  MANUAL_SOURCE_FILE,
+  PRACTICAL_GUIDE_FILES,
+} from './manual-paths'
 
 const html = readFileSync(resolve(process.cwd(), MANUAL_SOURCE_FILE), 'utf8')
 const manualIds = new Set([...html.matchAll(/\sid="([^"]+)"/g)].map((m) => m[1]))
@@ -107,4 +113,35 @@ describe('URL do manual', () => {
     expect(manualThemeFor('argos-dark')).toBe('escuro')
     expect(manualThemeFor('slate-dark')).toBe('escuro')
   })
+})
+
+describe('Guias Práticos', () => {
+  it('URL leva o tema e o modo integrado, sem dados de sessão', () => {
+    expect(buildGuideUrl({ guide: 'colaborador', theme: 'escuro' })).toBe(
+      '/manual/colaborador.html?integrado=1&tema=escuro',
+    )
+    expect(buildGuideUrl({ guide: 'gestor', theme: 'claro' })).toBe(
+      '/manual/gestor-esteira.html?integrado=1&tema=claro',
+    )
+  })
+
+  it.each(Object.values(PRACTICAL_GUIDE_FILES))(
+    '%s tem seletor de tema, retorno ao SGP+ e todas as capturas existentes',
+    (file) => {
+      const guidePath = resolve(process.cwd(), MANUAL_SOURCE_DIR, file)
+      const guide = readFileSync(guidePath, 'utf8')
+      expect(guide).toContain('class="theme-switch"')
+      expect(guide).toContain(':root[data-theme="claro"]')
+      expect(guide).toContain("localStorage.getItem('sgp.manual.tema')")
+      expect(guide).toContain('id="voltar-sgp"')
+      const images = [...guide.matchAll(/\s(?:src|href)="(img\/[^"]+)"/g)].map(
+        (m) => m[1],
+      )
+      expect(images.length).toBeGreaterThan(0)
+      const missing = images.filter(
+        (img) => !existsSync(resolve(process.cwd(), MANUAL_SOURCE_DIR, img)),
+      )
+      expect(missing).toEqual([])
+    },
+  )
 })

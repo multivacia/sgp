@@ -1,8 +1,10 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import {
+  buildGuideUrl,
   buildManualUrl,
   manualThemeFor,
+  PRACTICAL_GUIDES,
   resolveScreenHelp,
 } from '../../lib/help/manual-help'
 import { useColorTheme } from '../../lib/theme/useColorTheme'
@@ -177,6 +179,19 @@ export function HelpMenu({ onOpenSupportTicket }: Props) {
           >
             Manual do usuário
           </a>
+
+          {PRACTICAL_GUIDES.map((guide) => (
+            <a
+              key={guide.id}
+              role="menuitem"
+              tabIndex={-1}
+              href={buildGuideUrl({ guide: guide.id, theme })}
+              className={ITEM_CLASS}
+              onClick={() => setOpen(false)}
+            >
+              {guide.label}
+            </a>
+          ))}
 
           {onOpenSupportTicket ? (
             <button
