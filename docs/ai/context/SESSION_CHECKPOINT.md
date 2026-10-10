@@ -10,9 +10,9 @@
 - TASK_ID: `linguagem-controlada-sgp`
 - Atualizado em: `2026-10-10 UTC`
 - Branch: `ccr-8c61f152-k8drvu` (fast-forward de `c611d10` para `origin/develop` `b3416c1`)
-- HEAD: ver `git log -1` (commit deste checkpoint)
+- HEAD: `7f379eb` (checkpoint/prompt); implementação ainda **sem commit**
 - Base/remoto relevante: `origin/develop`
-- Working tree: `clean` após o commit deste checkpoint
+- Working tree: `dirty` — implementação completa da spec (66 arquivos alterados + 2 testes novos), aguardando revisão e commit do orquestrador
 
 ## Objetivo atual
 
@@ -20,7 +20,7 @@ Implantar linguagem controlada PT-BR (ISO 24495-1 + princípios do ASD-STE100) n
 
 ## Estado em uma frase
 
-Decisões humanas tomadas (D1–D8); contexto e impacto concluídos; spec em elaboração; nenhum código alterado ainda.
+Spec aprovada implementada pelo `sgp-implementer` no working tree (seções a–h, CA-01..CA-37), com validação verde; falta revisão (`sgp-test-reviewer`), retorno e commit/PR.
 
 ## Decisões já tomadas (humano, 2026-10-10)
 
@@ -46,13 +46,21 @@ Decisões humanas tomadas (D1–D8); contexto e impacto concluídos; spec em ela
 - server: `tsc --noEmit` ok; vitest 1 falha pré-existente (`env.test.ts`, versão fixa), 849 ok, 448 pulados.
 - `npm run auditoria:textos`: 71 achados (1 PT-PT falso positivo + 70 TECNICO).
 
+## Validações após a implementação (working tree, 2026-10-10)
+
+- `auditoria:textos:ci` exit 0 (GLOSSARIO 0 · PT-PT 0); `auditoria:textos` 68 achados, todos TECNICO (antes 70).
+- front: `tsc -b` ok; `npm test` 220 arquivos / 1508 testes ok; build ok; lint 117 (idêntico por arquivo à base).
+- server: `tsc --noEmit` ok; `server:build` ok; `server:test` só a falha pré-existente `env.test.ts` (849 ok, 448 pulados).
+- `manual:usuario:html:check` ok; `verify:deploy` exit 0.
+- Atenção: `npm run lint` sobe para 146 se `server/dist` existir (gerado por `server:build`/`verify:deploy`; o `eslint .` não o ignora). Medir lint sem `server/dist`.
+
 ## Pendências
 
-- Spec → sgp-implementer → sgp-test-reviewer → commit/push/PR para `develop` (sem merge) → retorno.
+- sgp-test-reviewer → retorno `docs/ai/returns/linguagem-controlada-sgp-retorno.md` → commit/push/PR para `develop` (sem merge).
 
 ## Próxima ação exata
 
-- Concluir a spec e passar ao `sgp-implementer`.
+- Revisar o working tree com o `sgp-test-reviewer`.
 
 ## Riscos / ressalvas
 

@@ -7,6 +7,7 @@ Spec + diff referenciados.
 | Comando | Exit code | Observação |
 |---|---|---|
 | `npm run lint` |  |  |
+| `npm run auditoria:textos:ci` |  |  |
 | `tsc -b` |  |  |
 | `npm test` |  |  |
 | `npm run server:test` |  |  |

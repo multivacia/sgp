@@ -6,14 +6,14 @@
 
 ## Objetivo deste guia
 
-Este documento existe para **traduzir o mandato do SGP em decisões concretas** de interface, fluxo, hierarquia visual e priorização. Enquanto o documento fundador fixa o *porquê* e o *o que não negociar*, este guia responde ao *como decidir* na prática — na hora de desenhar tela, cortar etapa, escolher label ou validar mock.
+Este documento existe para **traduzir o mandato do SGP em decisões concretas** de interface, fluxo, hierarquia visual e priorização. Enquanto o documento fundador fixa o *porquê* e o *o que não negociar*, este guia responde ao *como decidir* na prática — na hora de desenhar tela, cortar passo, escolher label ou validar mock.
 
 Consulte-o sempre que houver dúvida sobre:
 
 - **Tela** — o que entra, o que sai, o que pode esperar.  
 - **Fluxo** — quantos passos, em que ordem, com que continuidade.  
 - **Campo** — se merece existir agora ou nunca.  
-- **Etapa** — se protege, esclarece ou só burocratiza.  
+- **Passo** — se protege, esclarece ou só burocratiza.  
 - **Clique** — se é necessário ou vício de desenho.  
 - **Confirmação** — se evita erro real ou só atrasa todo mundo.  
 - **Estado** — vazio, erro, sucesso: como falar sem drama.  
@@ -39,15 +39,15 @@ Use como **teste de sanidade** em qualquer tela nova: *esta decisão torna apont
 **Função:** ser o lugar onde o colaborador responde, em segundos, à pergunta *o que eu faço agora?*
 
 - **Importância visível:** o que é mais urgente ou mais bloqueante deve aparecer primeiro na hierarquia — não escondido atrás de filtro ou aba.  
-- **Pouca interpretação:** título da tarefa, prazo quando existir, vínculo com esteira/cliente em linguagem operacional — evitar códigos internos como protagonista.  
+- **Pouca interpretação:** título da atividade, prazo quando existir, vínculo com esteira/cliente em linguagem operacional — evitar códigos internos como protagonista.  
 - **Legibilidade acima de densidade:** lista escaneável, espaço de respiro, tipografia que suporta uso repetido ao longo do dia.  
 - **Contexto suficiente, sem relatório:** o mínimo para executar e apontar com segurança — não mini dashboard analítico dentro da lista.
 
-**Na prática:** se alguém precisa abrir vários lugares para entender a tarefa, a tela falhou no recorte de informação.
+**Na prática:** se alguém precisa abrir vários lugares para entender a atividade, a tela falhou no recorte de informação.
 
 ---
 
-### Apontamento de Tarefa
+### Apontamento de Atividade
 
 **Função:** registrar progresso ou conclusão com o **menor custo cognitivo** possível.
 
@@ -107,7 +107,7 @@ Use como **teste de sanidade** em qualquer tela nova: *esta decisão torna apont
 
 - **Comunicar assistência:** deixar claro que o sistema **ajuda a sugerir** campos ou destino — não que “adivinha tudo”. Expectativa honesta reduz frustração.  
 - **Sugestões visíveis:** o que foi inferido deve ser legível e editável antes de confirmar.  
-- **Revisão simples:** uma passagem clara de “conferir e ajustar” — não labirinto de etapas.  
+- **Revisão simples:** uma passagem clara de “conferir e ajustar” — não labirinto de passos.  
 - **Evitar upload genérico:** ícone de arquivo sem próximo passo óbvio é anti-padrão; sempre mostrar *para onde* o conteúdo vai na operação.
 
 **Na prática:** documento é meio, não fim — o fim é esteira ou backlog acionável.
@@ -121,7 +121,7 @@ Use como **teste de sanidade** em qualquer tela nova: *esta decisão torna apont
 - **Consolidar sem poluir:** poucos blocos com função clara; evitar parede de números sem hierarquia.  
 - **Poucos KPIs com peso real:** 3–5 indicadores que mudam decisão — não 20 competindo por atenção.  
 - **Leitura em segundos:** gestor entra para situar e sair — ou ir direto para ação.  
-- **Não competir com a operação:** dashboard não deve ser o lugar onde se passa a maior parte do dia; operação vive em backlog, esteiras e tarefas.
+- **Não competir com a operação:** dashboard não deve ser o lugar onde se passa a maior parte do dia; operação vive em backlog, esteiras e atividades.
 
 **Na prática:** se o gestor só “vê” bonito mas precisa ir a outro sistema para fazer, o dashboard está mal dimensionado.
 
@@ -144,7 +144,7 @@ Use como **teste de sanidade** em qualquer tela nova: *esta decisão torna apont
 
 ### Fricção evitável
 
-- Reaproveitar contexto (esteira já escolhida, tarefa já aberta).  
+- Reaproveitar contexto (esteira já escolhida, atividade já aberta).  
 - Evitar pedir o mesmo dado duas vezes na mesma jornada.  
 - Evitar “voltar três telas” para corrigir um detalhe que podia ser inline.
 
@@ -181,15 +181,15 @@ Use como filtro — resposta honesta:
 
 ---
 
-## Como decidir se uma etapa deve existir
+## Como decidir se um passo deve existir
 
-1. **Esta etapa reduz erro real ou só adiciona atrito?** Atrito sem redução de erro é candidato a corte.  
+1. **Este passo reduz erro real ou só adiciona atrito?** Atrito sem redução de erro é candidato a corte.  
 2. **Ajuda a clarear ou só burocratiza?** Se repetir o que já está explícito na ação, é ruído.  
 3. **Protege algo importante ou só repete informação?** Repetição não é segurança.  
 4. **Poderia ser uma ação inline?** (botão na linha, edição no próprio card, drawer leve.)  
 5. **Poderia ser um estado simples em vez de tela separada?** (pendente / enviado / erro) sem novo “passo” de navegação.
 
-**Etapas boas** esclarecem decisão ou evitam dano. **Etapas ruins** existem porque o fluxo foi desenhado para o sistema, não para a pessoa.
+**Passos bons** esclarecem decisão ou evitam dano. **Passos ruins** existem porque o fluxo foi desenhado para o sistema, não para a pessoa.
 
 ---
 
@@ -230,8 +230,52 @@ Toda tela relevante deve **considerar** estados — com bom senso: nem toda supe
 **Exemplos de boa direção:**
 
 - Botão: **“Apontar conclusão”** em vez de **“Submeter registro de encerramento”**.  
-- Vazio: **“Nenhuma tarefa neste filtro. Tente outro período ou limpe os filtros.”**  
+- Vazio: **“Nenhuma atividade neste filtro. Tente outro período ou limpe os filtros.”**  
 - Erro: **“Não foi possível salvar. Verifique a conexão e tente de novo.”**
+
+### Linguagem controlada (textos de tela)
+
+Base: ABNT NBR ISO 24495-1:2024 (Linguagem simples), com princípios do ASD-STE100 adaptados ao português (o ASD-STE100 vale só para inglês).
+
+- **Quando usar:** ao escrever ou revisar texto que o usuário vê — rótulo, botão, título, dica, aviso, mensagem de erro (inclusive as da API) e ticket impresso.
+- **Quando não usar:** nomes no código (variáveis, tipos, colunas), logs, comentários e validações técnicas que só aparecem com requisição malformada.
+
+**Regras**
+
+1. **Um termo por conceito.** Use os termos do [Glossário do usuário](./manual/source/MANUAL_USUARIO_SGP.md) (manual, capítulo 20). Estrutura: **Esteira → Tarefa → Setor → Atividade**. **Passo** é só passo de assistente (ex.: Nova esteira: Dados básicos → Estrutura → Revisão).
+2. **Instrução no imperativo, uma ação por frase.** "Informe a justificativa."
+3. **Condição antes da ação.** "Se a atividade estiver dispensada, restaure antes de planejar."
+4. **Frases curtas.** Instrução: até 20 palavras. Explicação: até 25. Meta de revisão; não é checada automaticamente.
+5. **Instrução separada de explicação.** O botão diz a ação; o porquê vai na dica ou no subtítulo.
+6. **Erro diz o que houve e o que fazer.** Sem código interno, nome de coluna, permissão ou status cru.
+7. **Voz ativa, sujeito visível.** "O gestor publica o plano."
+8. **Tela pequena, texto curto.** Modo Fábrica e ticket térmico: rótulos curtos; confira a largura.
+
+**Termos proibidos em texto de tela**
+
+| Não use | Use | Bloqueado no CI |
+|---|---|---|
+| STEP, step | atividade | sim |
+| etapa | atividade (unidade de trabalho) · passo (assistente) | sim |
+| Kiosk | Modo Fábrica | sim |
+| membership | participação em equipe | sim |
+| palavras só de Portugal (utilizador, registar, ficheiro, planeamento, ecrã…) | forma do Brasil (usuário, registrar, arquivo, planejamento, tela…) | sim |
+| palavras de Portugal que também existem no Brasil (guardar, rever, gerir, equipa…) e "a + infinitivo" ("A carregar…") | salvar, revisar, gerenciar, equipe; "Carregando…" | não — relatório |
+| opção, área (como nível da estrutura) | tarefa, setor | não — revisão |
+| bucket | situação | não |
+| preset | período | não |
+| soft delete | remover (o histórico é mantido) | não |
+| Daily | Dia | não |
+| status cru (PENDING, EM_ANDAMENTO…) | rótulo da situação | não |
+
+"backlog" aguarda decisão: hoje é nome de bloco ("Backlog operacional") e de ação ("Voltar para backlog").
+
+**Como verificar**
+
+- `npm run auditoria:textos:ci` — falha se aparecer termo bloqueado. Roda no CI (`verify:deploy`).
+- `npm run auditoria:textos` — triagem completa, com termos técnicos e palavras só de relatório; não bloqueia o CI.
+- Exceção legítima: comentário `auditoria-textos: ignorar — <motivo>` na própria linha ou na linha de cima.
+- Ao mudar esta tabela, mude também a lista em `scripts/auditar-textos-tela.mjs`.
 
 ---
 
@@ -297,7 +341,7 @@ Checklist utilizável em revisão de design ou PR de UI:
 - [ ] **Esta tela reduz ou aumenta atrito** para colaborador ou gestor na tarefa principal?  
 - [ ] **Fica clara em ~5 segundos** o que é e qual é a ação principal?  
 - [ ] **Existe campo desnecessário** que pode ser default, depois ou inferido?  
-- [ ] **Existe etapa desnecessária** que poderia ser inline ou estado?  
+- [ ] **Existe passo desnecessário** que poderia ser inline ou estado?  
 - [ ] **A ação principal está óbvia** (posição, contraste, label)?  
 - [ ] **A prioridade visual está correta** — o mais importante domina sem disputa com decoração?  
 - [ ] **A tela serve a operação** ou o desejo de controle/cadastro?  
@@ -333,7 +377,7 @@ Use esta lista em code review de UX: **nomear o anti-padrão** acelera o “não
 
 - **Design** — partir daqui para hierarquia, estados e copy; não só do moodboard.  
 - **Frontend** — implementar affordance, estados e fluxo raso como requisito, não opcional.  
-- **Validação de fluxo** — testar com as perguntas de campo, etapa e checklist de aprovação.  
+- **Validação de fluxo** — testar com as perguntas de campo, passo e checklist de aprovação.  
 - **Priorização** — o que aumenta fricção sem ganho operacional desce na fila ou sai.  
 - **Revisão de escopo** — feature que empurra burocracia precisa redesign ou corte.  
 - **Evolução mockada** — mock deve provar cliques e campos *antes* de base física; este guia apoia o que validar no protótipo.

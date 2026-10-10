@@ -144,6 +144,7 @@ Para atividades médias/grandes, seguir o fluxo já estabelecido:
 ## Convenções
 
 - Textos de produto e mensagens para usuário: português do Brasil.
+- Textos de tela: seguir *Linguagem controlada* em `docs/sgp-decisoes-praticas-de-ux.md` e o Glossário do manual (cap. 20); `npm run auditoria:textos:ci` deve passar.
 - Código TypeScript: nomes de variáveis/funções/tipos preferencialmente em inglês.
 - Validação backend: Zod.
 - Logging: Pino.
