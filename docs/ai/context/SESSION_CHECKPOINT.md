@@ -7,38 +7,61 @@
 
 ## Identificação
 
-- TASK_ID: `SEM_ATIVIDADE_ATIVA`
-- Atualizado em: `2026-10-10 01:45 UTC`
-- Branch: `develop`
-- HEAD: ver `git log -1 origin/develop` (registro deste checkpoint após o merge `236fcef`)
+- TASK_ID: `pesquisar-asd-ste100` (concluída) → próxima: `linguagem-controlada-sgp`
+- Atualizado em: `2026-10-10 UTC`
+- Branch: `ccr-50b0b39e-sss9zr` (atualizada com `origin/develop` `b3416c1` via merge)
+- HEAD: ver `git log` da branch (commit que atualiza este checkpoint)
+- Base/remoto relevante: `origin/develop`
 - Working tree: `clean`
+
+## Objetivo atual
+
+Handoff para um novo chat: definir e implantar linguagem controlada PT-BR (inspirada no ASD-STE100 + ISO 24495-1) nos textos do SGP+.
 
 ## Estado em uma frase
 
-`corrigir-textos-tela` mergeado em `develop` via PR #35 (`236fcef`). PR #34 (`guias-praticos-tema-integracao`) segue aberto, aguardando validação humana.
+Pesquisa e análise de complexidade concluídas (somente docs); implementação aguarda decisões humanas.
 
 ## Concluído
 
-- PR #35: textos pt-PT, STEP e nomes técnicos removidos das telas/API; `npm run auditoria:textos`.
-- PR #34: tema Claro/Escuro e integração dos Guias Práticos no menu Ajuda (aberto, não mergeado).
+- Pesquisa ASD-STE100 + aplicação ao PT-BR + avaliação de complexidade (ver retorno).
+
+## Decisões já tomadas
+
+- Não introduzir i18n só para isso.
+
+## Arquivos relevantes
+
+- `docs/ai/returns/pesquisar-asd-ste100-retorno.md`
+- `docs/ai/prompts/linguagem-controlada-sgp.md` (prompt de retomada)
+
+## Validações já executadas
+
+- Contagens por grep em `develop` `b3416c1` (ver retorno). Nenhum código alterado.
 
 ## Pendências
 
-- Decidir merge do PR #34 após validação dos guias.
-- `server/src/tests/env.test.ts` espera versão `1.9.4` (app em 1.9.9) — falha pré-existente.
-- 71 achados restantes do `auditoria:textos` são fora de escopo (validações Zod de formato, config, logs).
+- Decidir: Etapa x Atividade; glossário inicial; local do guia; fases no escopo.
+- Resíduo `STEP: {stepStatus}` em `FactoryIntakeItemCard.tsx:51`.
+
+## Próxima ação exata
+
+- Abrir novo chat com o conteúdo de `docs/ai/prompts/linguagem-controlada-sgp.md`.
+
+## Riscos / ressalvas
+
+- 118 testes com asserção por texto; kiosk isolado; largura dos tickets térmicos.
 
 ## Não repetir
 
+- Não medir o código em branch desatualizada: sempre comparar com `origin/develop` antes.
 - Não force-push em `develop`.
-- Não recriar inventário longo no `CLAUDE.md`.
 
 ## Referências úteis
 
-- `docs/ai/returns/corrigir-textos-tela-retorno.md`
-- `docs/ai/returns/auditoria-textos-tela-retorno.md`
-- `docs/ai/returns/guias-praticos-tema-integracao-retorno.md`
-- https://github.com/multivacia/sgp/pull/35 · https://github.com/multivacia/sgp/pull/34
+- Retorno: `docs/ai/returns/pesquisar-asd-ste100-retorno.md`
+- Prompt: `docs/ai/prompts/linguagem-controlada-sgp.md`
+- PR relacionada: https://github.com/multivacia/sgp/pull/35
 
 ## Uso de contexto / sessão
 
