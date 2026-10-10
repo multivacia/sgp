@@ -2,7 +2,7 @@
 
 **Produto:** SGP+ · Multivacia / ARGOS
 **Versão da aplicação nesta revisão:** 1.9.9
-**Revisão deste manual:** 2026-10-04
+**Revisão deste manual:** 2026-10-10
 **Situação:** capítulos 1 a 21 com conteúdo final, revisados na auditoria final de 2026-10-04.
 
 > **Este é o documento canônico do manual do usuário.** Versões em HTML ou PDF devem ser geradas a partir daqui.
@@ -86,7 +86,7 @@ O que pode acontecer:
 
 - **"E-mail ou senha inválidos."** — revise os dados. O sistema não informa qual dos dois está errado.
 - **"Não foi possível entrar agora. Tente novamente mais tarde."** — houve bloqueio temporário por tentativas repetidas. Aguarde e tente de novo.
-- **"Sua conta está inativa. Contacte o administrador."** — o acesso foi desativado; só a administração reativa.
+- **"Sua conta está inativa. Entre em contato com o administrador."** — o acesso foi desativado; só a administração reativa.
 - **Troca de senha obrigatória** — em alguns casos o sistema pede uma nova senha antes de liberar o uso. A nova senha precisa ter **pelo menos 8 caracteres** e ser diferente da atual.
 
 O **Modo Fábrica**, usado pelo colaborador para apontar produção no totem ou no navegador da fábrica, tem acesso próprio por colaborador e **PIN** — não por e-mail e senha. Veja o capítulo 13.
@@ -348,7 +348,7 @@ O comportamento depende da tela: algumas escondem os botões, outras mostram tod
 | Situação | Causa real | Onde resolver |
 |---|---|---|
 | *"Sua conta não está associada a um colaborador operacional…"*, ou fila e jornada vazias com aviso de vínculo | a conta não está vinculada a um colaborador | **Usuários**, pela administração (capítulo 16, seção 16.9) |
-| *"Sua conta está inativa. Contacte o administrador."* ao entrar | a conta foi inativada | **Usuários**, com **Ativar** (capítulo 16) |
+| *"Sua conta está inativa. Entre em contato com o administrador."* ao entrar | a conta foi inativada | **Usuários**, com **Ativar** (capítulo 16) |
 | o sistema pede nova senha antes de liberar o uso | troca de senha obrigatória | criar a nova senha (capítulo 3) |
 | ação recusada pela **situação** da esteira, pela **sequência** das atividades ou pelo tempo previsto | regra de operação, não de acesso | capítulos 6 e 7 |
 | não consegue entrar no **Modo Fábrica** | credencial de produção (PIN) do colaborador | capítulo 13 |
@@ -1555,7 +1555,7 @@ Na **Nova esteira** e na **Alterar Esteira**, nada é gravado antes de **Criar e
 | janela **Concluir atividade** com *"Esta atividade está fora da sequência recomendada."* | existe atividade anterior ainda em aberto | escreva a justificativa, ou conclua a anterior primeiro |
 | *"Informe uma justificativa para executar esta atividade fora da sequência recomendada."* | justificativa em branco | preencha |
 | *"Esta atividade não está incluída na sequência operacional recomendada."* / *"Esta atividade não foi encontrada na estrutura atual desta esteira."* | a estrutura mudou desde que a tela carregou | recarregue a página |
-| *"A etapa só pode ser reaberta quando estiver concluída."* | **Reabrir** usado em atividade não concluída | para dispensada, use **Restaurar** |
+| *"A atividade só pode ser reaberta quando estiver concluída."* | **Reabrir** usado em atividade não concluída | para dispensada, use **Restaurar** |
 | *"Esta atividade já está dispensada."* | dispensa repetida | nada a fazer |
 | *"A atividade só pode ser restaurada quando estiver dispensada."* | **Restaurar** usado fora de dispensada | para concluída, use **Reabrir atividade** |
 | *"Não é possível dispensar atividades em esteira finalizada ou cancelada."* | a esteira está encerrada | reabra o caminho da esteira, ou trate em outra esteira |
@@ -1688,7 +1688,7 @@ Três casos, e eles podem ocorrer juntos:
 
 Nos três casos **nada é bloqueado**: você continua, informando a justificativa. O apontamento fora de sequência fica registrado no histórico da esteira como exceção.
 
-Quando existe atividade anterior pendente mas o sistema **não** exige justificativa, aparece apenas um aviso discreto — por exemplo **"Aguardando etapa …"** ou **"Aguardando N etapas anteriores"**. Nesse caso é só informação.
+Quando existe atividade anterior pendente mas o sistema **não** exige justificativa, aparece apenas um aviso discreto — por exemplo **"Aguardando atividade …"** ou **"Aguardando N atividades anteriores"**. Nesse caso é só informação.
 
 ### Registrar e concluir no mesmo passo
 
@@ -1729,7 +1729,7 @@ Se a lista de motivos estiver vazia, aparece **"Não há descrições ativas con
 
 ### Corrigir, remover e lançar por outra pessoa
 
-Estas três ações ficam na tela **Apontamento gerencial**, alcançável por **Jornada por colaborador** ou pelo detalhe da esteira. A tela avisa o que ela é: *"Registo em nome de um colaborador alocado neste passo. O motivo é obrigatório e fica na trilha administrativa."*
+Estas três ações ficam na tela **Apontamento gerencial**, alcançável por **Jornada por colaborador** ou pelo detalhe da esteira. A tela avisa o que ela é: *"Registro em nome de um colaborador alocado nesta atividade. O motivo é obrigatório e fica na trilha administrativa."*
 
 A tela tem duas partes: **Novo lançamento**, para lançar por outra pessoa, e **Lançamentos no passo**, com os apontamentos já registrados naquela atividade.
 
@@ -2770,8 +2770,8 @@ Cada cartão traz, na faixa de cima, um número e os selos; no corpo, a identifi
 | **Atrasada** | a data planejada já passou e a atividade continua aberta |
 | **Concluída** | a atividade foi concluída |
 | **Próxima atividade recomendada** | nada impede começar agora |
-| *"Etapa anterior pendente: …"* / **Atenção à sequência** | há atividade anterior da esteira ainda aberta — "etapa" aqui é **atividade** |
-| *"Aguardando etapa …"* / *"Aguardando N etapas anteriores"* | a atividade anterior aberta é de **outra pessoa** |
+| *"Atividade anterior pendente: …"* / **Atenção à sequência** | há atividade anterior da esteira ainda aberta |
+| *"Aguardando atividade …"* / *"Aguardando N atividades anteriores"* | a atividade anterior aberta é de **outra pessoa** |
 | **Atividade** / **Tarefa ·** / **Setor ·** / **Esteira** / **Data planejada** | identificação do trabalho e onde ele fica |
 | linha discreta no pé | cliente, veículo e placa, quando a esteira tem esses dados |
 
@@ -2826,7 +2826,7 @@ Dois casos, e somente estes dois:
 
 Nos dois casos **nada é bloqueado**: você continua, escolhendo um motivo na lista de **justificativa operacional**. Algumas opções pedem um **Complemento**.
 
-Quando existe atividade anterior aberta **de outra pessoa** e o sistema não exige justificativa, aparece apenas um aviso discreto — *"Aguardando etapa …"* ou *"Aguardando N etapas anteriores"*. Nesse caso é só informação.
+Quando existe atividade anterior aberta **de outra pessoa** e o sistema não exige justificativa, aparece apenas um aviso discreto — *"Aguardando atividade …"* ou *"Aguardando N atividades anteriores"*. Nesse caso é só informação.
 
 
 ### Concluir pela fila
@@ -3035,7 +3035,7 @@ O realizado soma os minutos efetivamente registrados: a **quantidade executada n
 
 ### Consultar as atividades
 
-Cada cartão mostra a atividade, o código e o nome da esteira, seu papel **Principal** ou **Apoio**, o previsto e **Realizado na etapa**. Esse último rótulo significa o **seu tempo acumulado naquela atividade**, incluindo apontamentos anteriores ao período escolhido.
+Cada cartão mostra a atividade, o código e o nome da esteira, seu papel **Principal** ou **Apoio**, o previsto e **Realizado na atividade**. Esse último rótulo significa o **seu tempo acumulado naquela atividade**, incluindo apontamentos anteriores ao período escolhido.
 
 Use **Expandir detalhe** para ver a tarefa e o setor, apresentados como **Opção · Área**, a situação da esteira e o prazo estimado, quando houver. **Recolher detalhe** fecha essas informações. **Ver esteira** abre a esteira relacionada.
 
@@ -3694,7 +3694,7 @@ No totem **não existe campo de quantidade executada**. Se a atividade precisa d
 
 Duas situações, que podem acontecer juntas. Em nenhuma delas o apontamento é bloqueado: você continua, explicando o motivo.
 
-**1. Atividade anterior pendente.** Aparece a faixa **Fora de sequência — confirme o apontamento**, com a lista das atividades anteriores em aberto e o aviso *"Existem etapas anteriores pendentes. Informe uma justificativa para apontar."*
+**1. Atividade anterior pendente.** Aparece a faixa **Fora de sequência — confirme o apontamento**, com a lista das atividades anteriores em aberto e o aviso *"Existem atividades anteriores pendentes. Informe uma justificativa para apontar."*
 
 **2. Tempo acima do previsto.** Aparece a faixa **Tempo acima do previsto — confirme o apontamento**, com o aviso *"Este apontamento ultrapassa o tempo planejado da atividade. Informe uma justificativa para registrar."*
 
@@ -3817,7 +3817,7 @@ O Modo Fábrica confirma o registro **apenas na tela**: o visto verde e a mensag
 | apontar tempo | sim | sim |
 | **quantidade executada** | **não existe** | **existe** |
 | evolução da sessão | sim | não |
-| **concluir atividade** | **sim** | **não** — o botão **Concluir etapa** está desativado, com o aviso *"Disponível na próxima etapa"* |
+| **concluir atividade** | **sim** | **não** — o botão **Concluir atividade** está desativado, com o aviso *"Conclua a atividade pelo totem."* |
 | **Outra atividade** | **sim** | **não** |
 | **Extra Esteira** | **sim** | **não** |
 | atualizar a fila | botão **Atualizar** | não há na tela da fila |
@@ -4287,7 +4287,7 @@ O bloco **Resumo** traz quatro cartões:
 |---|---|---|
 | **Esteiras (total)** | todas as esteiras existentes, em **qualquer situação** — inclusive finalizadas e canceladas | abre o **Painel operacional** sem filtro, em nova aba |
 | **Pressão de atraso (esteiras)** | as esteiras contadas como **em atraso**, pela mesma regra do Painel operacional (capítulo 5) | abre o **Painel operacional** já filtrado em **Em atraso**, em nova aba |
-| **Alocações em STEPs** — leia "alocações em atividades" | o total de alocações de pessoas e equipes em atividades, em esteiras de qualquer situação. Abaixo, a divisão **Principal** · **Apoio**. Alocações de equipe contam sempre como **apoio** | nada |
+| **Alocações em atividades** | o total de alocações de pessoas e equipes em atividades, em esteiras de qualquer situação. Abaixo, a divisão **Principal** · **Apoio**. Alocações de equipe contam sempre como **apoio** | nada |
 | **Minutos apontados (acumulado)** | a soma de **todos** os apontamentos em atividades de esteira já registrados, de qualquer data. Apontamentos removidos não contam. **Extra Esteira não entra** | nada |
 
 Acima dos cartões, o seletor *"Opcional: soma de apontamentos num recorte temporal (não altera o acumulado global)."* permite somar os apontamentos de um período:
@@ -4320,7 +4320,7 @@ O bloco **Previsto estrutural vs minutos apontados** mostra três totais, de tod
 
 | Linha | O que soma |
 |---|---|
-| **Previsto estrutural (referência — STEPs)** | o tempo previsto de **todas as atividades ativas de todas as esteiras**: tempo por unidade × quantidade prevista. Inclui esteiras de qualquer situação — rascunhos, finalizadas e canceladas também |
+| **Previsto estrutural (referência — atividades)** | o tempo previsto de **todas as atividades ativas de todas as esteiras**: tempo por unidade × quantidade prevista. Inclui esteiras de qualquer situação — rascunhos, finalizadas e canceladas também |
 | **Total por esteira (OS) — apoio** | a soma do tempo total registrado em cada esteira. Serve de conferência e **pode divergir** do previsto estrutural quando o total de alguma esteira não foi recalculado depois de mudanças na estrutura |
 | **Minutos apontados (acumulado)** | o mesmo número do cartão do Resumo |
 
@@ -4341,7 +4341,7 @@ O bloco **Carga por colaborador** traz dois gráficos de barras e uma tabela. O 
 | **Colaborador** | nome |
 | **Alocações** | quantidade de atividades em que a pessoa está alocada |
 | **Principal / apoio** | quantas dessas alocações são como responsável principal e quantas como apoio |
-| **Previsto estrutural (STEPS)** | a soma do tempo previsto das atividades em que a pessoa está alocada |
+| **Previsto estrutural (atividades)** | a soma do tempo previsto das atividades em que a pessoa está alocada |
 | **Previsto vs capacidade diária** | só para quem tem acesso a Configurações operacionais; veja abaixo |
 | **Minutos apontados (acumulado)** | todos os apontamentos da pessoa em atividades de esteira, de qualquer data — **inclusive** em atividades em que ela não está alocada |
 
@@ -4375,7 +4375,7 @@ O gráfico de minutos **não** traz quem mais apontou: ele segue a ordem por nú
 
 O link **Colaboradores**, ao lado do título, abre a tela **Colaboradores** (capítulo 16).
 
-Sem nenhuma alocação direta na operação, aparece *"Sem dados de colaboradores."*, e os gráficos mostram *"Sem alocações."* e *"Sem apontamentos registados."*.
+Sem nenhuma alocação direta na operação, aparece *"Sem dados de colaboradores."*, e os gráficos mostram *"Sem alocações."* e *"Sem apontamentos registrados."*.
 
 ### 15.6 Visão Operacional — últimos apontamentos
 
@@ -4479,7 +4479,6 @@ Alguns rótulos ainda usam termos internos. Leia assim:
 
 | Na tela | Leia como |
 |---|---|
-| **"STEPs"**, **"STEPS"**, **"etapas"** | atividades |
 | **"bucket"**, **"bucket operacional"** | situação da esteira, no sentido dos recortes do Painel operacional |
 | **"OS"**, em **Total por esteira (OS)** | o total registrado em cada esteira |
 | **"snapshot_atual"** e **"snapshot"**, no rodapé e no texto do modo Gráficos | fotografia do momento da busca |
@@ -4812,7 +4811,7 @@ As janelas de senha têm **Cancelar** e **Confirmar**; durante a ação, o botã
 
 Ao redefinir, a senha anterior deixa de valer, **qualquer sessão aberta daquela conta é encerrada**, um eventual **bloqueio por tentativas é retirado** e a próxima entrada exige troca de senha. É o caminho para quem esqueceu a senha ou foi bloqueado.
 
-**Inativar** impede novas entradas: quem tentar entrar vê *"Sua conta está inativa. Contacte o administrador."*. A inativação **não garante** a desconexão imediata de quem já está com o sistema aberto; se precisar cortar o acesso na hora, use também **Redefinir senha**.
+**Inativar** impede novas entradas: quem tentar entrar vê *"Sua conta está inativa. Entre em contato com o administrador."*. A inativação **não garante** a desconexão imediata de quem já está com o sistema aberto; se precisar cortar o acesso na hora, use também **Redefinir senha**.
 
 **Remover** impede a entrada e encerra a sessão aberta na ação seguinte. Mas tenha em conta, antes de remover:
 
@@ -4910,7 +4909,7 @@ Se **Até** for anterior a **De**, o ajuste é recusado com uma mensagem que cit
 
 ### 16.14 Descrições de apontamentos
 
-Aba **Descrições de apontamentos**: a lista de descrições que o colaborador escolhe ao registrar tempo **Extra Esteira** — apoio, limpeza, deslocamento e semelhantes (capítulo 7). O texto de apoio da aba usa o termo técnico `STEP`; leia como **atividade**.
+Aba **Descrições de apontamentos**: a lista de descrições que o colaborador escolhe ao registrar tempo **Extra Esteira** — apoio, limpeza, deslocamento e semelhantes (capítulo 7).
 
 Filtros: **Busca** e **Status** (**Todos**, **Ativos**, **Inativos**). Colunas: **Descrição**, **Status**, **Ordem**, **Atualizado em**.
 
@@ -4948,7 +4947,7 @@ No menu da linha: **Editar** e **Desativar** / **Ativar** (**"Justificativa desa
 
 ### 16.16 Motivos de dispensa
 
-Aba **Motivos de dispensa**: a lista do campo **Motivo** ao **dispensar** uma atividade (capítulo 6, seção 6.18). O texto de apoio da aba usa o termo técnico `STEP`; leia como **atividade**.
+Aba **Motivos de dispensa**: a lista do campo **Motivo** ao **dispensar** uma atividade (capítulo 6, seção 6.18).
 
 Filtros: **Busca** (por código ou motivo) e **Status**. Colunas: **Código**, **Motivo**, **Complemento**, **Ordem**, **Ativo**.
 
@@ -5089,7 +5088,7 @@ Em **Colaboradores** e em **Usuários**, sair pelo menu lateral com uma janela d
 | *"Papel de acesso não encontrado."* · *"Papel ou colaborador informado não existe."* | o perfil ou o colaborador foi excluído enquanto a janela estava aberta | fechar, reabrir e escolher de novo |
 | *"Não pode inativar a sua própria conta."* · *"Não pode remover a sua própria conta."* | ação sobre a própria conta | pedir a outra pessoa com a permissão |
 | *"Não pode redefinir a sua própria senha por aqui. Utilize «Alterar senha» na sua conta."* | redefinição da própria senha | usar **Alterar senha** |
-| *"Sua conta está inativa. Contacte o administrador."* | mensagem que **a pessoa** vê ao tentar entrar com uma conta inativa | reativar com **Ativar** |
+| *"Sua conta está inativa. Entre em contato com o administrador."* | mensagem que **a pessoa** vê ao tentar entrar com uma conta inativa | reativar com **Ativar** |
 
 ### Configurações operacionais
 
@@ -5162,7 +5161,7 @@ A tela é organizada de cima para baixo:
 2. os **avisos**, quando houver;
 3. a **Revisão da OS importada**, com as decisões item por item;
 4. os **Dados sugeridos (editáveis)**;
-5. os **Itens / etapas inferidos**;
+5. os **Itens / atividades inferidos**;
 6. os botões **Criar esteira no SGP+** e **Novo documento**.
 
 Os blocos 3 a 6 só aparecem depois que o sistema devolve um rascunho utilizável.
@@ -5221,7 +5220,7 @@ As mensagens que o sistema pode mostrar:
 | *"… presente mas com confiança baixa."* | o dado foi lido, mas com pouca certeza | confira o dado na tela contra o PDF |
 | *"Trechos financeiros, tabulares ou sensíveis foram removidos antes do rascunho operacional."* | valores, totais, dados pessoais ou tabelas de preço foram retirados de propósito | nada a fazer; é proteção do sistema |
 | *"Nenhum serviço operacional válido foi identificado após filtros de ruído documental."* | depois da limpeza, não sobrou nenhum serviço | verifique o PDF; se for o documento correto, crie a esteira manualmente |
-| *"Texto vazio após extração; sugestões baseadas apenas no nome do ficheiro, se aplicável."* / *"Nenhum texto legível extraído do ficheiro."* | o PDF não tem texto que o sistema consiga ler | veja o limite sobre PDF de imagem, acima |
+| *"Texto vazio após extração; sugestões baseadas apenas no nome do arquivo, se aplicável."* / *"Nenhum texto legível extraído do arquivo."* | o PDF não tem texto que o sistema consiga ler | veja o limite sobre PDF de imagem, acima |
 | *"Não foi possível ler a estrutura do PDF; texto obtido por fallback pode ser incompleto."* | o arquivo está danificado ou fora do padrão; o sistema tentou recuperar o texto | confira o rascunho com atenção redobrada ou gere o PDF de novo |
 | *"Nenhuma atividade de Matriz compatível encontrada; revisão manual necessária."* | nenhum serviço do documento se parece com atividade das matrizes | todos os itens entram como novos; veja a seção abaixo |
 | *"Falha ao consultar candidatos de matriz; revisão manual recomendada."* | a comparação com as matrizes não pôde ser feita | os itens entram como novos; tente enviar de novo se quiser a comparação |
@@ -5261,7 +5260,7 @@ Cada item cai em um de três grupos, e o grupo define o que se espera de você:
 
 ### Decidir item por item
 
-Cada cartão mostra a descrição do serviço lido, o grupo, a **Confiança**, o **Motivo** e, quando há candidato, os dados dele: **Atividade**, **Setor**, **Etapa**, **Tempo**, **Time** e **Responsável**. Uma linha **Estado** informa a decisão atual.
+Cada cartão mostra a descrição do serviço lido, o grupo, a **Confiança**, o **Motivo** e, quando há candidato, os dados dele: **Atividade**, **Setor**, **Tarefa**, **Tempo**, **Time** e **Responsável**. Uma linha **Estado** informa a decisão atual.
 
 Os botões variam conforme o grupo:
 
@@ -5278,7 +5277,7 @@ Pontos de atenção:
 - em **Nova atividade sugerida** não há **Aceitar sugestão**, porque não existe candidato;
 - em **Reaproveitar da Matriz** **não há** botão para ignorar nem para criar como novo. Se o candidato não serve, abra as alternativas e escolha outra. Se nenhuma serve, o caminho é criar a esteira e ajustar a atividade depois (capítulo 6);
 - uma decisão pode ser **refeita** a qualquer momento antes de criar: basta clicar em outro botão do mesmo cartão;
-- a alternativa pode ser **uma estrutura inteira** (uma tarefa ou um setor com várias atividades). Nesse caso o cartão mostra **Estrutura da Matriz sugerida**, com áreas, atividades e minutos, e avisa que, ao aceitar, *"esta estrutura representa um reaproveitamento composto da Matriz (não um item novo simples)"*;
+- a alternativa pode ser **uma estrutura inteira** (uma tarefa ou um setor com várias atividades). Nesse caso o cartão mostra **Estrutura da Matriz sugerida**, com setores, atividades e minutos, e avisa que, ao aceitar, *"esta estrutura representa um reaproveitamento composto da Matriz (não um item novo simples)"*;
 - quando a mesma estrutura é sugerida para mais de um item, ela entra **uma única vez** na esteira.
 
 O Estado de cada item usa estas expressões: **Decisão pendente**, **Candidato principal aceite**, **Alternativa da matriz selecionada**, **Confirmado como novo item** e **Item ignorado pelo revisor**.
@@ -5309,7 +5308,7 @@ Em **Dados sugeridos (editáveis)**, o texto reflete a leitura automática — *
 
 > **Nem tudo o que a tela mostra é gravado.** Na configuração padrão do sistema, todo PDF é lido como ordem de serviço do modelo da oficina. Nesse caso, os campos **Modelo / versão**, **Placa**, **Prazo estimado** e **Observações** aparecem **travados**, e **Cliente**, **Placa** e **Prazo estimado** **não são gravados** na esteira, mesmo que a tela mostre ou aceite um valor. Seguem de fato para a esteira o **Nome da esteira**, o **Veículo**, a **Prioridade** e a **Referência OS**, que é acrescentada às observações. Se precisar de cliente, placa ou prazo, preencha depois, em **Alterar Esteira** (capítulo 6).
 
-Em **Itens / etapas inferidos** você vê a estrutura que será criada. A tela a chama de **Opção → Área → Etapa**; na esteira criada, isso corresponde a **tarefa → setor → atividade**. Os títulos de cada nível e o campo **Min** (tempo planejado, em minutos) podem ser editados.
+Em **Itens / atividades inferidos** você vê a estrutura que será criada, na ordem **Tarefa → Setor → Atividade**. Os títulos de cada nível e o campo **Min** (tempo planejado, em minutos) podem ser editados.
 
 Por padrão, os serviços novos entram em uma tarefa chamada **Itens inferidos do documento**, no setor **Serviço**. Quando você aceita uma estrutura inteira da matriz, uma **tarefa** da matriz entra como tarefa própria na esteira, com os setores e atividades dela; um **setor** da matriz entra como setor da tarefa **Itens inferidos do documento**. Mas atenção ao efeito das decisões sobre o que você editou:
 
@@ -5349,7 +5348,7 @@ O que a esteira traz:
 
 Esta tela **não** mostra os atalhos **Ver backlog** e **Ir a Minha fila** que aparecem ao criar pela **Nova esteira**; só o aviso acima.
 
-> Se, após a revisão, não restar nenhuma atividade (por exemplo, todos os itens foram ignorados), a esteira é criada com uma única atividade provisória chamada **Defina as etapas do serviço**, com tempo zero. Edite ou substitua essa atividade antes de planejar.
+> Se, após a revisão, não restar nenhuma atividade (por exemplo, todos os itens foram ignorados), a esteira é criada com uma única atividade provisória chamada **Defina as atividades do serviço**, com tempo zero. Edite ou substitua essa atividade antes de planejar.
 
 ### Proteções de conteúdo
 
@@ -5382,14 +5381,14 @@ O botão fica desativado **sem explicação na própria tela** — a pista é o 
 | *"Indique o nome da esteira antes de criar."* | **Nome da esteira** vazio | preencha o campo |
 | *"O draft contém conteúdo financeiro ou sensível removido por segurança. Reimporte ou revise o documento antes de criar a esteira."* | texto com valores, totais ou dados sensíveis nos campos ou nas observações | remova o trecho ou reenvie o documento |
 | *"O draft contém conteúdo não operacional (partItems). Revise antes de criar."* / *"O draft contém campos de debug internos e não pode ser enviado para criação."* | o rascunho contém informação que não deve seguir para a esteira | reenvie o documento; se persistir, abra chamado com a **referência de suporte** |
-| *"Cada opção precisa de um título."* / *"Cada área precisa de um título."* / *"Cada etapa precisa de um título."* | você apagou o título de uma tarefa, de um setor ou de uma atividade | preencha o título que ficou vazio (lembrando: **opção** = tarefa, **área** = setor, **etapa** = atividade) |
-| *"A estrutura contém uma etapa sintética de Matriz. Remova o item agregado e mantenha apenas as atividades reais."* | a estrutura final contém um item agregado que não corresponde a uma atividade real | escolha outra alternativa ou **Criar como novo item** para o serviço envolvido; se persistir, abra chamado |
+| *"Cada tarefa precisa de um título."* / *"Cada setor precisa de um título."* / *"Cada atividade precisa de um título."* | você apagou o título de uma tarefa, de um setor ou de uma atividade | preencha o título que ficou vazio |
+| *"A estrutura contém uma atividade sintética de Matriz. Remova o item agregado e mantenha apenas as atividades reais."* | a estrutura final contém um item agregado que não corresponde a uma atividade real | escolha outra alternativa ou **Criar como novo item** para o serviço envolvido; se persistir, abra chamado |
 
 A mensagem aparece em faixa vermelha no alto da tela. O texto usa a palavra **draft**, que é o **rascunho** deste capítulo.
 
 ### Quando o documento não gera rascunho
 
-Se o documento não rende um rascunho utilizável, a tela mostra, em vermelho, *"Não foi possível obter um rascunho utilizável a partir deste documento. Corrija o arquivo ou tente outro envio. Se o problema continuar, contate o suporte."*, com a lista dos motivos e o botão **Enviar outro documento**. O caso mais comum é o arquivo **vazio** (*"Ficheiro vazio; nada a interpretar."*).
+Se o documento não rende um rascunho utilizável, a tela mostra, em vermelho, *"Não foi possível obter um rascunho utilizável a partir deste documento. Corrija o arquivo ou tente outro envio. Se o problema continuar, contate o suporte."*, com a lista dos motivos e o botão **Enviar outro documento**. O caso mais comum é o arquivo **vazio** (*"Arquivo vazio; nada a interpretar."*).
 
 Quando o problema é de comunicação, sessão ou serviço, o sistema mostra o erro de duas formas, conforme a gravidade: em **faixa vermelha** no alto da tela, ou em uma **janela de aviso** que precisa ser fechada. Nos dois casos, a tela continua utilizável: corrija o que o aviso indicar e envie de novo. Se a sessão expirou, entre novamente no sistema.
 
@@ -5399,7 +5398,7 @@ Quando o problema é de comunicação, sessão ou serviço, o sistema mostra o e
 |---|---|
 | Não é possível **salvar** a revisão para continuar depois | conclua na mesma visita, ou envie o documento de novo |
 | Só se envia **um PDF por vez** | envie um documento, crie a esteira e repita |
-| Não é possível **adicionar ou remover** atividades na lista **Itens / etapas inferidos** | use **Ignorar item** para tirar; para acrescentar, use **Incluir novo item** no detalhe da esteira (capítulo 6) |
+| Não é possível **adicionar ou remover** atividades na lista **Itens / atividades inferidos** | use **Ignorar item** para tirar; para acrescentar, use **Incluir novo item** no detalhe da esteira (capítulo 6) |
 | Não há como informar **responsável**, **equipe** ou **quantidade prevista** aqui | faça no detalhe da esteira, depois de criada |
 | Não é possível **desfazer** a criação nesta tela | a esteira criada é uma esteira normal e segue as regras do capítulo 6 |
 | Peças e insumos do documento são ignorados | não há como importá-los |
@@ -5505,7 +5504,7 @@ As escolhas não ficam guardadas: ao sair e voltar, a tela abre de novo com **7 
 | **Sobrecarga** | pessoas com carga pendente acima da capacidade da janela. **Quem está em sobrecarga crítica é contado duas vezes** — veja o aviso abaixo |
 | **Baixa ocupação** | pessoas com atividades em aberto e carga pendente que apontaram, na janela, menos de 15% da capacidade da janela |
 | **Sem apontamento recente** | pessoas sem nenhum apontamento na janela — **inclusive quem não tem nenhuma atividade em aberto** |
-| **Sem etapas abertas** | pessoas sem nenhuma atividade em aberto alocada |
+| **Sem atividades abertas** | pessoas sem nenhuma atividade em aberto alocada |
 | **Carga via time** | pessoas com pelo menos uma atividade em aberto que chega a elas por meio de uma equipe |
 
 > **O cartão Sobrecarga conta em dobro quem está em sobrecarga crítica.** Ele soma as pessoas acima da capacidade com as pessoas acima do dobro da capacidade — e quem está acima do dobro também está acima da capacidade. Com três pessoas acima da capacidade, uma delas acima do dobro, o cartão mostra **4**. Para saber quantas pessoas estão de fato em sobrecarga, filtre **Estado operacional** em **Crítico** e conte as linhas: na prática, só a sobrecarga leva ao estado **Crítico** (18.7).
@@ -5524,7 +5523,7 @@ A tabela traz uma linha por colaborador, em **ordem alfabética de nome**. Não 
 | **Carga pendente** | o tempo que ainda falta nas atividades em aberto da pessoa (18.6) |
 | **Capacidade da janela** | a capacidade diária multiplicada pelos dias da janela |
 | **Uso** | a carga pendente dividida pela capacidade da janela, em percentual. A partir de 999%, aparece **999%+** |
-| **Etapas abertas** | quantas atividades em aberto a pessoa tem |
+| **Atividades abertas** | quantas atividades em aberto a pessoa tem |
 | **Apontamentos recentes** | o tempo apontado na janela e a quantidade de registros, por exemplo **12h30 · 9 reg.** |
 | **Último apontamento** | **hoje**, **há 1 dia**, **há N dias** ou **sem registro na janela** |
 | **Sinais** | até **dois** sinais, os mais graves primeiro; os demais aparecem resumidos como **+N** (18.8 a 18.10). Sem nenhum sinal, aparece um traço |
@@ -5536,7 +5535,7 @@ Sobre a coluna **Sinais**:
 
 - a cor indica a gravidade: **vermelho** para crítico, **amarelo** para alerta e **cinza** para informação. Os vermelhos vêm primeiro, depois os amarelos e, por fim, os cinzas;
 - passar o mouse sobre um sinal mostra o texto completo do sistema, que usa alguns termos técnicos (veja "Rótulos técnicos que aparecem na tela");
-- o resumo **+N** não abre lista nem dica, e o painel de detalhe também não mostra os sinais. Um sinal importante pode ficar escondido atrás de outros do mesmo nível — por exemplo, **Pendência acima da capacidade da janela** atrás de **Capacidade por fallback** e **Sem apontamento recente com etapas abertas**. Por isso, **confira sempre as colunas Uso e Último apontamento**, que mostram a mesma informação em números.
+- o resumo **+N** não abre lista nem dica, e o painel de detalhe também não mostra os sinais. Um sinal importante pode ficar escondido atrás de outros do mesmo nível — por exemplo, **Pendência acima da capacidade da janela** atrás de **Capacidade por fallback** e **Sem apontamento recente com atividades abertas**. Por isso, **confira sempre as colunas Uso e Último apontamento**, que mostram a mesma informação em números.
 
 Quando nenhuma pessoa atende aos filtros, aparece *"Não há colaboradores para exibir com os filtros atuais."*.
 
@@ -5551,7 +5550,7 @@ O painel tem quatro blocos:
 | Bloco | Linhas |
 |---|---|
 | **Capacidade** | **Capacidade diária**; **Capacidade da janela**; **Fonte** — **Capacidade específica** (ajuste individual), **Capacidade padrão** ou **Fallback operacional** (as 8 horas que o sistema assume) |
-| **Carga** | **Etapas abertas**; **Carga planejada (aberta)** — o tempo previsto total das atividades em aberto; **Pendência estimada (aberta)** — a carga pendente; **Realizado pelo colaborador (nessas etapas)** — o que a própria pessoa já apontou nessas atividades, em qualquer data |
+| **Carga** | **Atividades abertas**; **Carga planejada (aberta)** — o tempo previsto total das atividades em aberto; **Pendência estimada (aberta)** — a carga pendente; **Realizado pelo colaborador (nessas atividades)** — o que a própria pessoa já apontou nessas atividades, em qualquer data |
 | **Apontamentos recentes** | **Quantidade** de registros na janela; **Total de minutos** — apesar do nome, mostrado em horas e minutos; **Último apontamento**, com a data no formato dia/mês/ano, ou um traço; **Recência face à data de referência** — o mesmo **hoje**, **há N dias** ou **sem registro na janela** da tabela |
 | **Qualidade dos dados** | os avisos que pedem cuidado na leitura (18.10), ou *"Sem avisos adicionais."* |
 
@@ -5570,7 +5569,7 @@ Observações:
 | Elemento | O que entra | O que fica de fora |
 |---|---|---|
 | **Pessoas** | colaboradores ativos, em ordem alfabética, até 50; com **Incluir colaboradores inativos**, também os inativos | colaboradores removidos; quem passa do limite de 50 |
-| **Atividades em aberto** — na tela, **etapas abertas** | as atividades em que a pessoa está **alocada na estrutura** da esteira — como responsável principal, como apoio ou por meio de uma equipe de que é membro ativo — e que **não estão concluídas**. Entram esteiras de **qualquer situação** | atividades **concluídas**, atividades removidas da estrutura e esteiras excluídas |
+| **Atividades em aberto** — na tela, **atividades abertas** | as atividades em que a pessoa está **alocada na estrutura** da esteira — como responsável principal, como apoio ou por meio de uma equipe de que é membro ativo — e que **não estão concluídas**. Entram esteiras de **qualquer situação** | atividades **concluídas**, atividades removidas da estrutura e esteiras excluídas |
 | **Carga planejada** | o tempo por unidade × a quantidade prevista de cada atividade em aberto (capítulo 6, seção 6.7) | — |
 | **Realizado pelo colaborador** | os apontamentos **da própria pessoa** nessas atividades, de **qualquer data** | o que outras pessoas apontaram na mesma atividade |
 | **Carga pendente** | para cada atividade, o previsto menos o realizado pela pessoa, nunca abaixo de zero; depois, a soma de todas | — |
@@ -5610,7 +5609,7 @@ O **estado** resume a situação da pessoa; o **risco** gradua essa situação. 
 Como ler:
 
 - **só a sobrecarga leva a Crítico.** Para diferenciar os dois níveis, olhe o **Risco**: **Alto** é sobrecarga; **Crítico** é sobrecarga crítica;
-- **ficar sem apontar não muda o estado sozinho.** Quem tem atividades em aberto e nenhum apontamento na janela recebe o sinal amarelo **Sem apontamento recente com etapas abertas**, mas continua **Saudável** se a carga estiver até 75% — exceto no caso da capacidade assumida de 8 horas, na tabela acima;
+- **ficar sem apontar não muda o estado sozinho.** Quem tem atividades em aberto e nenhum apontamento na janela recebe o sinal amarelo **Sem apontamento recente com atividades abertas**, mas continua **Saudável** se a carga estiver até 75% — exceto no caso da capacidade assumida de 8 horas, na tabela acima;
 - **colaborador inativo nunca aparece como Saudável**, mesmo sem carga;
 - o percentual de **Uso** é arredondado. Perto dos limites — 75%, 100% e 200% —, confie no **Estado** e no **Risco**.
 
@@ -5637,7 +5636,7 @@ Dois sinais olham para o tempo apontado na janela:
 
 | Sinal | Quando aparece | Cor |
 |---|---|---|
-| **Sem apontamento recente com etapas abertas** | a pessoa tem atividades em aberto e **nenhum** apontamento na janela | amarelo |
+| **Sem apontamento recente com atividades abertas** | a pessoa tem atividades em aberto e **nenhum** apontamento na janela | amarelo |
 | **Sinal de baixa ocupação recente** | a pessoa tem atividades em aberto com carga pendente e apontou, na janela, **menos de 15%** da capacidade da janela | cinza |
 
 Os dois podem aparecer juntos: quem não apontou nada também apontou menos de 15%.
@@ -5659,8 +5658,8 @@ Quatro sinais não falam de carga nem de apontamento: avisam que algum dado pede
 |---|---|---|---|
 | **Capacidade por fallback** | amarelo | *"A capacidade foi estimada por fallback operacional."* | não há capacidade padrão nem ajuste individual válido hoje; o sistema assumiu **8 horas** por dia (capítulo 16, seção 16.13) |
 | **Colaborador inativo** | amarelo | *"O colaborador está inativo."* | só aparece com **Incluir colaboradores inativos** marcado |
-| **Carga via time** | cinza | *"A carga inclui etapas atribuídas a times dos quais o colaborador participa."* | parte da carga vem de atividades alocadas a uma equipe de que a pessoa é membro ativo |
-| **Sem etapas abertas** | cinza | *"Nenhuma etapa aberta foi encontrada para este colaborador."* | a pessoa não tem nenhuma atividade em aberto alocada |
+| **Carga via time** | cinza | *"A carga inclui atividades atribuídas a times dos quais o colaborador participa."* | parte da carga vem de atividades alocadas a uma equipe de que a pessoa é membro ativo |
+| **Sem atividades abertas** | cinza | *"Nenhuma atividade aberta foi encontrada para este colaborador."* | a pessoa não tem nenhuma atividade em aberto alocada |
 
 ### 18.11 O que fazer diante de cada sinal
 
@@ -5670,12 +5669,12 @@ A Saúde operacional não altera nada: ela indica onde olhar. As providências s
 |---|---|---|
 | **Pendência acima do dobro da capacidade da janela** ou **Pendência acima da capacidade da janela** | se as atividades em aberto ainda são trabalho da pessoa: atividades já executadas e não concluídas, alocações em esteiras finalizadas ou canceladas, atividades dispensadas, alocações por equipe | concluir o que já foi feito (capítulo 6, seção 6.16); retirar ou trocar a alocação na estrutura (capítulo 6, seções 6.6 e 6.10); redistribuir o trabalho da semana (capítulos 8 e 9), o que alivia o dia a dia, mas não muda os números desta tela |
 | estado **Atenção** por carga | se o trabalho em aberto vai se concentrar nos próximos dias | acompanhar no **Planejamento** e na **Agenda da semana** (capítulos 8 e 9) |
-| **Sem apontamento recente com etapas abertas** | se a pessoa trabalhou e não apontou, esteve ausente, trabalhou só em Extra Esteira ou tem alocações que não correspondem mais ao trabalho real | orientar o apontamento (capítulos 7 e 13); corrigir apontamentos (capítulo 7); revisar as alocações (capítulo 6) |
+| **Sem apontamento recente com atividades abertas** | se a pessoa trabalhou e não apontou, esteve ausente, trabalhou só em Extra Esteira ou tem alocações que não correspondem mais ao trabalho real | orientar o apontamento (capítulos 7 e 13); corrigir apontamentos (capítulo 7); revisar as alocações (capítulo 6) |
 | **Sinal de baixa ocupação recente** | as mesmas causas do sinal anterior, com algum apontamento registrado | os mesmos caminhos do sinal anterior |
 | **Capacidade por fallback** | se a capacidade padrão foi configurada | **Configurações operacionais → Capacidade operacional** (capítulo 16, seção 16.13) |
 | **Carga via time** | se a pessoa de fato executa as atividades da equipe | rever a alocação da equipe na estrutura ou os membros da equipe (capítulos 6 e 16) |
 | **Colaborador inativo** com atividades em aberto | se essas atividades precisam passar para outra pessoa — colaborador inativo não recebe novas alocações nem entra no Modo Fábrica | trocar a alocação na estrutura (capítulo 6) |
-| **Sem etapas abertas** | se a pessoa deveria ter trabalho alocado | alocar na estrutura da esteira (capítulo 6) e planejar (capítulos 8 e 9) |
+| **Sem atividades abertas** | se a pessoa deveria ter trabalho alocado | alocar na estrutura da esteira (capítulo 6) e planejar (capítulos 8 e 9) |
 
 Para ver em quais atividades a pessoa está alocada, use a lista **Em aberto** da **Jornada por colaborador** (capítulo 12). Ela mostra apenas as alocações **diretas** em esteiras que não estão finalizadas nem canceladas; as alocações por equipe e as de esteiras encerradas, que aqui continuam somando, só aparecem no detalhe de cada esteira (capítulo 6).
 
@@ -5719,12 +5718,9 @@ Alguns rótulos e dicas ainda usam termos internos. Leia assim:
 
 | Na tela | Leia como |
 |---|---|
-| **"etapas"**, em **Etapas abertas**, **Sem etapas abertas** e nos textos de apoio | atividades |
-| **"STEPs"**, no texto que aparece ao passar o mouse sobre os sinais | atividades |
 | **"fallback"**, em **Capacidade por fallback**, **Fallback operacional** e nos textos de apoio | as 8 horas por dia que o sistema assume quando não há capacidade padrão nem ajuste individual |
 | **"default global"** e **"override"**, no texto do sinal de capacidade | capacidade padrão e ajuste individual |
-| **"time"**, **"membership de equipe"** e **"membership de time"**, em **Carga via time** e nos textos de apoio | equipe e participação como membro da equipe |
-| **"snapshot"**, no texto do sinal **Sem etapas abertas** | o cálculo feito no momento da busca |
+| **"time"**, em **Carga via time** e nos textos de apoio | equipe |
 | **"Regras determinísticas"**, no topo da tela | regras fixas de cálculo, iguais para todos |
 | **"capacidade agregada na janela (minutos)"**, nos textos de sobrecarga | capacidade da janela |
 | **"Total de minutos"**, no painel de detalhe | tempo total apontado na janela, exibido em horas e minutos |
@@ -5872,7 +5868,7 @@ Localize a situação e a mensagem. A última coluna diz onde a explicação com
 |---|---|---|---|
 | *"E-mail ou senha inválidos."* | e-mail ou senha errados | revisar os dados; cada erro conta para o bloqueio temporário | 19.5 |
 | *"Não foi possível entrar agora. Tente novamente mais tarde."* | bloqueio temporário por tentativas erradas | aguardar, ou pedir a redefinição da senha | 19.5 |
-| *"Sua conta está inativa. Contacte o administrador."* | a conta foi inativada | pedir a reativação à administração | 19.5; capítulo 16, seção 16.10 |
+| *"Sua conta está inativa. Entre em contato com o administrador."* | a conta foi inativada | pedir a reativação à administração | 19.5; capítulo 16, seção 16.10 |
 | *"Senha atual incorreta."* | ao trocar a senha, a senha atual foi digitada errada | digitar de novo | 19.5 |
 | janela **Sua sessão está prestes a expirar** | a sessão vai terminar por inatividade | **Continuar conectado** | 19.5 |
 | *"Sua sessão expirou. Faça login novamente."* | a sessão terminou | entrar de novo | 19.5 |
@@ -5983,7 +5979,7 @@ As mensagens da entrada aparecem em uma **janela de aviso**, e o título da jane
 |---|---|---|---|
 | **Sessão inválida** | *"E-mail ou senha inválidos."* | e-mail ou senha errados. O sistema não diz qual dos dois. Apesar do título, não há problema de sessão | revisar os dados com atenção: cada erro conta para o bloqueio temporário |
 | **Sem permissão** | *"Não foi possível entrar agora. Tente novamente mais tarde."* | depois de várias tentativas erradas seguidas, a conta fica **bloqueada por um tempo** — tipicamente **5 tentativas** e **15 minutos**, conforme a configuração do ambiente. Durante o bloqueio, nem a senha correta entra | aguardar e tentar de novo, ou pedir à administração **Redefinir senha** (capítulo 16, seção 16.10), que retira o bloqueio na hora |
-| **Sem permissão** | *"Sua conta está inativa. Contacte o administrador."* | a conta foi inativada | pedir à administração que a ative (capítulo 16, seção 16.10) |
+| **Sem permissão** | *"Sua conta está inativa. Entre em contato com o administrador."* | a conta foi inativada | pedir à administração que a ative (capítulo 16, seção 16.10) |
 
 Depois da entrada, se a conta estiver marcada para troca de senha, abre a tela **Alterar senha obrigatória** (capítulo 3, seção 3.1).
 
@@ -6256,7 +6252,7 @@ Termos do dia a dia do SGP+. Em caso de dúvida sobre uma palavra do manual, com
 
 ### Termo técnico que você não precisa conhecer
 
-**`STEP`** — identificador interno usado na implementação do sistema para o que este manual chama de **atividade**. Ele ainda aparece em alguns rótulos e mensagens de tela ("Etapa (STEP)", "Atividades (STEPs)", "Alocações em STEPs"). **Leia sempre como "atividade".** É termo técnico legado, sem significado operacional próprio, e está registrado como ajuste pendente de interface.
+**`STEP`** — identificador interno usado na implementação do sistema para o que este manual chama de **atividade**. Não aparece mais nas telas. Pode aparecer ainda no código de tickets impressos antes desta versão (**STEP-XXXX**; os novos usam **ATV-XXXX**), no ticket de teste do SGP Print Agent e no caminho de algumas mensagens de validação. **Leia sempre como "atividade".**
 
 ---
 
@@ -6282,7 +6278,7 @@ Se um usuário relatar o uso de alguma dessas telas, o acesso foi por endereço 
 |---|---|---|
 | **Busca rápida…** | barra superior | campo visível e não funcional; reservado para entrega futura |
 | **Alertas** | menu do seu nome | item visível e sem efeito; reservado para entrega futura |
-| **Concluir etapa** | cartão da fila, no navegador da fábrica do Modo Fábrica | botão permanentemente desativado, com o aviso *"Disponível na próxima etapa"*; concluir atividade só pelo totem |
+| **Concluir atividade** | cartão da fila, no navegador da fábrica do Modo Fábrica | botão permanentemente desativado, com o aviso *"Conclua a atividade pelo totem."*; concluir atividade só pelo totem |
 
 Não geram chamado.
 
@@ -6294,17 +6290,13 @@ Os termos técnicos abaixo são reproduzidos **apenas** para você reconhecê-lo
 
 | O que aparece na tela | Leia como | Observação |
 |---|---|---|
-| `STEP`, "Etapa (STEP)", "Alocações em STEPs", "STEPs em aberto" | **atividade** | termo técnico legado |
 | **"bucket"**, em **Jornada por colaborador** ("bucket «em atraso»", "bucket ≠ concluídas", "Bucket operacional") | **situação da esteira** | termo técnico legado; aparece em títulos e em mensagens de lista vazia |
 | **"preset: 7d"**, na linha do intervalo em **Jornada por colaborador** | o **recorte temporal** escolhido | código curto do período, sem efeito sobre o uso |
-| Situação da atividade exibida em código, no painel de encaixe do planejamento | **situação da atividade** | a tela ainda mostra o código interno em alguns casos |
 | **"Mês atual (UTC)"**, no seletor de período | mês atual pelo calendário local | o cálculo usa o fuso de São Paulo; o rótulo está incorreto |
 | Após redefinir o PIN: "Próximo acesso exigirá nova senha." | próximo acesso exigirá **novo PIN** | o recurso é o PIN do Modo Fábrica, não a senha |
 | Sete nomes com símbolos sem sentido no lugar das letras acentuadas, em **Permissões por papel** | o nome correto, listado na seção 4.3 | defeito de codificação no cadastro de permissões, regravado a cada atualização da base de dados |
 | Botão **"Remover (soft delete)"**, em Usuários e Colaboradores | **remover preservando o histórico** | o registro deixa de aparecer nas listas e a opção de restaurar não fica acessível pela tela; trate a remoção como definitiva |
 | Textos de filtro que citam nomes internos de parâmetro, no Painel operacional | o filtro correspondente | sem efeito sobre o uso; basta usar os filtros da tela |
-| **"passo"**, nas telas de Apontamento gerencial ("Lançamentos no passo", "Apontamento gerencial neste passo") | **atividade** | mesmo conceito, nome diferente |
-| **"Voltando ao Kiosk…"**, após registrar por Outra atividade ou Extra Esteira no totem | voltando ao **Modo Fábrica** | "Kiosk" é o nome interno do totem |
 | **"SGP+ Produção"**, no cabeçalho do navegador da fábrica | **Modo Fábrica** | o totem exibe "SGP · Modo Fábrica"; os dois cabeçalhos deveriam usar o mesmo nome |
 | **"Daily"**, no seletor de Visualização do Planejamento semanal | **visão por dia** | rótulo em inglês em uma interface em português; a opção ao lado, "Semana", está traduzida |
 | **"Atividades de hoje"**, **"Minutos planejados"** e a frase *"Atividades planejadas para hoje, em ordem de execução."*, na Minha fila | os mesmos dados **da data exibida** | os rótulos continuam dizendo "hoje" quando você navega para outro dia; os números sempre acompanham a data escolhida |
