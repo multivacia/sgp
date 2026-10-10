@@ -68,6 +68,32 @@
   - regras de microcopy (tamanho, imperativo, condição antes da ação).
 - Fontes: https://normas.com.br/visualizar/abnt-nbr-nm/13932/abnt-nbriso24495-1-linguagem-simples-parte-1-principios-e-diretrizes-norteadores ; https://www.iso.org/news/ref2566.html ; https://www.legjur.com/legislacao/htm/lei_00152632025
 
+### Complemento 2: complexidade de implantar no SGP+ (análise, sem código)
+
+Levantamento no HEAD `e8e45f2` (contagens aproximadas por grep):
+
+- **Sem i18n.** Os textos ficam direto no código: 273 `.tsx` no frontend e 325 `.ts` no backend.
+- **Volume de texto:** cerca de 734 trechos de texto em JSX, cerca de 368 props de texto (`placeholder`/`title`/`label`/`aria-label`) e cerca de 120 mensagens no backend.
+- **Pontos já centralizados:**
+  - `src/lib/sgp-semantica-labels.ts` (rótulos de status);
+  - `src/lib/transversalUxCopy.ts` (microcopy, já diz "frases curtas e acionáveis");
+  - `src/lib/errors/errorCatalog.ts`.
+- **Termos inconsistentes:** na UI aparecem "atividade(s)" (~420), "etapa(s)" (~80) e "passo(s)" (~22). "STEP" ainda é mostrado ao usuário em `src/features/colaborador/MinhasAtividadesPage.tsx:107` e `:238`.
+- **Testes que dependem do texto:** 115 arquivos de teste fazem asserção por texto (`getByText` etc.). Mudar um texto quebra esses testes.
+- **Áreas sensíveis:** `kiosk` (fluxo isolado) e `operational-tickets` (impressão térmica com largura limitada).
+
+Complexidade por fase:
+
+| Fase | Entrega | Complexidade | Observação |
+|---|---|---|---|
+| 0 | Guia curto + glossário PT-BR (termos aprovados/proibidos) | Baixa | Só docs. Exige decisão de negócio sobre os termos (ex.: Atividade x Etapa). |
+| 1 | Aplicar o guia a todo texto novo (checagem na spec/revisão dos agentes) | Baixa | Sem refatoração. |
+| 2 | Script/lint de glossário no CI (termos proibidos em texto visível) | Baixa–média | Viável por lista. Medir o tamanho das frases automaticamente não compensa. |
+| 3 | Revisar os textos existentes por área, começando por kiosk e tickets | Média | ~1.200 textos espalhados. Testes e layout do ticket precisam de cuidado. Fazer em PRs pequenos por feature. |
+| — | Introduzir i18n só para isso | Alta | Não recomendado agora. |
+
+Risco de regra de negócio: nenhum. Mudanças só de texto, sem banco, RBAC ou ciclo de vida. O risco real é de regressão em testes e na impressão.
+
 ## Relevância para o SGP+
 
 - **Limitação direta:** o STE vale somente para o **inglês**. A UI e a documentação do SGP+ são em português. Por isso, não é possível declarar conformidade com o ASD-STE100.
