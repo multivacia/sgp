@@ -67,11 +67,11 @@ Nenhuma.
 
 ## Próximo passo recomendado
 
-Abrir PR da branch para `develop` e homologar o menu **? Ajuda** nos temas Light Executive e escuros.
+Revisar o PR #34 e homologar o menu **? Ajuda** nos temas Light Executive e escuros.
 
 ## Git
 
 - `git status` final: limpo após commit.
-- Commit/push: branch `ccr-4b05a2d1-plgj52`. PR: não criado (não solicitado).
+- Commit/push: branch `ccr-4b05a2d1-plgj52`. PR: https://github.com/multivacia/sgp/pull/34 (base `develop`; merge depende de aprovação humana).
 
 Uso/tokens disponíveis: INDISPONÍVEL — a sessão não fornece métrica confiável.
