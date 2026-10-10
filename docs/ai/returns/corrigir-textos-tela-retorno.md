@@ -3,9 +3,9 @@
 - **TASK_ID:** `corrigir-textos-tela` (continuação de `auditoria-textos-tela`)
 - **Data/hora:** 2026-10-10 (UTC)
 - **Objetivo:** remover das telas textos em português de Portugal, "STEP" e nomes técnicos (colunas, tabelas, códigos, permissões), usando o glossário Esteira → Tarefa → Setor → **Atividade**.
-- **Status final:** CONCLUÍDO na branch; PR não aberto (aguardando pedido).
+- **Status final:** CONCLUÍDO e mergeado na `develop` (PR #35, merge commit `236fcef`, autorizado pelo usuário; CI `verify` verde).
 - **Branch:** `corrigir-textos-tela`, criada a partir de `origin/develop` (`54b23b5`)
-- **SHA inicial:** `54b23b5` · **SHA final:** ver `git log -1`
+- **SHA inicial:** `54b23b5` · **SHA final da branch:** `dfdaba7` · **develop após merge:** `236fcef`
 
 ## O que foi feito
 
