@@ -178,7 +178,7 @@ async function assertCanPatchStepCompletion(
   const collaboratorId = await findCollaboratorIdByAppUserId(pool, input.actorAppUserId)
   if (!collaboratorId) {
     throw new AppError(
-      'Conta sem colaborador operacional vinculado. Contacte o administrador.',
+      'Conta sem colaborador operacional vinculado. Entre em contato com o administrador.',
       403,
       ErrorCodes.FORBIDDEN,
     )
@@ -233,7 +233,7 @@ export async function servicePatchConveyorStepCompletion(
     throw new AppError('Etapa não encontrada nesta esteira.', 404, ErrorCodes.NOT_FOUND)
   }
   if (stepRow.node_type !== 'STEP') {
-    throw new AppError('Apenas etapas (STEP) podem ser concluídas explicitamente.', 422, ErrorCodes.VALIDATION_ERROR)
+    throw new AppError('Apenas atividades podem ser concluídas explicitamente.', 422, ErrorCodes.VALIDATION_ERROR)
   }
 
   await assertCanPatchStepCompletion(pool, input, conveyor)

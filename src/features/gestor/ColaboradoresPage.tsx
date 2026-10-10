@@ -1061,7 +1061,7 @@ function CollaboratorOperationalCapacityCard({
         to="/app/configuracoes-operacionais"
         className="mt-3 inline-block text-[11px] font-bold text-sgp-gold/90 underline-offset-2 hover:underline"
       >
-        Gerir em Configurações operacionais — Capacidade operacional
+        Gerenciar em Configurações operacionais — Capacidade operacional
       </Link>
     </div>
   )

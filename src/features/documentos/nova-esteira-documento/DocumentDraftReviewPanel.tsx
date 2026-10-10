@@ -399,7 +399,7 @@ function PrimaryCandidateBlock({ item }: { item: ArgosMatchingPlanItemV11 }) {
           {(ms.areas?.length ?? 0) > previewAreas.length ? (
             <p className="mt-1 text-[10px] text-slate-500">
               … e mais {((ms.areas?.length ?? 0) - previewAreas.length).toString()} área(s). Expanda
-              para ver o detalhe completo quando disponível no payload.
+              para ver o detalhe completo, quando disponível.
             </p>
           ) : null}
         </details>

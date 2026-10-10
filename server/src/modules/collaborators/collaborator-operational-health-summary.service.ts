@@ -233,14 +233,14 @@ function buildExtraSignals(input: {
       code: 'PENDING_CRITICAL_OVER_WINDOW',
       severity: 'critical',
       message:
-        'Pendência estimada em STEPs abertos excede o dobro da capacidade agregada na janela (minutos).',
+        'Pendência estimada em atividades abertas excede o dobro da capacidade agregada na janela (minutos).',
     })
   } else if (wc > 0 && pending > wc) {
     out.push({
       code: 'PENDING_OVER_WINDOW_CAPACITY',
       severity: 'warning',
       message:
-        'Pendência estimada em STEPs abertos excede a capacidade agregada na janela (minutos).',
+        'Pendência estimada em atividades abertas excede a capacidade agregada na janela (minutos).',
     })
   }
 
@@ -249,7 +249,7 @@ function buildExtraSignals(input: {
       code: 'NO_RECENT_TIME_ENTRIES_WITH_OPEN_WORK',
       severity: 'warning',
       message:
-        'Existem STEPs abertos atribuídos, mas não há apontamentos na janela de dias recentes.',
+        'Há atividades abertas atribuídas, mas não há apontamentos na janela de dias recentes.',
     })
   }
 
@@ -258,7 +258,7 @@ function buildExtraSignals(input: {
       code: 'LOW_RECENT_TIME_OCCUPATION',
       severity: 'info',
       message:
-        'Com STEPs abertos e pendência, o tempo apontado na janela recente está abaixo de 15% da capacidade da janela.',
+        'Com atividades abertas e pendência, o tempo apontado na janela recente está abaixo de 15% da capacidade da janela.',
     })
   }
 

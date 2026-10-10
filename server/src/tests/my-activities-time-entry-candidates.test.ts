@@ -89,7 +89,7 @@ describe('serviceListTimeEntryCandidates — somente atividades planejadas', () 
     })
 
     expect(result.items).toEqual([])
-    expect(result.unavailableReason).toContain('colaborador operacional vinculado')
+    expect(result.unavailableReason).toContain('não está vinculada a um colaborador operacional')
   })
 
   function mockPlanned(mine: TimeEntryCandidateRawRow[], others: TimeEntryCandidateRawRow[] = []) {

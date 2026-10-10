@@ -113,7 +113,7 @@ export async function assertNodeIsStepForConveyor(
   }
   if (node.node_type !== 'STEP') {
     throw new AppError(
-      'Operação permitida apenas em atividades (STEP).',
+      'Operação permitida apenas em atividades.',
       422,
       ErrorCodes.VALIDATION_ERROR,
     )

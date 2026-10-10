@@ -178,7 +178,7 @@ describe('serviceCreateConveyorOperationalPlanItem', () => {
         activityNodeId: STEP_ID,
       }),
     ).rejects.toMatchObject({
-      message: expect.stringContaining('STEP'),
+      message: expect.stringContaining('Somente atividades'),
     })
   })
 

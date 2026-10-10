@@ -77,7 +77,7 @@ export function WeeklyAgendaBacklogDrawer(props: WeeklyAgendaBacklogDrawerProps)
             </button>
           </div>
           <p className="mt-1 text-[12px] text-slate-500">
-            Arraste para a grade ou toque em Atribuir e depois numa célula — a gaveta fecha para revelar a
+            Arraste para a grade ou toque em Atribuir e depois em uma célula — a gaveta fecha para revelar a
             agenda.
           </p>
           <div className="mt-3 flex gap-2">

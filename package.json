@@ -27,6 +27,7 @@
     "print-agent:install": "npm install --prefix sgp-print-agent",
     "manual:usuario:html": "node scripts/generate-manual-usuario-html.mjs",
     "manual:usuario:html:check": "node scripts/generate-manual-usuario-html.mjs --check",
+    "auditoria:textos": "node scripts/auditar-textos-tela.mjs",
     "test:watch": "vitest",
     "preview": "vite preview"
   },

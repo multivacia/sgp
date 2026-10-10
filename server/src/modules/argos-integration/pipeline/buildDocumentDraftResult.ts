@@ -191,7 +191,7 @@ export function buildDocumentDraftResult(params: {
         {
           category: 'fatal_error',
           code: 'file.empty_buffer',
-          message: 'Ficheiro vazio; nada a interpretar.',
+          message: 'Arquivo vazio; nada a interpretar.',
           fieldPath: 'file',
         },
       ],
@@ -216,7 +216,7 @@ export function buildDocumentDraftResult(params: {
       category: 'revisable_warning',
       code: 'interpret.text_empty',
       message:
-        'Texto vazio após extração; sugestões baseadas apenas no nome do ficheiro, se aplicável.',
+        'Texto vazio após extração; sugestões baseadas apenas no nome do arquivo, se aplicável.',
       fieldPath: 'extract.text',
     })
   }
