@@ -56,6 +56,18 @@
 - Há verificadores comerciais: HyperSTE, Congree, Acrolinx, Talisen STEM, entre outros. Muitos se integram a editores XML (Arbortext, XMetaL).
 - HyperSTE pode ser configurado para documentação farmacêutica/médica, o que mostra uso fora da aviação.
 
+### Complemento (pergunta de follow-up): o conceito vale para qualquer idioma?
+
+- Sim. O ASD-STE100 em si é só para inglês, mas a ideia de **língua controlada** serve para qualquer idioma: vocabulário restrito, um termo por conceito, frases curtas, voz ativa e instrução separada de explicação.
+- Para PT-BR, as referências oficiais são:
+  - **ABNT NBR ISO 24495-1:2024**: Linguagem Simples, Parte 1, princípios e diretrizes. Foi adotada a partir da ISO 24495-1:2023, que vale para qualquer idioma escrito.
+  - **Lei 15.263/2025**: Política Nacional de Linguagem Simples. Obriga somente a administração pública; para o SGP+ é só uma referência.
+- Linguagem simples (ISO 24495) é mais ampla e menos rígida que o STE: não tem dicionário fechado nem limite fixo de palavras. Por isso, um padrão para o SGP+ precisaria juntar:
+  - os princípios da ISO 24495;
+  - um glossário controlado do domínio (estilo STE);
+  - regras de microcopy (tamanho, imperativo, condição antes da ação).
+- Fontes: https://normas.com.br/visualizar/abnt-nbr-nm/13932/abnt-nbriso24495-1-linguagem-simples-parte-1-principios-e-diretrizes-norteadores ; https://www.iso.org/news/ref2566.html ; https://www.legjur.com/legislacao/htm/lei_00152632025
+
 ## Relevância para o SGP+
 
 - **Limitação direta:** o STE vale somente para o **inglês**. A UI e a documentação do SGP+ são em português. Por isso, não é possível declarar conformidade com o ASD-STE100.
