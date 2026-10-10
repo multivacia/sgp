@@ -6,7 +6,17 @@ import { ColorThemeContext } from '../../lib/theme/theme-context'
 import type { ColorThemeId } from '../../lib/theme/theme-constants'
 import { HelpMenu } from './HelpMenu'
 
-afterEach(cleanup)
+const auth = vi.hoisted(() => ({ permissions: ['conveyors.create'] as string[] }))
+vi.mock('../../lib/use-auth', () => ({
+  useAuth: () => ({
+    canAny: (codes: string[]) => codes.some((c) => auth.permissions.includes(c)),
+  }),
+}))
+
+afterEach(() => {
+  cleanup()
+  auth.permissions = ['conveyors.create']
+})
 
 function renderMenu(opts: {
   path: string
@@ -60,6 +70,15 @@ describe('HelpMenu', () => {
         .getByRole('menuitem', { name: 'Guia prático do gestor' })
         .getAttribute('href'),
     ).toBe('/manual/gestor-esteira.html?integrado=1&tema=claro')
+  })
+
+  it('perfil sem permissão de gestão não vê o guia do gestor', () => {
+    auth.permissions = []
+    renderMenu({ path: '/app/minha-fila' })
+    fireEvent.click(trigger())
+    const labels = screen.getAllByRole('menuitem').map((i) => i.textContent)
+    expect(labels).toContain('Guia prático do colaborador')
+    expect(labels).not.toContain('Guia prático do gestor')
   })
 
   it('"Como usar esta tela" leva à âncora da tela, com tema e modo integrado', () => {

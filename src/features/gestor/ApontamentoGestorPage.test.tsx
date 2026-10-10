@@ -98,7 +98,7 @@ describe('ApontamentoGestorPage — data de realização', () => {
     fireEvent.change(screen.getByLabelText(/Motivo do registro/), {
       target: { value: 'Colaborador esqueceu' },
     })
-    fireEvent.click(screen.getByRole('button', { name: 'Rever e registar' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Revisar e registrar' }))
 
     expect(screen.getByText(`Ontem · ${formatIsoDateBr(yesterday)}`)).toBeTruthy()
     fireEvent.click(screen.getByRole('button', { name: 'Confirmar' }))
@@ -129,7 +129,7 @@ describe('ApontamentoGestorPage — data de realização', () => {
     const dateInput = await screen.findByLabelText('Data em que o trabalho foi realizado')
     fireEvent.change(dateInput, { target: { value: shiftIsoDate(operationalTodayIso(), 1) } })
     fireEvent.change(screen.getByLabelText(/Motivo do registro/), { target: { value: 'x' } })
-    const btn = screen.getByRole('button', { name: 'Rever e registar' }) as HTMLButtonElement
+    const btn = screen.getByRole('button', { name: 'Revisar e registrar' }) as HTMLButtonElement
     expect(btn.disabled).toBe(true)
     expect(screen.getByText('A data de realização não pode ser futura.')).toBeTruthy()
   })

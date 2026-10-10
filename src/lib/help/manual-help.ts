@@ -239,11 +239,38 @@ export function buildManualUrl(options: {
   return `${MANUAL_PUBLIC_PATH}?${integratedQuery(options.theme)}${hash}`
 }
 
+export type PracticalGuide = {
+  id: PracticalGuideId
+  label: string
+  /** Quando presente, o guia só aparece para quem tem uma dessas permissões. */
+  anyOfPermissions?: readonly string[]
+}
+
 /** Guias Práticos oferecidos no menu "? Ajuda", na ordem de exibição. */
-export const PRACTICAL_GUIDES: readonly { id: PracticalGuideId; label: string }[] = [
+export const PRACTICAL_GUIDES: readonly PracticalGuide[] = [
   { id: 'colaborador', label: 'Guia prático do colaborador' },
-  { id: 'gestor', label: 'Guia prático do gestor' },
+  {
+    id: 'gestor',
+    label: 'Guia prático do gestor',
+    // Mesmas permissões das telas de gestão descritas no guia (perfil COLABORADOR não tem nenhuma).
+    anyOfPermissions: [
+      'conveyors.create',
+      'conveyors.edit_status',
+      'conveyors.manage_assignments',
+      'collaborators_admin.view',
+      'teams.view',
+    ],
+  },
 ]
+
+/** Guias visíveis para o usuário atual (RBAC efetivo). */
+export function visiblePracticalGuides(
+  canAny: (permissionCodes: string[]) => boolean,
+): PracticalGuide[] {
+  return PRACTICAL_GUIDES.filter(
+    (g) => !g.anyOfPermissions || canAny([...g.anyOfPermissions]),
+  )
+}
 
 /** URL de um Guia Prático aberto a partir do SGP+ (mesmas regras do manual). */
 export function buildGuideUrl(options: {

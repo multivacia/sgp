@@ -12,6 +12,7 @@ import {
   manualThemeFor,
   resolveScreenHelp,
   SCREEN_HELP,
+  visiblePracticalGuides,
 } from './manual-help'
 import {
   MANUAL_PUBLIC_PATH,
@@ -123,6 +124,16 @@ describe('Guias Práticos', () => {
     expect(buildGuideUrl({ guide: 'gestor', theme: 'claro' })).toBe(
       '/manual/gestor-esteira.html?integrado=1&tema=claro',
     )
+  })
+
+  it('guia do gestor exige permissão de gestão; o do colaborador é para todos', () => {
+    const ids = (perms: string[]) =>
+      visiblePracticalGuides((codes) => codes.some((c) => perms.includes(c))).map(
+        (g) => g.id,
+      )
+    expect(ids([])).toEqual(['colaborador'])
+    expect(ids(['conveyors.create'])).toEqual(['colaborador', 'gestor'])
+    expect(ids(['collaborators_admin.view'])).toEqual(['colaborador', 'gestor'])
   })
 
   it.each(Object.values(PRACTICAL_GUIDE_FILES))(
