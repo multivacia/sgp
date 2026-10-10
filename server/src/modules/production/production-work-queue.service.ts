@@ -1,10 +1,7 @@
 import type pg from 'pg'
 import type { MyWorkQueueItemApi } from '../my-work-queue/my-work-queue.dto.js'
 import { serviceGetWorkQueueForCollaborator } from '../my-work-queue/my-work-queue.service.js'
-import {
-  getLatestSessionCompletionPctByStepForCollaborator,
-  sumRealizedMinutesByStepForConveyor,
-} from '../conveyors/conveyorNodeWorkload.repository.js'
+import { getLatestSessionCompletionPctByStepForCollaborator } from '../conveyors/conveyorNodeWorkload.repository.js'
 import type {
   ProductionWorkQueueItemApi,
   ProductionWorkQueueResponseApi,
@@ -102,25 +99,20 @@ export async function serviceGetProductionWorkQueue(
     includePastDue?: boolean
   },
 ): Promise<ProductionWorkQueueResponseApi> {
+  // TASK apontamento-somente-planejado: fila do Kiosk = atividades planejadas para o
+  // colaborador em qualquer semana (atrasadas, hoje e futuras), em aberto; um cartão por
+  // atividade com previsto e realizado do próprio colaborador.
   const result = await serviceGetWorkQueueForCollaborator(pool, {
     collaboratorId: input.collaboratorId,
     date: input.date,
     includePastDue: input.includePastDue,
+    allOpenPlanned: true,
     listOptions: {
       planItemStatuses: ['PLANNED'],
     },
   })
 
   const uniqueConveyorIds = [...new Set(result.items.map((i) => i.conveyorId))]
-  const realizedByStep = new Map<string, number>()
-  await Promise.all(
-    uniqueConveyorIds.map(async (cid) => {
-      const m = await sumRealizedMinutesByStepForConveyor(pool, cid)
-      for (const [stepId, min] of m) {
-        realizedByStep.set(stepId, min)
-      }
-    }),
-  )
 
   const lastSessionCompletionPctByStep =
     await getLatestSessionCompletionPctByStepForCollaborator(
@@ -140,7 +132,7 @@ export async function serviceGetProductionWorkQueue(
     items: result.items.map((item) =>
       mapToProductionItem(
         item,
-        realizedByStep.get(item.activityNodeId) ?? 0,
+        item.realizedMinutes,
         lastSessionCompletionPctByStep.get(item.activityNodeId) ?? null,
       ),
     ),

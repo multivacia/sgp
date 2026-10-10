@@ -8,65 +8,38 @@
 ## Identificação
 
 - TASK_ID: `SEM_ATIVIDADE_ATIVA`
-- Atualizado em: `2026-10-02 16:49 UTC`
+- Atualizado em: `2026-10-10 01:45 UTC`
 - Branch: `develop`
-- HEAD: `4798efbac17bd73256a5df4f0435fa4cafa43f10`
-- Base/remoto relevante: `origin/develop`
+- HEAD: ver `git log -1 origin/develop` (registro deste checkpoint após o merge `236fcef`)
 - Working tree: `clean`
-
-## Objetivo atual
-
-Nenhuma atividade ativa registrada.
 
 ## Estado em uma frase
 
-`padronizar-contexto-ia` mergeado em `develop` via PR #31; tip `4798efba`.
+`corrigir-textos-tela` mergeado em `develop` via PR #35 (`236fcef`). PR #34 (`guias-praticos-tema-integracao`) segue aberto, aguardando validação humana.
 
 ## Concluído
 
-- Padronização de contexto de IA mergeada em `develop` (`--no-ff`, sem force-push).
-- Somente arquivos de docs alterados no merge.
-
-## Decisões já tomadas
-
-- Merge autorizado explicitamente pelo humano com cuidado para preservar homologação em `develop`.
-
-## Arquivos relevantes
-
-- `CLAUDE.md`
-- `docs/ai/context/PROJECT_CONTEXT.md`
-- `docs/ai/context/SESSION_CHECKPOINT.md`
-- `docs/ai/returns/padronizar-contexto-ia-retorno.md`
-
-## Validações já executadas
-
-- Diff do merge vs tip anterior: 4 arquivos docs only.
-- PR #31: `MERGED`.
+- PR #35: textos pt-PT, STEP e nomes técnicos removidos das telas/API; `npm run auditoria:textos`.
+- PR #34: tema Claro/Escuro e integração dos Guias Práticos no menu Ajuda (aberto, não mergeado).
 
 ## Pendências
 
-- N/A
-
-## Próxima ação exata
-
-- N/A
-
-## Riscos / ressalvas
-
-- N/A
+- Decidir merge do PR #34 após validação dos guias.
+- `server/src/tests/env.test.ts` espera versão `1.9.4` (app em 1.9.9) — falha pré-existente.
+- 71 achados restantes do `auditoria:textos` são fora de escopo (validações Zod de formato, config, logs).
 
 ## Não repetir
 
-- Não recriar inventário longo no `CLAUDE.md`.
 - Não force-push em `develop`.
+- Não recriar inventário longo no `CLAUDE.md`.
 
 ## Referências úteis
 
-- Retorno da atividade: `docs/ai/returns/padronizar-contexto-ia-retorno.md`
-- Prompt da atividade: `N/A`
-- PR/issue relacionado: https://github.com/multivacia/sgp/pull/31
+- `docs/ai/returns/corrigir-textos-tela-retorno.md`
+- `docs/ai/returns/auditoria-textos-tela-retorno.md`
+- `docs/ai/returns/guias-praticos-tema-integracao-retorno.md`
+- https://github.com/multivacia/sgp/pull/35 · https://github.com/multivacia/sgp/pull/34
 
 ## Uso de contexto / sessão
 
 - Percentual confiável disponível: `INDISPONÍVEL`
-- Observação: não estimar percentuais quando a ferramenta não expuser a métrica.

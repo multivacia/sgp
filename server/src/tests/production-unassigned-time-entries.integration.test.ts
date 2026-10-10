@@ -1,5 +1,6 @@
 import { describe, expect, it, beforeAll, afterAll } from 'vitest'
 import request from 'supertest'
+import { cleanupSeededPlanItems, seedPublishedPlanItem } from './plannedActivityTestHelpers.js'
 import { createApp } from '../app.js'
 import { createLogger } from '../plugins/logger.js'
 import { closePool, getPool } from '../plugins/db.js'
@@ -131,6 +132,7 @@ describe.skipIf(!hasDb)('production unassigned time entries + candidates (integr
   })
 
   afterAll(async () => {
+    await cleanupSeededPlanItems(pool)
     await closePool()
   })
 
@@ -140,12 +142,19 @@ describe.skipIf(!hasDb)('production unassigned time entries + candidates (integr
       expect(res.status).toBe(401)
     })
 
-    it('busca por nome (>= 2 chars) retorna atividade real não alocada', async () => {
+    it('busca por nome (>= 2 chars) retorna atividade planejada para outro colaborador', async () => {
       const conv = await serviceCreateConveyor(
         pool,
         minimalConveyorBody(`UOA-Search-${Date.now()}`),
       )
       await setConveyorProductionStatusForIntegration(pool, conv.id)
+      // Planejada para outro colaborador: aparece na pesquisa de outras atividades.
+      await seedPublishedPlanItem(pool, {
+        conveyorId: conv.id,
+        stepNodeId: await firstStepId(pool, conv.id),
+        collaboratorId: UOA_UNASSIGNED_COLLAB_ID,
+        createdByUserId: MARIA_APP_USER_ID,
+      })
 
       const cookie = productionSessionCookie(SEED_COLLABORATOR_MARIA_ID)
       const res = await request(app)
@@ -181,13 +190,20 @@ describe.skipIf(!hasDb)('production unassigned time entries + candidates (integr
       expect(res.status).toBe(422)
     })
 
-    it('colaborador não alocado sem justificativa → 422 (exige justificativa)', async () => {
+    it('atividade planejada para outro, sem justificativa → 422 (exige justificativa)', async () => {
       const conv = await serviceCreateConveyor(
         pool,
         minimalConveyorBody(`UOA-NoJust-${Date.now()}`),
       )
       await setConveyorProductionStatusForIntegration(pool, conv.id)
       const stepId = await firstStepId(pool, conv.id)
+      // Planejada para outro colaborador (Maria): exceção com justificativa.
+      await seedPublishedPlanItem(pool, {
+        conveyorId: conv.id,
+        stepNodeId: stepId,
+        collaboratorId: SEED_COLLABORATOR_MARIA_ID,
+        createdByUserId: MARIA_APP_USER_ID,
+      })
 
       const cookie = productionSessionCookie(UOA_UNASSIGNED_COLLAB_ID)
       const res = await request(app)
@@ -200,13 +216,50 @@ describe.skipIf(!hasDb)('production unassigned time entries + candidates (integr
       )
     })
 
-    it('colaborador não alocado com justificativa → 201, entry_origin=UNASSIGNED_EXCEPTION, sem criar alocação', async () => {
+    it('atividade não planejada para ninguém → 422 TIME_ENTRY_NOT_PLANNED, mesmo com alocação e justificativa', async () => {
+      const conv = await serviceCreateConveyor(
+        pool,
+        minimalConveyorBody(`UOA-NotPlanned-${Date.now()}`),
+      )
+      await setConveyorProductionStatusForIntegration(pool, conv.id)
+      const stepId = await firstStepId(pool, conv.id)
+      await serviceCreateConveyorNodeAssignee(pool, {
+        conveyorId: conv.id,
+        conveyorNodeId: stepId,
+        collaboratorId: SEED_COLLABORATOR_MARIA_ID,
+        isPrimary: true,
+      })
+      const justificationId = await planningJustificationId(pool)
+
+      const cookie = productionSessionCookie(SEED_COLLABORATOR_MARIA_ID)
+      const res = await request(app)
+        .post('/api/v1/production/time-entries/unassigned-exception')
+        .set('Cookie', cookie)
+        .send({
+          conveyorId: conv.id,
+          stepNodeId: stepId,
+          minutes: 10,
+          exceptionJustificationId: justificationId,
+          exceptionJustificationComplement: 'Teste de recusa',
+        })
+      expect(res.status).toBe(422)
+      expect(res.body.error?.code).toBe(ErrorCodes.TIME_ENTRY_NOT_PLANNED)
+    })
+
+    it('atividade planejada para outro, com justificativa → 201, entry_origin=UNASSIGNED_EXCEPTION, sem criar alocação', async () => {
       const conv = await serviceCreateConveyor(
         pool,
         minimalConveyorBody(`UOA-Just-${Date.now()}`),
       )
       await setConveyorProductionStatusForIntegration(pool, conv.id)
       const stepId = await firstStepId(pool, conv.id)
+      // Planejada para outro colaborador (Maria): exceção com justificativa.
+      await seedPublishedPlanItem(pool, {
+        conveyorId: conv.id,
+        stepNodeId: stepId,
+        collaboratorId: SEED_COLLABORATOR_MARIA_ID,
+        createdByUserId: MARIA_APP_USER_ID,
+      })
       const justificationId = await planningJustificationId(pool)
 
       const beforeAssignees = await pool.query<{ count: string }>(
@@ -302,7 +355,7 @@ describe.skipIf(!hasDb)('production unassigned time entries + candidates (integr
       expect(assignee.rows[0]?.metadata_json?.source).toBe('production_published_plan')
     })
 
-    it('colaborador alocado no STEP → 201, entry_origin=ASSIGNED, collaborator vindo da sessão', async () => {
+    it('atividade planejada para o colaborador → 201, entry_origin=ASSIGNED, collaborator vindo da sessão', async () => {
       const conv = await serviceCreateConveyor(
         pool,
         minimalConveyorBody(`UOA-Assigned-${Date.now()}`),
@@ -314,6 +367,12 @@ describe.skipIf(!hasDb)('production unassigned time entries + candidates (integr
         conveyorNodeId: stepId,
         collaboratorId: SEED_COLLABORATOR_MARIA_ID,
         isPrimary: true,
+      })
+      await seedPublishedPlanItem(pool, {
+        conveyorId: conv.id,
+        stepNodeId: stepId,
+        collaboratorId: SEED_COLLABORATOR_MARIA_ID,
+        createdByUserId: MARIA_APP_USER_ID,
       })
 
       const cookie = productionSessionCookie(SEED_COLLABORATOR_MARIA_ID)

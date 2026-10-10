@@ -11,6 +11,7 @@ import { useAuth } from '../lib/use-auth'
 import { isSupportTicketsEnabled } from '../lib/api/env'
 import { OpenSupportTicketDialog } from '../features/support/OpenSupportTicketDialog'
 import { QuickTimeEntryDrawer } from '../features/shell/QuickTimeEntryDrawer'
+import { HelpMenu } from './shell/HelpMenu'
 
 function displayNameFromEmail(email: string) {
   const local = email.split('@')[0] ?? 'gestor'
@@ -163,6 +164,12 @@ export function AppHeader({ onMenuClick }: Props) {
           >
             Apontar horas
           </button>
+
+          <HelpMenu
+            onOpenSupportTicket={
+              supportEnabled ? () => setSupportDialogOpen(true) : undefined
+            }
+          />
 
           <div className="relative ml-auto sm:ml-0" ref={profileWrapRef}>
             <button

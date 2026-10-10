@@ -9,9 +9,14 @@ const BASE = '/api/v1'
 export async function getMyWorkQueue(options?: {
   date?: string
   includePastDue?: boolean
+  /** Pesquisa por período (data planejada, inclusiva). Início/fim opcionais. */
+  from?: string
+  to?: string
 }): Promise<MyWorkQueueResult> {
   const sp = new URLSearchParams()
   if (options?.date) sp.set('date', options.date)
+  if (options?.from) sp.set('from', options.from)
+  if (options?.to) sp.set('to', options.to)
   if (options?.includePastDue === false) sp.set('includePastDue', 'false')
   const qs = sp.toString()
   const path = qs ? `${BASE}/me/work-queue?${qs}` : `${BASE}/me/work-queue`

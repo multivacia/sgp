@@ -315,7 +315,7 @@ function AddItemBlock({
     <div className="space-y-3 rounded-lg border border-white/[0.06] bg-white/[0.03] p-3">
       <p className="text-[13px] font-medium text-slate-200">Novo item manual</p>
       <label className="block text-[12px] text-slate-400">
-        Atividade (STEP)
+        Atividade
         <select
           className="mt-1 w-full rounded-lg border border-white/10 bg-sgp-base px-2 py-2 text-sm text-slate-100"
           value={activityNodeId}

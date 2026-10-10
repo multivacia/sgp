@@ -37,6 +37,8 @@ export const ErrorCodes = {
   /** Apontamento em atividade sem alocação exige justificativa (`exceptionJustification`). */
   TIME_ENTRY_UNASSIGNED_REQUIRES_JUSTIFICATION:
     'TIME_ENTRY_UNASSIGNED_REQUIRES_JUSTIFICATION',
+  /** Apontamento em atividade sem item planejado válido para ninguém (plano publicado vigente). */
+  TIME_ENTRY_NOT_PLANNED: 'TIME_ENTRY_NOT_PLANNED',
   /** Apontamento com atividades anteriores ainda pendentes na esteira. */
   TIME_ENTRY_OUT_OF_SEQUENCE_REQUIRES_JUSTIFICATION:
     'TIME_ENTRY_OUT_OF_SEQUENCE_REQUIRES_JUSTIFICATION',

@@ -24,7 +24,10 @@ export type MyWorkQueueItem = {
   workPlanItemId: string
   plannedDate: string
   plannedOrder: number
+  /** Soma de todos os dias planejados para o colaborador na atividade. */
   plannedMinutes: number | null
+  /** Apontado pelo próprio colaborador na atividade, todos os dias. */
+  realizedMinutes?: number
   status: string
   group: MyWorkQueueItemGroup
   conveyorId: string
@@ -78,6 +81,8 @@ export type MyWorkQueueSummary = {
 
 export type MyWorkQueueResponse = {
   date: string
+  /** Período (data planejada) aplicado; `null`/ausente no modo diário. */
+  period?: { from: string; to: string } | null
   planStatus: 'PUBLISHED' | null
   summary: MyWorkQueueSummary
   items: MyWorkQueueItem[]

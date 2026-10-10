@@ -286,6 +286,25 @@ export const PRODUCTION_WORK_QUEUE_ERROR_MESSAGE =
 
 const TIME_ENTRY_UNASSIGNED_CODE = 'TIME_ENTRY_UNASSIGNED_REQUIRES_JUSTIFICATION'
 
+/** Atividade sem item planejado para ninguém (TASK apontamento-somente-planejado). */
+export const PRODUCTION_TIME_ENTRY_NOT_PLANNED_MESSAGE =
+  'Esta atividade não está planejada. Fale com o gestor para incluí-la no planejamento.'
+const TIME_ENTRY_NOT_PLANNED_CODE = 'TIME_ENTRY_NOT_PLANNED'
+
+export const PRODUCTION_TIME_ENTRY_EXCEEDED_MESSAGE =
+  'Informe uma justificativa para apontar acima do tempo previsto da atividade.'
+const TIME_ENTRY_EXCEEDED_CODE = 'TIME_ENTRY_EXCEEDED_PLANNED_REQUIRES_JUSTIFICATION'
+
+/** Mensagens de regra de apontamento que o colaborador precisa ler como vieram. */
+function rethrowPlanningRuleError(e: ApiError): void {
+  if (e.code === TIME_ENTRY_NOT_PLANNED_CODE) {
+    throw new ApiError(PRODUCTION_TIME_ENTRY_NOT_PLANNED_MESSAGE, e.status, { code: e.code, cause: e })
+  }
+  if (e.code === TIME_ENTRY_EXCEEDED_CODE) {
+    throw new ApiError(PRODUCTION_TIME_ENTRY_EXCEEDED_MESSAGE, e.status, { code: e.code, cause: e })
+  }
+}
+
 export async function createProductionTimeEntry(
   input: ProductionTimeEntryPayload,
 ): Promise<ProductionTimeEntryResult> {
@@ -298,6 +317,7 @@ export async function createProductionTimeEntry(
     return data
   } catch (e) {
     if (e instanceof ApiError) {
+      rethrowPlanningRuleError(e)
       if (e.code === TIME_ENTRY_UNASSIGNED_CODE) {
         throw new ApiError(PRODUCTION_TIME_ENTRY_UNASSIGNED_MESSAGE, e.status, {
           code: e.code,
@@ -471,6 +491,7 @@ export async function createProductionUnassignedTimeEntry(
     )
   } catch (e) {
     if (e instanceof ApiError) {
+      rethrowPlanningRuleError(e)
       if (e.code === TIME_ENTRY_UNASSIGNED_CODE) {
         throw new ApiError(PRODUCTION_TIME_ENTRY_UNASSIGNED_MESSAGE, e.status, {
           code: e.code,

@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import { describe, expect, it, beforeAll, afterAll } from 'vitest'
 import request from 'supertest'
+import { cleanupSeededPlanItems, seedPublishedPlanItem } from './plannedActivityTestHelpers.js'
 import { createApp } from '../app.js'
 import { createLogger } from '../plugins/logger.js'
 import { closePool, getPool } from '../plugins/db.js'
@@ -140,6 +141,13 @@ describe.skipIf(!hasDb)('jornada — período em America/Sao_Paulo (integração
       collaboratorId,
       isPrimary: true,
     })
+    // Regra apontamento-somente-planejado: a atividade precisa estar planejada.
+    await seedPublishedPlanItem(pool, {
+      conveyorId,
+      stepNodeId: stepId,
+      collaboratorId,
+      createdByUserId: userId,
+    })
 
     // Fixtures criadas pelas APIs reais de apontamento.
     const te = `/api/v1/conveyors/${conveyorId}/steps/${stepId}/time-entries`
@@ -164,6 +172,7 @@ describe.skipIf(!hasDb)('jornada — período em America/Sao_Paulo (integração
   })
 
   afterAll(async () => {
+    await cleanupSeededPlanItems(pool)
     await closePool()
   })
 

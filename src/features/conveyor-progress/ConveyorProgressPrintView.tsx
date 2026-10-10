@@ -1,3 +1,4 @@
+import { createPortal } from 'react-dom'
 import type { ConveyorProgressSummaryMetrics } from '../../domain/conveyor-progress/conveyorProgressDisplay'
 import type { ConveyorProgressItem } from '../../domain/conveyor-progress/conveyorProgress.types'
 import {
@@ -9,12 +10,18 @@ import type { ConveyorOperationalStatus } from '../../domain/conveyors/conveyor.
 import { resolvePlanningItemOperationalStatusLabel } from '../operational-planning/planningExecutionHelpers'
 import type { ConveyorProgressFiltersState } from './ConveyorProgressFilters'
 import { formatWorkDateFromEntryAt } from '../../domain/operational/workDate'
+import {
+  buildConveyorProgressPageRule,
+  DEFAULT_CONVEYOR_PROGRESS_PDF_ORIENTATION,
+  type ConveyorProgressPdfOrientation,
+} from './conveyorProgressPdfOrientation'
 
 type Props = {
   items: ConveyorProgressItem[]
   generatedAt: string
   summary: ConveyorProgressSummaryMetrics
   appliedFilters?: ConveyorProgressFiltersState
+  orientation?: ConveyorProgressPdfOrientation
 }
 
 export function ConveyorProgressPrintView({
@@ -22,10 +29,15 @@ export function ConveyorProgressPrintView({
   generatedAt,
   summary,
   appliedFilters,
+  orientation = DEFAULT_CONVEYOR_PROGRESS_PDF_ORIENTATION,
 }: Props) {
-  return (
-    <div className="conveyor-progress-print-root hidden print:block">
+  const content = (
+    <div
+      className="conveyor-progress-print-root hidden print:block"
+      data-print-orientation={orientation}
+    >
       <style>{`
+        ${buildConveyorProgressPageRule(orientation)}
         @media print {
           body * { visibility: hidden; }
           .conveyor-progress-print-root, .conveyor-progress-print-root * { visibility: visible; }
@@ -40,7 +52,9 @@ export function ConveyorProgressPrintView({
             color: #111;
             background: #fff;
           }
-          .conveyor-progress-print-root table { page-break-inside: auto; }
+          .conveyor-progress-print-root table { page-break-inside: auto; width: 100%; table-layout: fixed; color: #111; }
+          .conveyor-progress-print-root thead { display: table-header-group; }
+          .conveyor-progress-print-root td, .conveyor-progress-print-root th { overflow-wrap: anywhere; }
           .conveyor-progress-print-root tr { page-break-inside: avoid; }
           .conveyor-progress-print-root section { page-break-inside: avoid; margin-bottom: 16px; }
         }
@@ -48,7 +62,10 @@ export function ConveyorProgressPrintView({
 
       <header className="mb-4 border-b border-gray-300 pb-3">
         <h1 className="text-lg font-bold">Evolução das Esteiras</h1>
-        <p className="mt-1 text-gray-600">Gerado em: {generatedAt}</p>
+        <p className="mt-1 text-gray-600">
+          Gerado em: {generatedAt} · Orientação:{' '}
+          {orientation === 'landscape' ? 'Paisagem' : 'Retrato'}
+        </p>
         {appliedFilters ? (
           <p className="mt-1 text-gray-500">{describeAppliedFilters(appliedFilters)}</p>
         ) : null}
@@ -76,6 +93,11 @@ export function ConveyorProgressPrintView({
       ))}
     </div>
   )
+
+  // Fora do shell do app (altura fixa + overflow) para não recortar o conteúdo impresso —
+  // mesmo padrão de `ThermalActivityTicketsPrintArea`.
+  if (typeof document === 'undefined') return content
+  return createPortal(content, document.body)
 }
 
 function PrintTableForConveyor({ conveyor }: { conveyor: ConveyorProgressItem }) {
@@ -85,6 +107,15 @@ function PrintTableForConveyor({ conveyor }: { conveyor: ConveyorProgressItem })
 
   return (
     <table className="mb-2 w-full border-collapse text-[10px]">
+      <colgroup>
+        <col style={{ width: '40%' }} />
+        <col style={{ width: '12%' }} />
+        <col style={{ width: '9.6%' }} />
+        <col style={{ width: '9.6%' }} />
+        <col style={{ width: '9.6%' }} />
+        <col style={{ width: '9.6%' }} />
+        <col style={{ width: '9.6%' }} />
+      </colgroup>
       <thead>
         <tr className="border-b border-gray-300 text-left text-[9px] uppercase text-gray-500">
           <th className="py-1 pr-2">Item</th>
@@ -150,6 +181,9 @@ function PrintTableForConveyor({ conveyor }: { conveyor: ConveyorProgressItem })
                         <td className="py-1" style={{ paddingLeft: '5rem' }}>
                           {formatPrintDate(te.entryDate)} · {te.collaboratorName}
                           {te.notes ? ` · ${te.notes}` : ''}
+                          {te.justification?.trim()
+                            ? ` · Justificativa: ${te.justification.trim()}`
+                            : ''}
                         </td>
                         <td className="py-1">—</td>
                         <td className="py-1">—</td>

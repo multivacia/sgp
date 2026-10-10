@@ -23,6 +23,7 @@ export type TimeEntryCandidatesResult = {
  * GET /api/v1/me/time-entry-candidates — atividades em aberto apontáveis neste recorte.
  */
 export async function listTimeEntryCandidates(options?: {
+  /** Pesquisa livre; com `&`: `esteira/OS & nome da atividade` (interpretado no backend). */
   q?: string
   limit?: number
   includeUnassigned?: boolean

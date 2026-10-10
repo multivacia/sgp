@@ -33,6 +33,10 @@ export type ConveyorProgressTimeEntryRow = {
   notes: string | null
   entry_mode: string
   collaborator_name: string
+  exception_justification?: string | null
+  out_of_sequence_justification?: string | null
+  standard_justification_label?: string | null
+  standard_justification_complement?: string | null
 }
 
 export type ConveyorProgressAssigneeRow = {
@@ -192,6 +196,10 @@ export async function listTimeEntriesForConveyors(
     notes: string | null
     entry_mode: string
     collaborator_name: string
+    exception_justification: string | null
+    out_of_sequence_justification: string | null
+    standard_justification_label: string | null
+    standard_justification_complement: string | null
   }>(
     `
     SELECT
@@ -203,7 +211,11 @@ export async function listTimeEntriesForConveyors(
       te.executed_quantity,
       te.notes,
       te.entry_mode::text AS entry_mode,
-      col.full_name AS collaborator_name
+      col.full_name AS collaborator_name,
+      te.exception_justification,
+      te.out_of_sequence_justification,
+      te.standard_justification_label_snapshot AS standard_justification_label,
+      te.standard_justification_complement AS standard_justification_complement
     FROM conveyor_time_entries te
     INNER JOIN collaborators col ON col.id = te.collaborator_id
     WHERE ${where.join(' AND ')}

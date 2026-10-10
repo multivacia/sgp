@@ -20,7 +20,7 @@ export function documentDraftMulterErrorHandler(
   if (err instanceof multer.MulterError && err.code === 'LIMIT_FILE_SIZE') {
     next(
       new AppError(
-        'Ficheiro excede o tamanho máximo permitido.',
+        'O arquivo excede o tamanho máximo permitido.',
         413,
         ErrorCodes.VALIDATION_ERROR,
       ),

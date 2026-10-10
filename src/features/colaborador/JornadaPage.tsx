@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useLocation, useSearchParams } from 'react-router-dom'
 import { PageCanvas } from '../../components/ui/PageCanvas'
 import {
@@ -22,6 +22,14 @@ import {
   labelRoleInStep,
 } from './minhasAtividadesLabels'
 import { reportClientError } from '../../lib/errors'
+import { TimeEntryJustificationNote } from '../../components/operational/TimeEntryJustificationNote'
+import { subscribeOperationalDataChanged } from '../../lib/operational/operationalDataEvents'
+import {
+  describePeriodRange,
+  resolveOpenPeriodBounds,
+  validatePeriodRange,
+} from '../../domain/operational/periodFilter'
+import { JourneyExtraTimeEntriesSection } from '../../components/operational/JourneyExtraTimeEntriesSection'
 import {
   resolveJourneyLoadUserMessage,
   transversalUxCopy,
@@ -260,10 +268,23 @@ export function JornadaPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
+  /** Intervalo personalizado: início/fim opcionais (fim vazio = hoje; início vazio = desde o primeiro registro). */
+  const customRange = useMemo(() => ({ from: periodFrom, to: periodTo }), [periodFrom, periodTo])
+  const customBounds = useMemo(
+    () => (periodPreset === 'custom' ? resolveOpenPeriodBounds(customRange) : null),
+    [periodPreset, customRange],
+  )
+  const customRangeError =
+    periodPreset === 'custom'
+      ? !customBounds
+        ? 'Intervalo personalizado: informe a data inicial, a final ou ambas.'
+        : validatePeriodRange(customRange)
+      : null
+
   const loadJourney = useCallback(async () => {
-    if (periodPreset === 'custom' && (!periodFrom || !periodTo)) {
+    if (customRangeError) {
       setJourney(null)
-      setError('Intervalo personalizado: indique início e fim.')
+      setError(customRangeError)
       setLoading(false)
       return
     }
@@ -274,8 +295,8 @@ export function JornadaPage() {
         limit: 20,
         periodPreset,
         ...(conveyorFilter ? { conveyorId: conveyorFilter } : {}),
-        ...(periodPreset === 'custom' && periodFrom && periodTo
-          ? operationalDayRangeIso(periodFrom, periodTo)
+        ...(periodPreset === 'custom' && customBounds
+          ? operationalDayRangeIso(customBounds.from, customBounds.to)
           : {}),
       }
       const data = await fetchMyOperationalJourney(query)
@@ -291,11 +312,22 @@ export function JornadaPage() {
     } finally {
       setLoading(false)
     }
-  }, [periodPreset, periodFrom, periodTo, conveyorFilter, pathname])
+  }, [periodPreset, customRangeError, customBounds, conveyorFilter, pathname])
 
   useEffect(() => {
     void loadJourney()
   }, [loadJourney])
+
+  /** Apontamentos feitos pelo "Apontar horas" do cabeçalho atualizam a jornada aberta. */
+  const loadJourneyRef = useRef(loadJourney)
+  loadJourneyRef.current = loadJourney
+  useEffect(
+    () =>
+      subscribeOperationalDataChanged(() => {
+        void loadJourneyRef.current()
+      }),
+    [],
+  )
 
   const patchParams = (patch: Record<string, string | undefined>) => {
     const next = new URLSearchParams(searchParams)
@@ -308,8 +340,11 @@ export function JornadaPage() {
 
   const periodLabel = useMemo(() => {
     if (!journey) return '—'
+    if (periodPreset === 'custom' && !periodFrom && periodTo) {
+      return describePeriodRange(customRange)
+    }
     return formatPeriodLabel(journey.period.from, journey.period.to)
-  }, [journey])
+  }, [journey, periodPreset, periodFrom, periodTo, customRange])
 
   /** Todas as alocações da jornada (abertas + em atraso), sem duplicar chave. */
   const allAssignments = useMemo(() => {
@@ -352,8 +387,7 @@ export function JornadaPage() {
       .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'))
   }, [journey])
 
-  const customIntervalInvalid =
-    periodPreset === 'custom' && (!periodFrom || !periodTo)
+  const customIntervalInvalid = Boolean(customRangeError)
   const canRetry =
     Boolean(error) && !customIntervalInvalid
 
@@ -410,12 +444,21 @@ export function JornadaPage() {
               <Chip>
                 Atividades: <span className="text-slate-100">{journey.load.assignmentCount}</span>
               </Chip>
+              <Chip>
+                Extra Esteira (período):{' '}
+                <span className="text-slate-100">
+                  {formatHumanMinutes(journey.extraTimeEntriesSummary.totalMinutes)}
+                </span>
+              </Chip>
             </div>
           ) : null}
 
-          <details className="mt-4 rounded-xl border border-white/[0.06] bg-white/[0.02] px-4 py-3">
+          <details open className="mt-4 rounded-xl border border-white/[0.06] bg-white/[0.02] px-4 py-3">
             <summary className="cursor-pointer text-sm font-semibold text-slate-300">
               Período e filtros
+              {journey ? (
+                <span className="ml-2 text-xs font-normal text-slate-500">· {periodLabel}</span>
+              ) : null}
             </summary>
             <div className="mt-4 space-y-4 border-t border-white/[0.06] pt-4">
               <label className="flex max-w-xl flex-col gap-2 text-xs font-medium text-slate-400">
@@ -447,6 +490,7 @@ export function JornadaPage() {
                       type="date"
                       className="sgp-input-app rounded-lg px-3 py-2 text-sm text-slate-200"
                       value={periodFrom}
+                      max={periodTo || undefined}
                       onChange={(ev) => patchParams({ periodFrom: ev.target.value || undefined })}
                     />
                   </label>
@@ -456,11 +500,18 @@ export function JornadaPage() {
                       type="date"
                       className="sgp-input-app rounded-lg px-3 py-2 text-sm text-slate-200"
                       value={periodTo}
+                      min={periodFrom || undefined}
                       onChange={(ev) => patchParams({ periodTo: ev.target.value || undefined })}
                     />
                   </label>
                 </div>
               )}
+              {periodPreset === 'custom' ? (
+                <p className="text-xs text-slate-500">
+                  Datas inclusivas, pela data do apontamento (horário de Brasília). Sem data final,
+                  considera até hoje; sem data inicial, desde o primeiro registro.
+                </p>
+              ) : null}
               {journey && (
                 <p className="text-xs text-slate-500">
                   Janela: <span className="text-slate-400">{periodLabel}</span>
@@ -520,7 +571,7 @@ export function JornadaPage() {
             <section className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] p-4 ring-1 ring-white/[0.04]">
                 <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
-                  Atividades (STEPs)
+                  Atividades
                 </p>
                 <p className="mt-1 font-heading text-2xl font-bold text-slate-50">
                   {journey.load.assignmentCount}
@@ -575,7 +626,7 @@ export function JornadaPage() {
               />
               <ActivityColumn
                 title="Concluídas"
-                hint="Alocações já no bucket de conclusão da esteira."
+                hint="Alocações já concluídas na esteira."
                 items={concluidas}
                 emptyLabel={
                   conveyorFilter
@@ -594,7 +645,7 @@ export function JornadaPage() {
                 <p className="mt-4 text-sm text-slate-500">
                   {conveyorFilter
                     ? transversalUxCopy.journeyEmptyFiltered
-                    : 'Nenhum apontamento com data nesta janela. Experimente alargar o período ou apontar numa atividade em aberto.'}
+                    : 'Nenhum apontamento com data nesta janela. Experimente ampliar o período ou apontar em uma atividade em aberto.'}
                 </p>
               ) : (
                 <ul className="mt-4 grid gap-2 sm:grid-cols-2">
@@ -638,6 +689,13 @@ export function JornadaPage() {
                           <p className="mt-1 text-[11px] text-slate-600">
                             {formatWorkDateFromEntryAt(e.entryAt)}
                           </p>
+                          <TimeEntryJustificationNote entry={e} />
+                          {e.notes?.trim() ? (
+                            <p className="mt-0.5 text-[11px] leading-snug text-slate-500">
+                              <span className="font-semibold">Observação: </span>
+                              {e.notes.trim()}
+                            </p>
+                          ) : null}
                         </div>
                         <Link
                           to={esteiraDetalheHref(e.conveyorId)}
@@ -651,6 +709,12 @@ export function JornadaPage() {
                 </ul>
               )}
             </section>
+
+            <JourneyExtraTimeEntriesSection
+              summary={journey.extraTimeEntriesSummary}
+              entries={journey.recentExtraTimeEntries ?? []}
+              limit={journey.query.limit ?? 20}
+            />
           </>
         ) : null}
       </div>

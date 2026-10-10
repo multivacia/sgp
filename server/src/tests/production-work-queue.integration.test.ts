@@ -14,6 +14,7 @@ import {
   SEED_COLLABORATOR_MARIA_ID,
 } from './productionTestHelpers.js'
 import { sessionCookieForUser } from './sessionTestCookie.js'
+import { setConveyorProductionStatusForIntegration } from './integrationConveyorFixtures.js'
 import { serviceCreateConveyor } from '../modules/conveyors/conveyors.service.js'
 import type { PostConveyorBody } from '../modules/conveyors/conveyors.schemas.js'
 import {
@@ -288,6 +289,8 @@ describe.skipIf(!hasDb)('production work queue (integração)', () => {
         pool,
         twoStepConveyorBody(`WQ-Vigente-${Date.now()}`),
       )
+      // Fila do Kiosk só lista esteiras que permitem apontamento (A iniciar / Em andamento).
+      await setConveyorProductionStatusForIntegration(pool, conv.id)
       const stepOld = await firstStepId(conv.id)
       const stepKeep = await secondStepId(conv.id)
 

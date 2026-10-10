@@ -126,3 +126,18 @@ export function canSubmitKioskProductionTimeEntry(input: {
   }
   return true
 }
+
+export type KioskPlannedDateBucket = 'overdue' | 'today' | 'upcoming'
+
+/**
+ * Faixa da data planejada no cartão do Kiosk (TASK apontamento-somente-planejado): a fila
+ * mostra atrasadas, de hoje e futuras de qualquer semana.
+ */
+export function resolveKioskPlannedDateBucket(
+  plannedDate: string,
+  today: string,
+): { bucket: KioskPlannedDateBucket; label: string } {
+  if (plannedDate < today) return { bucket: 'overdue', label: 'Atrasada' }
+  if (plannedDate === today) return { bucket: 'today', label: 'Hoje' }
+  return { bucket: 'upcoming', label: 'Futura' }
+}

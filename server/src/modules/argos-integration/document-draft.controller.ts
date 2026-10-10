@@ -48,7 +48,7 @@ export async function postDocumentDraft(req: Request, res: Response): Promise<vo
   const file = req.file
   if (!file?.buffer) {
     throw new AppError(
-      'Ficheiro em falta (campo file no multipart).',
+      'Nenhum arquivo foi enviado.',
       422,
       ErrorCodes.VALIDATION_ERROR,
     )

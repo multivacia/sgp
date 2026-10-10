@@ -40,6 +40,9 @@ export type ApontamentoAnaliticoItem = {
   /** Execução fora da sequência recomendada na esteira (S3). */
   foraDaSequencia?: boolean
   justificativaForaSequencia?: string
+  /** Justificativa padronizada (catálogo) — rótulo e complemento gravados no apontamento. */
+  justificativaPadraoRotulo?: string
+  justificativaPadraoComplemento?: string
   /** ISO — na API costuma refletir entryAt. */
   createdAt: string
   origem: ApontamentoAnaliticoOrigem

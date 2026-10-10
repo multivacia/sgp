@@ -7,6 +7,7 @@ import {
   canSubmitExtraTimeEntry,
   candidateNeedsOutOfSequenceJustification,
   candidateRequiresOperationalJustification,
+  candidateRequiresExcessJustification,
   emptyJustificationValue,
   EXTRA_TIME_ENTRY_DESCRIPTION_PLACEHOLDER,
   resolveExtraDescriptionSelectionAfterLoad,
@@ -353,5 +354,57 @@ describe('quickTimeEntryDrawerLogic', () => {
       expect(reopened).toBe('')
       expect(EXTRA_TIME_ENTRY_DESCRIPTION_PLACEHOLDER).toBe('Selecione um motivo...')
     })
+  })
+})
+
+describe('excesso de tempo previsto (apontamento-somente-planejado)', () => {
+  const mine = (o: Partial<TimeEntryCandidateItem> = {}) =>
+    baseCandidate({
+      isAssignedToMe: true,
+      requiresJustification: false,
+      requiresOutOfSequenceJustification: false,
+      isOutOfSequence: false,
+      hasPreviousPendingStep: false,
+      plannedMinutes: 60,
+      plannedTotalMinutes: 60,
+      realizedMinutes: 30,
+      ...o,
+    })
+
+  it('atividade do colaborador acima do previsto dele exige justificativa', () => {
+    expect(candidateRequiresExcessJustification(mine(), 31)).toBe(true)
+    expect(candidateRequiresExcessJustification(mine(), 30)).toBe(false)
+  })
+
+  it('atividade de outro colaborador não pede justificativa de excesso', () => {
+    expect(
+      candidateRequiresExcessJustification(mine({ isAssignedToMe: false, requiresJustification: true }), 500),
+    ).toBe(false)
+  })
+
+  it('sem previsto não exige', () => {
+    expect(
+      candidateRequiresExcessJustification(mine({ plannedMinutes: null, plannedTotalMinutes: undefined }), 500),
+    ).toBe(false)
+  })
+
+  it('validateTimeEntryForm exige a justificativa quando passa do previsto', () => {
+    const error = validateTimeEntryForm({
+      candidate: mine(),
+      operationalJustification: emptyJustificationValue(),
+      useFallback: false,
+      requiresComplement: false,
+      minutes: 45,
+    })
+    expect(error).not.toBeNull()
+    expect(
+      validateTimeEntryForm({
+        candidate: mine(),
+        operationalJustification: emptyJustificationValue(),
+        useFallback: false,
+        requiresComplement: false,
+        minutes: 10,
+      }),
+    ).toBeNull()
   })
 })

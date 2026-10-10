@@ -36,6 +36,7 @@ import {
   candidateNeedsJustification,
   candidateNeedsOutOfSequenceJustification,
   candidateRequiresOperationalJustification,
+  candidateRequiresExcessJustification,
   emptyJustificationValue,
   EXTRA_TIME_ENTRY_DESCRIPTION_PLACEHOLDER,
   QUICK_TIME_ENTRY_ERRORS,
@@ -50,6 +51,7 @@ import { JustificationSelect } from '../../components/operational/JustificationS
 import { resolvePreferredJustificationCategory } from '../../domain/operational/timeEntryJustificationField'
 import { QuickTimeEntryCandidateActions } from './QuickTimeEntryCandidateActions'
 import { WorkDateField } from '../../components/ui/WorkDateField'
+import { notifyOperationalDataChanged } from '../../lib/operational/operationalDataEvents'
 import {
   formatIsoDateBr,
   operationalTodayIso,
@@ -90,6 +92,7 @@ export function QuickTimeEntryDrawer({
   const { presentBlocking } = useSgpErrorSurface()
   const [phase, setPhase] = useState<Phase>('list')
   const [tab, setTab] = useState<DrawerTab>('conveyor')
+  /** Pesquisa livre; `esteira & atividade` restringe a esteira/OS e o nome da atividade (backend). */
   const [search, setSearch] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
   /** Inclui atividades em aberto fora da alocação do colaborador (com critério no servidor). */
@@ -310,12 +313,17 @@ export function QuickTimeEntryDrawer({
   const formRequiresOperationalJustification = selected
     ? candidateRequiresOperationalJustification(selected)
     : false
+  const formMinutes = Number.parseInt(minutesStr, 10)
+  const formRequiresExcessJustification = selected
+    ? candidateRequiresExcessJustification(selected, formMinutes)
+    : false
   const justificationValidationError = selected
     ? validateTimeEntryForm({
         candidate: selected,
         operationalJustification,
         useFallback: justificationUseFallback,
         requiresComplement: justificationRequiresComplement,
+        minutes: formMinutes,
       })
     : null
   const canSubmitForm =
@@ -369,6 +377,7 @@ export function QuickTimeEntryDrawer({
         operationalJustification,
         useFallback: justificationUseFallback,
         requiresComplement: justificationRequiresComplement,
+        minutes: formMinutes,
       })
     if (validationError) {
       setSubmitError(validationError)
@@ -391,6 +400,7 @@ export function QuickTimeEntryDrawer({
           workDate,
         }),
       )
+      notifyOperationalDataChanged(markAsDone ? 'activity_completed' : 'time_entry_created')
       pushToast(
         workDate === operationalTodayIso()
           ? resolveTimeEntrySuccessToast(markAsDone)
@@ -461,6 +471,7 @@ export function QuickTimeEntryDrawer({
             }
           : {}),
       })
+      notifyOperationalDataChanged('activity_completed')
       pushToast(QUICK_TIME_ENTRY_TOAST.activityCompleted, 'success')
       setCompleteConfirmCandidate(null)
       setCompleteJustification(emptyJustificationValue())
@@ -524,6 +535,7 @@ export function QuickTimeEntryDrawer({
         minutes: extraMinutes,
         notes: extraNotes.trim() || undefined,
       })
+      notifyOperationalDataChanged('extra_time_entry_created')
       pushToast('Apontamento extra esteira registrado com sucesso.', 'success')
       setExtraDescriptionId('')
       setExtraMinutesStr('30')
@@ -645,16 +657,26 @@ export function QuickTimeEntryDrawer({
                           <p className="mt-1 text-amber-50/90">{unavailableReason}</p>
                         </div>
                       ) : null}
-                      <label className="block text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">
+<label className="block text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">
                         Pesquisar
                         <input
                           type="search"
                           value={search}
                           onChange={(e) => setSearch(e.target.value)}
-                          placeholder="Esteira, cliente, veículo, placa, setor, tarefa, atividade…"
+                          placeholder="Esteira & atividade (ex.: 7070 & XPTO)"
+                          aria-label="Pesquisar atividades"
                           className="mt-1.5 w-full rounded-xl border border-[color:var(--semantic-border-glass-strong)] bg-sgp-app-panel-deep/90 px-3 py-2 text-sm text-slate-200 outline-none ring-sgp-blue-bright/0 transition focus:ring-2 focus:ring-sgp-blue-bright/25"
                         />
                       </label>
+                      {search.includes('&') ? (
+                        <p className="text-[11px] text-slate-500">
+                          Antes do «&»: esteira/OS · depois do «&»: nome da atividade.
+                        </p>
+                      ) : (
+                        <p className="text-[11px] text-slate-600">
+                          Sem «&», busca em esteira, cliente, veículo, placa, setor e atividade.
+                        </p>
+                      )}
                       <label className="flex cursor-pointer items-start gap-2.5 rounded-xl border border-white/[0.06] bg-black/15 px-3 py-2.5 text-xs text-slate-300">
                         <input
                           type="checkbox"
@@ -666,8 +688,8 @@ export function QuickTimeEntryDrawer({
                         <span>
                           <span className="font-semibold text-slate-100">Buscar outras atividades</span>
                           <span className="mt-0.5 block text-[11px] leading-snug text-slate-500">
-                            Inclui atividades em aberto fora da sua alocação. Use pelo menos 2 caracteres na
-                            pesquisa. Será necessária uma justificativa ao apontar.
+                            Inclui atividades em aberto planejadas para outros colaboradores. Use pelo menos 2
+                            caracteres na pesquisa. Será necessária uma justificativa ao apontar.
                           </span>
                         </span>
                       </label>
@@ -926,8 +948,8 @@ export function QuickTimeEntryDrawer({
                     {formNeedsJustification ? (
                       <div className="mt-4 rounded-xl border border-amber-500/25 bg-amber-500/[0.07] px-3 py-2.5 text-xs text-amber-50/95">
                         <p className="font-semibold text-amber-100">
-                          Você não está alocado nesta atividade. Para apontar horas, informe uma justificativa
-                          (apontamento por exceção).
+                          Esta atividade está planejada para outro colaborador. Para apontar horas, informe uma
+                          justificativa (apontamento por exceção).
                         </p>
                       </div>
                     ) : null}
@@ -986,11 +1008,15 @@ export function QuickTimeEntryDrawer({
                         value={operationalJustification.justificationId ?? ''}
                         complement={operationalJustification.justificationComplement}
                         legacyText={operationalJustification.legacyText}
-                        required={formRequiresOperationalJustification}
+                        required={
+                          formRequiresOperationalJustification || formRequiresExcessJustification
+                        }
                         preferredCategory={
                           formNeedsJustification
                             ? null
-                            : formNeedsOutOfSequence
+                            : formRequiresExcessJustification
+                              ? resolvePreferredJustificationCategory({ requiresExcessTime: true })
+                              : formNeedsOutOfSequence
                               ? resolvePreferredJustificationCategory({
                                   hasPreviousPendingStep: selected?.hasPreviousPendingStep,
                                   isOutOfSequence: selected?.isOutOfSequence,

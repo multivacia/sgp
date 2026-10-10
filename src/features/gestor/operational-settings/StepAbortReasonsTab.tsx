@@ -78,7 +78,7 @@ export function StepAbortReasonsTab({ onError, onToast }: Props) {
                 Motivos de dispensa
               </h2>
               <p className="mt-1 text-sm text-slate-400">
-                Catálogo padronizado para abortar/dispensar etapas (STEP) da esteira.
+                Catálogo padronizado de motivos para dispensar atividades da esteira.
               </p>
             </div>
             <button

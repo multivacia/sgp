@@ -38,6 +38,9 @@ export type ConveyorStepTimeEntryListItem = TimeEntryDelegationClient & {
   /** S3 — ausente em respostas antigas. */
   isOutOfSequence?: boolean
   outOfSequenceJustification?: string | null
+  /** Justificativa padronizada (catálogo) — ausente em respostas antigas. */
+  standardJustificationLabel?: string | null
+  standardJustificationComplement?: string | null
   entryAt: string
   createdAt: string
   updatedAt: string

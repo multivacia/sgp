@@ -332,11 +332,58 @@ describe('ConveyorProgressFilters render', () => {
         onGeneratePdf: () => {},
         pdfDisabled: true,
         pdfLoading: false,
+        pdfOrientation: 'portrait',
+        onPdfOrientationChange: () => {},
       }),
     )
     expect(html).toContain('Gerar PDF')
     expect(html).toContain('Hierarquia')
     expect(html).toContain('disabled')
+    expect(html).toContain('Orientação do PDF')
+    expect(html).toContain('Retrato')
+    expect(html).toContain('Paisagem')
+  })
+})
+
+describe('ConveyorProgressPrintView orientação', () => {
+  it('retrato é o padrão e gera regra @page portrait', async () => {
+    const { ConveyorProgressPrintView } = await import('./ConveyorProgressPrintView')
+    const items = [sampleItem('c1', 'E1')]
+    const html = renderToStaticMarkup(
+      createElement(ConveyorProgressPrintView, {
+        items,
+        generatedAt: '07/10/2026 10:00:00',
+        summary: computeConveyorProgressSummary(items),
+      }),
+    )
+    expect(html).toContain('@page { size: portrait; margin: 10mm; }')
+    expect(html).toContain('data-print-orientation="portrait"')
+    expect(html).toMatch(/Orientação:(\s|<!-- -->)*Retrato/)
+  })
+
+  it('paisagem gera regra @page landscape', async () => {
+    const { ConveyorProgressPrintView } = await import('./ConveyorProgressPrintView')
+    const items = [sampleItem('c1', 'E1')]
+    const html = renderToStaticMarkup(
+      createElement(ConveyorProgressPrintView, {
+        items,
+        generatedAt: '07/10/2026 10:00:00',
+        summary: computeConveyorProgressSummary(items),
+        orientation: 'landscape',
+      }),
+    )
+    expect(html).toContain('@page { size: landscape; margin: 10mm; }')
+    expect(html).not.toContain('size: portrait')
+    expect(html).toContain('data-print-orientation="landscape"')
+  })
+
+  it('parse de orientação inválida volta para retrato', async () => {
+    const { parseConveyorProgressPdfOrientation } = await import(
+      './conveyorProgressPdfOrientation'
+    )
+    expect(parseConveyorProgressPdfOrientation('landscape')).toBe('landscape')
+    expect(parseConveyorProgressPdfOrientation('qualquer')).toBe('portrait')
+    expect(parseConveyorProgressPdfOrientation(null)).toBe('portrait')
   })
 })
 

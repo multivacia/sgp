@@ -644,7 +644,7 @@ export function UsersPage() {
                       onClick: () => {
                         if (
                           !window.confirm(
-                            'Inativar este usuário? Não poderá autenticar-se.',
+                            'Inativar este usuário? Ele não poderá mais entrar no sistema.',
                           )
                         )
                           return

@@ -725,7 +725,7 @@ export async function serviceDuplicateSubtreeUnderSameParent(
   }
   if (source.node_type === 'ITEM') {
     throw new AppError(
-      'Use o endpoint de duplicação de matriz (ITEM) para copiar um item raiz.',
+      'Para copiar um item raiz, use a duplicação de matriz.',
       422,
       ErrorCodes.VALIDATION_ERROR,
     )

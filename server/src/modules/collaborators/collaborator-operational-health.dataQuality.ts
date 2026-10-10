@@ -17,7 +17,7 @@ const WARNINGS = {
   NO_OPEN_ASSIGNMENTS: {
     code: 'NO_OPEN_ASSIGNMENTS',
     message:
-      'Não existem STEPs abertos atribuídos a este colaborador no âmbito considerado pelo snapshot.',
+      'Não há atividades abertas atribuídas a este colaborador no período considerado.',
   },
   COLLABORATOR_INACTIVE: {
     code: 'COLLABORATOR_INACTIVE',

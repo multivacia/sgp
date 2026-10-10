@@ -214,3 +214,46 @@ describe('kioskOutraAtividadeFlowLogic', () => {
     })
   })
 })
+
+describe('Outra atividade — excesso de tempo do próprio colaborador', () => {
+  const mine = candidate({
+    isAssignedToMe: true,
+    requiresJustification: false,
+    requiresOutOfSequenceJustification: false,
+    isOutOfSequence: false,
+    hasPreviousPendingStep: false,
+    plannedMinutes: 60,
+    plannedTotalMinutes: 60,
+    realizedMinutes: 50,
+  })
+  const just = { justificationId: 'j-1', justificationComplement: '', legacyText: 'Motivo' }
+
+  it('exige justificativa e envia justificationId quando passa do previsto', () => {
+    expect(
+      canSubmitKioskOutraAtividadeForm({
+        candidate: mine,
+        minutes: 30,
+        operationalJustification: { value: emptyJustificationValue(), useFallback: false, requiresComplement: false },
+      }),
+    ).toBe(false)
+    const payload = buildKioskUnassignedTimeEntryPayload({
+      candidate: mine,
+      minutes: 30,
+      note: '',
+      operationalJustification: just,
+      workDate: '2026-10-08',
+    })
+    expect(payload.justificationId).toBe('j-1')
+    expect(payload.exceptionJustificationId).toBeUndefined()
+  })
+
+  it('dentro do previsto não exige nem envia justificativa', () => {
+    expect(
+      canSubmitKioskOutraAtividadeForm({
+        candidate: mine,
+        minutes: 10,
+        operationalJustification: { value: emptyJustificationValue(), useFallback: false, requiresComplement: false },
+      }),
+    ).toBe(true)
+  })
+})

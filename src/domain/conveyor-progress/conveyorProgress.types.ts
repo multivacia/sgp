@@ -5,6 +5,8 @@ export type TimeEntryAnalyticalItem = {
   durationMinutes: number
   executedQuantity?: number | null
   notes?: string | null
+  /** Justificativa efetiva do apontamento (exceção, fora de sequência ou padronizada). */
+  justification?: string | null
   entryMode?: string | null
 }
 

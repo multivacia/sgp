@@ -2,12 +2,11 @@ import type pg from 'pg'
 import { DatabaseError } from 'pg'
 import {
   findAssigneeIdForStepAndCollaborator,
-  findPublishedPlanItemIdForCollaboratorOnStep,
   insertConveyorNodeAssignee,
   maxAssigneeOrderIndexForStep,
   newAssignmentId,
 } from '../conveyors/conveyorAssignments.repository.js'
-import { mondayOfWeekContaining } from '../operational-planning/operational-planning.week.js'
+import { findStepPlanningForCollaborator } from '../operational-planning/planned-activity.repository.js'
 
 export const PRODUCTION_PUBLISHED_PLAN_ASSIGNEE_METADATA = {
   source: 'production_published_plan',
@@ -17,18 +16,10 @@ function isPgUniqueViolation(err: unknown): boolean {
   return err instanceof DatabaseError && err.code === '23505'
 }
 
-function todayIsoLocal(): string {
-  const t = new Date()
-  return [
-    t.getFullYear(),
-    String(t.getMonth() + 1).padStart(2, '0'),
-    String(t.getDate()).padStart(2, '0'),
-  ].join('-')
-}
-
 /**
- * Resolve alocação no STEP para apontamento em Modo Produção.
- * Reutiliza assignee existente; se vier do plano publicado, cria apoio (`is_primary = false`).
+ * Resolve a alocação no STEP para apontamento em atividade **planejada para o colaborador**
+ * (qualquer semana, plano publicado vigente). Sem item planejado para ele → `null`.
+ * Reutiliza o assignee existente; sem assignee, cria apoio (`is_primary = false`).
  */
 export async function resolveProductionStepAssigneeId(
   pool: pg.Pool,
@@ -38,6 +29,9 @@ export async function resolveProductionStepAssigneeId(
     stepNodeId: string
   },
 ): Promise<string | null> {
+  const planning = await findStepPlanningForCollaborator(pool, input)
+  if (!planning.plannedForCollaborator) return null
+
   const existing = await findAssigneeIdForStepAndCollaborator(
     pool,
     input.conveyorId,
@@ -45,12 +39,6 @@ export async function resolveProductionStepAssigneeId(
     input.collaboratorId,
   )
   if (existing) return existing
-
-  const planItemId = await findPublishedPlanItemIdForCollaboratorOnStep(pool, {
-    ...input,
-    weekStartDate: mondayOfWeekContaining(todayIsoLocal()),
-  })
-  if (!planItemId) return null
 
   const orderIndex = (await maxAssigneeOrderIndexForStep(pool, input.stepNodeId)) + 1
 

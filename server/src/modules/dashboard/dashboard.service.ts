@@ -126,7 +126,7 @@ export async function serviceOperationalDashboard(
 
   const periodNote =
     realizedInPeriod !== undefined && realizedPeriod
-      ? ` Minutos apontados (período, preset ${realizedPeriod.preset}): soma dos lançamentos com entry_at entre o início da janela e agora (month: desde 00:00 do dia 1 em America/Sao_Paulo).`
+      ? ` Minutos apontados (período ${realizedPeriod.preset}): soma dos lançamentos entre o início do período e agora (mês: desde 00:00 do dia 1, horário de Brasília).`
       : ''
 
   return {
@@ -154,7 +154,7 @@ export async function serviceOperationalDashboard(
           }
         : {}),
       notes:
-        'Previsto estrutural: soma do tempo unitário × quantidade dos STEPs ativos. Total por esteira (coluna OS): soma de total_planned_minutes (apoio; pode diferir do previsto estrutural se a coluna não foi recalculada). Minutos apontados (acumulado): soma global de conveyor_time_entries não apagados.' +
+        'Previsto estrutural: soma do tempo unitário × quantidade das atividades ativas. Total por esteira (coluna OS): soma do tempo total previsto das esteiras (apoio; pode diferir do previsto estrutural se o total não foi recalculado). Minutos apontados (acumulado): soma de todos os apontamentos válidos.' +
         periodNote,
     },
     collaboratorLoad,
@@ -220,7 +220,7 @@ export async function serviceExecutiveDashboard(
       plannedMinutesStepNodes: plannedSteps,
       realizedMinutesTotal: realized,
       notes:
-        'Previsto estrutural: soma do tempo unitário × quantidade dos STEPs ativos. Total por esteira (OS): apoio; pode diferir se total_planned_minutes não foi recalculado. Minutos apontados (acumulado): todos os lançamentos válidos. Mesma base de agregação do painel operacional.',
+        'Previsto estrutural: soma do tempo unitário × quantidade das atividades ativas. Total por esteira (OS): apoio; pode diferir se o total da OS não foi recalculado. Minutos apontados (acumulado): todos os lançamentos válidos. Mesma base de agregação do painel operacional.',
     },
     topOverdueConveyors: topOverdue,
   }

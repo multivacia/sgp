@@ -121,11 +121,11 @@ export function OperationalDashboardCharts({ data }: Props) {
 
       <section className="sgp-panel sgp-panel-hover">
         <h2 className="font-heading text-sm font-bold uppercase tracking-[0.12em] text-slate-200">
-          Esteiras por bucket operacional
+          Esteiras por situação operacional
         </h2>
         <p className="mt-1 text-xs text-slate-500">
-          Contagem por bucket operacional. Abre o backlog com o recorte correspondente
-          ao premir um segmento ou um item da legenda{' '}
+          Contagem por situação operacional. Abre o Painel operacional filtrado pela
+          situação ao clicar em um segmento ou em um item da legenda{' '}
           <span className="text-slate-600">(nova aba)</span>.
         </p>
         {bucketTotal === 0 ? (
@@ -201,7 +201,7 @@ export function OperationalDashboardCharts({ data }: Props) {
               ))}
             </ul>
             <p className="mt-3 text-center text-[10px] text-slate-600">
-              Se um bucket concentrar quase todo o volume, use a legenda para
+              Se uma situação concentrar quase todo o volume, use a legenda para
               navegar com precisão.
             </p>
           </>
@@ -215,7 +215,7 @@ export function OperationalDashboardCharts({ data }: Props) {
           </h2>
           <ul className="mt-4 space-y-2 text-sm">
             {data.overdueHighlight.length === 0 ? (
-              <li className="text-slate-500">Nenhuma esteira neste bucket.</li>
+              <li className="text-slate-500">Nenhuma esteira nesta situação.</li>
             ) : (
               data.overdueHighlight.map((r) => (
                 <li
