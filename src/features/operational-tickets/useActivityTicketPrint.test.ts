@@ -137,7 +137,7 @@ describe('agente disponível — usa batch e não chama window.print', () => {
       tickets: Array<{ shortCode: string; conveyorTitle: string }>
     }
     expect(body.tickets).toHaveLength(1)
-    expect(body.tickets[0]?.shortCode).toBe('STEP-1234')
+    expect(body.tickets[0]?.shortCode).toBe('ATV-1234')
     expect(body.tickets[0]?.conveyorTitle).toBe('OS 100')
   })
 })

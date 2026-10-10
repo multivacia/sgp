@@ -27,6 +27,6 @@ describe('sheetToAgentPayload', () => {
     expect(payload.groupHeaderLabel).toBe('SETOR: CORTE')
     expect(payload.conveyorTitle).toBe('OS 7549')
     expect(payload.activityTitle).toBe('Cortar carpete')
-    expect(payload.shortCode).toBe('STEP-1234')
+    expect(payload.shortCode).toBe('ATV-1234')
   })
 })

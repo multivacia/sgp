@@ -89,7 +89,7 @@ describe('buildPlanningGroupedTicketPrintItems', () => {
       activityTitle: 'Costurar',
       taskTitle: 'Bancos',
       sectorTitle: 'Costura',
-      shortCode: 'STEP-ABCD',
+      shortCode: 'ATV-ABCD',
     })
     expect(ticket.model).not.toHaveProperty('reprint')
     expect(ticket.model).not.toHaveProperty('secondCopy')

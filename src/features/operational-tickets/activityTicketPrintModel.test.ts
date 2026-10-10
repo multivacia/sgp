@@ -91,8 +91,8 @@ describe('activityTicketPrintModel', () => {
   })
 
   it('gera shortCode previsível', () => {
-    expect(buildShortStepCode('node-abc-8f42')).toBe('STEP-8F42')
-    expect(buildShortStepCode('x')).toBe('STEP-000X')
+    expect(buildShortStepCode('node-abc-8f42')).toBe('ATV-8F42')
+    expect(buildShortStepCode('x')).toBe('ATV-000X')
   })
 
   it('formata minutos', () => {

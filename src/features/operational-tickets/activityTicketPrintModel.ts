@@ -91,7 +91,7 @@ export function formatMinutes(minutes: number): string {
 export function buildShortStepCode(activityNodeId: string): string {
   const compact = activityNodeId.replace(/[^a-zA-Z0-9]/g, '').toUpperCase()
   const suffix = (compact.slice(-4) || '0000').padStart(4, '0')
-  return `STEP-${suffix}`
+  return `ATV-${suffix}`
 }
 
 export function normalizeTicketText(value: string | null | undefined): string | undefined {
