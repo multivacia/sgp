@@ -171,7 +171,7 @@ export function MinhasAtividadesPage() {
                       {item.conveyorName}
                     </h2>
                     <p className="text-sm font-medium text-slate-400">
-                      <span className="text-slate-500">Etapa · </span>
+                      <span className="text-slate-500">Atividade · </span>
                       {item.stepName}
                     </p>
                     <p className="text-xs text-slate-500">
@@ -202,7 +202,7 @@ export function MinhasAtividadesPage() {
                         {item.conveyorId}
                       </span>
                       {' · '}
-                      Etapa{' '}
+                      Atividade{' '}
                       <span className="font-mono text-slate-500">
                         {item.stepNodeId}
                       </span>

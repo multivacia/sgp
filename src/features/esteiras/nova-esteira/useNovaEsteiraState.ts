@@ -393,7 +393,7 @@ export function useNovaEsteiraState() {
       ordenarOpcoes(
         prev.map((o) => {
           if (o.id !== opcaoId) return o
-          const et = etapaVazia('Nova etapa', 60, 'manual', 1)
+          const et = etapaVazia('Nova atividade', 60, 'manual', 1)
           const ar: NovaEsteiraAreaDraft = {
             ...areaVazia('Nova área', 'manual', o.areas.length + 1),
             etapas: [et],
@@ -484,7 +484,7 @@ export function useNovaEsteiraState() {
               o.areas.map((a) => {
                 if (a.id !== areaId) return a
                 const et = etapaVazia(
-                  'Nova etapa',
+                  'Nova atividade',
                   60,
                   'manual',
                   a.etapas.length + 1,

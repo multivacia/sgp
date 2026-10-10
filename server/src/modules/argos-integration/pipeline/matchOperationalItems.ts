@@ -576,7 +576,7 @@ export function buildMatrixSubtreeV11FromPool(
     totalPlannedMinutes,
     subtreeTruncated: truncated || undefined,
     subtreeWarning: truncated
-      ? `Estrutura limitada a ${MATRIX_SUBTREE_MAX_ACTIVITIES} etapas nesta resposta; revise na Matriz se necessário.`
+      ? `Estrutura limitada a ${MATRIX_SUBTREE_MAX_ACTIVITIES} atividades nesta resposta; revise na Matriz se necessário.`
       : undefined,
     areas: areasOut,
   })

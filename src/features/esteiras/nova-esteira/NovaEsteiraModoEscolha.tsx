@@ -21,7 +21,7 @@ export function NovaEsteiraModoEscolha({ value, onChange, disabled }: Props) {
           Como esta esteira será montada?
         </h2>
         <p className="mt-1 text-sm text-slate-500">
-          Primeiro escolha o modo oficial. Na etapa seguinte você informa os dados
+          Primeiro escolha o modo oficial. No passo seguinte você informa os dados
           da OS; só depois entramos na composição (matriz ou manual).
         </p>
       </div>

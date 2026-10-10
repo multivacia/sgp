@@ -73,7 +73,7 @@ export function OperationalDashboardCharts({ data }: Props) {
 
   const plannedRows = [
     {
-      metric: `${operationalLabels.previstoEstrutural} (etapas)`,
+      metric: `${operationalLabels.previstoEstrutural} (atividades)`,
       minutes: data.plannedVsRealized.plannedMinutesStepNodes,
       hint: dashboardHints.previstoEstruturalSteps,
     },
@@ -243,7 +243,7 @@ export function OperationalDashboardCharts({ data }: Props) {
           </h2>
           <p className="mt-1 text-xs text-slate-500">{data.plannedVsRealized.notes}</p>
           <p className="mt-2 text-[11px] leading-snug text-slate-400">
-            Ordem: {operationalLabels.previstoEstrutural} (etapas) ·{' '}
+            Ordem: {operationalLabels.previstoEstrutural} (atividades) ·{' '}
             {operationalLabels.totalPorEsteiraOs} · acumulado global · opcionalmente{' '}
             {operationalLabels.minutosApontadosPeriodo} (escalas podem diferir).
           </p>
@@ -307,7 +307,7 @@ export function OperationalDashboardCharts({ data }: Props) {
           </a>
         </div>
         <p className="mt-1 text-xs text-slate-500">
-          Top 10 por alocações. Barras: {operationalLabels.previstoEstrutural} nas etapas e{' '}
+          Top 10 por alocações. Barras: {operationalLabels.previstoEstrutural} nas atividades e{' '}
           {operationalLabels.minutosApontadosAcumulado} (colaborador).
         </p>
         <div className="mt-6 h-[320px] w-full">
@@ -343,7 +343,7 @@ export function OperationalDashboardCharts({ data }: Props) {
                 <Legend wrapperStyle={{ fontSize: 11, paddingTop: 8 }} />
                 <Bar
                   dataKey="planejSteps"
-                  name={`${operationalLabels.previstoEstrutural} (etapas)`}
+                  name={`${operationalLabels.previstoEstrutural} (atividades)`}
                   fill={chart.barMetric.planned}
                   radius={[0, 4, 4, 0]}
                 />
@@ -358,7 +358,7 @@ export function OperationalDashboardCharts({ data }: Props) {
           )}
         </div>
         <p className="mt-2 text-[10px] text-slate-600">
-          Por colaborador: {operationalLabels.previstoEstrutural} = soma das etapas alocadas; minutos
+          Por colaborador: {operationalLabels.previstoEstrutural} = soma das atividades alocadas; minutos
           apontados = soma dos apontamentos do colaborador. Comparar barras, não somar num único
           total.
         </p>

@@ -657,9 +657,9 @@ export function NovaEsteiraPorDocumentoPage() {
           </section>
 
           <section className="rounded-2xl border border-white/[0.08] bg-white/[0.03] p-6 ring-1 ring-white/[0.05]">
-            <h2 className="font-heading text-lg text-slate-100">Itens / etapas inferidos</h2>
+            <h2 className="font-heading text-lg text-slate-100">Itens / atividades inferidos</h2>
             <p className="mt-1 text-sm text-slate-500">
-              Estrutura proposta (opção → área → etapa). Edite títulos e tempos planeados
+              Estrutura proposta (tarefa → setor → atividade). Edite títulos e tempos planejados
               em minutos.
             </p>
             <DraftStructureEditor draft={editedDraft} onChange={setEditedDraft} />
@@ -667,7 +667,7 @@ export function NovaEsteiraPorDocumentoPage() {
 
           {ingest && !isDraftV11Result(ingest) && ingest.extractedFacts.length > 0 ? (
             <section className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-6">
-              <h3 className="text-sm font-semibold text-slate-300">Factos extraídos</h3>
+              <h3 className="text-sm font-semibold text-slate-300">Fatos extraídos</h3>
               <ul className="mt-3 space-y-2 text-xs text-slate-400">
                 {ingest.extractedFacts.slice(0, 24).map((f) => (
                   <li key={f.key} className="flex justify-between gap-4 border-b border-white/[0.04] pb-2 last:border-0">
@@ -822,7 +822,7 @@ function DraftStructureEditor(props: {
           className="rounded-xl border border-white/[0.07] bg-sgp-app-panel-deep/80 p-4"
         >
           <label className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-            Opção {oi + 1}
+            Tarefa {oi + 1}
           </label>
           <input
             value={opt.title}
@@ -836,7 +836,7 @@ function DraftStructureEditor(props: {
           <div className="mt-4 space-y-4 pl-2 border-l border-white/[0.08]">
             {opt.areas.map((area, ai) => (
               <div key={`area-${area.orderIndex}-${ai}`}>
-                <label className="text-[11px] font-semibold text-slate-500">Área</label>
+                <label className="text-[11px] font-semibold text-slate-500">Setor</label>
                 <input
                   value={area.title}
                   onChange={(e) =>
@@ -853,7 +853,7 @@ function DraftStructureEditor(props: {
                       className="grid gap-2 rounded-lg border border-white/[0.05] bg-white/[0.02] p-3 sm:grid-cols-[1fr_120px]"
                     >
                       <div>
-                        <label className="text-[10px] uppercase text-slate-600">Etapa</label>
+                        <label className="text-[10px] uppercase text-slate-600">Atividade</label>
                         <input
                           value={st.title}
                           onChange={(e) =>

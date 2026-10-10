@@ -40,7 +40,7 @@ describe('collaboratorOperationalHealthDisplay', () => {
 
   it('getCollaboratorHealthSignalLabel mapeamentos mínimos', () => {
     expect(getCollaboratorHealthSignalLabel('LOW_OCCUPATION')).toBe('Baixa ocupação')
-    expect(getCollaboratorHealthSignalLabel('NO_OPEN_ASSIGNMENTS')).toBe('Sem etapas abertas')
+    expect(getCollaboratorHealthSignalLabel('NO_OPEN_ASSIGNMENTS')).toBe('Sem atividades abertas')
     expect(getCollaboratorHealthSignalLabel('TEAM_ASSIGNMENTS_INCLUDED')).toBe('Carga via time')
     expect(getCollaboratorHealthSignalLabel('PENDING_OVER_WINDOW_CAPACITY')).toBe(
       'Pendência acima da capacidade da janela',

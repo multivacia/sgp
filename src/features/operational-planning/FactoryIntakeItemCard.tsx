@@ -1,5 +1,6 @@
 import type { OperationalPlanningFactoryIntakeItem } from '../../domain/operational-planning/operational-planning.types'
 import { formatPlanningMinutes } from './planningBoardHelpers'
+import { resolvePlanningItemOperationalStatusLabel } from './planningExecutionHelpers'
 
 type FactoryIntakeItemCardProps = {
   item: OperationalPlanningFactoryIntakeItem
@@ -15,21 +16,9 @@ function formatAssignee(item: OperationalPlanningFactoryIntakeItem): string {
   )
 }
 
-function formatStepStatus(status: string | null): string | null {
-  if (!status) return null
-  const labels: Record<string, string> = {
-    NOT_STARTED: 'Não iniciado',
-    IN_PROGRESS: 'Em andamento',
-    COMPLETED: 'Concluído',
-    BLOCKED: 'Bloqueado',
-    CANCELLED: 'Cancelado',
-  }
-  return labels[status] ?? status
-}
-
 export function FactoryIntakeItemCard(props: FactoryIntakeItemCardProps) {
   const { item } = props
-  const stepStatus = formatStepStatus(item.activityOperationalStatus)
+  const stepStatus = resolvePlanningItemOperationalStatusLabel(item.activityOperationalStatus)
 
   return (
     <article className="rounded-lg border border-violet-500/15 bg-violet-500/[0.04] p-2.5">
@@ -48,7 +37,7 @@ export function FactoryIntakeItemCard(props: FactoryIntakeItemCardProps) {
             {formatPlanningMinutes(item.plannedMinutes ?? 0)} · {formatAssignee(item)}
           </p>
           {stepStatus ? (
-            <p className="mt-1 text-[11px] text-slate-500">STEP: {stepStatus}</p>
+            <p className="mt-1 text-[11px] text-slate-500">Atividade: {stepStatus}</p>
           ) : null}
           {item.reviewRequired ? (
             <p className="mt-1 text-[11px] text-amber-400/90">Revisão necessária</p>

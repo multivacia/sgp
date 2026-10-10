@@ -93,7 +93,7 @@ export function ExecutiveDashboardCharts({ data, windowDays }: Props) {
 
   const execRows = [
     {
-      metric: `${operationalLabels.previstoEstrutural} (etapas)`,
+      metric: `${operationalLabels.previstoEstrutural} (atividades)`,
       minutes: data.plannedVsRealized.plannedMinutesStepNodes,
       valueCaption: executiveDashboardCopy.barTooltipValueCaption,
       hint: dashboardHints.previstoEstruturalSteps,

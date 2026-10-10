@@ -57,13 +57,13 @@ const SIGNAL_LABELS: Record<string, string> = {
   OVERLOADED: 'Sobrecarga',
   CRITICAL_OVERLOAD: 'Sobrecarga crítica',
   NO_RECENT_TIME_ENTRY: 'Sem apontamento recente',
-  NO_OPEN_ASSIGNMENTS: 'Sem etapas abertas',
+  NO_OPEN_ASSIGNMENTS: 'Sem atividades abertas',
   TEAM_ASSIGNMENTS_INCLUDED: 'Carga via time',
   CAPACITY_FALLBACK_USED: 'Capacidade por fallback',
   COLLABORATOR_INACTIVE: 'Colaborador inativo',
   PENDING_CRITICAL_OVER_WINDOW: 'Pendência acima do dobro da capacidade da janela',
   PENDING_OVER_WINDOW_CAPACITY: 'Pendência acima da capacidade da janela',
-  NO_RECENT_TIME_ENTRIES_WITH_OPEN_WORK: 'Sem apontamento recente com etapas abertas',
+  NO_RECENT_TIME_ENTRIES_WITH_OPEN_WORK: 'Sem apontamento recente com atividades abertas',
   LOW_RECENT_TIME_OCCUPATION: 'Sinal de baixa ocupação recente',
 }
 
@@ -92,11 +92,11 @@ export function getCapacitySourceLabel(
 export function getDataQualityWarningDisplayMessage(code: string, fallbackMessage?: string): string {
   switch (code) {
     case 'TEAM_ASSIGNMENTS_INCLUDED':
-      return 'A carga inclui etapas atribuídas a times dos quais o colaborador participa.'
+      return 'A carga inclui atividades atribuídas a times dos quais o colaborador participa.'
     case 'CAPACITY_FALLBACK_USED':
       return 'A capacidade foi estimada por fallback operacional.'
     case 'NO_OPEN_ASSIGNMENTS':
-      return 'Nenhuma etapa aberta foi encontrada para este colaborador.'
+      return 'Nenhuma atividade aberta foi encontrada para este colaborador.'
     case 'COLLABORATOR_INACTIVE':
       return 'O colaborador está inativo.'
     default:

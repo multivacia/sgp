@@ -240,9 +240,9 @@ export function formatAwaitingPreviousActivitiesLabel(
 ): string | null {
   if (activities.length === 0) return null
   if (activities.length === 1) {
-    return `Aguardando etapa ${activities[0]!.activityTitle}`
+    return `Aguardando atividade ${activities[0]!.activityTitle}`
   }
-  return `Aguardando ${activities.length} etapas anteriores`
+  return `Aguardando ${activities.length} atividades anteriores`
 }
 
 export function isAwaitingOthers(

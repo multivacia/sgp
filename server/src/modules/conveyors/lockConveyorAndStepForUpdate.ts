@@ -86,7 +86,7 @@ export async function lockConveyorAndStepForUpdate(
   )
   const row = stepRes.rows[0]
   if (!row) {
-    throw new AppError('Etapa não encontrada nesta esteira.', 404, ErrorCodes.NOT_FOUND)
+    throw new AppError('Atividade não encontrada nesta esteira.', 404, ErrorCodes.NOT_FOUND)
   }
   if (row.node_type !== 'STEP') {
     throw new AppError(

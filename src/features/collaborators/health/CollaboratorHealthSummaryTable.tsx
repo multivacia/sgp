@@ -25,7 +25,7 @@ export function CollaboratorHealthSummaryTable({ rows, onOpenDetail }: Props) {
             <th className="px-3 py-3">Carga pendente</th>
             <th className="px-3 py-3">Capacidade da janela</th>
             <th className="px-3 py-3">Uso</th>
-            <th className="px-3 py-3">Etapas abertas</th>
+            <th className="px-3 py-3">Atividades abertas</th>
             <th className="px-3 py-3">Apontamentos recentes</th>
             <th className="px-3 py-3">Último apontamento</th>
             <th className="px-3 py-3">Sinais</th>

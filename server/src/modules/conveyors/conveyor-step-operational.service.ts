@@ -73,7 +73,7 @@ export async function completeConveyorStepOnClient(
 
   if (!canTransitionStepStatus(current, 'COMPLETED')) {
     throw new AppError(
-      `Transição de estado da etapa não permitida (${current} → COMPLETED).`,
+      `Transição de estado da atividade não permitida (${current} → COMPLETED).`,
       422,
       ErrorCodes.INVALID_STATUS_TRANSITION,
     )
@@ -118,7 +118,7 @@ export async function completeConveyorStepOnClient(
     },
   )
   if (!updated) {
-    throw new AppError('Não foi possível atualizar a etapa.', 500, ErrorCodes.INTERNAL)
+    throw new AppError('Não foi possível atualizar a atividade.', 500, ErrorCodes.INTERNAL)
   }
 
   await serviceCreateConveyorOperationalEvent(client, {
@@ -230,7 +230,7 @@ export async function servicePatchConveyorStepCompletion(
   const nodes = await listConveyorNodesByConveyorId(pool, input.conveyorId)
   const stepRow = nodes.find((n) => n.id === input.stepNodeId)
   if (!stepRow) {
-    throw new AppError('Etapa não encontrada nesta esteira.', 404, ErrorCodes.NOT_FOUND)
+    throw new AppError('Atividade não encontrada nesta esteira.', 404, ErrorCodes.NOT_FOUND)
   }
   if (stepRow.node_type !== 'STEP') {
     throw new AppError('Apenas atividades podem ser concluídas explicitamente.', 422, ErrorCodes.VALIDATION_ERROR)
@@ -269,7 +269,7 @@ async function serviceCompleteStep(
 
   if (!canTransitionStepStatus(current, 'COMPLETED')) {
     throw new AppError(
-      `Transição de estado da etapa não permitida (${current} → COMPLETED).`,
+      `Transição de estado da atividade não permitida (${current} → COMPLETED).`,
       422,
       ErrorCodes.INVALID_STATUS_TRANSITION,
     )
@@ -320,7 +320,7 @@ async function serviceCompleteStep(
     }
     if (isStepAbortedStatus(lockedStatus) || !canTransitionStepStatus(lockedStatus, 'COMPLETED')) {
       throw new AppError(
-        `Transição de estado da etapa não permitida (${lockedStatus} → COMPLETED).`,
+        `Transição de estado da atividade não permitida (${lockedStatus} → COMPLETED).`,
         422,
         ErrorCodes.INVALID_STATUS_TRANSITION,
       )
@@ -345,7 +345,7 @@ async function serviceCompleteStep(
 
   const rowAfter = await findConveyorById(pool, input.conveyorId)
   if (!rowAfter) {
-    throw new AppError('Esteira não encontrada após conclusão da etapa.', 500, ErrorCodes.INTERNAL)
+    throw new AppError('Esteira não encontrada após conclusão da atividade.', 500, ErrorCodes.INTERNAL)
   }
   const nodesAfter = await listConveyorNodesByConveyorId(pool, input.conveyorId)
   const structureAfter = await loadConveyorStructureWithAssignees(pool, input.conveyorId, nodesAfter)
@@ -365,7 +365,7 @@ async function serviceReopenStep(
 ): Promise<{ detail: ConveyorDetailApi; idempotent: boolean }> {
   if (current !== 'COMPLETED') {
     throw new AppError(
-      'A etapa só pode ser reaberta quando estiver concluída.',
+      'A atividade só pode ser reaberta quando estiver concluída.',
       422,
       ErrorCodes.VALIDATION_ERROR,
     )
@@ -373,7 +373,7 @@ async function serviceReopenStep(
 
   if (!canTransitionStepStatus(current, 'REOPENED')) {
     throw new AppError(
-      `Transição de estado da etapa não permitida (${current} → REOPENED).`,
+      `Transição de estado da atividade não permitida (${current} → REOPENED).`,
       422,
       ErrorCodes.INVALID_STATUS_TRANSITION,
     )
@@ -400,14 +400,14 @@ async function serviceReopenStep(
       locked.step.operational_status ?? 'PENDING'
     if (lockedStatus !== 'COMPLETED') {
       throw new AppError(
-        'A etapa só pode ser reaberta quando estiver concluída.',
+        'A atividade só pode ser reaberta quando estiver concluída.',
         422,
         ErrorCodes.VALIDATION_ERROR,
       )
     }
     if (!canTransitionStepStatus(lockedStatus, 'REOPENED')) {
       throw new AppError(
-        `Transição de estado da etapa não permitida (${lockedStatus} → REOPENED).`,
+        `Transição de estado da atividade não permitida (${lockedStatus} → REOPENED).`,
         422,
         ErrorCodes.INVALID_STATUS_TRANSITION,
       )
@@ -418,7 +418,7 @@ async function serviceReopenStep(
       operational_completed_by: null,
     })
     if (!updated) {
-      throw new AppError('Não foi possível atualizar a etapa.', 500, ErrorCodes.INTERNAL)
+      throw new AppError('Não foi possível atualizar a atividade.', 500, ErrorCodes.INTERNAL)
     }
     const ev = await serviceCreateConveyorOperationalEvent(client, {
       conveyorId: input.conveyorId,
@@ -454,7 +454,7 @@ async function serviceReopenStep(
 
   const rowAfter = await findConveyorById(pool, input.conveyorId)
   if (!rowAfter) {
-    throw new AppError('Esteira não encontrada após reabertura da etapa.', 500, ErrorCodes.INTERNAL)
+    throw new AppError('Esteira não encontrada após reabertura da atividade.', 500, ErrorCodes.INTERNAL)
   }
   const nodesAfter = await listConveyorNodesByConveyorId(pool, input.conveyorId)
   const structureAfter = await loadConveyorStructureWithAssignees(pool, input.conveyorId, nodesAfter)

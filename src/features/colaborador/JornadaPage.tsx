@@ -162,7 +162,7 @@ function JourneyActivityCard({ item }: { item: MyActivityItem }) {
           <p className="text-[11px] tabular-nums text-slate-500">
             Previsto: <span className="text-slate-300">{prev}</span>
             <span className="text-slate-600"> · </span>
-            Realizado na etapa: <span className="text-slate-300">{real}</span>
+            Realizado na atividade: <span className="text-slate-300">{real}</span>
           </p>
           <button
             type="button"
@@ -215,7 +215,7 @@ function JourneyActivityCard({ item }: { item: MyActivityItem }) {
           </p>
           <p className="mt-1 text-[11px] text-slate-600">
             {operationalLabels.previstoEstrutural}: {prev} · {operationalLabels.minutosApontadosAcumulado}{' '}
-            (step): {real}
+            (atividade): {real}
           </p>
         </div>
       ) : null}

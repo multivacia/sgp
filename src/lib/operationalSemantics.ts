@@ -72,7 +72,7 @@ export function formatCoberturaTempoRatio(ratio: number | null): string {
 /** V1 leitura por área/STEP no detalhe da esteira — sem «gargalo» como label principal. */
 export const nodeWorkloadLabels = {
   sectionTitle: 'Pendência e concentração por setor e atividade',
-  pendenciaTempoStep: 'Pendência de tempo (etapa)',
+  pendenciaTempoStep: 'Pendência de tempo (atividade)',
   concentracaoPrevisto: 'Concentração de trabalho — previsto',
   concentracaoRealizado: 'Concentração de trabalho — realizado',
   pressaoAtrasoContexto: 'Pressão de atraso (contexto da esteira)',
@@ -87,5 +87,5 @@ export const nodeWorkloadLabels = {
   },
   /** Tooltip do bloco + alinhamento ao texto fixo da API. */
   tooltipBloco:
-    'Pendência de tempo compara o previsto estrutural da etapa com os minutos apontados acumulados. Não identifica causa raiz. O atraso e a pressão referem-se à esteira, não à etapa.',
+    'Pendência de tempo compara o previsto estrutural da atividade com os minutos apontados acumulados. Não identifica causa raiz. O atraso e a pressão referem-se à esteira, não à atividade.',
 } as const

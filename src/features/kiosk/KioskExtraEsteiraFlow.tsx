@@ -152,7 +152,7 @@ export function KioskExtraEsteiraFlow({ collaborator, onClose, onSuccess }: Prop
               </div>
               <div>
                 <p className="text-xl font-semibold text-white">Apontamento registrado!</p>
-                <p className="mt-1 text-sm text-slate-400">Voltando ao Kiosk…</p>
+                <p className="mt-1 text-sm text-slate-400">Voltando ao Modo Fábrica…</p>
               </div>
             </div>
           ) : step === 'review' ? (

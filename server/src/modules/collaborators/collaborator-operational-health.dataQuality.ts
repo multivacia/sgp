@@ -7,7 +7,7 @@ const WARNINGS = {
   TEAM_ASSIGNMENTS_INCLUDED: {
     code: 'TEAM_ASSIGNMENTS_INCLUDED',
     message:
-      'O resumo inclui pelo menos uma etapa alcançada por alocação em equipe (membership de time).',
+      'O resumo inclui pelo menos uma atividade alcançada por alocação em equipe.',
   },
   CAPACITY_FALLBACK_USED: {
     code: 'CAPACITY_FALLBACK_USED',

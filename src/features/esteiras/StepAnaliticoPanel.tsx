@@ -46,7 +46,7 @@ export function StepAnaliticoPanel({
     <div className="rounded-xl border border-white/[0.07] bg-white/[0.025] px-3 py-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">
-          Step · equipe e apontamentos
+          Atividade · equipe e apontamentos
         </p>
         <span
           className={`rounded-md px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ring-1 ${
@@ -178,7 +178,7 @@ export function StepAnaliticoPanel({
 
       {matrixId ? (
         <p className="mt-2 font-mono text-[9px] text-slate-600">
-          matriz · step{' '}
+          matriz · atividade{' '}
           <span className="text-slate-500">{matrixId}</span>
         </p>
       ) : null}

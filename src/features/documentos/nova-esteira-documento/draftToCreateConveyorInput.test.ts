@@ -151,6 +151,46 @@ describe('draftV1ToCreateConveyorInput', () => {
     expect(out.options[0]?.areas[0]?.steps.map((s) => s.titulo)).toEqual(['Serviço real'])
     expect(JSON.stringify(out)).not.toContain('16816')
   })
+
+  it('placeholders: Tarefa 1 › Serviço › Defina as atividades do serviço', () => {
+    const semOpcoes = draftV1ToCreateConveyorInput({
+      schemaVersion: '1.0.0',
+      suggestedDados: { title: 'OS teste' },
+      options: [],
+    })
+    expect(semOpcoes.options[0]?.titulo).toBe('Tarefa 1')
+    expect(semOpcoes.options[0]?.areas[0]?.titulo).toBe('Serviço')
+    expect(semOpcoes.options[0]?.areas[0]?.steps.map((s) => s.titulo)).toEqual([
+      'Defina as atividades do serviço',
+    ])
+
+    const setorSemAtividadesValidas = draftV1ToCreateConveyorInput({
+      schemaVersion: '1.1.0',
+      suggestedDados: { title: 'OS teste' },
+      options: [
+        {
+          orderIndex: 1,
+          title: 'Bancos',
+          areas: [
+            {
+              orderIndex: 1,
+              title: 'Costura',
+              steps: [
+                { orderIndex: 1, title: '   ', plannedMinutes: 0 },
+                { orderIndex: 2, title: '16816,36', plannedMinutes: 0 },
+              ],
+            },
+          ],
+        },
+      ],
+      warnings: [],
+      humanReviewRequired: true,
+    })
+    expect(setorSemAtividadesValidas.options[0]?.areas[0]?.titulo).toBe('Costura')
+    expect(setorSemAtividadesValidas.options[0]?.areas[0]?.steps.map((s) => s.titulo)).toEqual([
+      'Defina as atividades do serviço',
+    ])
+  })
 })
 
 function twoStepDraft(): ConveyorDraft {

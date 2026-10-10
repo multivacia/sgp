@@ -35,7 +35,7 @@ export function NovaEsteiraMontagemZonas() {
             Atividade
           </p>
           <p className="mt-2 text-sm text-slate-400">
-            Passos com tempo estimado e origem (manual, reaproveitada, base).
+            Atividades com tempo estimado e origem (manual, reaproveitada, base).
           </p>
         </div>
       </div>

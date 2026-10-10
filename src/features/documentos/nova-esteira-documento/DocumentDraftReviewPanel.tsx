@@ -124,7 +124,7 @@ export function DocumentDraftReviewPanel({
       />
       <MatchingEntriesSection
         title="Ignorar"
-        subtitle="Itens que não devem virar etapa operacional nesta esteira."
+        subtitle="Itens que não devem virar atividade operacional nesta esteira."
         tone="ignore"
         entries={model.matchingPlanEntries.filter((e) => e.item.suggestedAction === 'IGNORE')}
         acceptanceState={state}
@@ -340,7 +340,7 @@ function PrimaryCandidateBlock({ item }: { item: ArgosMatchingPlanItemV11 }) {
     <div className="mt-2 space-y-1 text-xs text-slate-300">
       <p>
         Atividade: {rs.activity ?? 'Não informado'} · Setor: {rs.sector ?? 'Não informado'} ·
-        Etapa: {rs.step ?? 'Não informado'} · Tempo: {formatPlannedMinutes(rs.plannedMinutes)} ·
+        Tarefa: {rs.step ?? 'Não informado'} · Tempo: {formatPlannedMinutes(rs.plannedMinutes)} ·
         Time: {rs.teamName ?? 'Não informado'} · Responsável:{' '}
         {rs.collaboratorName ?? 'Não informado'}
       </p>
@@ -348,7 +348,7 @@ function PrimaryCandidateBlock({ item }: { item: ArgosMatchingPlanItemV11 }) {
         <div className="rounded border border-sky-400/30 bg-sky-500/10 px-2 py-1 text-sky-100/90">
           <p className="font-medium">Estrutura da Matriz sugerida</p>
           <p>
-            Tipo: {subtree.rootNodeType} · Áreas: {subtree.totalAreas} · Etapas:{' '}
+            Tipo: {subtree.rootNodeType} · Setores: {subtree.totalAreas} · Atividades:{' '}
             {subtree.totalActivities} · Minutos totais: {subtree.totalPlannedMinutes}
           </p>
           {subtree.previewActivities?.length ? (
@@ -366,7 +366,7 @@ function PrimaryCandidateBlock({ item }: { item: ArgosMatchingPlanItemV11 }) {
             Estrutura da Matriz sugerida — {ms.rootTitle}
           </summary>
           <p className="mt-2 text-[11px] text-amber-100/90">
-            Áreas: {ms.totalAreas} · Etapas: {ms.totalActivities} · Minutos:{' '}
+            Setores: {ms.totalAreas} · Atividades: {ms.totalActivities} · Minutos:{' '}
             {ms.totalPlannedMinutes}
             {ms.subtreeTruncated ? (
               <span className="block text-amber-200/90">
@@ -375,7 +375,7 @@ function PrimaryCandidateBlock({ item }: { item: ArgosMatchingPlanItemV11 }) {
             ) : null}
           </p>
           <p className="mt-2 text-[11px] font-medium text-amber-50">
-            Ao aceitar, esta estrutura substituirá o item simples por áreas e etapas da Matriz.
+            Ao aceitar, esta estrutura substituirá o item simples por setores e atividades da Matriz.
           </p>
           <ul className="mt-2 space-y-2 text-[11px]">
             {previewAreas.map((a) => (
@@ -383,7 +383,7 @@ function PrimaryCandidateBlock({ item }: { item: ArgosMatchingPlanItemV11 }) {
                 <span className="font-semibold text-slate-100">{a.title}</span>
                 <span className="text-slate-400">
                   {' '}
-                  ({a.activities.length} etapa(s), {formatPlannedMinutes(a.plannedMinutes)})
+                  ({a.activities.length} atividade(s), {formatPlannedMinutes(a.plannedMinutes)})
                 </span>
                 <ul className="mt-1 list-disc pl-4 text-slate-300">
                   {a.activities.slice(0, 3).map((ac) => (
@@ -398,7 +398,7 @@ function PrimaryCandidateBlock({ item }: { item: ArgosMatchingPlanItemV11 }) {
           </ul>
           {(ms.areas?.length ?? 0) > previewAreas.length ? (
             <p className="mt-1 text-[10px] text-slate-500">
-              … e mais {((ms.areas?.length ?? 0) - previewAreas.length).toString()} área(s). Expanda
+              … e mais {((ms.areas?.length ?? 0) - previewAreas.length).toString()} setor(es). Expanda
               para ver o detalhe completo, quando disponível.
             </p>
           ) : null}
@@ -418,7 +418,7 @@ function DecisionStatusLine({
   if (action === 'IGNORE') {
     return (
       <p className="mt-2 text-xs text-slate-400">
-        Não será incluído como etapa operacional na criação desta esteira.
+        Não será incluído como atividade operacional na criação desta esteira.
       </p>
     )
   }

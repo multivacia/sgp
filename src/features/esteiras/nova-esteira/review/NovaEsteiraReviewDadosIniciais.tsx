@@ -62,7 +62,7 @@ export function NovaEsteiraReviewDadosIniciais({
             Dados iniciais
           </h3>
           <p className="mt-1 text-xs text-slate-500">
-            Identificação e contexto do pedido. Ajuste na etapa anterior se algo estiver
+            Identificação e contexto do pedido. Ajuste no passo anterior se algo estiver
             incorreto.
           </p>
         </div>

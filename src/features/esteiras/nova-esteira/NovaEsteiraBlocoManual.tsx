@@ -124,7 +124,7 @@ export function NovaEsteiraBlocoManual({
 
       <div className="sgp-panel !p-4">
         <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
-          Etapa 1 · Partes do serviço
+          Passo 1 · Partes do serviço
         </p>
         <div className="mt-3 space-y-4">
           {grupos.map((grupo) => (
@@ -180,7 +180,7 @@ export function NovaEsteiraBlocoManual({
         <div className="flex flex-wrap items-end justify-between gap-2">
           <div>
             <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
-              Etapa 2 · Como montar cada bloco
+              Passo 2 · Como montar cada bloco
             </p>
             <p className="mt-0.5 text-xs text-slate-500">
               Toque na linha para abrir ou fechar. ↑↓ só mudam a ordem.
@@ -206,7 +206,7 @@ export function NovaEsteiraBlocoManual({
 
         {linhas.length === 0 ? (
           <div className="rounded-lg border border-dashed border-white/[0.1] bg-white/[0.02] px-4 py-8 text-center text-xs text-slate-500">
-            Nenhum bloco selecionado na etapa 1.
+            Nenhum bloco selecionado no passo 1.
           </div>
         ) : (
           <ul className="space-y-1.5">

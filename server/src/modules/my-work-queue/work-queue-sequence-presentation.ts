@@ -25,7 +25,7 @@ export function resolveSequenceWarningLabel(
   if (allPreviousOpen.length === 1) {
     return {
       sequenceWarningType: 'PREVIOUS_STEP_PENDING',
-      sequenceWarningLabel: `Etapa anterior pendente: ${allPreviousOpen[0]!.activityTitle}`,
+      sequenceWarningLabel: `Atividade anterior pendente: ${allPreviousOpen[0]!.activityTitle}`,
     }
   }
   return {

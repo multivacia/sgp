@@ -151,7 +151,7 @@ describe('formatAwaitingPreviousActivitiesLabel', () => {
   it('nomeia uma etapa', () => {
     expect(
       formatAwaitingPreviousActivitiesLabel([{ activityTitle: 'Funilaria' }]),
-    ).toBe('Aguardando etapa Funilaria')
+    ).toBe('Aguardando atividade Funilaria')
   })
 
   it('pluraliza várias etapas', () => {
@@ -160,7 +160,7 @@ describe('formatAwaitingPreviousActivitiesLabel', () => {
         { activityTitle: 'Funilaria' },
         { activityTitle: 'Pintura' },
       ]),
-    ).toBe('Aguardando 2 etapas anteriores')
+    ).toBe('Aguardando 2 atividades anteriores')
   })
 })
 

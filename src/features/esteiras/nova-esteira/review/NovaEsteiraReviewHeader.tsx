@@ -61,7 +61,7 @@ export function NovaEsteiraReviewHeader({
           <p className="mt-1 text-sm text-slate-400">
             {[dados.cliente, dados.veiculo, dados.modeloVersao, dados.placa]
               .filter(Boolean)
-              .join(' · ') || 'Preencha cliente e veículo na etapa anterior se necessário.'}
+              .join(' · ') || 'Preencha cliente e veículo no passo anterior se necessário.'}
           </p>
         </div>
         <span

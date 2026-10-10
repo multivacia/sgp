@@ -78,7 +78,7 @@ export const postConveyorStepSchema = z
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         message:
-          'Cada etapa com colaboradores deve ter exatamente um responsável principal.',
+          'Cada atividade com colaboradores deve ter exatamente um responsável principal.',
         path: ['assignees'],
       })
     }
@@ -87,7 +87,7 @@ export const postConveyorStepSchema = z
     if (ids.size !== collaboratorIds.length) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: 'Colaborador duplicado na etapa.',
+        message: 'Colaborador duplicado na atividade.',
         path: ['assignees'],
       })
     }
@@ -96,7 +96,7 @@ export const postConveyorStepSchema = z
     if (new Set(teamIds).size !== teamIds.length) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: 'Time duplicado na etapa.',
+        message: 'Time duplicado na atividade.',
         path: ['assignees'],
       })
     }

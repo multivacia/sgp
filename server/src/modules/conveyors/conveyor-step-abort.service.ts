@@ -311,7 +311,7 @@ export async function serviceAbortConveyorStep(
 
       if (!canTransitionStepStatus(current, 'ABORTED')) {
         throw new AppError(
-          `Transição de estado da etapa não permitida (${current} → ABORTED).`,
+          `Transição de estado da atividade não permitida (${current} → ABORTED).`,
           409,
           ErrorCodes.CONFLICT,
         )
@@ -465,7 +465,7 @@ export async function serviceRestoreAbortedConveyorStep(
 
       if (!canTransitionStepStatus(current, 'REOPENED')) {
         throw new AppError(
-          `Transição de estado da etapa não permitida (${current} → REOPENED).`,
+          `Transição de estado da atividade não permitida (${current} → REOPENED).`,
           409,
           ErrorCodes.CONFLICT,
         )

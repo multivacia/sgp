@@ -21,7 +21,7 @@ function mapSeverityToTone(
 function stepCompletedDescription(event: ConveyorOperationalEvent): string {
   const r = (event.reason ?? '').trim().toUpperCase()
   const base =
-    'A atividade foi concluída por ação explícita. O tempo apontado não conclui a etapa; o registro representa uma ação operacional explícita.'
+    'A atividade foi concluída por ação explícita. O tempo apontado não conclui a atividade; o registro representa uma ação operacional explícita.'
   if (r === 'EXPLICITLY_COMPLETED') {
     return `${base} Conclusão registrada manualmente.`
   }

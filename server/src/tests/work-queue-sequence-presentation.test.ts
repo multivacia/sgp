@@ -12,7 +12,7 @@ describe('work-queue-sequence-presentation', () => {
       resolveSequenceWarningLabel(true, [{ activityTitle: 'Funilaria' }]),
     ).toEqual({
       sequenceWarningType: 'PREVIOUS_STEP_PENDING',
-      sequenceWarningLabel: 'Etapa anterior pendente: Funilaria',
+      sequenceWarningLabel: 'Atividade anterior pendente: Funilaria',
     })
   })
 

@@ -445,7 +445,7 @@ export function KioskActivityCard({ item, onSuccess }: Props) {
                   </ul>
                 ) : null}
                 <p className="mt-1.5 text-xs text-amber-100/80">
-                  Existem etapas anteriores pendentes. Informe uma justificativa para apontar.
+                  Existem atividades anteriores pendentes. Informe uma justificativa para apontar.
                 </p>
               </div>
             ) : null}

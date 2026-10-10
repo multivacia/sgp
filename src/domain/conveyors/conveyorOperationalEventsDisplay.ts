@@ -15,7 +15,7 @@ export function buildConveyorStepDisplayNameById(structure: ConveyorStructure): 
     for (const area of opt.areas) {
       for (const st of area.steps) {
         const name = st.name?.trim()
-        m.set(st.id, name || `Etapa ${st.orderIndex}`)
+        m.set(st.id, name || `Atividade ${st.orderIndex}`)
       }
     }
   }

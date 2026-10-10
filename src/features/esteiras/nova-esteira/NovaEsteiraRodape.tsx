@@ -66,7 +66,7 @@ export function NovaEsteiraRodape({
             disabled={block}
             onClick={onVoltarParaEstrutura}
             className="sgp-cta-secondary w-full sm:w-auto sm:max-w-[16rem]"
-            aria-label="Voltar à etapa de estrutura e montagem"
+            aria-label="Voltar ao passo de estrutura e montagem"
           >
             Voltar à montagem
           </button>

@@ -269,10 +269,10 @@ function WorkQueueCard({
         <button
           type="button"
           disabled
-          title="Disponível na próxima etapa"
+          title="Conclua a atividade pelo totem."
           className="min-h-11 cursor-not-allowed rounded-xl border border-white/10 bg-white/5 px-4 text-sm font-medium text-slate-500 opacity-50"
         >
-          Concluir etapa
+          Concluir atividade
         </button>
       </div>
     </div>

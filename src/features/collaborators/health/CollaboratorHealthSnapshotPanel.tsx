@@ -93,7 +93,7 @@ export function CollaboratorHealthSnapshotPanel({ open, loading, error, snapshot
               <section>
                 <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">Carga</h3>
                 <div className="mt-2 rounded-lg border border-white/[0.06] bg-white/[0.02] px-3">
-                  <Row label="Etapas abertas" value={String(snapshot.workload.openDistinctSteps)} />
+                  <Row label="Atividades abertas" value={String(snapshot.workload.openDistinctSteps)} />
                   <Row
                     label="Carga planejada (aberta)"
                     value={formatMinutesToHoursLabel(snapshot.workload.plannedOpenMinutesSum)}
@@ -103,7 +103,7 @@ export function CollaboratorHealthSnapshotPanel({ open, loading, error, snapshot
                     value={formatMinutesToHoursLabel(snapshot.workload.pendingOpenMinutesSum)}
                   />
                   <Row
-                    label="Realizado pelo colaborador (nessas etapas)"
+                    label="Realizado pelo colaborador (nessas atividades)"
                     value={formatMinutesToHoursLabel(snapshot.workload.realizedOpenMinutesSum)}
                   />
                 </div>

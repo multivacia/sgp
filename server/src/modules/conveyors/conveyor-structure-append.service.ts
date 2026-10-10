@@ -63,16 +63,16 @@ function assertUniqueOrderIndices(
 
 function revalidateOption(option: PostConveyorOptionBody): void {
   const areas = [...option.areas].sort((a, b) => a.orderIndex - b.orderIndex)
-  assertUniqueOrderIndices(areas, `Áreas da opção "${option.titulo}"`)
+  assertUniqueOrderIndices(areas, `Setores da tarefa "${option.titulo}"`)
   for (const ar of areas) {
     const steps = [...ar.steps].sort((a, b) => a.orderIndex - b.orderIndex)
-    assertUniqueOrderIndices(steps, `Etapas da área "${ar.titulo}"`)
+    assertUniqueOrderIndices(steps, `Atividades do setor "${ar.titulo}"`)
   }
 }
 
 function revalidateArea(area: PostConveyorAreaBody): void {
   const steps = [...area.steps].sort((a, b) => a.orderIndex - b.orderIndex)
-  assertUniqueOrderIndices(steps, `Etapas da área "${area.titulo}"`)
+  assertUniqueOrderIndices(steps, `Atividades do setor "${area.titulo}"`)
 }
 
 function computeAreaTotals(area: PostConveyorAreaBody): {
@@ -716,7 +716,7 @@ function assertNoSyntheticRollupForAppend(body: PostConveyorStructureItemBody): 
     })
     if (rollup.length > 0) {
       throw new AppError(
-        'A estrutura contém uma etapa sintética de Matriz. Remova o item agregado e mantenha apenas as atividades reais.',
+        'A estrutura contém uma atividade sintética de Matriz. Remova o item agregado e mantenha apenas as atividades reais.',
         422,
         ErrorCodes.CONVEYOR_SYNTHETIC_ROLLUP_STEP,
         { findings: rollup },
@@ -743,7 +743,7 @@ function assertNoSyntheticRollupForAppend(body: PostConveyorStructureItemBody): 
     })
     if (rollup.length > 0) {
       throw new AppError(
-        'A estrutura contém uma etapa sintética de Matriz. Remova o item agregado e mantenha apenas as atividades reais.',
+        'A estrutura contém uma atividade sintética de Matriz. Remova o item agregado e mantenha apenas as atividades reais.',
         422,
         ErrorCodes.CONVEYOR_SYNTHETIC_ROLLUP_STEP,
         { findings: rollup },

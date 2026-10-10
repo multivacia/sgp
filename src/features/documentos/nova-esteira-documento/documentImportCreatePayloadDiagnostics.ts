@@ -440,4 +440,4 @@ export function detectSyntheticSubtreeRollupInEditableDraft(
 
 /** Mensagem ao bloquear criação quando o detector acusa rollup sintético. */
 export const SYNTHETIC_SUBTREE_STEP_USER_MESSAGE =
-  'A estrutura contém uma etapa sintética de Matriz. Remova o item agregado e mantenha apenas as atividades reais.'
+  'A estrutura contém uma atividade sintética de Matriz. Remova o item agregado e mantenha apenas as atividades reais.'

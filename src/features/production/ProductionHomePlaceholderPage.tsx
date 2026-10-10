@@ -15,7 +15,7 @@ export function ProductionHomePlaceholderPage() {
           Minhas atividades
         </h1>
         <p className="mt-2 text-base text-slate-400">
-          As atividades planejadas aparecerão aqui na próxima etapa.
+          As atividades planejadas aparecerão aqui.
         </p>
       </div>
 

@@ -14,7 +14,7 @@ export const NOVA_ESTEIRA_MODE_LABEL: Record<
   full_matrix: {
     title: 'Usar matriz inteira',
     description:
-      'Escolha uma matriz ativa e crie a esteira com toda a estrutura dela, sem montar etapa a etapa.',
+      'Escolha uma matriz ativa e crie a esteira com toda a estrutura dela, sem montar atividade por atividade.',
   },
   matrix_plus_extras: {
     title: 'Matriz como base e complementos',

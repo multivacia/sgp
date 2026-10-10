@@ -814,7 +814,7 @@ export function DashboardPage() {
                     <th className="py-2 pr-3">Colaborador</th>
                     <th className="py-2 pr-3">Alocações</th>
                     <th className="py-2 pr-3">Principal / apoio</th>
-                    <th className="py-2 pr-3">{operationalLabels.previstoEstrutural} (STEPS)</th>
+                    <th className="py-2 pr-3">{operationalLabels.previstoEstrutural} (atividades)</th>
                     {canManageOperationalCapacity ? (
                       <th className="py-2 pr-3">Previsto vs capacidade diária</th>
                     ) : null}
@@ -994,7 +994,7 @@ export function DashboardPage() {
             <div className="mt-4 flex flex-wrap gap-x-12 gap-y-6">
               <div title={dashboardHints.previstoEstruturalSteps}>
                 <p className="text-[10px] uppercase tracking-wide text-slate-500">
-                  {operationalLabels.previstoEstrutural} (STEPS)
+                  {operationalLabels.previstoEstrutural} (atividades)
                 </p>
                 <p className="mt-1 font-heading text-2xl font-bold text-slate-50">
                   {formatHumanMinutes(executive.plannedVsRealized.plannedMinutesStepNodes)}

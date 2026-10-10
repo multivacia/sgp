@@ -823,7 +823,7 @@ function mapOptionsOrPlaceholder(
   if (src.length === 0) {
     return [
       {
-        titulo: 'Opção 1',
+        titulo: 'Tarefa 1',
         orderIndex: 1,
         sourceOrigin: 'manual',
         areas: [
@@ -833,7 +833,7 @@ function mapOptionsOrPlaceholder(
             sourceOrigin: 'manual',
             steps: [
               {
-                titulo: 'Defina as etapas do serviço',
+                titulo: 'Defina as atividades do serviço',
                 orderIndex: 1,
                 plannedMinutes: 0,
                 sourceOrigin: 'manual',
@@ -890,7 +890,7 @@ function mapOptionsOrPlaceholder(
           ? stepsClean
           : [
               {
-                titulo: 'Defina as etapas do serviço',
+                titulo: 'Defina as atividades do serviço',
                 orderIndex: 1,
                 plannedMinutes: 0,
                 sourceOrigin: 'manual' as const,
@@ -952,11 +952,11 @@ export function validateDraftForCreate(
   const opts = draft.options ?? []
   if (opts.length === 0) return null
   for (const o of opts) {
-    if (!o.title?.trim()) return 'Cada opção precisa de um título.'
+    if (!o.title?.trim()) return 'Cada tarefa precisa de um título.'
     for (const a of o.areas ?? []) {
-      if (!a.title?.trim()) return 'Cada área precisa de um título.'
+      if (!a.title?.trim()) return 'Cada setor precisa de um título.'
       for (const st of a.steps ?? []) {
-        if (!st.title?.trim()) return 'Cada etapa precisa de um título.'
+        if (!st.title?.trim()) return 'Cada atividade precisa de um título.'
       }
     }
   }

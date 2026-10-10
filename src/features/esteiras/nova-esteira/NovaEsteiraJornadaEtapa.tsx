@@ -99,7 +99,7 @@ export function NovaEsteiraJornadaEtapa({
   return (
     <section
       className="rounded-2xl border border-white/[0.07] bg-white/[0.02] p-4 ring-1 ring-white/[0.04] sm:p-5"
-      aria-label="Etapas da Nova Esteira"
+      aria-label="Passos da Nova esteira"
     >
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
         <div className="min-w-0 flex-1">

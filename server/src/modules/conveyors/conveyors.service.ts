@@ -535,14 +535,14 @@ function revalidateStructureOptions(
   options: PostConveyorBody['options'],
 ): void {
   const sortedOptions = [...options].sort((a, b) => a.orderIndex - b.orderIndex)
-  assertUniqueOrderIndices(sortedOptions, 'Opções')
+  assertUniqueOrderIndices(sortedOptions, 'Tarefas')
 
   for (const op of sortedOptions) {
     const areas = [...op.areas].sort((a, b) => a.orderIndex - b.orderIndex)
-    assertUniqueOrderIndices(areas, `Áreas da opção "${op.titulo}"`)
+    assertUniqueOrderIndices(areas, `Setores da tarefa "${op.titulo}"`)
     for (const ar of areas) {
       const steps = [...ar.steps].sort((a, b) => a.orderIndex - b.orderIndex)
-      assertUniqueOrderIndices(steps, `Etapas da área "${ar.titulo}"`)
+      assertUniqueOrderIndices(steps, `Atividades do setor "${ar.titulo}"`)
     }
   }
 }
@@ -752,7 +752,7 @@ export async function serviceCreateConveyor(
   const officialRollup = detectSyntheticSubtreeRollupInCreatePayload(body)
   if (officialRollup.length > 0) {
     throw new AppError(
-      'A estrutura contém uma etapa sintética de Matriz. Remova o item agregado e mantenha apenas as atividades reais.',
+      'A estrutura contém uma atividade sintética de Matriz. Remova o item agregado e mantenha apenas as atividades reais.',
       422,
       ErrorCodes.CONVEYOR_SYNTHETIC_ROLLUP_STEP,
       { findings: officialRollup },
@@ -1112,7 +1112,7 @@ export async function serviceApplyConveyorStructureDiff(
   const officialRollupPatch = detectSyntheticSubtreeRollupInCreatePayload(structureBody)
   if (officialRollupPatch.length > 0) {
     throw new AppError(
-      'A estrutura contém uma etapa sintética de Matriz. Remova o item agregado e mantenha apenas as atividades reais.',
+      'A estrutura contém uma atividade sintética de Matriz. Remova o item agregado e mantenha apenas as atividades reais.',
       422,
       ErrorCodes.CONVEYOR_SYNTHETIC_ROLLUP_STEP,
       { findings: officialRollupPatch },

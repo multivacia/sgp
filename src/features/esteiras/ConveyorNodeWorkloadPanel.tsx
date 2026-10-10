@@ -92,7 +92,7 @@ export function ConveyorNodeWorkloadPanel({
                         colSpan={5}
                         className="py-4 text-slate-500"
                       >
-                        Sem etapas na estrutura.
+                        Sem atividades na estrutura.
                       </td>
                     </tr>
                   ) : (
@@ -149,7 +149,7 @@ export function ConveyorNodeWorkloadPanel({
                   {data.steps.length === 0 ? (
                     <tr>
                       <td colSpan={7} className="py-4 text-slate-500">
-                        Sem etapas na estrutura.
+                        Sem atividades na estrutura.
                       </td>
                     </tr>
                   ) : (
@@ -183,7 +183,7 @@ export function ConveyorNodeWorkloadPanel({
                             to={`/app/esteiras/${encodeURIComponent(conveyorId)}?step=${encodeURIComponent(s.stepId)}`}
                             className="text-[11px] font-semibold text-sgp-blue-bright hover:underline"
                           >
-                            Focar etapa
+                            Focar atividade
                           </Link>
                         </td>
                       </tr>

@@ -354,7 +354,7 @@ export async function listRecentActivityForConveyor(
     return {
       id: row.id,
       stepId: row.conveyor_node_id,
-      stepName: row.step_name ?? '(sem etapa)',
+      stepName: row.step_name ?? '(sem atividade)',
       collaboratorId: row.collaborator_id,
       collaboratorName: row.collaborator_name ?? '(sem colaborador)',
       minutes: mins,
