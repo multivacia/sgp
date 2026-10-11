@@ -141,6 +141,42 @@ Status: **proposta de arquitetura, nada implementado**. Demanda grande (banco, p
 - Janela de indisponibilidade aceita durante restore (minutos, conforme tamanho da base).
 - Tela lista também cópias do on-premise, ou só da VPS.
 
+## Atualização 4 — decisões e inventário para a Fase 1 (2026-10-11)
+
+Decisões humanas:
+- Quem restaura: controlado pelo RBAC existente (permissões novas, atribuição por perfil).
+- Restore produção → HML: desejado; HML ainda não instalado → previsto, mas fora da Fase 1.
+- Indisponibilidade durante restore: aceita.
+
+Fatos novos do código (`origin/develop`):
+- `deploy-hostgator-vps.yml` **não roda migrations** ("Guardrail: migrations are intentionally disabled") → migrations são manuais; o backup pré-migration entra no runbook manual, não no workflow (não é preciso mexer no deploy na Fase 1).
+- API na VPS roda sob **PM2** (`pm2 restart sgp-api`), não systemd; app em `/opt/sgp/sgp-main`.
+- Versão publicada disponível em `GET /api/version` (APP_VERSION/GIT_SHA) e via `git -C /opt/sgp/sgp-main rev-parse` → fonte para o manifesto.
+
+### Já disponível
+- Configuração do backup diário (VPS, `sgp_prod`, PG 18, porta 5433, cron 02h30, `/opt/sgp/backups/local/`, 14 dias, `.dump`).
+- Padrão de scripts existente (`scripts/db/backup_all_databases.*`: nome com timestamp, sem sobrescrita, validações).
+- Runbook de restore em base isolada (`docs/runbooks/load-prod-data-into-dev.md`).
+- Decisões: pull pelo Windows, confirmação digitando nome, RBAC, manutenção aceita.
+
+### Escopo proposto da Fase 1
+1. `scripts/db/backup-adhoc.sh` — dump + globals + manifesto + sha256 em `/opt/sgp/backups/adhoc/`.
+2. `scripts/db/restore-db.sh` — restore em base nova, validação, troca por rename com PM2 parado, desfazer; confirmação digitando o nome do arquivo.
+3. `scripts/db/pull-backups-windows.ps1` — Tarefa Agendada, OpenSSH, sha256, retenção.
+4. Manifesto/sha256 também no backup diário (ajuste do `backup-sgp.sh`, depois de versionado).
+5. Runbooks: backup esporádico, restore, migration manual com backup prévio, instalação no Windows, teste mensal.
+Sem alteração de código da aplicação nem migration na Fase 1.
+
+### Faltando para iniciar (informação do servidor/cliente)
+- Conteúdo de `/opt/sgp/backup-sgp.sh` (sem senhas) e linha do crontab; usuário do SO que roda o cron.
+- Caminho do binário PG 18 (`which pg_dump`, `ls /usr/lib/postgresql/`) e se há outro cluster na 5432.
+- Como o script autentica hoje (`.pgpass`/usuário) e se pode ser criado role dedicado de backup.
+- Porta interna da API na VPS (para `/api/version`) e nome do processo PM2 confirmado (`sgp-api`).
+- Windows: versão, pasta de destino, se a rede do cliente alcança a porta SSH da VPS, PG 18 client instalado ou não, BitLocker disponível.
+- Retenção no Windows (proposta: 30 diários + 12 mensais).
+- Canal de alerta de falha (e-mail? nenhum por ora?).
+- Autorização para seguir com a Fase 1 e abrir PR para `develop`.
+
 ## Riscos / ressalvas
 - Backup de banco depende inteiramente de execução manual; se ninguém rodar, não há cópia.
 - Backups de frontend em `/opt/sgp/backups/` crescem sem rotação (inferido pelo workflow; não verificado no servidor).
