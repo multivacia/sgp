@@ -1,14 +1,21 @@
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type pg from 'pg'
 import * as authRepo from '../modules/auth/auth.repository.js'
 import * as seqRepo from '../modules/conveyors/conveyors.repository.js'
 import * as capacityService from '../modules/operational-settings/operational-settings.service.js'
 import * as queueRepo from '../modules/my-work-queue/my-work-queue.repository.js'
+import * as plannedRepo from '../modules/operational-planning/planned-activity.repository.js'
 import {
   groupWorkQueueItem,
   serviceGetMyWorkQueue,
   serviceGetWorkQueueForCollaborator,
 } from '../modules/my-work-queue/my-work-queue.service.js'
+
+// Sem resumo de plano nem apontamentos: cada cartão mantém os valores do próprio item.
+beforeEach(() => {
+  vi.spyOn(plannedRepo, 'summarizeCollaboratorPlannedSteps').mockResolvedValue(new Map())
+  vi.spyOn(plannedRepo, 'sumCollaboratorRealizedMinutesByStep').mockResolvedValue(new Map())
+})
 
 const USER_ID = '00000000-0000-0000-0000-000000000001'
 const COLLABORATOR_ID = '00000000-0000-0000-0000-000000000002'
@@ -49,7 +56,7 @@ describe('serviceGetMyWorkQueue', () => {
 
     expect(result.data.items).toEqual([])
     expect(result.meta.collaboratorId).toBeNull()
-    expect(result.meta.unavailableReason).toContain('colaborador operacional vinculado')
+    expect(result.meta.unavailableReason).toContain('não está vinculada a um colaborador operacional')
   })
 
   it('retorna vazio quando não há plano publicado na semana', async () => {
@@ -136,7 +143,7 @@ describe('serviceGetMyWorkQueue', () => {
         client_name: null,
         vehicle_description: null,
         license_plate: null,
-        activity_node_id: TARGET_STEP_ID,
+        activity_node_id: '00000000-0000-0000-0000-000000000077',
         activity_title: 'Remover banco esquerdo',
         task_title: 'Bancos dianteiros',
         sector_title: 'Desmontagem',
@@ -210,7 +217,8 @@ describe('serviceGetMyWorkQueue', () => {
       overdueItems: 1,
       completedItemsToday: 1,
       outOfSequenceItems: 1,
-      unassignedExceptionItems: 1,
+      // Atividade planejada para o colaborador não exige justificativa de exceção.
+      unassignedExceptionItems: 0,
       capacityMinutesToday: 60,
       overload: true,
     })
@@ -219,7 +227,7 @@ describe('serviceGetMyWorkQueue', () => {
       isOverdue: true,
       isOutOfSequence: true,
       isNextRecommended: false,
-      requiresUnassignedJustification: true,
+      requiresUnassignedJustification: false,
       previousOpenCount: 1,
     })
     expect(result.data.items[1]).toMatchObject({

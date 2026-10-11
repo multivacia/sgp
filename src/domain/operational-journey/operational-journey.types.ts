@@ -29,6 +29,22 @@ export type OperationalJourneyTimeEntry = {
   exceptionJustification?: string | null
   isOutOfSequence?: boolean
   outOfSequenceJustification?: string | null
+  /** Justificativa padronizada (catálogo) — inclui a voluntária de apontamento normal. */
+  standardJustificationLabel?: string | null
+  standardJustificationComplement?: string | null
+}
+
+/** Lançamento Extra Esteira (tempo fora de esteira) no período da jornada. */
+export type OperationalJourneyExtraTimeEntry = {
+  id: string
+  collaboratorId: string
+  collaboratorName: string | null
+  /** Data de trabalho `YYYY-MM-DD` (dia civil de São Paulo). */
+  entryDate: string
+  minutes: number
+  description: string
+  notes: string | null
+  origin: 'WEB' | 'PRODUCTION'
 }
 
 export type PendenciaTempoItem = {
@@ -104,4 +120,6 @@ export type OperationalJourneyData = {
   assignmentsOpen: OperationalJourneyAssignment[]
   assignmentsAtRisk: OperationalJourneyAssignment[]
   recentTimeEntries: OperationalJourneyTimeEntry[]
+  /** Ausente em respostas antigas — tratar como lista vazia. */
+  recentExtraTimeEntries?: OperationalJourneyExtraTimeEntry[]
 }

@@ -10,9 +10,11 @@ import {
 import { ApiError } from '../../lib/api/apiErrors'
 import { JustificationSelect } from '../../components/operational/JustificationSelect'
 import { emptyJustificationValue, type JustificationFieldValue } from '../shell/quickTimeEntryDrawerLogic'
+import { resolvePreferredJustificationCategory } from '../../domain/operational/timeEntryJustificationField'
 import {
   buildKioskUnassignedTimeEntryPayload,
   candidateNeedsExceptionJustification,
+  candidateNeedsExcessJustification,
   candidateNeedsOutOfSequenceJustification,
   canSubmitKioskOutraAtividadeForm,
   formatCandidateContextLine,
@@ -101,6 +103,8 @@ export function KioskOutraAtividadeFlow({ collaborator, onClose, onSuccess }: Pr
   const minutesValid = isValidKioskOutraAtividadeMinutes(minutes)
   const needsException = candidate ? candidateNeedsExceptionJustification(candidate) : false
   const needsOos = candidate ? candidateNeedsOutOfSequenceJustification(candidate) : false
+  const needsExcess =
+    candidate && minutesValid ? candidateNeedsExcessJustification(candidate, minutes) : false
 
   const canGoToReview = canSubmitKioskOutraAtividadeForm({
     candidate,
@@ -332,7 +336,7 @@ export function KioskOutraAtividadeFlow({ collaborator, onClose, onSuccess }: Pr
                 ) : null}
               </div>
 
-              {needsException || needsOos ? (
+              {needsException || needsOos || needsExcess ? (
                 <JustificationSelect
                   channel="production"
                   idPrefix={`kiosk-outra-atividade-justificativa-${candidate.stepNodeId}`}
@@ -340,6 +344,11 @@ export function KioskOutraAtividadeFlow({ collaborator, onClose, onSuccess }: Pr
                   complement={operationalJustification.justificationComplement}
                   legacyText={operationalJustification.legacyText}
                   required
+                  preferredCategory={
+                    needsExcess && !needsException && !needsOos
+                      ? resolvePreferredJustificationCategory({ requiresExcessTime: true })
+                      : null
+                  }
                   disabled={submitting}
                   onCatalogStateChange={({ useFallback, selectedRequiresComplement }) => {
                     setJustificationUseFallback(useFallback)

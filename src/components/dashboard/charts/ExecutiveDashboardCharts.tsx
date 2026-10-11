@@ -136,8 +136,8 @@ export function ExecutiveDashboardCharts({ data, windowDays }: Props) {
           <span className="font-medium text-slate-400">
             Concluídas ({windowDays}d)
           </span>
-          : concluídas com data de conclusão na janela. Abre o backlog com o mesmo filtro
-          ao premir um segmento ou a legenda{' '}
+          : concluídas com data de conclusão na janela. Abre o Painel operacional com o mesmo filtro
+          ao clicar em um segmento ou na legenda{' '}
           <span className="text-slate-600">(nova aba)</span>.
         </p>
         {execTotal === 0 ? (

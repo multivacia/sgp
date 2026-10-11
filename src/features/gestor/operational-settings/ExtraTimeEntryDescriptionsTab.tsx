@@ -70,7 +70,7 @@ export function ExtraTimeEntryDescriptionsTab({ onError, onToast }: Props) {
                 Descrições de apontamentos
               </h2>
               <p className="mt-1 text-sm text-slate-400">
-                Cadastro de descrições para apontamentos de horas fora de esteiras/STEP.
+                Cadastro de descrições para apontamentos de horas fora das esteiras (Extra Esteira).
               </p>
             </div>
             <button

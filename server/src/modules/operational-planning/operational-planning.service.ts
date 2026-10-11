@@ -593,7 +593,7 @@ async function validatePlanItems(
       )
     }
     if (row.node_type !== 'STEP') {
-      throw new AppError('Somente Atividades (STEP) podem ser planejadas.', 400, ErrorCodes.VALIDATION_ERROR)
+      throw new AppError('Somente atividades podem ser planejadas.', 400, ErrorCodes.VALIDATION_ERROR)
     }
     if (!row.is_active) {
       throw new AppError('Atividade inativa não pode ser planejada.', 400, ErrorCodes.VALIDATION_ERROR)
@@ -1203,6 +1203,11 @@ export type BacklogItemApi = {
   previousOpenCount: number
   isOverdue: boolean
   hasAssignees: boolean
+  /** Campos adicionais (exportação para IA); aditivos ao contrato existente. */
+  conveyorCode?: string | null
+  conveyorPriority?: string | null
+  estimatedDeadline?: string | null
+  plannedQuantity?: number | null
 }
 
 export async function serviceListOperationalPlanningBacklog(
@@ -1256,6 +1261,10 @@ export async function serviceListOperationalPlanningBacklog(
       previousOpenCount: seq.previousOpenCount,
       isOverdue: isDeadlineOverdue(row.estimated_deadline),
       hasAssignees: collaborators.length > 0 || teams.length > 0,
+      conveyorCode: row.conveyor_code ?? null,
+      conveyorPriority: row.conveyor_priority ?? null,
+      estimatedDeadline: row.estimated_deadline,
+      plannedQuantity: row.planned_quantity ?? null,
     }
   })
 

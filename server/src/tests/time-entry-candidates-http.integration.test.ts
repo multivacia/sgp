@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import request from 'supertest'
+import { cleanupSeededPlanItems, seedPublishedPlanItem } from './plannedActivityTestHelpers.js'
 import { createApp } from '../app.js'
 import { createLogger } from '../plugins/logger.js'
 import { closePool, getPool } from '../plugins/db.js'
@@ -98,6 +99,7 @@ describe.skipIf(!hasDb)('GET /api/v1/me/time-entry-candidates (integração)', (
   })
 
   afterAll(async () => {
+    await cleanupSeededPlanItems(getPool())
     await closePool()
   })
 
@@ -153,6 +155,12 @@ describe.skipIf(!hasDb)('GET /api/v1/me/time-entry-candidates (integração)', (
       conveyorNodeId: stepId,
       collaboratorId: COLAB_SEED,
       isPrimary: true,
+    })
+    await seedPublishedPlanItem(pool, {
+      conveyorId: created.id,
+      stepNodeId: stepId,
+      collaboratorId: COLAB_SEED,
+      createdByUserId: GOV_ADMIN_USER_ID,
     })
 
     const cookieMaria = await sessionCookieForUser(pool, MARIA_APP_USER_ID, MARIA_EMAIL)
@@ -236,6 +244,12 @@ describe.skipIf(!hasDb)('GET /api/v1/me/time-entry-candidates (integração)', (
       collaboratorId: COLAB_SEED,
       isPrimary: true,
     })
+    await seedPublishedPlanItem(pool, {
+      conveyorId: created2.id,
+      stepNodeId: step2,
+      collaboratorId: COLAB_SEED,
+      createdByUserId: GOV_ADMIN_USER_ID,
+    })
 
     const bad = await request(app)
       .post(
@@ -254,5 +268,89 @@ describe.skipIf(!hasDb)('GET /api/v1/me/time-entry-candidates (integração)', (
     expect(ok.status).toBe(201)
     expect(ok.body.data.minutes).toBe(12)
     expect(ok.body.data.notes).toContain('integração')
+  })
+
+  it('pesquisa "Esteira & atividade" (q com &): esteira/OS à esquerda, nome da atividade à direita', async () => {
+    await linkAppUserToCollaborator(pool, MARIA_APP_USER_ID, COLAB_SEED)
+    const tag = randomUUID().replace(/-/g, '').slice(0, 6)
+    const code = `7070${tag}`
+    const mk = async (nome: string, stepTitles: string[], osCode: string) => {
+      const body = minimalConveyorBody(nome)
+      body.options[0]!.titulo = 'Bancos dianteiros'
+      body.options[0]!.areas[0]!.titulo = 'Tapeçaria'
+      body.options[0]!.areas[0]!.steps = stepTitles.map((titulo, i) => ({
+        titulo,
+        orderIndex: i + 1,
+        plannedMinutes: 30,
+        sourceOrigin: 'manual' as const,
+        required: true,
+      }))
+      const created = await serviceCreateConveyor(pool, body)
+      await setConveyorProductionStatusForIntegration(pool, created.id)
+      await pool.query(`UPDATE conveyors SET code = $2 WHERE id = $1::uuid`, [created.id, osCode])
+      const steps = await pool.query<{ id: string }>(
+        `SELECT id::text FROM conveyor_nodes
+         WHERE conveyor_id = $1::uuid AND node_type = 'STEP' AND deleted_at IS NULL`,
+        [created.id],
+      )
+      for (const st of steps.rows) {
+        await serviceCreateConveyorNodeAssignee(pool, {
+          conveyorId: created.id,
+          conveyorNodeId: st.id,
+          collaboratorId: COLAB_SEED,
+          isPrimary: true,
+        })
+        await seedPublishedPlanItem(pool, {
+          conveyorId: created.id,
+          stepNodeId: st.id,
+          collaboratorId: COLAB_SEED,
+          createdByUserId: GOV_ADMIN_USER_ID,
+        })
+      }
+      return created.id
+    }
+    const target = await mk(
+      `Esteira ${code}`,
+      [
+        'corte do tecido XPTO',
+        'Costura do tecido XPTO',
+        'Revestir banco com tecido XPTO',
+        'Revestir banco do couro',
+        'Lixar estrutura',
+      ],
+      code,
+    )
+    // Outra esteira com atividade "XPTO" — não pode aparecer.
+    const other = await mk(`Outra ${tag}`, ['Costura do tecido XPTO'], `9090${tag}`)
+
+    const cookieMaria = await sessionCookieForUser(pool, MARIA_APP_USER_ID, MARIA_EMAIL)
+    const search = async (q: string) => {
+      const res = await request(app)
+        .get(`/api/v1/me/time-entry-candidates?q=${encodeURIComponent(q)}`)
+        .set('Cookie', cookieMaria)
+      expect(res.status).toBe(200)
+      const rows = res.body.data as Array<{ conveyorId: string; stepName: string }>
+      expect(rows.some((r) => r.conveyorId === other)).toBe(false)
+      return rows
+        .filter((r) => r.conveyorId === target)
+        .map((r) => r.stepName)
+        .sort()
+    }
+
+    expect(await search(`${code} & XPTO`)).toEqual(
+      ['Costura do tecido XPTO', 'Revestir banco com tecido XPTO', 'corte do tecido XPTO'].sort(),
+    )
+    expect(await search(`${code} & banco`)).toEqual(
+      ['Revestir banco com tecido XPTO', 'Revestir banco do couro'].sort(),
+    )
+    // Sem diferenciar maiúsculas/acentos e com espaços extras ao redor do &.
+    expect(await search(`  ${code}   &   xptó  `)).toHaveLength(3)
+    expect(await search(`${code}&BANCO`)).toHaveLength(2)
+    // Termo direito casa só o nome da atividade (não a tarefa "Bancos dianteiros").
+    expect(await search(`${code} & dianteiros`)).toEqual([])
+    // Termo esquerdo sozinho → todas as atividades da esteira.
+    expect(await search(`${code} &`)).toHaveLength(5)
+    // Sem &, a pesquisa livre segue como antes (nome da esteira contém o código).
+    expect(await search(code)).toHaveLength(5)
   })
 })

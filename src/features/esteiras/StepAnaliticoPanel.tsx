@@ -6,6 +6,7 @@ import {
   type StepAnaliticoDetalhe,
 } from '../../domain/esteiras/step-analitico.types'
 import { formatWorkDateFromEntryAt } from '../../domain/operational/workDate'
+import { TimeEntryJustificationNote } from '../../components/operational/TimeEntryJustificationNote'
 
 export type StepAnaliticoPanelProps = {
   stepAnalitico: StepAnaliticoDetalhe | undefined
@@ -73,7 +74,7 @@ export function StepAnaliticoPanel({
             to={`/app/gestao/apontamento/${encodeURIComponent(sa.stepNodeId)}?conveyorId=${encodeURIComponent(sa.conveyorId)}&from=esteira`}
             className="text-[11px] font-semibold text-sgp-gold/95 underline-offset-2 hover:text-sgp-gold hover:underline"
           >
-            Apontamento gerencial neste passo
+            Apontamento gerencial nesta atividade
           </Link>
         </div>
       ) : null}
@@ -226,6 +227,21 @@ export function StepAnaliticoPanel({
                   {formatMinutosHumanos(h.minutos)} ·{' '}
                   {formatWorkDateFromEntryAt(h.createdAt)}
                 </span>
+                <TimeEntryJustificationNote
+                  className="basis-full"
+                  entry={{
+                    exceptionJustification: h.justificativaExcecao,
+                    outOfSequenceJustification: h.justificativaForaSequencia,
+                    standardJustificationLabel: h.justificativaPadraoRotulo,
+                    standardJustificationComplement: h.justificativaPadraoComplemento,
+                  }}
+                />
+                {h.observacao?.trim() ? (
+                  <p className="basis-full text-[11px] leading-snug text-slate-500">
+                    <span className="font-semibold">Observação: </span>
+                    {h.observacao.trim()}
+                  </p>
+                ) : null}
               </li>
             ))}
           </ul>

@@ -90,7 +90,7 @@ export async function serviceLogin(
 
   if (!row.is_active) {
     throw new AppError(
-      'Sua conta está inativa. Contacte o administrador.',
+      'Sua conta está inativa. Entre em contato com o administrador.',
       403,
       ErrorCodes.ACCOUNT_INACTIVE,
     )
@@ -162,7 +162,7 @@ export async function serviceGetMe(
   }
   if (!profile.isActive) {
     throw new AppError(
-      'Sua conta está inativa. Contacte o administrador.',
+      'Sua conta está inativa. Entre em contato com o administrador.',
       403,
       ErrorCodes.ACCOUNT_INACTIVE,
     )
@@ -186,7 +186,7 @@ export async function serviceChangePassword(
   }
   if (!row.is_active) {
     throw new AppError(
-      'Sua conta está inativa. Contacte o administrador.',
+      'Sua conta está inativa. Entre em contato com o administrador.',
       403,
       ErrorCodes.ACCOUNT_INACTIVE,
     )

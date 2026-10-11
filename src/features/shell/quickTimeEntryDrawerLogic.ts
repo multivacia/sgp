@@ -41,6 +41,22 @@ export function candidateRequiresOperationalJustification(c: TimeEntryCandidateI
 }
 
 /** Botão «Concluir atividade» na lista — atividades apontáveis alocadas ao colaborador. */
+/**
+ * Excesso de tempo previsto (TASK apontamento-somente-planejado): vale para atividade
+ * planejada para o próprio colaborador, com previsto e apontado dele (todos os dias).
+ * Exceção ou fora de sequência já exigem justificativa e dispensam esta.
+ */
+export function candidateRequiresExcessJustification(
+  c: TimeEntryCandidateItem,
+  minutes: number,
+): boolean {
+  if (candidateRequiresOperationalJustification(c)) return false
+  if (!Number.isInteger(minutes) || minutes <= 0) return false
+  const planned = c.plannedTotalMinutes ?? c.plannedMinutes
+  if (planned == null || !Number.isFinite(planned) || planned <= 0) return false
+  return (c.realizedMinutes ?? 0) + minutes > planned
+}
+
 export function canShowCompleteActivityButton(candidate: TimeEntryCandidateItem): boolean {
   if (!candidate.conveyorId || !candidate.stepNodeId) return false
   if (candidate.canCompleteStep === false) return false
@@ -142,8 +158,12 @@ export function validateTimeEntryForm(input: {
   operationalJustification: JustificationFieldValue
   useFallback: boolean
   requiresComplement: boolean
+  /** Minutos informados; quando passam do previsto do colaborador, a justificativa é obrigatória. */
+  minutes?: number
 }): string | null {
-  if (!candidateRequiresOperationalJustification(input.candidate)) {
+  const requiresExcess =
+    input.minutes !== undefined && candidateRequiresExcessJustification(input.candidate, input.minutes)
+  if (!candidateRequiresOperationalJustification(input.candidate) && !requiresExcess) {
     if (!input.operationalJustification.justificationId && !input.operationalJustification.legacyText.trim()) {
       return null
     }

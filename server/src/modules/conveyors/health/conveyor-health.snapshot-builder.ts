@@ -274,7 +274,7 @@ function buildComputed(
   if (inconsistentTimeEntries > 0) {
     warnings.push({
       code: 'inconsistent_time_entries',
-      message: `${inconsistentTimeEntries} step(s) com realizado maior que planejado`,
+      message: `${inconsistentTimeEntries} atividade(s) com realizado maior que o planejado`,
       scope: 'conveyor',
     })
   }

@@ -25,7 +25,7 @@ describe('backlogCopy', () => {
   it('linha de situação cobre recortes principais', () => {
     expect(backlogFiltersSituationLine('ativas')).toContain('finalizadas')
     expect(backlogFiltersSituationLine('em_atraso')).toContain('hoje')
-    expect(backlogFiltersSituationLine('finalizadas')).toContain('completed_at')
+    expect(backlogFiltersSituationLine('finalizadas')).toContain('data de conclusão')
     expect(backlogFiltersSituationLine('')).toContain('Situação')
   })
 
@@ -39,8 +39,9 @@ describe('backlogCopy', () => {
     expect(backlogChipResponsavel('Maria')).toBe('Responsável: Maria')
   })
 
-  it('janela de concluídas menciona completed_at', () => {
-    expect(backlogFilterDetailConcluidasWindow(7)).toContain('completed_at')
-    expect(backlogFilterDetailConcluidasWindow(7)).toContain('days=7')
+  it('janela de concluídas fala em data de conclusão, sem nomes técnicos', () => {
+    expect(backlogFilterDetailConcluidasWindow(7)).toContain('data de conclusão')
+    expect(backlogFilterDetailConcluidasWindow(7)).toContain('7 dias')
+    expect(backlogFilterDetailConcluidasWindow(7)).not.toMatch(/completed_at|days=/)
   })
 })

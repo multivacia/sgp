@@ -25,6 +25,9 @@
     "server:test": "npm run test --prefix server",
     "print-agent:dev": "npm run dev --prefix sgp-print-agent",
     "print-agent:install": "npm install --prefix sgp-print-agent",
+    "manual:usuario:html": "node scripts/generate-manual-usuario-html.mjs",
+    "manual:usuario:html:check": "node scripts/generate-manual-usuario-html.mjs --check",
+    "auditoria:textos": "node scripts/auditar-textos-tela.mjs",
     "test:watch": "vitest",
     "preview": "vite preview"
   },
@@ -51,6 +54,7 @@
     "eslint-plugin-react-refresh": "^0.5.2",
     "globals": "^17.4.0",
     "jsdom": "^30.0.1",
+    "marked": "^18.0.14",
     "rollup-plugin-visualizer": "^6.0.5",
     "tailwindcss": "^4.2.2",
     "typescript": "~5.9.3",

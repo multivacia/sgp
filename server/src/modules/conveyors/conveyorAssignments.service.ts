@@ -59,6 +59,13 @@ import {
   TIME_ENTRY_JUSTIFICATION_REQUIRED_MESSAGE,
 } from '../../shared/timeEntryJustificationResolver.js'
 import { resolveProductionStepAssigneeId } from '../production/production-plan-assignee.js'
+import {
+  assertStepPlannedForAnyone,
+  resolveCollaboratorExcessCheck,
+  resolveTimeEntryPlanningGate,
+  TIME_ENTRY_EXCEEDED_PLANNED_JUSTIFICATION_MESSAGE,
+  TIME_ENTRY_NOT_PLANNED_MESSAGE,
+} from '../operational-planning/planned-activity.service.js'
 import { resolveTimeEntryEntryAt } from '../../shared/operationalWorkDate.js'
 
 function isPgUniqueViolation(err: unknown): boolean {
@@ -106,7 +113,7 @@ export async function assertNodeIsStepForConveyor(
   }
   if (node.node_type !== 'STEP') {
     throw new AppError(
-      'Operação permitida apenas em atividades (STEP).',
+      'Operação permitida apenas em atividades.',
       422,
       ErrorCodes.VALIDATION_ERROR,
     )
@@ -386,43 +393,45 @@ export async function serviceCreateConveyorTimeEntryForAppUser(
     actorAppUserId: input.appUserId,
   }
 
-  const assigneeId = await findAssigneeIdForStepAndCollaborator(
-    pool,
-    input.conveyorId,
-    input.conveyorNodeId,
-    collaboratorId,
-  )
-  if (assigneeId) {
-    return serviceCreateConveyorTimeEntry(pool, {
-      conveyorId: input.conveyorId,
-      conveyorNodeId: input.conveyorNodeId,
-      collaboratorId,
-      conveyorNodeAssigneeId: assigneeId,
-      entryAt: input.entryAt,
-      minutes: input.minutes,
-      executedQuantity: input.executedQuantity,
-      notes: input.notes ?? null,
-      entryMode: input.entryMode,
-      entryOrigin: 'ASSIGNED',
-      exceptionJustification: null,
-      markAsDone: input.markAsDone,
-      sequence: seq,
-    outOfSequenceJustificationId: input.outOfSequenceJustificationId,
-    outOfSequenceJustificationComplement: input.outOfSequenceJustificationComplement,
-    voluntaryJustificationId: input.voluntaryJustificationId,
-    voluntaryJustificationComplement: input.voluntaryJustificationComplement,
-    standardJustificationException: null,
-      standardJustificationOos: oosStandard,
-      ...commonSeq,
-    })
-  }
-
-  const planAssigneeId = await resolveProductionStepAssigneeId(pool, {
+  // Regra canônica (TASK apontamento-somente-planejado): só atividade planejada recebe
+  // apontamento. Planejada para o colaborador → sem exceção; só para outro → exceção com
+  // justificativa (abaixo); não planejada para ninguém → TIME_ENTRY_NOT_PLANNED.
+  const planningGate = await resolveTimeEntryPlanningGate(pool, {
     conveyorId: input.conveyorId,
     stepNodeId: input.conveyorNodeId,
     collaboratorId,
   })
-  if (planAssigneeId) {
+
+  if (planningGate.kind === 'MINE') {
+    // Excesso de tempo: previsto e realizado do próprio colaborador (todos os dias).
+    // Justificativa de fora de sequência já informada dispensa a de excesso.
+    if (!seq.isOutOfSequence) {
+      const excess = await resolveCollaboratorExcessCheck(pool, {
+        stepNodeId: input.conveyorNodeId,
+        collaboratorId,
+        plannedMinutesForCollaborator: planningGate.plannedMinutesForCollaborator,
+        minutesNovo: input.minutes,
+      })
+      if (excess.required) {
+        await resolveTimeEntryJustification(pool, {
+          required: true,
+          justificationId: input.voluntaryJustificationId,
+          justificationComplement: input.voluntaryJustificationComplement,
+          legacyText: null,
+          requiredErrorCode: ErrorCodes.TIME_ENTRY_EXCEEDED_PLANNED_REQUIRES_JUSTIFICATION,
+          requiredErrorMessage: TIME_ENTRY_EXCEEDED_PLANNED_JUSTIFICATION_MESSAGE,
+        })
+      }
+    }
+
+    const planAssigneeId = await resolveProductionStepAssigneeId(pool, {
+      conveyorId: input.conveyorId,
+      stepNodeId: input.conveyorNodeId,
+      collaboratorId,
+    })
+    if (!planAssigneeId) {
+      throw new AppError(TIME_ENTRY_NOT_PLANNED_MESSAGE, 422, ErrorCodes.TIME_ENTRY_NOT_PLANNED)
+    }
     return serviceCreateConveyorTimeEntry(pool, {
       conveyorId: input.conveyorId,
       conveyorNodeId: input.conveyorNodeId,
@@ -437,11 +446,11 @@ export async function serviceCreateConveyorTimeEntryForAppUser(
       exceptionJustification: null,
       markAsDone: input.markAsDone,
       sequence: seq,
-    outOfSequenceJustificationId: input.outOfSequenceJustificationId,
-    outOfSequenceJustificationComplement: input.outOfSequenceJustificationComplement,
-    voluntaryJustificationId: input.voluntaryJustificationId,
-    voluntaryJustificationComplement: input.voluntaryJustificationComplement,
-    standardJustificationException: null,
+      outOfSequenceJustificationId: input.outOfSequenceJustificationId,
+      outOfSequenceJustificationComplement: input.outOfSequenceJustificationComplement,
+      voluntaryJustificationId: input.voluntaryJustificationId,
+      voluntaryJustificationComplement: input.voluntaryJustificationComplement,
+      standardJustificationException: null,
       standardJustificationOos: oosStandard,
       ...commonSeq,
     })
@@ -852,6 +861,14 @@ export async function serviceCreateConveyorTimeEntryOnBehalf(
     outSeqJust = resolved.legacyText
     oosStandard = resolved.standard
   }
+
+  // Regra canônica: ninguém aponta em atividade não planejada, nem o gestor em nome de outro.
+  // Demais regras do lançamento em nome de outro permanecem como estavam.
+  await assertStepPlannedForAnyone(pool, {
+    conveyorId: input.conveyorId,
+    stepNodeId: input.conveyorNodeId,
+    collaboratorId: input.targetCollaboratorId,
+  })
 
   const assigneeId = await findAssigneeIdForStepAndCollaborator(
     pool,

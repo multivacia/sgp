@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  resolveKioskPlannedDateBucket,
   canSubmitKioskProductionTimeEntry,
   kioskRequiresExcessTimeJustification,
   kioskRequiresOperationalJustification,
@@ -265,5 +266,13 @@ describe('kioskActivityCardLogic', () => {
         requiresComplement: false,
       }),
     ).toMatch(/justificativa/i)
+  })
+})
+
+describe('resolveKioskPlannedDateBucket', () => {
+  it('classifica atrasada, hoje e futura', () => {
+    expect(resolveKioskPlannedDateBucket('2026-10-01', '2026-10-08').label).toBe('Atrasada')
+    expect(resolveKioskPlannedDateBucket('2026-10-08', '2026-10-08').label).toBe('Hoje')
+    expect(resolveKioskPlannedDateBucket('2026-11-02', '2026-10-08').label).toBe('Futura')
   })
 })

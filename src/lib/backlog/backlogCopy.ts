@@ -9,19 +9,19 @@ import {
 } from './operationalBuckets'
 
 export const backlogHeaderSemanticLine =
-  'Os buckets usam a mesma regra operacional do painel de esteiras.'
+  'As situações usam a mesma regra operacional do painel de esteiras.'
 
 export const backlogKpiDeckIntro =
-  'Os cards somam todas as esteiras desta lista carregada (mesma regra de bucket). Filtros da tabela não alteram estes totais.'
+  'Os cards somam todas as esteiras desta lista carregada (mesma regra de situação). Filtros da tabela não alteram estes totais.'
 
 export const backlogTotalsVsTableFiltered =
   'Os totais dos cards continuam a refletir todas as esteiras carregadas; só a tabela abaixo respeita os filtros.'
 
 export const backlogFilterDetailAtivas =
-  'Recorte «não encerradas» (exclui finalizadas e canceladas). Parâmetro de URL preferido: scope=ativas.'
+  'Filtro «não encerradas» (exclui finalizadas e canceladas).'
 
 export function backlogFilterDetailConcluidasWindow(days: number): string {
-  return `Apenas finalizadas com completed_at nos últimos ${days} dias (alinhado ao dashboard gerencial). Parâmetro: days=${days}.`
+  return `Apenas finalizadas com data de conclusão nos últimos ${days} dias (alinhado ao dashboard gerencial).`
 }
 
 export const backlogKpiHints = {
@@ -29,7 +29,7 @@ export const backlogKpiHints = {
   aguardandoPlanejamento: 'Cadastro concluído; aguardando aceite do gestor da fábrica.',
   emPlanejamento: 'Gestor planejando equipe, responsáveis e sequência.',
   emExecucao: 'Liberada para produção (a iniciar ou em andamento), sem atraso de prazo.',
-  emAtraso: 'Prazo estimado da esteira comparado com hoje (bucket operacional).',
+  emAtraso: 'Prazo estimado da esteira comparado com hoje.',
   finalizadas: 'Encerradas operacionalmente nesta lista carregada.',
 } as const
 
@@ -43,12 +43,12 @@ export function backlogFiltersSituationLine(
     return 'Em atraso: prazo estimado da esteira comparado com hoje.'
   }
   if (statusFilter === 'finalizadas') {
-    return 'Finalizadas: use a URL com days= para janela por data de conclusão (completed_at).'
+    return 'Finalizadas: esteiras encerradas, por data de conclusão.'
   }
   if (isOperationalBucketKey(statusFilter)) {
-    return `${OPERATIONAL_BUCKET_LABELS[statusFilter]}: filtro alinhado ao bucket operacional.`
+    return `${OPERATIONAL_BUCKET_LABELS[statusFilter]}: filtro alinhado à situação operacional.`
   }
-  return 'Situação: escolha um bucket ou «Ativas» para filtrar a tabela.'
+  return 'Situação: escolha uma situação ou «Ativas» para filtrar a tabela.'
 }
 
 export function backlogPriorityDisplay(p: BacklogPriorityParam): string {

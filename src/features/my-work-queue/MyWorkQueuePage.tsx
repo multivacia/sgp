@@ -18,6 +18,10 @@ import {
 import { getMyWorkQueue } from '../../services/my-work-queue/myWorkQueueApiService'
 import { QuickTimeEntryDrawer } from '../shell/QuickTimeEntryDrawer'
 import { workQueueApontamentoCandidate } from './myWorkQueueUi'
+import {
+  describePeriodRange,
+  validatePeriodRange,
+} from '../../domain/operational/periodFilter'
 
 function todayIsoLocal(): string {
   const t = new Date()
@@ -98,8 +102,17 @@ function QueueCard(props: {
             <span className="inline-flex size-8 items-center justify-center rounded-xl border border-sgp-blue-bright/25 bg-sgp-blue-bright/10 font-heading text-sm font-bold text-sgp-blue-bright">
               {item.plannedOrder + 1}
             </span>
-            <span className={`rounded-md px-2 py-0.5 text-[11px] font-bold ${badgeClass('neutral')}`}>
+            <span
+              className={`rounded-md px-2 py-0.5 text-[11px] font-bold ${badgeClass('neutral')}`}
+              title="Planejado para você nesta atividade, somando todos os dias"
+            >
               {plannedMinutes}
+            </span>
+            <span
+              className={`rounded-md px-2 py-0.5 text-[11px] font-bold ${badgeClass('neutral')}`}
+              data-testid="queue-card-realized"
+            >
+              Apontado: {formatHumanMinutes(item.realizedMinutes ?? 0)}
             </span>
             {item.isOverdue ? (
               <span className={`rounded-md px-2 py-0.5 text-[11px] font-bold ${badgeClass('danger')}`}>
@@ -228,6 +241,13 @@ export function MyWorkQueuePage() {
   const location = useLocation()
   const { presentBlocking } = useSgpErrorSurface()
   const selectedDate = searchParams.get('date') || todayIsoLocal()
+  /** Pesquisa por período (data planejada). `mode=periodo` mantém a seção aberta sem datas. */
+  const periodFrom = searchParams.get('from')?.trim() || ''
+  const periodTo = searchParams.get('to')?.trim() || ''
+  const periodMode = searchParams.get('mode') === 'periodo' || Boolean(periodFrom || periodTo)
+  const periodRange = useMemo(() => ({ from: periodFrom, to: periodTo }), [periodFrom, periodTo])
+  const periodError = periodMode ? validatePeriodRange(periodRange) : null
+  const periodQueryActive = periodMode && Boolean(periodFrom || periodTo) && !periodError
   const [queue, setQueue] = useState<MyWorkQueueResponse | null>(null)
   const [unavailableReason, setUnavailableReason] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
@@ -235,10 +255,19 @@ export function MyWorkQueuePage() {
   const [entryItem, setEntryItem] = useState<MyWorkQueueItem | null>(null)
 
   const load = useCallback(async () => {
+    if (periodError) {
+      setQueue(null)
+      setLoading(false)
+      return
+    }
     setLoading(true)
     setError(null)
     try {
-      const result = await getMyWorkQueue({ date: selectedDate })
+      const result = await getMyWorkQueue(
+        periodQueryActive
+          ? { from: periodFrom || undefined, to: periodTo || undefined }
+          : { date: selectedDate },
+      )
       setQueue(result.data)
       setUnavailableReason(result.unavailableReason)
     } catch (e) {
@@ -257,7 +286,15 @@ export function MyWorkQueuePage() {
     } finally {
       setLoading(false)
     }
-  }, [location.pathname, presentBlocking, selectedDate])
+  }, [
+    location.pathname,
+    presentBlocking,
+    selectedDate,
+    periodQueryActive,
+    periodFrom,
+    periodTo,
+    periodError,
+  ])
 
   useEffect(() => {
     void load()
@@ -276,8 +313,23 @@ export function MyWorkQueuePage() {
     setSearchParams({ date })
   }
 
-  const emptyTitle =
-    queue?.planStatus === 'PUBLISHED'
+  function patchPeriod(next: { from?: string; to?: string }) {
+    const from = next.from ?? periodFrom
+    const to = next.to ?? periodTo
+    const sp = new URLSearchParams({ mode: 'periodo' })
+    if (from) sp.set('from', from)
+    if (to) sp.set('to', to)
+    setSearchParams(sp, { replace: true })
+  }
+
+  const periodLabel = queue?.period
+    ? describePeriodRange({ from: queue.period.from, to: queue.period.to })
+    : ''
+  const showingPeriod = periodQueryActive && Boolean(queue?.period)
+
+  const emptyTitle = showingPeriod
+    ? 'Não há atividades planejadas para você neste período.'
+    : queue?.planStatus === 'PUBLISHED'
       ? 'Não há atividades planejadas para você neste dia.'
       : 'Você ainda não possui atividades planejadas para este dia.'
 
@@ -312,43 +364,126 @@ export function MyWorkQueuePage() {
           </div>
         </header>
 
-        <div className="mt-6 flex max-w-5xl flex-wrap items-center gap-3 rounded-2xl border border-white/[0.08] bg-white/[0.03] p-3 ring-1 ring-white/[0.04]">
+        <div className="mt-6 flex max-w-5xl flex-wrap items-center gap-2" role="group" aria-label="Modo de pesquisa">
           <button
             type="button"
-            className="sgp-cta-secondary !px-3 !py-2 text-sm"
-            onClick={() => setDate(shiftDateIso(selectedDate, -1))}
+            aria-pressed={!periodMode}
+            className={[
+              '!px-3 !py-1.5 text-sm',
+              !periodMode ? 'sgp-cta-primary' : 'sgp-cta-secondary',
+            ].join(' ')}
+            onClick={() => setDate(selectedDate)}
           >
-            Dia anterior
-          </button>
-          <input
-            type="date"
-            value={selectedDate}
-            onChange={(e) => setDate(e.target.value || todayIsoLocal())}
-            className="sgp-input-app px-3 py-2 text-sm text-slate-200"
-          />
-          <button
-            type="button"
-            className="sgp-cta-secondary !px-3 !py-2 text-sm"
-            onClick={() => setDate(shiftDateIso(selectedDate, 1))}
-          >
-            Próximo dia
+            Por dia
           </button>
           <button
             type="button"
-            className="sgp-cta-primary !px-3 !py-2 text-sm"
-            onClick={() => setDate(todayIsoLocal())}
+            aria-pressed={periodMode}
+            className={[
+              '!px-3 !py-1.5 text-sm',
+              periodMode ? 'sgp-cta-primary' : 'sgp-cta-secondary',
+            ].join(' ')}
+            onClick={() => patchPeriod({})}
           >
-            Hoje
+            Por período
           </button>
-          <span className="ml-auto text-sm font-medium text-slate-400">
-            {formatDatePt(selectedDate)}
-          </span>
         </div>
+
+        {periodMode ? (
+          <div className="mt-3 max-w-5xl rounded-2xl border border-white/[0.08] bg-white/[0.03] p-3 ring-1 ring-white/[0.04]">
+            <div className="flex flex-wrap items-end gap-3">
+              <label className="flex flex-col gap-1 text-xs font-medium text-slate-400">
+                De (data planejada)
+                <input
+                  type="date"
+                  value={periodFrom}
+                  max={periodTo || undefined}
+                  onChange={(e) => patchPeriod({ from: e.target.value })}
+                  className="sgp-input-app px-3 py-2 text-sm text-slate-200"
+                />
+              </label>
+              <label className="flex flex-col gap-1 text-xs font-medium text-slate-400">
+                Até (data planejada)
+                <input
+                  type="date"
+                  value={periodTo}
+                  min={periodFrom || undefined}
+                  onChange={(e) => patchPeriod({ to: e.target.value })}
+                  className="sgp-input-app px-3 py-2 text-sm text-slate-200"
+                />
+              </label>
+              <button
+                type="button"
+                className="sgp-cta-secondary !px-3 !py-2 text-sm"
+                onClick={() => setSearchParams({ mode: 'periodo' }, { replace: true })}
+                disabled={!periodFrom && !periodTo}
+              >
+                Limpar datas
+              </button>
+            </div>
+            {periodError ? (
+              <p className="mt-2 text-xs font-medium text-rose-200" role="alert">
+                {periodError}
+              </p>
+            ) : !periodFrom && !periodTo ? (
+              <p className="mt-2 text-xs text-slate-500">
+                Informe a data inicial, a final ou ambas (datas inclusivas). Sem datas, a fila
+                abaixo mostra o dia selecionado.
+              </p>
+            ) : (
+              <p className="mt-2 text-xs text-slate-400" aria-live="polite">
+                {showingPeriod
+                  ? `Exibindo atividades com data planejada ${periodLabel}.`
+                  : 'Carregando período…'}
+                {!periodFrom || !periodTo ? ' Sem uma das datas, o período vai até 92 dias.' : ''}
+              </p>
+            )}
+          </div>
+        ) : (
+          <div className="mt-3 flex max-w-5xl flex-wrap items-center gap-3 rounded-2xl border border-white/[0.08] bg-white/[0.03] p-3 ring-1 ring-white/[0.04]">
+            <button
+              type="button"
+              className="sgp-cta-secondary !px-3 !py-2 text-sm"
+              onClick={() => setDate(shiftDateIso(selectedDate, -1))}
+            >
+              Dia anterior
+            </button>
+            <input
+              type="date"
+              value={selectedDate}
+              onChange={(e) => setDate(e.target.value || todayIsoLocal())}
+              className="sgp-input-app px-3 py-2 text-sm text-slate-200"
+            />
+            <button
+              type="button"
+              className="sgp-cta-secondary !px-3 !py-2 text-sm"
+              onClick={() => setDate(shiftDateIso(selectedDate, 1))}
+            >
+              Próximo dia
+            </button>
+            <button
+              type="button"
+              className="sgp-cta-primary !px-3 !py-2 text-sm"
+              onClick={() => setDate(todayIsoLocal())}
+            >
+              Hoje
+            </button>
+            <span className="ml-auto text-sm font-medium text-slate-400">
+              {formatDatePt(selectedDate)}
+            </span>
+          </div>
+        )}
 
         {queue ? (
           <div className="mt-6 grid max-w-5xl gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <KpiCard label="Atividades de hoje" value={String(queue.summary.plannedItemsToday)} />
-            <KpiCard label="Minutos planejados" value={formatHumanMinutes(queue.summary.plannedMinutesToday)} />
+            <KpiCard
+              label={showingPeriod ? 'Atividades no período' : 'Atividades de hoje'}
+              value={String(queue.summary.plannedItemsToday)}
+            />
+            <KpiCard
+              label={showingPeriod ? 'Minutos planejados (período)' : 'Minutos planejados'}
+              value={formatHumanMinutes(queue.summary.plannedMinutesToday)}
+            />
             <KpiCard label="Atenção à sequência" value={String(queue.summary.outOfSequenceItems)} tone={queue.summary.outOfSequenceItems > 0 ? 'warning' : undefined} />
             <KpiCard label="Atrasadas" value={String(queue.summary.overdueItems)} tone={queue.summary.overdueItems > 0 ? 'danger' : undefined} />
           </div>
@@ -377,12 +512,16 @@ export function MyWorkQueuePage() {
         {!loading && !error && queue && queue.items.length > 0 ? (
           <>
             <QueueSection title="Atrasadas" items={groups.overdue} onPointHours={setEntryItem} />
-            <QueueSection title="Hoje" items={groups.today} onPointHours={setEntryItem} />
+            <QueueSection
+              title={showingPeriod ? 'No período (a partir de hoje)' : 'Hoje'}
+              items={groups.today}
+              onPointHours={setEntryItem}
+            />
             <QueueSection title="Concluídas" items={groups.completed} onPointHours={setEntryItem} />
           </>
         ) : null}
 
-        {!loading && !error && queue && queue.items.length === 0 ? (
+        {!loading && !error && !periodError && queue && queue.items.length === 0 ? (
           <div className="mt-8 max-w-5xl rounded-2xl border border-dashed border-white/[0.12] bg-white/[0.02] px-6 py-14 text-center">
             <p className="font-heading text-base font-semibold text-slate-300">
               {emptyTitle}

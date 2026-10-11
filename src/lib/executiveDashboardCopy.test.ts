@@ -10,7 +10,7 @@ describe('executiveDashboardCopy', () => {
       'Participação de atraso (ativas)',
     )
     expect(executiveDashboardCopy.participacaoAtrasoHint).toBe(
-      'Razão entre esteiras no bucket em_atraso e esteiras ativas. Indicador derivado.',
+      'Proporção de esteiras em atraso entre as esteiras ativas. Indicador derivado.',
     )
     expect(executiveDashboardCopy.secaoAgregadaTitulo).toBe(
       'Previsto estrutural e minutos apontados',

@@ -13,9 +13,7 @@ import type {
 } from './my-activities.dto.js'
 import {
   listActivitiesRawForCollaborator,
-  listTimeEntryCandidatesForCollaborator,
-  listTimeEntryCandidatesFromPublishedPlan,
-  listTimeEntryUnassignedOpenStepsForCollaborator,
+  listPlannedTimeEntryCandidates,
   type TimeEntryCandidateRawRow,
 } from './my-activities.repository.js'
 import { analyzeConveyorActivitySequence } from '../conveyors/conveyorActivitySequence.logic.js'
@@ -23,15 +21,8 @@ import { mapWorkQueueSequenceForCollaborator } from '../my-work-queue/work-queue
 import { resolveActivityPlannedTotalMinutes } from '../../shared/activityOperationalQuantity.js'
 import type { SequenceAnalysisNode } from '../conveyors/conveyorActivitySequence.logic.js'
 import { listConveyorNodesForSequenceAnalysis, listPlannedCollaboratorsByActivityNode } from '../conveyors/conveyors.repository.js'
+import { operationalToday } from '../../shared/operationalWorkDate.js'
 
-function todayIsoLocal(): string {
-  const t = new Date()
-  return [
-    t.getFullYear(),
-    String(t.getMonth() + 1).padStart(2, '0'),
-    String(t.getDate()).padStart(2, '0'),
-  ].join('-')
-}
 
 export type GetMyActivitiesQuery = {
   userId: string
@@ -242,6 +233,10 @@ export async function serviceListTimeEntryCandidates(
   input: {
     collaboratorId: string | null
     q: string | null
+    /** Filtro por esteira; combinado com `activityQ` e `q` via AND. */
+    conveyorQ?: string | null
+    /** Nome da atividade; combinado com `conveyorQ` e `q` via AND. */
+    activityQ?: string | null
     limit: number
     includeUnassigned: boolean
   },
@@ -259,46 +254,43 @@ export async function serviceListTimeEntryCandidates(
     }
   }
 
-  const rawAssigned = await listTimeEntryCandidatesForCollaborator(
-    pool,
-    input.collaboratorId,
-    {
-      q: input.q,
-      limit: input.limit,
-    },
-  )
-
-  const referenceDate = todayIsoLocal()
-  const rawFromPlan = await listTimeEntryCandidatesFromPublishedPlan(pool, {
-    collaboratorId: input.collaboratorId,
-    date: referenceDate,
+  const searchTerms = {
     q: input.q,
+    conveyorQ: input.conveyorQ ?? null,
+    activityQ: input.activityQ ?? null,
+  }
+
+  // Regra canônica (TASK apontamento-somente-planejado): lista padrão = atividades
+  // planejadas para o colaborador (qualquer semana); pesquisa de outras atividades (>= 2
+  // caracteres) = planejadas para outros colaboradores. Alocação na esteira não é fonte.
+  const referenceDate = operationalToday()
+  const rawMine = await listPlannedTimeEntryCandidates(pool, {
+    collaboratorId: input.collaboratorId,
+    scope: 'mine',
+    ...searchTerms,
     limit: input.limit,
   })
 
-  const seenStep = new Set(rawAssigned.map((r) => r.step_node_id))
   let tagged: Array<{ row: TimeEntryCandidateRawRow; isAssignedToMe: boolean }> =
-    rawAssigned.map((r) => ({ row: r, isAssignedToMe: true }))
-
-  for (const row of rawFromPlan) {
-    if (seenStep.has(row.step_node_id)) continue
-    seenStep.add(row.step_node_id)
-    tagged.push({ row, isAssignedToMe: true })
-  }
+    rawMine.map((r) => ({ row: r, isAssignedToMe: true }))
 
   const qOk =
     input.includeUnassigned &&
-    Boolean(input.q && input.q.trim().length >= 2)
+    [input.q, input.conveyorQ, input.activityQ].some(
+      (term) => Boolean(term && term.trim().length >= 2),
+    )
 
   if (qOk) {
-    const rawUnassigned = await listTimeEntryUnassignedOpenStepsForCollaborator(
-      pool,
-      input.collaboratorId,
-      { q: input.q, limit: input.limit },
-    )
+    const seenStep = new Set(rawMine.map((r) => r.step_node_id))
+    const rawOthers = await listPlannedTimeEntryCandidates(pool, {
+      collaboratorId: input.collaboratorId,
+      scope: 'others',
+      ...searchTerms,
+      limit: input.limit,
+    })
     tagged = [
       ...tagged,
-      ...rawUnassigned
+      ...rawOthers
         .filter((r) => !seenStep.has(r.step_node_id))
         .map((r) => ({ row: r, isAssignedToMe: false })),
     ]

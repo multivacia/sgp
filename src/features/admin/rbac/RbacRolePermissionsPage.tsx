@@ -244,7 +244,7 @@ export function RbacRolePermissionsPage() {
         </h1>
         <p className="max-w-2xl text-sm leading-relaxed text-slate-400">
           Consulte e altere as permissões RBAC de cada papel. O servidor é a fonte de verdade; as
-          alterações ficam registadas na trilha administrativa.
+          alterações ficam registradas na trilha administrativa.
         </p>
       </header>
 

@@ -46,7 +46,7 @@ export function buildSupportEmailText(input: NotifierSendInput): string {
     `Protocolo: ${input.ticketCode}`,
     `Categoria: ${input.category}`,
     `Severidade: ${input.severity}`,
-    `Utilizador (ID): ${input.createdByUserId}`,
+    `Usuário (ID): ${input.createdByUserId}`,
     `Módulo/tela: ${input.moduleName ?? '—'}`,
     `Rota: ${input.routePath ?? '—'}`,
     `Assunto: ${input.title}`,

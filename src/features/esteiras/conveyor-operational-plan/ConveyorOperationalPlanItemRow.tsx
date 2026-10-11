@@ -18,6 +18,7 @@ import {
   labelConveyorOperationalPlanItemStatus,
 } from '../../../domain/conveyor-operational-plan/conveyorOperationalPlanDisplay'
 import { formatMinutosHumanos } from '../../../lib/formatters'
+import { resolvePlanningItemOperationalStatusLabel } from '../../operational-planning/planningExecutionHelpers'
 import { ConveyorPlanBadge } from './ConveyorPlanBadge'
 
 export type ItemSaveInput = PatchConveyorOperationalPlanItemInput
@@ -212,7 +213,9 @@ function ItemReadView({
       {!isCancelled ? (
         <p className="mt-1 text-[12px] text-slate-500">
           Realizado {formatMinutosHumanos(item.realizedMinutes)}
-          {item.activityOperationalStatus ? ` · STEP ${item.activityOperationalStatus}` : ''}
+          {resolvePlanningItemOperationalStatusLabel(item.activityOperationalStatus)
+            ? ` · Atividade: ${resolvePlanningItemOperationalStatusLabel(item.activityOperationalStatus)}`
+            : ''}
         </p>
       ) : null}
       {item.reviewRequired && !isCancelled ? (

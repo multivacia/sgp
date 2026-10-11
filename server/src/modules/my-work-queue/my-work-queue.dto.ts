@@ -20,7 +20,10 @@ export type MyWorkQueueItemApi = {
   workPlanItemId: string
   plannedDate: string
   plannedOrder: number
+  /** Soma de todos os dias planejados para o colaborador na atividade (cartão). */
   plannedMinutes: number | null
+  /** Apontado pelo próprio colaborador na atividade, todos os dias. */
+  realizedMinutes: number
   status: string
   group: 'overdue' | 'today' | 'completed'
 
@@ -73,6 +76,11 @@ export type MyWorkQueueItemApi = {
 
 export type MyWorkQueueResponseApi = {
   date: string
+  /**
+   * Pesquisa por período (data planejada, inclusiva) efetivamente aplicada; `null` no modo
+   * diário. No modo período os campos `*Today` do resumo referem-se ao período inteiro.
+   */
+  period?: { from: string; to: string } | null
   planStatus: 'PUBLISHED' | null
   summary: {
     plannedItemsToday: number

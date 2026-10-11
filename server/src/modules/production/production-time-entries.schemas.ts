@@ -61,6 +61,9 @@ export const productionUnassignedTimeEntryBodySchema = z.object({
     .optional(),
   outOfSequenceJustificationId: z.string().uuid().optional(),
   outOfSequenceJustificationComplement: z.union([z.string().max(2000), z.null()]).optional(),
+  /** Justificativa por excesso de tempo previsto (atividade planejada para o colaborador). */
+  justificationId: z.string().uuid().optional(),
+  justificationComplement: z.union([z.string().max(2000), z.null()]).optional(),
   entryAt: entryAtInput.optional(),
 })
 

@@ -14,6 +14,7 @@ import {
   productionTimePlannedCoverageLabel,
   productionTimePlannedCoveragePct,
   resolveKioskInitialSessionCompletionPct,
+  resolveKioskPlannedDateBucket,
 } from '../../domain/production/kioskActivityCardLogic'
 import {
   formatAwaitingPreviousActivitiesLabel,
@@ -134,6 +135,7 @@ export function KioskActivityCard({ item, onSuccess }: Props) {
   const timeCoveragePct = productionTimePlannedCoveragePct(item)
   const timeCoverageLabel = productionTimePlannedCoverageLabel(timeCoveragePct)
   const statusDisplay = resolveProductionOperationalStatusDisplay(item)
+  const plannedDateBucket = resolveKioskPlannedDateBucket(item.plannedDate, operationalTodayIso())
   const plannedTimeHint = productionPlannedTimeReachedHint(item)
   const sequenceBadge = resolveSequenceListBadge(item)
   const sequenceHint =
@@ -375,6 +377,22 @@ export function KioskActivityCard({ item, onSuccess }: Props) {
               <span>
                 <span className="text-slate-600">Esteira </span>
                 <span className="text-slate-300">{item.conveyorTitle}</span>
+              </span>
+              <span data-testid="kiosk-planned-date">
+                <span className="text-slate-600">Planejada </span>
+                <span className="text-slate-300">{formatWorkDateLabel(item.plannedDate)}</span>
+                <span
+                  className={
+                    plannedDateBucket.bucket === 'overdue'
+                      ? ' font-semibold text-rose-300'
+                      : plannedDateBucket.bucket === 'today'
+                        ? ' font-semibold text-sgp-gold'
+                        : ' text-slate-400'
+                  }
+                >
+                  {' · '}
+                  {plannedDateBucket.label}
+                </span>
               </span>
             </div>
             <p className="mt-1.5 text-xs text-slate-500">

@@ -69,6 +69,12 @@ function AnalyticalEntryRow({
         {entry.notes ? (
           <p className="mt-0.5 max-w-xl text-[11px] leading-snug text-slate-500">{entry.notes}</p>
         ) : null}
+        {entry.justification?.trim() ? (
+          <p className="mt-0.5 max-w-xl text-[11px] leading-snug text-slate-600">
+            <span className="font-semibold text-slate-500">Justificativa: </span>
+            {entry.justification.trim()}
+          </p>
+        ) : null}
         {entry.executedQuantity != null ? (
           <p className="mt-0.5 text-[11px] text-slate-500">Qtd: {entry.executedQuantity}</p>
         ) : null}

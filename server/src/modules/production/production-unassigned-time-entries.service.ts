@@ -8,21 +8,26 @@ import {
   assertNodeIsStepForConveyor,
   serviceCreateConveyorTimeEntry,
 } from '../conveyors/conveyorAssignments.service.js'
-import { findAssigneeIdForStepAndCollaborator } from '../conveyors/conveyorAssignments.repository.js'
 import type { TimeEntryCreatedDto } from '../conveyors/conveyorAssignments.dto.js'
 import { resolveProductionStepAssigneeId } from './production-plan-assignee.js'
+import {
+  resolveCollaboratorExcessCheck,
+  resolveTimeEntryPlanningGate,
+  TIME_ENTRY_EXCEEDED_PLANNED_JUSTIFICATION_MESSAGE,
+  TIME_ENTRY_NOT_PLANNED_MESSAGE,
+} from '../operational-planning/planned-activity.service.js'
+import { resolveTimeEntryJustification } from '../../shared/timeEntryJustificationResolver.js'
 import type { ProductionUnassignedTimeEntryBody } from './production-time-entries.schemas.js'
 
 /**
  * Apontamento de tempo em uma atividade real de uma esteira ("Outra Atividade") — Modo
- * Fábrica. Resolve a alocação seguindo a mesma regra canônica de
- * `serviceCreateConveyorTimeEntryForAppUser` (`conveyorAssignments.service.ts`):
- * 1. Alocação estrutural existente (`findAssigneeIdForStepAndCollaborator`) → `ASSIGNED`.
- * 2. Sem alocação estrutural, mas com item no planejamento semanal publicado vigente
- *    (`resolveProductionStepAssigneeId`) → cria alocação de apoio (`is_primary=false`) e
- *    também resulta em `ASSIGNED`.
- * 3. Nenhuma das duas → `UNASSIGNED_EXCEPTION`, exigindo justificativa (validada dentro de
- *    `serviceCreateConveyorTimeEntry`, não duplicada aqui).
+ * Fábrica. Segue a regra canônica de `serviceCreateConveyorTimeEntryForAppUser`
+ * (TASK apontamento-somente-planejado):
+ * 1. Planejada para o colaborador (qualquer semana) → `ASSIGNED`; reutiliza ou cria apoio.
+ *    Acima do previsto dele exige justificativa (`justificationId`), salvo fora de sequência.
+ * 2. Planejada só para outro colaborador → `UNASSIGNED_EXCEPTION`, com justificativa de
+ *    exceção (validada dentro de `serviceCreateConveyorTimeEntry`).
+ * 3. Não planejada para ninguém → `TIME_ENTRY_NOT_PLANNED`.
  */
 export async function serviceCreateProductionUnassignedTimeEntry(
   pool: pg.Pool,
@@ -46,18 +51,40 @@ export async function serviceCreateProductionUnassignedTimeEntry(
     )
   }
 
-  let assigneeId = await findAssigneeIdForStepAndCollaborator(
-    pool,
-    body.conveyorId,
-    body.stepNodeId,
+  const gate = await resolveTimeEntryPlanningGate(pool, {
+    conveyorId: body.conveyorId,
+    stepNodeId: body.stepNodeId,
     collaboratorId,
-  )
-  if (!assigneeId) {
+  })
+
+  let assigneeId: string | null = null
+  if (gate.kind === 'MINE') {
+    if (!sequence.isOutOfSequence) {
+      const excess = await resolveCollaboratorExcessCheck(pool, {
+        stepNodeId: body.stepNodeId,
+        collaboratorId,
+        plannedMinutesForCollaborator: gate.plannedMinutesForCollaborator,
+        minutesNovo: body.minutes,
+      })
+      if (excess.required) {
+        await resolveTimeEntryJustification(pool, {
+          required: true,
+          justificationId: body.justificationId,
+          justificationComplement: body.justificationComplement,
+          legacyText: null,
+          requiredErrorCode: ErrorCodes.TIME_ENTRY_EXCEEDED_PLANNED_REQUIRES_JUSTIFICATION,
+          requiredErrorMessage: TIME_ENTRY_EXCEEDED_PLANNED_JUSTIFICATION_MESSAGE,
+        })
+      }
+    }
     assigneeId = await resolveProductionStepAssigneeId(pool, {
       collaboratorId,
       conveyorId: body.conveyorId,
       stepNodeId: body.stepNodeId,
     })
+    if (!assigneeId) {
+      throw new AppError(TIME_ENTRY_NOT_PLANNED_MESSAGE, 422, ErrorCodes.TIME_ENTRY_NOT_PLANNED)
+    }
   }
 
   const actorAppUserId = await findAppUserIdByCollaboratorId(pool, collaboratorId)
@@ -80,6 +107,9 @@ export async function serviceCreateProductionUnassignedTimeEntry(
     outOfSequenceJustification: body.outOfSequenceJustification ?? null,
     outOfSequenceJustificationId: body.outOfSequenceJustificationId ?? null,
     outOfSequenceJustificationComplement: body.outOfSequenceJustificationComplement ?? null,
+    voluntaryJustificationId: gate.kind === 'MINE' ? (body.justificationId ?? null) : null,
+    voluntaryJustificationComplement:
+      gate.kind === 'MINE' ? (body.justificationComplement ?? null) : null,
     actorAppUserId,
     sequence,
   })

@@ -11,11 +11,33 @@ import {
   serviceListTimeEntryCandidates,
 } from './my-activities.service.js'
 import { timeEntryCandidatesQuerySchema } from './my-activities.schemas.js'
+import { parseConveyorActivitySearch } from '../../shared/accentInsensitiveSearch.js'
 import {
   getMyExtraTimeEntries as getMyExtraTimeEntriesController,
   getMyExtraTimeEntryDescriptions as getMyExtraTimeEntryDescriptionsController,
   postMyExtraTimeEntry as postMyExtraTimeEntryController,
 } from './extra-time-entries.controller.js'
+
+/**
+ * `q` com `&` → pesquisa "Esteira & atividade" (esquerda = esteira/OS, direita = nome da
+ * atividade). Sem `&`, `q` segue como pesquisa livre atual. `conveyorQ`/`activityQ`
+ * explícitos continuam aceitos (mesma semântica).
+ */
+function resolveCandidateSearchTerms(parsed: {
+  q?: string
+  conveyorQ?: string
+  activityQ?: string
+}): { q: string | null; conveyorQ: string | null; activityQ: string | null } {
+  const pair = parseConveyorActivitySearch(parsed.q)
+  if (pair) {
+    return { q: null, conveyorQ: pair.conveyorTerm, activityQ: pair.activityTerm }
+  }
+  return {
+    q: parsed.q?.trim() ? parsed.q.trim() : null,
+    conveyorQ: parsed.conveyorQ?.trim() ? parsed.conveyorQ.trim() : null,
+    activityQ: parsed.activityQ?.trim() ? parsed.activityQ.trim() : null,
+  }
+}
 
 function queryString(v: unknown): string | undefined {
   if (typeof v === 'string') return v
@@ -31,6 +53,8 @@ export async function getTimeEntryCandidates(
   const auth = req.authUser!
   const parsed = timeEntryCandidatesQuerySchema.parse({
     q: queryString(req.query.q),
+    conveyorQ: queryString(req.query.conveyorQ),
+    activityQ: queryString(req.query.activityQ),
     limit: queryString(req.query.limit),
     includeUnassigned:
       typeof req.query.includeUnassigned === 'boolean'
@@ -40,7 +64,7 @@ export async function getTimeEntryCandidates(
   const collaboratorId = await findCollaboratorIdByAppUserId(pool, auth.id)
   const result = await serviceListTimeEntryCandidates(pool, {
     collaboratorId,
-    q: parsed.q?.trim() ? parsed.q.trim() : null,
+    ...resolveCandidateSearchTerms(parsed),
     limit: parsed.limit,
     includeUnassigned: Boolean(parsed.includeUnassigned),
   })

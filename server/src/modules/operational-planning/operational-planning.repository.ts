@@ -1177,6 +1177,10 @@ export type PlanItemExportRow = {
   notes: string | null
   activity_operational_status: string | null
   conveyor_operational_plan_item_id: string | null
+  /** Prioridade da esteira (`alta` | `media` | `baixa`). */
+  conveyor_priority?: string | null
+  /** Quantidade prevista da atividade (STEP). */
+  activity_planned_quantity?: number | null
 }
 
 /**
@@ -1212,6 +1216,8 @@ export async function listEnrichedItemsForWorkPlanExport(
     notes: string | null
     activity_operational_status: string | null
     conveyor_operational_plan_item_id: string | null
+    conveyor_priority: string | null
+    activity_planned_quantity: string | null
   }>(
     `
     SELECT
@@ -1237,7 +1243,9 @@ export async function listEnrichedItemsForWorkPlanExport(
       i.status,
       i.notes,
       step.operational_status::text AS activity_operational_status,
-      i.conveyor_operational_plan_item_id::text
+      i.conveyor_operational_plan_item_id::text,
+      cv.priority::text AS conveyor_priority,
+      step.planned_quantity::text AS activity_planned_quantity
     FROM operational_work_plan_items i
     INNER JOIN conveyors cv
       ON cv.id = i.conveyor_id
@@ -1293,6 +1301,9 @@ export async function listEnrichedItemsForWorkPlanExport(
     notes: row.notes,
     activity_operational_status: row.activity_operational_status,
     conveyor_operational_plan_item_id: row.conveyor_operational_plan_item_id,
+    conveyor_priority: row.conveyor_priority,
+    activity_planned_quantity:
+      row.activity_planned_quantity == null ? null : Number(row.activity_planned_quantity),
   }))
 }
 
@@ -1391,6 +1402,9 @@ export type BacklogRawRow = {
   pending_minutes: number
   assigned_collaborators_json: unknown
   assigned_teams_json: unknown
+  conveyor_code?: string | null
+  conveyor_priority?: string | null
+  planned_quantity?: number | null
 }
 
 export async function listOperationalPlanningBacklog(
@@ -1418,6 +1432,9 @@ export async function listOperationalPlanningBacklog(
     pending_minutes: string
     assigned_collaborators_json: unknown
     assigned_teams_json: unknown
+    conveyor_code: string | null
+    conveyor_priority: string | null
+    planned_quantity: string | null
   }>(
     `
     WITH realized AS (
@@ -1472,7 +1489,10 @@ export async function listOperationalPlanningBacklog(
             AND cna.assignment_type = 'TEAM'
         ),
         '[]'::json
-      ) AS assigned_teams_json
+      ) AS assigned_teams_json,
+      cv.code AS conveyor_code,
+      cv.priority::text AS conveyor_priority,
+      step.planned_quantity::text AS planned_quantity
     FROM conveyor_nodes step
     INNER JOIN conveyor_nodes area
       ON area.id = step.parent_id
@@ -1562,6 +1582,9 @@ export async function listOperationalPlanningBacklog(
     pending_minutes: Number.parseInt(row.pending_minutes, 10) || 0,
     assigned_collaborators_json: row.assigned_collaborators_json,
     assigned_teams_json: row.assigned_teams_json,
+    conveyor_code: row.conveyor_code,
+    conveyor_priority: row.conveyor_priority,
+    planned_quantity: row.planned_quantity == null ? null : Number(row.planned_quantity),
   }))
 }
 

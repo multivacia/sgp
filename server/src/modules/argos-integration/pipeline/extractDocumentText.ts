@@ -79,7 +79,7 @@ export async function extractDocumentText(params: {
   if (!text) {
     warnings.push({
       code: 'extract.empty',
-      message: 'Nenhum texto legível extraído do ficheiro.',
+      message: 'Nenhum texto legível extraído do arquivo.',
     })
   }
   return {

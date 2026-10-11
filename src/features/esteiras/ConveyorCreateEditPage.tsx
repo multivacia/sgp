@@ -1155,7 +1155,7 @@ export function ConveyorCreateEditPage({ mode }: { mode: Mode }) {
                 </div>
               ) : (
                 <p className="text-xs text-slate-500">
-                  Transições de status exigem a permissão conveyors.edit_status.
+                  Seu perfil não tem permissão para mudar a situação da esteira. Fale com a gestão.
                 </p>
               )}
             </div>

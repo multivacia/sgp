@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import type pg from 'pg'
 import { DatabaseError } from 'pg'
 import * as assigneeRepo from '../modules/conveyors/conveyorAssignments.repository.js'
+import * as plannedRepo from '../modules/operational-planning/planned-activity.repository.js'
 import {
   PRODUCTION_PUBLISHED_PLAN_ASSIGNEE_METADATA,
   resolveProductionStepAssigneeId,
@@ -19,6 +20,11 @@ describe('resolveProductionStepAssigneeId', () => {
   })
 
   it('reutiliza assignee existente do colaborador (principal)', async () => {
+    vi.spyOn(plannedRepo, 'findStepPlanningForCollaborator').mockResolvedValue({
+      plannedForCollaborator: true,
+      plannedForAnyone: true,
+      plannedMinutesForCollaborator: 60,
+    })
     vi.spyOn(assigneeRepo, 'findAssigneeIdForStepAndCollaborator').mockResolvedValue(
       'assignee-primary',
     )
@@ -36,9 +42,11 @@ describe('resolveProductionStepAssigneeId', () => {
 
   it('cria assignee não principal quando há plano publicado e outro é principal', async () => {
     vi.spyOn(assigneeRepo, 'findAssigneeIdForStepAndCollaborator').mockResolvedValue(null)
-    vi.spyOn(assigneeRepo, 'findPublishedPlanItemIdForCollaboratorOnStep').mockResolvedValue(
-      'plan-item-1',
-    )
+    vi.spyOn(plannedRepo, 'findStepPlanningForCollaborator').mockResolvedValue({
+      plannedForCollaborator: true,
+      plannedForAnyone: true,
+      plannedMinutesForCollaborator: 60,
+    })
     vi.spyOn(assigneeRepo, 'maxAssigneeOrderIndexForStep').mockResolvedValue(0)
     const insert = vi
       .spyOn(assigneeRepo, 'insertConveyorNodeAssignee')
@@ -65,6 +73,11 @@ describe('resolveProductionStepAssigneeId', () => {
   })
 
   it('reutiliza assignee não principal já existente', async () => {
+    vi.spyOn(plannedRepo, 'findStepPlanningForCollaborator').mockResolvedValue({
+      plannedForCollaborator: true,
+      plannedForAnyone: true,
+      plannedMinutesForCollaborator: 60,
+    })
     vi.spyOn(assigneeRepo, 'findAssigneeIdForStepAndCollaborator').mockResolvedValue(
       'assignee-existing-support',
     )
@@ -84,9 +97,11 @@ describe('resolveProductionStepAssigneeId', () => {
     vi.spyOn(assigneeRepo, 'findAssigneeIdForStepAndCollaborator')
       .mockResolvedValueOnce(null)
       .mockResolvedValueOnce('assignee-after-race')
-    vi.spyOn(assigneeRepo, 'findPublishedPlanItemIdForCollaboratorOnStep').mockResolvedValue(
-      'plan-item-1',
-    )
+    vi.spyOn(plannedRepo, 'findStepPlanningForCollaborator').mockResolvedValue({
+      plannedForCollaborator: true,
+      plannedForAnyone: true,
+      plannedMinutesForCollaborator: 60,
+    })
     vi.spyOn(assigneeRepo, 'maxAssigneeOrderIndexForStep').mockResolvedValue(1)
     const err = new DatabaseError('duplicate', 0, 'error')
     err.code = '23505'
@@ -102,11 +117,13 @@ describe('resolveProductionStepAssigneeId', () => {
     expect(assigneeRepo.findAssigneeIdForStepAndCollaborator).toHaveBeenCalledTimes(2)
   })
 
-  it('sem plano publicado → null', async () => {
-    vi.spyOn(assigneeRepo, 'findAssigneeIdForStepAndCollaborator').mockResolvedValue(null)
-    vi.spyOn(assigneeRepo, 'findPublishedPlanItemIdForCollaboratorOnStep').mockResolvedValue(
-      null,
-    )
+  it('sem item planejado para o colaborador → null, mesmo com alocação na esteira', async () => {
+    vi.spyOn(assigneeRepo, 'findAssigneeIdForStepAndCollaborator').mockResolvedValue('structural')
+    vi.spyOn(plannedRepo, 'findStepPlanningForCollaborator').mockResolvedValue({
+      plannedForCollaborator: false,
+      plannedForAnyone: true,
+      plannedMinutesForCollaborator: null,
+    })
     const insert = vi.spyOn(assigneeRepo, 'insertConveyorNodeAssignee')
 
     const id = await resolveProductionStepAssigneeId(POOL, {
@@ -122,9 +139,11 @@ describe('resolveProductionStepAssigneeId', () => {
   it('segunda chamada reutiliza assignee sem novo insert', async () => {
     const find = vi.spyOn(assigneeRepo, 'findAssigneeIdForStepAndCollaborator')
     find.mockResolvedValueOnce(null).mockResolvedValueOnce('assignee-1')
-    vi.spyOn(assigneeRepo, 'findPublishedPlanItemIdForCollaboratorOnStep').mockResolvedValue(
-      'plan-item-1',
-    )
+    vi.spyOn(plannedRepo, 'findStepPlanningForCollaborator').mockResolvedValue({
+      plannedForCollaborator: true,
+      plannedForAnyone: true,
+      plannedMinutesForCollaborator: 60,
+    })
     vi.spyOn(assigneeRepo, 'maxAssigneeOrderIndexForStep').mockResolvedValue(0)
     const insert = vi
       .spyOn(assigneeRepo, 'insertConveyorNodeAssignee')

@@ -45,6 +45,8 @@ import {
   OPERATIONAL_TIMEZONE,
   operationalDayRangeIso,
 } from '../../domain/operational/workDate'
+import { TimeEntryJustificationNote } from '../../components/operational/TimeEntryJustificationNote'
+import { JourneyExtraTimeEntriesSection } from '../../components/operational/JourneyExtraTimeEntriesSection'
 
 function JornadaGestorSkeleton() {
   return (
@@ -167,7 +169,7 @@ function AssignmentCard({
               {item.plannedMinutes != null ? formatHumanMinutes(item.plannedMinutes) : '—'}
             </span>
             <span>
-              {operationalLabels.minutosApontadosAcumulado} (neste step):{' '}
+              {operationalLabels.minutosApontadosAcumulado} (nesta atividade):{' '}
               {item.realizedMinutes == null
                 ? '—'
                 : formatHumanMinutes(item.realizedMinutes)}
@@ -661,13 +663,13 @@ export function JornadaColaboradorGestorPage() {
               Em aberto
             </h2>
             <p className="mt-1 text-sm text-slate-500">
-              Alocações em esteiras ainda não concluídas (bucket ≠ concluídas).
+              Alocações em esteiras ainda não concluídas.
             </p>
             {journey.assignmentsOpen.length === 0 ? (
               <p className="mt-4 text-sm text-slate-500">
                 {conveyorFilter
                   ? transversalUxCopy.journeyEmptyFiltered
-                  : 'Nada em aberto neste recorte. Confira o bucket «em atraso» ou o histórico abaixo.'}
+                  : 'Nada em aberto neste recorte. Confira a situação «em atraso» ou o histórico abaixo.'}
               </p>
             ) : (
               <ul className="mt-6 space-y-4">
@@ -690,10 +692,10 @@ export function JornadaColaboradorGestorPage() {
 
           <section className="mt-12">
             <h2 className="font-heading text-sm font-bold uppercase tracking-[0.12em] text-slate-50">
-              Em risco (bucket em atraso)
+              Em risco (em atraso)
             </h2>
             <p className="mt-1 text-sm text-slate-500">
-              Alocações cuja esteira está no bucket «em atraso» ({operationalLabels.pressaoAtraso}).
+              Alocações cuja esteira está «em atraso» ({operationalLabels.pressaoAtraso}).
             </p>
             {journey.assignmentsAtRisk.length === 0 ? (
               <p className="mt-4 text-sm text-slate-500">
@@ -725,7 +727,7 @@ export function JornadaColaboradorGestorPage() {
               {operationalLabels.pendenciaTempo}
             </h2>
             <p className="mt-1 text-sm text-slate-500">
-              STEPs em aberto com previsto estrutural superior ao acumulado apontado pelo colaborador
+              Atividades em aberto com previsto estrutural superior ao acumulado apontado pelo colaborador
               (ordenado por maior diferença). Sinal operacional.
             </p>
             {journey.signals.pendenciaTempo.count === 0 ? (
@@ -810,6 +812,13 @@ export function JornadaColaboradorGestorPage() {
                       <p className="text-xs text-slate-500">
                         {e.stepName} · {formatHumanMinutes(e.minutes)}
                       </p>
+                      <TimeEntryJustificationNote entry={e} />
+                      {e.notes?.trim() ? (
+                        <p className="mt-0.5 text-[11px] leading-snug text-slate-500">
+                          <span className="font-semibold">Observação: </span>
+                          {e.notes.trim()}
+                        </p>
+                      ) : null}
                     </div>
                     <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500">
                       <span>
@@ -827,6 +836,13 @@ export function JornadaColaboradorGestorPage() {
               </ul>
             )}
           </section>
+
+          <JourneyExtraTimeEntriesSection
+            summary={journey.extraTimeEntriesSummary}
+            entries={journey.recentExtraTimeEntries ?? []}
+            limit={journey.query.limit ?? 20}
+            showCollaborator={isMultiSelection}
+          />
         </>
       )}
 

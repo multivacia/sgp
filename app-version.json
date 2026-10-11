@@ -1,7 +1,7 @@
 {
   "product": "SGP+",
-  "version": "1.9.8",
-  "releaseName": "Jornada multi-colaborador, manual funcional e melhorias de interface",
-  "releaseDate": "2026-10-02",
+  "version": "1.9.9",
+  "releaseName": "Ajuda contextual e Manual do Usuário integrado",
+  "releaseDate": "2026-10-07",
   "channel": "production"
 }

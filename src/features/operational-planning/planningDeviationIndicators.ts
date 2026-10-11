@@ -3,6 +3,8 @@ import type {
   OperationalPlanningExecutionOutsidePlanSummary,
 } from '../../domain/operational-planning/operational-planning.types'
 import {
+  isPlanningPeriodFilterActive,
+  matchesPlanningPeriod,
   matchesPlanningTextSearch,
   PLANNING_COLLABORATOR_ALL,
   PLANNING_COLLABORATOR_UNASSIGNED,
@@ -10,6 +12,7 @@ import {
   type PlanningBoardFilters,
 } from './planningBoardFilters'
 import { formatPlanningMinutes } from './planningBoardHelpers'
+import { operationalDateOf } from '../../domain/operational/workDate'
 import { resolvePlanningItemOperationalStatusLabel } from './planningExecutionHelpers'
 
 export type PlanningDeviationKind =
@@ -210,6 +213,13 @@ export function filterExecutionOutsidePlanEntries(
       if (!matchesPlanningTextSearch(searchable, filters.q)) {
         return false
       }
+    }
+
+    if (
+      isPlanningPeriodFilterActive(filters) &&
+      !matchesPlanningPeriod(operationalDateOf(new Date(entry.entryAt)), filters)
+    ) {
+      return false
     }
 
     return true
