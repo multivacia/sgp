@@ -103,6 +103,44 @@ Achado no código: `server/src/scripts/migrate.ts` executa todos os `.sql` a cad
 - Restore só em produção ou também HML ← produção (já há runbook para DEV).
 - Disparo do esporádico via GitHub Actions é desejado?
 
+## Atualização 3 — proposta: tela de backups/restore no SGP (2026-10-11)
+
+Decisões humanas: servidor on-premise é **Windows** com espaço disponível; desejada opção no SGP para listar backups e restaurar o selecionado, com confirmação digitando o nome do arquivo.
+Status: **proposta de arquitetura, nada implementado**. Demanda grande (banco, permissão, produção) → seguir fluxo contexto → impacto → spec → implementação (AGENTS.md).
+
+### Por que a API não restaura diretamente
+1. A API usa `sgp_prod`; o restore exige parar o `sgp-api` e trocar a base — a API não pode derrubar a si mesma no meio da operação.
+2. A credencial da API teria de ser superuser/`CREATEDB`; conta admin comprometida = poder de apagar produção.
+3. Status, auditoria e logs gravados em `sgp_prod` somem com o restore.
+
+### Arquitetura proposta
+- **SGP Backup Agent** (serviço systemd próprio na VPS, mesmo conceito do SGP Print Agent): único processo com credenciais de backup/restore; executa os scripts versionados.
+- **Base de controle `sgp_ops`** (separada de `sgp_prod`): fila de pedidos (backup/restore), status, auditoria de operações. Sobrevive ao restore.
+- **API do SGP**: só lista backups (lendo manifestos), cria pedidos em `sgp_ops` e consulta status. Sem privilégio de restore.
+- **Fluxo do restore pelo agente**: valida checksum → restaura em `sgp_restore_<ts>` → valida → nginx em modo manutenção → para `sgp-api` → backup de segurança da base atual → renomeia (`sgp_prod`→`sgp_prod_old_<ts>`, restaurada→`sgp_prod`) → sobe `sgp-api` → sai da manutenção → registra resultado. Falha em qualquer passo antes da troca = produção intacta.
+- **Desfazer restore**: renomear de volta enquanto `sgp_prod_old_<ts>` existir (retenção sugerida: 7 dias).
+
+### Tela "Backups" (Administração)
+- Lista: data/hora, tipo (diário/esporádico/pré-restore), motivo, tamanho, versão (SHA/tag), checksum OK, presente no on-premise.
+- Ação "Fazer backup agora" (motivo obrigatório).
+- Ação "Restaurar": aviso de perda dos dados posteriores ao backup ("serão perdidos os registros desde DD/MM HH:MM — X horas"); alerta se a versão do backup difere da publicada; **reautenticação com senha** + **digitar o nome exato do arquivo**; acompanhamento do progresso; sistema indisponível durante a troca.
+- RBAC: novas permissões `system.backups.view`, `system.backups.create`, `system.backups.restore` (esta só para administrador master), via migration `0054` (confirmar número livre no momento).
+
+### On-premise Windows
+- Tarefa Agendada + PowerShell usando OpenSSH nativo do Windows (`sftp`/`scp`) em modo pull, chave restrita somente leitura; verificação `sha256`; retenção local (30 diários + 12 mensais); criptografia em repouso (BitLocker na pasta/volume ou `age`).
+- PostgreSQL 18 client instalado no Windows para teste mensal de restore e restore de desastre (VPS perdida) — este último **manual**, por runbook, não pela tela.
+
+### Fases sugeridas
+1. Scripts versionados (backup esporádico, restore, pull Windows) + backup automático no deploy com migration + runbooks.
+2. Agente + `sgp_ops` + tela somente listagem e "fazer backup agora".
+3. Restore pela tela (após fase 2 estável e teste de restore real em HML).
+
+### Decisões pendentes
+- Quem pode restaurar (só administrador master?).
+- Restore pela tela só em produção, ou também "produção → HML".
+- Janela de indisponibilidade aceita durante restore (minutos, conforme tamanho da base).
+- Tela lista também cópias do on-premise, ou só da VPS.
+
 ## Riscos / ressalvas
 - Backup de banco depende inteiramente de execução manual; se ninguém rodar, não há cópia.
 - Backups de frontend em `/opt/sgp/backups/` crescem sem rotação (inferido pelo workflow; não verificado no servidor).
