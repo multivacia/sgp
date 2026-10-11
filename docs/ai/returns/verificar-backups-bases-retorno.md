@@ -70,6 +70,39 @@ Fonte: informação humana; o conteúdo do script e o crontab **não foram visto
 - Enviar o conteúdo de `/opt/sgp/backup-sgp.sh` (sem senhas) e a linha do crontab para versionar em `scripts/db/` e documentar em `docs/backup-bases.md`.
 - Definir destino off-site (ex.: bucket S3/Backblaze/Google Drive via `rclone`) com retenção própria.
 
+## Atualização 2 — sugestões para backup esporádico, restore e cópia on-premise (2026-10-11)
+
+Decisão humana: manter backup na VPS **e** em servidor on-premise do cliente. Fontes ficam no GitHub; alvo é só PostgreSQL.
+Status: **proposta, nada implementado** — aguardando aprovação.
+
+Achado no código: `server/src/scripts/migrate.ts` executa todos os `.sql` a cada execução e **não há tabela de controle de migrations**. Um `.dump` não registra a versão do schema → cada backup precisa de manifesto com o SHA/tag da aplicação publicada.
+
+### Cópia on-premise
+- Modelo **pull**: o servidor on-premise busca da VPS (`rsync` via SSH com chave restrita, `command=`/`rrsync` read-only em `/opt/sgp/backups/`). VPS comprometida não consegue apagar a cópia on-premise; dispensa abrir porta no cliente.
+- Agendar após o backup (ex.: 03h30), verificar `sha256` e `pg_restore --list` no destino.
+- Retenção própria maior (sugestão: 30 diários + 12 mensais); criptografar em repouso (`age`/`gpg`) — dump contém dados pessoais (LGPD).
+
+### Backup esporádico (sob demanda)
+- Script versionado `scripts/db/backup-adhoc.sh` com motivo obrigatório (ex.: `pre-migration`, `pre-reset`, `manual`).
+- Gera: `pg_dump -Fc` da base escolhida + `pg_dumpall --globals-only` (roles) + `manifest.txt` (data, operador, motivo, base, versão do servidor, SHA/tag publicado, sha256).
+- Destino separado `/opt/sgp/backups/adhoc/`, **fora** da limpeza de 14 dias (retenção manual ou 90 dias); sincronizado também ao on-premise.
+- Binário explícito do PG 18 (ex.: `/usr/lib/postgresql/18/bin/pg_dump`), porta 5433.
+- Usuário de backup dedicado com `pg_read_all_data` (não superuser), senha em `~/.pgpass` 600.
+- Disparo: manual via SSH e/ou workflow `workflow_dispatch` "backup-db"; chamado automaticamente no deploy quando `migrate_on_deploy=1` (falha no backup aborta o deploy).
+
+### Restore
+- Script versionado `scripts/db/restore-db.sh`, com confirmação explícita digitando o nome da base.
+- Padrão seguro: restaurar em base nova (`sgp_restore_YYYYMMDD`) com `pg_restore -j N`, validar (contagens, login, telas principais) e só então trocar:
+  1. parar `sgp-api`; 2. backup ad hoc da base atual; 3. `ALTER DATABASE sgp_prod RENAME TO sgp_prod_old_<ts>` e `sgp_restore_... RENAME TO sgp_prod`; 4. subir `sgp-api`; 5. manter `_old` por alguns dias.
+- Rollback = renomear de volta (rápido, sem novo restore).
+- Conferir que o código publicado corresponde ao SHA do manifesto; se não, publicar a release correspondente ou rodar `migrate` (migrations precisam ser idempotentes).
+- Teste mensal de restore no servidor on-premise (serve também para validar a cópia).
+
+### Perguntas em aberto
+- On-premise: SO (Linux/Windows), se alcança a VPS por SSH, espaço disponível.
+- Restore só em produção ou também HML ← produção (já há runbook para DEV).
+- Disparo do esporádico via GitHub Actions é desejado?
+
 ## Riscos / ressalvas
 - Backup de banco depende inteiramente de execução manual; se ninguém rodar, não há cópia.
 - Backups de frontend em `/opt/sgp/backups/` crescem sem rotação (inferido pelo workflow; não verificado no servidor).
