@@ -1,11 +1,14 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import {
+  buildGuideUrl,
   buildManualUrl,
   manualThemeFor,
   resolveScreenHelp,
+  visiblePracticalGuides,
 } from '../../lib/help/manual-help'
 import { useColorTheme } from '../../lib/theme/useColorTheme'
+import { useAuth } from '../../lib/use-auth'
 
 type Props = {
   /** Presente só quando "Abrir chamado" está disponível; reaproveita o fluxo existente. */
@@ -19,6 +22,7 @@ const ITEM_CLASS =
 export function HelpMenu({ onOpenSupportTicket }: Props) {
   const location = useLocation()
   const { themeId } = useColorTheme()
+  const { canAny } = useAuth()
   const [open, setOpen] = useState(false)
   const wrapRef = useRef<HTMLDivElement>(null)
   const triggerRef = useRef<HTMLButtonElement>(null)
@@ -177,6 +181,19 @@ export function HelpMenu({ onOpenSupportTicket }: Props) {
           >
             Manual do usuário
           </a>
+
+          {visiblePracticalGuides(canAny).map((guide) => (
+            <a
+              key={guide.id}
+              role="menuitem"
+              tabIndex={-1}
+              href={buildGuideUrl({ guide: guide.id, theme })}
+              className={ITEM_CLASS}
+              onClick={() => setOpen(false)}
+            >
+              {guide.label}
+            </a>
+          ))}
 
           {onOpenSupportTicket ? (
             <button

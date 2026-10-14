@@ -4,6 +4,26 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Guia Prático do Colaborador — SGP+</title>
+  <meta name="color-scheme" content="dark light" />
+  <script>
+    /* Tema antes da primeira pintura. Prioridade: ?tema= (SGP+) > preferência guardada > sistema > escuro.
+       Mesma preferência do Manual do Usuário (sgp.manual.tema). */
+    (function () {
+      var root = document.documentElement;
+      var valid = function (v) { return v === 'claro' || v === 'escuro'; };
+      var params = new URLSearchParams(window.location.search);
+      var theme = params.get('tema');
+      if (!valid(theme)) {
+        theme = null;
+        try { var saved = window.localStorage.getItem('sgp.manual.tema'); if (valid(saved)) theme = saved; } catch (e) {}
+      }
+      if (!theme) {
+        theme = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'claro' : 'escuro';
+      }
+      root.setAttribute('data-theme', theme);
+      if (params.get('integrado') === '1') root.setAttribute('data-modo', 'integrado');
+    })();
+  </script>
   <style>
     :root {
       --gold: #c9a227;
@@ -17,6 +37,36 @@
       --border: rgba(255,255,255,0.09);
       --text: #e2e8f0;
       --muted: #94a3b8;
+      --accent: #c9a227;
+      --accent-bg: rgba(201,162,39,.15);
+      --heading: #ffffff;
+      --h3: #cbd5e1;
+      --code-bg: rgba(91,155,213,.14);
+      --code-fg: #a5c8f0;
+      --img-bg: #0b1320;
+      --focus: #7db6e8;
+      color-scheme: dark;
+    }
+    :root[data-theme="claro"] {
+      color-scheme: light;
+      --void: #f4f6f9;
+      --surface: #ffffff;
+      --surface-2: #eaeff5;
+      --border: rgba(15,23,42,0.14);
+      --text: #1e293b;
+      --muted: #475569;
+      --blue: #1c5a8c;
+      --emerald: #059669;
+      --amber: #b45309;
+      --red: #dc2626;
+      --accent: #7a5c0c;
+      --accent-bg: rgba(201,162,39,.18);
+      --heading: #0f172a;
+      --h3: #334155;
+      --code-bg: #e6edf6;
+      --code-fg: #1e3a8a;
+      --img-bg: #ffffff;
+      --focus: #1c5a8c;
     }
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     html { scroll-behavior: smooth; }
@@ -31,10 +81,10 @@
     header.doc { border-bottom: 1px solid var(--border); padding-bottom: 24px; margin-bottom: 32px; }
     .badge {
       display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: .08em;
-      text-transform: uppercase; color: var(--gold); border: 1px solid rgba(201,162,39,.35);
-      background: rgba(201,162,39,.08); border-radius: 4px; padding: 3px 10px; margin-bottom: 12px;
+      text-transform: uppercase; color: var(--accent); border: 1px solid rgba(201,162,39,.35);
+      background: var(--accent-bg); border-radius: 4px; padding: 3px 10px; margin-bottom: 12px;
     }
-    h1 { font-family: 'Montserrat', 'Segoe UI', Arial, sans-serif; font-size: 1.9rem; color: #fff; line-height: 1.2; }
+    h1 { font-family: 'Montserrat', 'Segoe UI', Arial, sans-serif; font-size: 1.9rem; color: var(--heading); line-height: 1.2; }
     .subtitle { margin-top: 8px; color: var(--muted); font-size: 14px; }
     .meta { margin-top: 10px; color: var(--muted); font-size: 12px; }
     nav.toc { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 18px 22px; margin-bottom: 40px; }
@@ -42,17 +92,17 @@
     nav.toc ol { padding-left: 20px; columns: 2; column-gap: 28px; }
     @media (max-width: 640px) { nav.toc ol { columns: 1; } }
     nav.toc a { color: var(--blue); text-decoration: none; font-size: 14px; }
-    nav.toc a:hover { color: var(--gold); text-decoration: underline; }
+    nav.toc a:hover { color: var(--accent); text-decoration: underline; }
     section { margin-bottom: 48px; }
     h2 {
-      font-family: 'Montserrat', 'Segoe UI', Arial, sans-serif; font-size: 1.2rem; color: var(--gold);
+      font-family: 'Montserrat', 'Segoe UI', Arial, sans-serif; font-size: 1.2rem; color: var(--accent);
       border-bottom: 1px solid rgba(201,162,39,.22); padding-bottom: 8px; margin-bottom: 16px; scroll-margin-top: 16px;
     }
-    h3 { font-size: .95rem; color: #cbd5e1; margin: 22px 0 8px; scroll-margin-top: 16px; }
+    h3 { font-size: .95rem; color: var(--h3); margin: 22px 0 8px; scroll-margin-top: 16px; }
     p { margin-bottom: 12px; }
     ol.steps, ul { margin: 0 0 14px 22px; }
     ol.steps li, ul li { margin-bottom: 6px; }
-    strong { color: #fff; }
+    strong { color: var(--heading); }
     .where { font-size: 13px; color: var(--muted); margin-bottom: 12px; }
     .where b { color: var(--text); }
     .ok, .warn, .info, .ref {
@@ -67,7 +117,7 @@
     figure a { display: block; }
     figure img {
       display: block; max-width: 100%; height: auto; border: 1px solid var(--border); border-radius: 8px;
-      background: #0b1320;
+      background: var(--img-bg);
     }
     figure.narrow img { max-width: min(480px, 100%); }
     figcaption { font-size: 12.5px; color: var(--muted); margin-top: 6px; }
@@ -76,18 +126,42 @@
     th { background: var(--surface-2); color: var(--muted); font-size: 11.5px; text-transform: uppercase; letter-spacing: .04em; text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--border); }
     td { padding: 9px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
     .div-item { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px 18px; margin-bottom: 16px; scroll-margin-top: 16px; }
-    .div-item h3 { margin-top: 0; color: #fff; }
+    .div-item h3 { margin-top: 0; color: var(--heading); }
     .div-item dl { display: grid; grid-template-columns: 190px 1fr; gap: 6px 14px; font-size: 13.5px; }
     @media (max-width: 640px) { .div-item dl { grid-template-columns: 1fr; } }
     .div-item dt { color: var(--muted); }
     .div-item dd, .div-item dt { min-width: 0; overflow-wrap: anywhere; }
-    code { font-family: Consolas, 'Courier New', monospace; font-size: 12.5px; background: rgba(91,155,213,.14); color: #a5c8f0; padding: 1px 5px; border-radius: 4px; }
+    code { font-family: Consolas, 'Courier New', monospace; font-size: 12.5px; background: var(--code-bg); color: var(--code-fg); padding: 1px 5px; border-radius: 4px; }
     footer { border-top: 1px solid var(--border); padding-top: 18px; color: var(--muted); font-size: 12px; }
     a.top { font-size: 12px; color: var(--muted); text-decoration: none; }
+    /* Barra do guia: tema e retorno ao SGP+ (mesmo padrão do Manual do Usuário). */
+    .doc-toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 24px; }
+    .back-sgp { display: none; font-size: 14px; font-weight: 600; color: var(--blue); text-decoration: none; }
+    :root[data-modo="integrado"] .back-sgp { display: inline-flex; min-height: 44px; align-items: center; }
+    .back-sgp:hover { text-decoration: underline; }
+    .theme-switch { display: inline-flex; margin-left: auto; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); padding: 3px; gap: 2px; }
+    .theme-switch button {
+      min-height: 44px; min-width: 76px; padding: 0 14px; border: 0; border-radius: 8px; background: transparent;
+      color: var(--muted); font: inherit; font-size: 14px; font-weight: 600; cursor: pointer;
+    }
+    .theme-switch button:hover { color: var(--text); }
+    .theme-switch button[aria-pressed="true"] { background: var(--accent-bg); color: var(--accent); }
+    a:focus-visible, button:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; border-radius: 4px; }
+    @media print {
+      .doc-toolbar { display: none; }
+    }
   </style>
 </head>
 <body>
 <div class="page">
+
+<div class="doc-toolbar">
+  <a class="back-sgp" id="voltar-sgp" href="/app/">← Voltar ao SGP+</a>
+  <div class="theme-switch" role="group" aria-label="Tema do guia">
+    <button type="button" data-tema="claro" aria-pressed="false">Claro</button>
+    <button type="button" data-tema="escuro" aria-pressed="true">Escuro</button>
+  </div>
+</div>
 
 <header class="doc">
   <span class="badge">SGP+ · Guia prático</span>
@@ -622,5 +696,33 @@
 </footer>
 
 </div>
+<script>
+  /* Seletor Claro/Escuro (grava a preferência compartilhada com o manual) e retorno ao SGP+. */
+  (function () {
+    var root = document.documentElement;
+    var buttons = document.querySelectorAll('.theme-switch button');
+    function sync() {
+      var current = root.getAttribute('data-theme');
+      for (var i = 0; i < buttons.length; i++) {
+        buttons[i].setAttribute('aria-pressed', String(buttons[i].getAttribute('data-tema') === current));
+      }
+    }
+    for (var i = 0; i < buttons.length; i++) {
+      buttons[i].addEventListener('click', function (event) {
+        var theme = event.currentTarget.getAttribute('data-tema');
+        root.setAttribute('data-theme', theme);
+        try { window.localStorage.setItem('sgp.manual.tema', theme); } catch (e) {}
+        sync();
+      });
+    }
+    sync();
+    var back = document.getElementById('voltar-sgp');
+    if (back) {
+      back.addEventListener('click', function (event) {
+        if (window.history.length > 1) { event.preventDefault(); window.history.back(); }
+      });
+    }
+  })();
+</script>
 </body>
 </html>
