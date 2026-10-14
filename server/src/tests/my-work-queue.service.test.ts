@@ -56,7 +56,7 @@ describe('serviceGetMyWorkQueue', () => {
 
     expect(result.data.items).toEqual([])
     expect(result.meta.collaboratorId).toBeNull()
-    expect(result.meta.unavailableReason).toContain('colaborador operacional vinculado')
+    expect(result.meta.unavailableReason).toContain('não está vinculada a um colaborador operacional')
   })
 
   it('retorna vazio quando não há plano publicado na semana', async () => {

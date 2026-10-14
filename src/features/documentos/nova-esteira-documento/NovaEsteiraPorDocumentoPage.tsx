@@ -412,7 +412,7 @@ export function NovaEsteiraPorDocumentoPage() {
       {documentExecutionMode === 'remote' ? (
         <SgpInlineBanner
           variant="neutral"
-          message="Modo remoto ARGOS: o rascunho veio do gateway (DOCUMENT_DRAFT_ADAPTER=remote). O padrão seguro em dev/HML é DOCUMENT_DRAFT_ADAPTER=local (pipeline R6 OS Bravo 1.1.0). ARGOS_INGEST_URL sozinho já não ativa remoto."
+          message="Rascunho gerado pelo serviço ARGOS remoto. Confira os dados antes de criar a esteira."
           className="mt-6 max-w-4xl border-violet-500/25 bg-violet-500/[0.08] text-violet-50/95"
         />
       ) : null}
@@ -449,7 +449,7 @@ export function NovaEsteiraPorDocumentoPage() {
           >
             <p className="text-center text-sm text-slate-300">
               {pickedFile
-                ? 'Ficheiro selecionado. Pode substituir escolhendo outro PDF.'
+                ? 'Arquivo selecionado. Você pode substituí-lo escolhendo outro PDF.'
                 : 'Arraste o PDF ou escolha um arquivo.'}
             </p>
             <label className="sgp-cta-primary mt-4 inline-flex cursor-pointer px-6 py-2.5">

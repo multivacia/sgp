@@ -74,7 +74,7 @@ export function StepAnaliticoPanel({
             to={`/app/gestao/apontamento/${encodeURIComponent(sa.stepNodeId)}?conveyorId=${encodeURIComponent(sa.conveyorId)}&from=esteira`}
             className="text-[11px] font-semibold text-sgp-gold/95 underline-offset-2 hover:text-sgp-gold hover:underline"
           >
-            Apontamento gerencial neste passo
+            Apontamento gerencial nesta atividade
           </Link>
         </div>
       ) : null}

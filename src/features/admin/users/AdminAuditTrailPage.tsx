@@ -130,7 +130,7 @@ export function AdminAuditTrailPage() {
             </select>
           </label>
           <label className="flex min-w-[14rem] flex-1 flex-col gap-1.5 text-xs font-semibold text-slate-400">
-            ID do usuário alvo (UUID)
+            ID do usuário alvo
             <input
               value={targetUserFilter}
               onChange={(e) => setTargetUserFilter(e.target.value)}

@@ -593,7 +593,7 @@ async function validatePlanItems(
       )
     }
     if (row.node_type !== 'STEP') {
-      throw new AppError('Somente Atividades (STEP) podem ser planejadas.', 400, ErrorCodes.VALIDATION_ERROR)
+      throw new AppError('Somente atividades podem ser planejadas.', 400, ErrorCodes.VALIDATION_ERROR)
     }
     if (!row.is_active) {
       throw new AppError('Atividade inativa não pode ser planejada.', 400, ErrorCodes.VALIDATION_ERROR)

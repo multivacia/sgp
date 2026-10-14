@@ -77,7 +77,7 @@ export function ApontamentoPage() {
 
   const loadContext = useCallback(async () => {
     if (!stepNodeId || !conveyorId) {
-      setError('Parâmetros em falta: indique a esteira e o passo (URL incompleta).')
+      setError('Endereço incompleto: indique a esteira e a atividade.')
       setActivity(null)
       setLoading(false)
       return
@@ -241,7 +241,7 @@ export function ApontamentoPage() {
           <p className="font-heading text-lg text-slate-200">URL incompleta</p>
           <p className="mt-2 text-sm text-slate-500">
             Abra o apontamento a partir de Minha fila, da jornada ou do detalhe da
-            esteira (parâmetros conveyorId e passo).
+            esteira.
           </p>
           <Link
             to="/app/minha-fila"
@@ -334,7 +334,7 @@ export function ApontamentoPage() {
           {fromEsteira ? 'Origem · esteira' : fromJornada ? 'Origem · jornada' : 'Origem · minha fila'}
         </p>
         <p className="relative mt-3 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">
-          Etapa (STEP)
+          Atividade
         </p>
         <div className="relative mt-1 flex flex-wrap items-start gap-3">
           <h1 className="sgp-page-title min-w-0 flex-1 leading-tight">
@@ -377,7 +377,7 @@ export function ApontamentoPage() {
         </div>
         <div className="relative mt-4 flex flex-wrap gap-x-6 gap-y-2 text-sm text-slate-400">
           <span className="text-slate-500">
-            Papel no passo:{' '}
+            Papel na atividade:{' '}
             <span className="font-medium text-slate-300">
               {labelRoleInStep(activity.roleInStep)}
             </span>

@@ -105,7 +105,7 @@ export function ApontamentoGestorPage() {
 
   const loadData = useCallback(async () => {
     if (!stepNodeId?.trim() || !conveyorId?.trim()) {
-      setError('Indique a esteira e o passo (URL incompleta).')
+      setError('Indique a esteira e a atividade (endereço incompleto).')
       setAssigneeOptions([])
       setEntries([])
       setSequenceCheck(null)
@@ -421,13 +421,13 @@ export function ApontamentoGestorPage() {
     return (
       <PageCanvas>
         <div className="sgp-panel max-w-lg rounded-2xl border border-white/[0.08] p-8">
-          <p className="font-heading text-lg text-slate-200">URL incompleta</p>
+          <p className="font-heading text-lg text-slate-200">Endereço incompleto</p>
           <p className="mt-2 text-sm text-slate-500">
-            Abra a partir do detalhe da esteira (link &quot;Apontamento gerencial&quot; no
-            passo) ou inclua conveyorId na query.
+            Abra a partir do detalhe da esteira, pelo link &quot;Apontamento gerencial&quot; da
+            atividade.
           </p>
           <Link to="/app/backlog" className="sgp-cta-primary mt-6 inline-flex text-center">
-            Backlog
+            Painel operacional
           </Link>
         </div>
       </PageCanvas>
@@ -437,7 +437,7 @@ export function ApontamentoGestorPage() {
   if (loading) {
     return (
       <PageCanvas>
-        <p className="text-sm text-slate-500">Carregando passo…</p>
+        <p className="text-sm text-slate-500">Carregando atividade…</p>
       </PageCanvas>
     )
   }
@@ -476,7 +476,7 @@ export function ApontamentoGestorPage() {
           Apontamento gerencial
         </p>
         <p className="mt-2 text-sm text-slate-400">
-          Registo em nome de um colaborador alocado neste passo. O motivo é obrigatório e fica
+          Registro em nome de um colaborador alocado nesta atividade. O motivo é obrigatório e fica
           na trilha administrativa.
         </p>
       </div>
@@ -496,7 +496,7 @@ export function ApontamentoGestorPage() {
           <h2 className="font-heading text-lg text-slate-100">Novo lançamento</h2>
           {assigneeOptions.length === 0 ? (
             <p className="text-sm text-slate-500">
-              Não há colaboradores alocados neste passo. Aloque antes de apontar.
+              Não há colaboradores alocados nesta atividade. Aloque antes de apontar.
             </p>
           ) : (
             <>
@@ -587,7 +587,7 @@ export function ApontamentoGestorPage() {
       ) : null}
 
       <section className="mt-10 max-w-2xl">
-        <h2 className="font-heading text-lg text-slate-100">Lançamentos no passo</h2>
+        <h2 className="font-heading text-lg text-slate-100">Lançamentos na atividade</h2>
         {entries.length === 0 ? (
           <p className="mt-2 text-sm text-slate-500">Ainda não há apontamentos.</p>
         ) : (

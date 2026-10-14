@@ -263,7 +263,7 @@ async function validateStepForItem(
     )
   }
   if (step.node_type !== 'STEP') {
-    throw new AppError('Somente atividades (STEP) podem compor o plano.', 400, ErrorCodes.VALIDATION_ERROR)
+    throw new AppError('Somente atividades podem compor o plano.', 400, ErrorCodes.VALIDATION_ERROR)
   }
   if (!step.is_active) {
     throw new AppError('Atividade inativa não pode compor o plano.', 400, ErrorCodes.VALIDATION_ERROR)

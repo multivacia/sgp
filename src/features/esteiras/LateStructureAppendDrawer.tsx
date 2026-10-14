@@ -191,11 +191,11 @@ export function LateStructureAppendDrawer({
       return 'Selecione uma tarefa da matriz.'
     }
     if (intent === 'AREA' && !targetOptionId) {
-      return 'Selecione a tarefa (OPTION) de destino.'
+      return 'Selecione a tarefa de destino.'
     }
     if (intent === 'STEP') {
-      if (!targetOptionId) return 'Selecione a tarefa (OPTION) de destino.'
-      if (!targetAreaId) return 'Selecione o setor (AREA) de destino.'
+      if (!targetOptionId) return 'Selecione a tarefa de destino.'
+      if (!targetAreaId) return 'Selecione o setor de destino.'
     }
     if (intent === 'AREA') {
       const area = roots[0]?.areas[0]
@@ -221,7 +221,7 @@ export function LateStructureAppendDrawer({
       if (step.plannedQuantityDraft !== undefined) return PLANNED_QUANTITY_INVALID_MESSAGE
       return validateManualStepAssignees(roots, aloc)
     }
-    if (roots.length !== 1) return 'Inclua exatamente uma nova tarefa (OPTION).'
+    if (roots.length !== 1) return 'Inclua exatamente uma nova tarefa.'
     return validateManualStructure(roots) ?? validateManualStepAssignees(roots, aloc)
   }, [
     intent,

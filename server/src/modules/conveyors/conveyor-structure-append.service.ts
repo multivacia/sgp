@@ -412,8 +412,8 @@ async function loadAndAssertParentNode(
   if (row.node_type !== input.expectedType) {
     throw new AppError(
       input.expectedType === 'OPTION'
-        ? 'Área tardia deve ser incluída sob uma tarefa (OPTION).'
-        : 'Atividade tardia deve ser incluída sob um setor (AREA).',
+        ? 'Um setor incluído depois deve ficar dentro de uma tarefa.'
+        : 'Uma atividade incluída depois deve ficar dentro de um setor.',
       422,
       ErrorCodes.VALIDATION_ERROR,
     )

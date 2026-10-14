@@ -19,7 +19,7 @@ export function ExecutiveWindowSelector({ value, onChange, disabled }: Props) {
         className="inline-flex flex-wrap rounded-lg border border-white/10 bg-sgp-void/60 p-0.5"
         role="radiogroup"
         aria-label="Dias da janela para conclusões no dashboard gerencial"
-        title="Recorte temporal para concluídas: usa completed_at nos últimos N dias. Não altera o recorte «Ativas»."
+        title="Período das concluídas: considera a data de conclusão nos últimos N dias. Não altera o filtro «Ativas»."
       >
         {EXECUTIVE_WINDOW_DAY_OPTIONS.map((d) => {
           const active = value === d

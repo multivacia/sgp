@@ -21,7 +21,7 @@ export const executiveDashboardCopy = {
   headerMicrocopyExecutive: 'Visão executiva (agregados operacionais)',
   participacaoAtrasoTitulo: 'Participação de atraso (ativas)',
   participacaoAtrasoHint:
-    'Razão entre esteiras no bucket em_atraso e esteiras ativas. Indicador derivado.',
+    'Proporção de esteiras em atraso entre as esteiras ativas. Indicador derivado.',
   secaoAgregadaTitulo: 'Previsto estrutural e minutos apontados',
   listaAtrasoTitulo: 'Esteiras em atraso (amostra)',
   pizzaTitulo: 'Ativas · Concluídas · Em atraso (esteiras)',
@@ -30,7 +30,7 @@ export const executiveDashboardCopy = {
   barSeriesName: 'Totais em minutos (por métrica no eixo)',
   /** Linha curta no tooltip das barras, abaixo do valor numérico. */
   barTooltipValueCaption:
-    'Cada barra segue o rótulo horizontal: previsto estrutural (STEPs), total por esteira (OS) ou minutos apontados (acumulado).',
+    'Cada barra segue o rótulo horizontal: previsto estrutural (atividades), total por esteira (OS) ou minutos apontados (acumulado).',
 } as const
 
 /** Textos curtos para tooltips nativos e gráficos (dashboard). */
@@ -38,18 +38,18 @@ export const dashboardHints = {
   acumuladoGlobal:
     'Soma global de minutos apontados na base (sem filtro de período neste número).',
   previstoEstruturalSteps:
-    'Soma do tempo unitário × quantidade prevista dos nós STEP ativos (estrutura operacional).',
+    'Soma do tempo unitário × quantidade prevista das atividades ativas (estrutura operacional).',
   totalOsApoio:
-    'Soma de total_planned_minutes nas esteiras — pode divergir do previsto estrutural se o total da OS não foi recalculado.',
+    'Soma do tempo total previsto das esteiras (OS) — pode divergir do previsto estrutural se o total da OS não foi recalculado.',
   periodoUtc: (preset: string) =>
-    `Soma dos apontamentos com entry_at na janela do preset ${preset} (UTC).`,
-  drillBacklogTodas: 'Abre o backlog de esteiras (todas). Nova aba.',
-  drillBacklogAtraso: 'Abre o backlog com situação «em atraso». Nova aba.',
-  drillBacklogAtivas: 'Abre o backlog com âmbito «ativas». Nova aba.',
+    `Soma dos apontamentos lançados no período ${preset} (UTC).`,
+  drillBacklogTodas: 'Abre o Painel operacional (todas as esteiras). Nova aba.',
+  drillBacklogAtraso: 'Abre o Painel operacional com a situação «em atraso». Nova aba.',
+  drillBacklogAtivas: 'Abre o Painel operacional com as «ativas». Nova aba.',
   /** Barras / legenda do gráfico operacional — mesmo gesto que os cartões KPI. */
-  drillBacklogSameBucket: 'Abre o backlog com o mesmo recorte de bucket (nova aba).',
+  drillBacklogSameBucket: 'Abre o Painel operacional com a mesma situação (nova aba).',
   /** Pizza executiva (ativas / atraso / concluídas em janela). */
-  drillBacklogChartSlice: 'Abre o backlog com o recorte deste segmento (nova aba).',
+  drillBacklogChartSlice: 'Abre o Painel operacional filtrado por este segmento (nova aba).',
 } as const
 
 /** Presets alinhados ao backend (`operationalPeriod` / query da jornada). */

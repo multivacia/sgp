@@ -405,8 +405,8 @@ export function DashboardPage() {
         </p>
         <h1 className="sgp-page-title mt-3">Dashboards</h1>
         <p className="sgp-page-lead mt-1 max-w-3xl">
-          Acompanhe o snapshot operacional e os recortes executivos com a mesma regra de
-          backlog e esteiras.
+          Acompanhe a situação operacional e a visão executiva com a mesma regra do
+          Painel operacional.
         </p>
         {tab === 'executive' && showExecTab ? (
           <p className="mt-2 max-w-3xl text-sm text-slate-400">
@@ -534,19 +534,19 @@ export function DashboardPage() {
                     0,
                   )
                 }
-                hint="Snapshot atual na base. Abre o backlog de esteiras (todas) numa nova aba."
+                hint="Situação atual. Abre o Painel operacional (todas as esteiras) em uma nova aba."
                 onDrillDown={() => openBacklogInNewTab()}
                 drillTitle={dashboardHints.drillBacklogTodas}
               />
               <KpiCard
                 label={`${operationalLabels.pressaoAtraso} (esteiras)`}
                 value={operational.conveyorsByBucket.em_atraso}
-                hint="Bucket operacional em atraso (prazo vs hoje). Abre o backlog com o mesmo recorte numa nova aba."
+                hint="Esteiras em atraso (prazo vs hoje). Abre o Painel operacional com o mesmo filtro em uma nova aba."
                 onDrillDown={() => openBacklogInNewTab('em_atraso')}
                 drillTitle={dashboardHints.drillBacklogAtraso}
               />
               <KpiCard
-                label="Alocações em STEPs"
+                label="Alocações em atividades"
                 value={operational.assignees.totalAllocations}
                 hint={`Principal ${operational.assignees.primaryAllocations} · Apoio ${operational.assignees.supportAllocations}`}
               />
@@ -657,11 +657,11 @@ export function DashboardPage() {
 
           <section className="sgp-panel sgp-panel-hover">
             <h2 className="font-heading text-sm font-bold uppercase tracking-[0.12em] text-slate-200">
-              Esteiras por bucket operacional
+              Esteiras por situação operacional
             </h2>
             <p className="mt-1 text-xs text-slate-500">
-              Mesma regra do backlog e do painel de esteiras (prazo vs estado). Abre o
-              backlog com o recorte do bucket ao premir uma barra{' '}
+              Mesma regra do Painel operacional (prazo vs situação). Abre o Painel
+              operacional filtrado pela situação ao clicar em uma barra{' '}
               <span className="text-slate-600">(nova aba)</span>.
             </p>
             <div className="mt-4 max-w-xl">
@@ -682,7 +682,7 @@ export function DashboardPage() {
               </h2>
               <ul className="mt-4 space-y-2 text-sm">
                 {operational.overdueHighlight.length === 0 ? (
-                  <li className="text-slate-500">Nenhuma esteira neste bucket.</li>
+                  <li className="text-slate-500">Nenhuma esteira nesta situação.</li>
                 ) : (
                   operational.overdueHighlight.map((r) => (
                     <li
@@ -714,7 +714,7 @@ export function DashboardPage() {
               <dl className="mt-4 space-y-3 text-sm">
                 <div className="flex justify-between gap-4">
                   <dt className="text-slate-400">
-                    {operationalLabels.previstoEstrutural} (referência — STEPs)
+                    {operationalLabels.previstoEstrutural} (referência — atividades)
                   </dt>
                   <dd className="font-heading font-bold tabular-nums text-slate-50">
                     {formatHumanMinutes(
@@ -802,7 +802,7 @@ export function DashboardPage() {
                   <DashboardOperacionalBarList
                     items={collaboratorMinutesSeries}
                     accent="responsaveis-minutos"
-                    emptyMessage="Sem apontamentos registados."
+                    emptyMessage="Sem apontamentos registrados."
                   />
                 </div>
               </div>
@@ -885,7 +885,7 @@ export function DashboardPage() {
               </table>
               {canManageOperationalCapacity ? (
                 <p className="mt-3 max-w-3xl text-[11px] leading-relaxed text-slate-600">
-                  O previsto em STEPs é a soma estrutural das atribuições; a capacidade diária é o
+                  O previsto nas atividades é a soma estrutural das atribuições; a capacidade diária é o
                   limite de jornada. A comparação é indicativa quando o previsto total excede um dia.
                 </p>
               ) : null}
@@ -912,7 +912,7 @@ export function DashboardPage() {
                       to={`/app/esteiras/${encodeURIComponent(e.conveyorId)}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      title="Abre o detalhe da esteira numa nova aba"
+                      title="Abre o detalhe da esteira em uma nova aba"
                       className="block rounded-md outline-none focus-visible:ring-2 focus-visible:ring-sgp-gold/40"
                     >
                       <div className="flex flex-wrap items-baseline justify-between gap-2">
@@ -960,14 +960,14 @@ export function DashboardPage() {
               featured
               label="Esteiras ativas"
               value={executive.totals.activeConveyors}
-              hint="Snapshot atual (não concluídas). Sem filtro de data. Abre o backlog com âmbito ativas numa nova aba."
+              hint="Situação atual (não concluídas). Sem filtro de data. Abre o Painel operacional com as ativas em uma nova aba."
               onDrillDown={() => openBacklogInNewTab('ativas')}
               drillTitle={dashboardHints.drillBacklogAtivas}
             />
             <KpiCard
               label={`Concluídas (${execDays}d)`}
               value={executive.totals.completedInWindow}
-              hint={`Concluídas com data de conclusão nos últimos ${execDays} dias. Abre o backlog com o mesmo recorte numa nova aba.`}
+              hint={`Concluídas com data de conclusão nos últimos ${execDays} dias. Abre o Painel operacional com o mesmo filtro em uma nova aba.`}
               onDrillDown={() =>
                 openBacklogInNewTab('finalizadas', { days: execDays })
               }
