@@ -7,64 +7,61 @@
 
 ## Identificação
 
-- TASK_ID: `SEM_ATIVIDADE_ATIVA`
-- Atualizado em: `2026-10-02 16:49 UTC`
-- Branch: `develop`
-- HEAD: `4798efbac17bd73256a5df4f0435fa4cafa43f10`
-- Base/remoto relevante: `origin/develop`
-- Working tree: `clean`
+- TASK_ID: `release-tati-kiosk-main-2026-10-16`
+- Atualizado em: `2026-10-16 19:20 UTC`
+- Branch: `release/tati-kiosk-main-2026-10-16` (a partir de `origin/main` `c611d10f`)
+- HEAD: ver `git log -1 origin/release/tati-kiosk-main-2026-10-16`
+- Base/remoto relevante: `origin/main`
+- Working tree: `clean` após o commit de docs
 
 ## Objetivo atual
 
-Nenhuma atividade ativa registrada.
+Release candidata para `main` com os itens 1–10 da Tati e a pesquisa `OS & atividade` do Kiosk, **sem** a regra de apontamento somente em atividade planejada.
 
 ## Estado em uma frase
 
-`padronizar-contexto-ia` mergeado em `develop` via PR #31; tip `4798efba`.
+Candidata **PRONTA PARA HOMOLOGAR**; PR aberta para `main`, **sem merge**, sem deploy.
 
 ## Concluído
 
-- Padronização de contexto de IA mergeada em `develop` (`--no-ff`, sem force-push).
-- Somente arquivos de docs alterados no merge.
+- Cherry-pick com `-x` de `935dc943` e `438f8a00` (Tati) e de `f4d38a42`, `ba9adf06` e `4a0bc0bf` (Kiosk).
+- Gate de privacidade: fila do Kiosk sem cliente, veículo e placa; contrato testado com lista não vazia.
+- Item 1: Guias Práticos no menu "? Ajuda" (só os guias; sem manual integrado nem ajuda contextual).
+- `verify:deploy` exit 0; servidor com banco sem falha nova contra a `main`.
+- Versão proposta: 1.10.0 (commit isolado e revertível).
 
 ## Decisões já tomadas
 
-- Merge autorizado explicitamente pelo humano com cuidado para preservar homologação em `develop`.
-
-## Arquivos relevantes
-
-- `CLAUDE.md`
-- `docs/ai/context/PROJECT_CONTEXT.md`
-- `docs/ai/context/SESSION_CHECKPOINT.md`
-- `docs/ai/returns/padronizar-contexto-ia-retorno.md`
-
-## Validações já executadas
-
-- Diff do merge vs tip anterior: 4 arquivos docs only.
-- PR #31: `MERGED`.
+- A regra `apontamento-somente-planejado` ficou fora (os commits do Kiosk são anteriores a ela).
+- O plugin de Vite manteve o nome da `develop` para facilitar a integração.
 
 ## Pendências
 
-- N/A
+- Homologação humana item a item (roteiro no retorno).
+- Decidir:
+  - Kiosk sem busca por cliente, veículo e placa;
+  - dados sensíveis preexistentes em "Outra atividade";
+  - versão 1.10.0.
+- Gate de produção (prompt, seção 8) não iniciado.
+- Integração posterior com a `develop`: ver o plano no retorno, que inclui `seedPublishedPlanItem` no teste `&` de "Outra atividade" na `develop`.
+- Falhas preexistentes:
+  - `env.test` (espera 1.9.4);
+  - `weekly-view.http` (`=SUM`).
 
 ## Próxima ação exata
 
-- N/A
-
-## Riscos / ressalvas
-
-- N/A
+- Homologar a candidata em ambiente isolado e registrar o aceite na PR.
 
 ## Não repetir
 
-- Não recriar inventário longo no `CLAUDE.md`.
-- Não force-push em `develop`.
+- Não fazer merge da `develop` inteira na release.
+- Não reintroduzir cliente, veículo e placa na fila do Kiosk.
+- Não force-push.
 
 ## Referências úteis
 
-- Retorno da atividade: `docs/ai/returns/padronizar-contexto-ia-retorno.md`
-- Prompt da atividade: `N/A`
-- PR/issue relacionado: https://github.com/multivacia/sgp/pull/31
+- Retorno da atividade: `docs/ai/returns/release-tati-kiosk-main-2026-10-16-retorno.md`
+- Prompt da atividade: `docs/ai/prompts/release-tati-kiosk-main-2026-10-16.md`
 
 ## Uso de contexto / sessão
 
