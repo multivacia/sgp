@@ -38,10 +38,7 @@ export type ProductionWorkQueueItem = {
 
   conveyorId: string
   conveyorTitle: string
-  /**
-   * Código da esteira/OS (pesquisa "Esteira/OS & atividade"). O Kiosk não recebe
-   * cliente, veículo nem placa (isolamento do Modo Fábrica).
-   */
+  /** Código da esteira/OS para pesquisa no Kiosk, sem cliente, veículo e placa. */
   conveyorCode?: string | null
 
   activityNodeId: string
@@ -165,6 +162,9 @@ export type ProductionUnassignedTimeEntryPayload = {
   outOfSequenceJustification?: string | null
   outOfSequenceJustificationId?: string | null
   outOfSequenceJustificationComplement?: string | null
+  /** Justificativa por excesso de tempo previsto (atividade planejada para o colaborador). */
+  justificationId?: string | null
+  justificationComplement?: string | null
   /** Data/hora de realização (ISO com fuso). Ausente = agora. Ver `buildEntryAtForWorkDate`. */
   entryAt?: string
 }
