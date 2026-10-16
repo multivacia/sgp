@@ -20,11 +20,12 @@ export type ProductionWorkQueueItemApi = {
 
   conveyorId: string
   conveyorTitle: string
-  /** Código da esteira/OS e dados usados na pesquisa "Esteira & atividade" do Kiosk. */
+  /**
+   * Código da esteira/OS: identificador operacional mínimo, usado na pesquisa
+   * "Esteira/OS & atividade" do Kiosk. Cliente, veículo e placa NÃO fazem parte
+   * deste contrato (isolamento do Modo Fábrica; ver teste de campos sensíveis).
+   */
   conveyorCode: string | null
-  clientName: string | null
-  vehicleDescription: string | null
-  licensePlate: string | null
 
   activityNodeId: string
   activityTitle: string

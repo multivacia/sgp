@@ -44,7 +44,7 @@ describe('serviceGetProductionWorkQueue — plano vigente', () => {
     )
   })
 
-  it('expõe código da esteira/OS, cliente, veículo e placa (pesquisa do Kiosk)', async () => {
+  it('expõe o código da esteira/OS e NÃO expõe cliente, veículo e placa (isolamento do Kiosk)', async () => {
     const queueItem = {
       workPlanId: 'wp-1',
       workPlanItemId: 'wpi-1',
@@ -109,10 +109,14 @@ describe('serviceGetProductionWorkQueue — plano vigente', () => {
     expect(result.items[0]).toMatchObject({
       conveyorTitle: 'Esteira 7070',
       conveyorCode: '7070',
-      clientName: 'Cliente Alfa',
-      vehicleDescription: 'Gol GTI',
-      licensePlate: 'ABC1D23',
       activityTitle: 'Costura do tecido XPTO',
     })
+    // O item de origem (fila web) traz cliente/veículo/placa; o contrato do Kiosk não.
+    expect(result.items[0]).not.toHaveProperty('clientName')
+    expect(result.items[0]).not.toHaveProperty('vehicleDescription')
+    expect(result.items[0]).not.toHaveProperty('licensePlate')
+    const serialized = JSON.stringify(result)
+    expect(serialized).not.toContain('Cliente Alfa')
+    expect(serialized).not.toContain('ABC1D23')
   })
 })

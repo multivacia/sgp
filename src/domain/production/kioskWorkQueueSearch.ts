@@ -7,10 +7,14 @@ import type { ProductionWorkQueueItem } from './production.types'
  * - `server/src/modules/my-activities/my-activities.repository.ts` (`scopedCandidateSearchSql`
  *   e a pesquisa livre `q`).
  *
- * Com `&`: esquerda = esteira/OS (nome, código, cliente, veículo, placa), direita = nome da
- * atividade; parcial, sem diferenciar maiúsculas/acentos; lados vazios são ignorados.
+ * Com `&`: esquerda = esteira/OS (nome e código), direita = nome da atividade; parcial, sem
+ * diferenciar maiúsculas/acentos; lados vazios são ignorados.
  * Sem `&`: pesquisa livre (maiúsculas/minúsculas indiferentes) na atividade, setor e tarefa —
- * como antes no Kiosk — e também na esteira/OS, cliente, veículo e placa, como na referência.
+ * como antes no Kiosk — e também no nome e no código da esteira/OS.
+ *
+ * Divergência consciente em relação à referência web: o Kiosk NÃO recebe cliente, veículo nem
+ * placa (contrato de `GET /production/me/work-queue`, isolamento do Modo Fábrica), portanto a
+ * caixa "Buscar atividade…" não pesquisa por esses dados. "Outra atividade" pesquisa no backend.
  */
 
 /** Igual a `foldSearchText` do backend: minúsculas, sem acentos, espaços colapsados. */
@@ -43,13 +47,7 @@ export function parseKioskConveyorActivitySearch(
 }
 
 function conveyorFields(item: ProductionWorkQueueItem): Array<string | null | undefined> {
-  return [
-    item.conveyorTitle,
-    item.conveyorCode,
-    item.clientName,
-    item.vehicleDescription,
-    item.licensePlate,
-  ]
+  return [item.conveyorTitle, item.conveyorCode]
 }
 
 export function filterKioskWorkQueueBySearch(
