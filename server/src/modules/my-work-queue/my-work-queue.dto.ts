@@ -30,6 +30,8 @@ export type MyWorkQueueItemApi = {
   conveyorId: string
   conveyorOperationalStatus: string
   conveyorTitle: string
+  /** Código da esteira/OS. */
+  conveyorCode?: string | null
   clientName: string | null
   vehicleDescription: string | null
   licensePlate: string | null
