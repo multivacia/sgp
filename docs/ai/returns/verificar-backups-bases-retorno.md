@@ -1,0 +1,201 @@
+# Retorno — verificar-backups-bases
+
+- **TASK_ID:** `verificar-backups-bases`
+- **Data/hora:** 2026-10-11 (UTC)
+- **Objetivo:** levantar o que existe na branch `develop` relacionado a backup das bases de dados do SGP.
+- **Status final:** CONCLUÍDO (análise, sem alteração de código) — atualizado com a configuração do servidor
+- **Branch de trabalho:** `ccr-9273502a-59u7mt`
+- **Ref analisada:** `origin/develop` @ `b3416c1`
+- **SHA inicial (branch de trabalho):** `c611d10`
+- **SHA final:** ver commit que adiciona este arquivo
+
+## Resumo do que existe na `develop`
+
+### 1. Backup lógico do cluster PostgreSQL (único mecanismo de backup de banco)
+| Arquivo | Função |
+|---|---|
+| `docs/backup-bases.md` | Documentação do fluxo: pré-requisitos, variáveis, credenciais, validação, restore básico, limitações |
+| `scripts/db/backup_all_databases.sh` | Bash: roda `pg_dumpall -f` → um `.sql` plain com globals (roles) + todas as databases |
+| `scripts/db/backup_all_databases.ps1` | Equivalente em PowerShell (Windows) |
+| `scripts/sql/list_databases_precheck.sql` | Só inspeção (lista `pg_database`), não faz backup |
+
+Características dos scripts:
+- Nome: `{prefix}backup_all_databases_{label}_YYYYMMDD_HHMMSS.sql`; nunca sobrescreve (sufixo `_1`, `_2`…).
+- Configuração por `PGHOST/PGPORT/PGUSER/PGPASSWORD/PGSSLMODE` ou `.pgpass`; `BACKUP_OUTPUT_DIR`, `BACKUP_FILE_PREFIX`, `BACKUP_HOST_LABEL`, `BACKUP_ENV_LABEL`.
+- Validam presença de `pg_dumpall`, exit code e tamanho > 0.
+- **Execução manual** — não há agendamento.
+
+Fora do escopo declarado pela própria doc: backup físico, PITR/WAL, replicação/HA, **retenção/rotação**, **restore automatizado**, compressão e criptografia do arquivo (o `.sql` fica em texto puro).
+
+### 2. Backups citados em outros fluxos
+- `.github/workflows/deploy-hml.yml` e `deploy-hostgator-vps.yml`: fazem `rsync` **apenas do frontend** para `/opt/sgp/backups/frontend-*-before-deploy-<ts>` antes de publicar. **Não fazem backup de banco.**
+- `docs/deploy-automatico-argos-ec2.md`: `migrate_on_deploy` padrão `0`; só habilitar "com backup/plano compatível" (orientação, sem automação).
+- `docs/reset-base-inicial.md` e `docs/setup_inicial.md`: exigem backup manual (`pg_dump`) antes do reset destrutivo.
+- `docs/runbooks/load-prod-data-into-dev.md` + `scripts/db/load-prod-to-dev.sql`: **restore** de um dump de produção (formato custom, ex. `dump-sgp-202606101819.sql`) em `sgp_prod_raw` via `pg_restore`, e carga adaptada para `sgp_dev`. O dump em si **não** está no repositório.
+
+### 3. O que NÃO existe
+- Nenhum arquivo de dump/backup versionado (`.sql.gz`, `.dump`, `.bak`); `.gitignore` ignora `scripts/db/*.local.sql`.
+- Nenhum workflow agendado (`schedule`/`cron`) de backup de banco nos workflows (`deploy-hml`, `deploy-hostgator-vps`, `verify-deploy`, `legacy/deploy-ec2.yml.disabled`).
+- Nenhuma política de retenção, envio off-site (S3 etc.) ou teste periódico de restore.
+- Nenhum backup de banco automático antes de migrations no deploy.
+
+## Atualização — configuração real no servidor (informada pelo usuário em 2026-10-11)
+
+Existe backup automático **fora do repositório**, na VPS HostGator:
+
+| Item | Configuração |
+|---|---|
+| Banco | `sgp_prod` (PostgreSQL 18, porta 5433) |
+| Agendamento | cron `30 2 * * *` (diário, 02h30) |
+| Script | `/opt/sgp/backup-sgp.sh` (**não versionado** no repositório) |
+| Destino | `/opt/sgp/backups/local/` |
+| Retenção | remove arquivos com mais de 14 dias |
+| Formato | `.dump` (formato custom do `pg_dump`, restaurável com `pg_restore`) |
+
+Isso corrige a conclusão anterior "não há backup automático": há, no servidor; o repositório só não o registra.
+Fonte: informação humana; o conteúdo do script e o crontab **não foram vistos** por esta análise.
+
+### Lacunas que permanecem
+1. **Sem cópia fora da VPS** — backup e banco no mesmo servidor; perda/comprometimento da VPS leva os dois. Principal risco.
+2. **Script não versionado** — `/opt/sgp/backup-sgp.sh` só existe no servidor; sem revisão nem recuperação se a VPS for perdida.
+3. **Sem monitoramento/alerta** — falha do cron passa despercebida; recomendado alerta e checagem de tamanho > 0 / `pg_restore --list`.
+4. **Sem teste periódico de restore** — conferir pelo menos mensalmente (o runbook `load-prod-data-into-dev.md` já mostra um fluxo de restore em base isolada).
+5. **Só `sgp_prod`** — base de HML (`/opt/sgp/sgp-homol`) e globals do cluster (roles/senhas, que o `pg_dump` de uma base não inclui) não aparecem cobertos.
+6. **Sem backup imediato antes de migrations** no deploy (`migrate_on_deploy=1`); o último backup pode ter até ~24h.
+7. **Versão do cliente** — porta 5433 sugere mais de um cluster na VPS; o `pg_dump` usado pelo script precisa ser da versão 18 (cliente mais antigo falha contra servidor 18). Verificar com `pg_dump --version` no caminho usado pelo script.
+8. **Backups de frontend** dos deploys ficam em `/opt/sgp/backups/frontend-*` (fora de `local/`); se a limpeza de 14 dias atua só em `local/`, esses acumulam sem rotação.
+9. **Documentação divergente** — `docs/backup-bases.md` descreve só o `pg_dumpall` manual em `.sql`; não cita o backup diário em `.dump`.
+
+### Próximo passo recomendado (requer decisão humana)
+- Enviar o conteúdo de `/opt/sgp/backup-sgp.sh` (sem senhas) e a linha do crontab para versionar em `scripts/db/` e documentar em `docs/backup-bases.md`.
+- Definir destino off-site (ex.: bucket S3/Backblaze/Google Drive via `rclone`) com retenção própria.
+
+## Atualização 2 — sugestões para backup esporádico, restore e cópia on-premise (2026-10-11)
+
+Decisão humana: manter backup na VPS **e** em servidor on-premise do cliente. Fontes ficam no GitHub; alvo é só PostgreSQL.
+Status: **proposta, nada implementado** — aguardando aprovação.
+
+Achado no código: `server/src/scripts/migrate.ts` executa todos os `.sql` a cada execução e **não há tabela de controle de migrations**. Um `.dump` não registra a versão do schema → cada backup precisa de manifesto com o SHA/tag da aplicação publicada.
+
+### Cópia on-premise
+- Modelo **pull**: o servidor on-premise busca da VPS (`rsync` via SSH com chave restrita, `command=`/`rrsync` read-only em `/opt/sgp/backups/`). VPS comprometida não consegue apagar a cópia on-premise; dispensa abrir porta no cliente.
+- Agendar após o backup (ex.: 03h30), verificar `sha256` e `pg_restore --list` no destino.
+- Retenção própria maior (sugestão: 30 diários + 12 mensais); criptografar em repouso (`age`/`gpg`) — dump contém dados pessoais (LGPD).
+
+### Backup esporádico (sob demanda)
+- Script versionado `scripts/db/backup-adhoc.sh` com motivo obrigatório (ex.: `pre-migration`, `pre-reset`, `manual`).
+- Gera: `pg_dump -Fc` da base escolhida + `pg_dumpall --globals-only` (roles) + `manifest.txt` (data, operador, motivo, base, versão do servidor, SHA/tag publicado, sha256).
+- Destino separado `/opt/sgp/backups/adhoc/`, **fora** da limpeza de 14 dias (retenção manual ou 90 dias); sincronizado também ao on-premise.
+- Binário explícito do PG 18 (ex.: `/usr/lib/postgresql/18/bin/pg_dump`), porta 5433.
+- Usuário de backup dedicado com `pg_read_all_data` (não superuser), senha em `~/.pgpass` 600.
+- Disparo: manual via SSH e/ou workflow `workflow_dispatch` "backup-db"; chamado automaticamente no deploy quando `migrate_on_deploy=1` (falha no backup aborta o deploy).
+
+### Restore
+- Script versionado `scripts/db/restore-db.sh`, com confirmação explícita digitando o nome da base.
+- Padrão seguro: restaurar em base nova (`sgp_restore_YYYYMMDD`) com `pg_restore -j N`, validar (contagens, login, telas principais) e só então trocar:
+  1. parar `sgp-api`; 2. backup ad hoc da base atual; 3. `ALTER DATABASE sgp_prod RENAME TO sgp_prod_old_<ts>` e `sgp_restore_... RENAME TO sgp_prod`; 4. subir `sgp-api`; 5. manter `_old` por alguns dias.
+- Rollback = renomear de volta (rápido, sem novo restore).
+- Conferir que o código publicado corresponde ao SHA do manifesto; se não, publicar a release correspondente ou rodar `migrate` (migrations precisam ser idempotentes).
+- Teste mensal de restore no servidor on-premise (serve também para validar a cópia).
+
+### Perguntas em aberto
+- On-premise: SO (Linux/Windows), se alcança a VPS por SSH, espaço disponível.
+- Restore só em produção ou também HML ← produção (já há runbook para DEV).
+- Disparo do esporádico via GitHub Actions é desejado?
+
+## Atualização 3 — proposta: tela de backups/restore no SGP (2026-10-11)
+
+Decisões humanas: servidor on-premise é **Windows** com espaço disponível; desejada opção no SGP para listar backups e restaurar o selecionado, com confirmação digitando o nome do arquivo.
+Status: **proposta de arquitetura, nada implementado**. Demanda grande (banco, permissão, produção) → seguir fluxo contexto → impacto → spec → implementação (AGENTS.md).
+
+### Por que a API não restaura diretamente
+1. A API usa `sgp_prod`; o restore exige parar o `sgp-api` e trocar a base — a API não pode derrubar a si mesma no meio da operação.
+2. A credencial da API teria de ser superuser/`CREATEDB`; conta admin comprometida = poder de apagar produção.
+3. Status, auditoria e logs gravados em `sgp_prod` somem com o restore.
+
+### Arquitetura proposta
+- **SGP Backup Agent** (serviço systemd próprio na VPS, mesmo conceito do SGP Print Agent): único processo com credenciais de backup/restore; executa os scripts versionados.
+- **Base de controle `sgp_ops`** (separada de `sgp_prod`): fila de pedidos (backup/restore), status, auditoria de operações. Sobrevive ao restore.
+- **API do SGP**: só lista backups (lendo manifestos), cria pedidos em `sgp_ops` e consulta status. Sem privilégio de restore.
+- **Fluxo do restore pelo agente**: valida checksum → restaura em `sgp_restore_<ts>` → valida → nginx em modo manutenção → para `sgp-api` → backup de segurança da base atual → renomeia (`sgp_prod`→`sgp_prod_old_<ts>`, restaurada→`sgp_prod`) → sobe `sgp-api` → sai da manutenção → registra resultado. Falha em qualquer passo antes da troca = produção intacta.
+- **Desfazer restore**: renomear de volta enquanto `sgp_prod_old_<ts>` existir (retenção sugerida: 7 dias).
+
+### Tela "Backups" (Administração)
+- Lista: data/hora, tipo (diário/esporádico/pré-restore), motivo, tamanho, versão (SHA/tag), checksum OK, presente no on-premise.
+- Ação "Fazer backup agora" (motivo obrigatório).
+- Ação "Restaurar": aviso de perda dos dados posteriores ao backup ("serão perdidos os registros desde DD/MM HH:MM — X horas"); alerta se a versão do backup difere da publicada; **reautenticação com senha** + **digitar o nome exato do arquivo**; acompanhamento do progresso; sistema indisponível durante a troca.
+- RBAC: novas permissões `system.backups.view`, `system.backups.create`, `system.backups.restore` (esta só para administrador master), via migration `0054` (confirmar número livre no momento).
+
+### On-premise Windows
+- Tarefa Agendada + PowerShell usando OpenSSH nativo do Windows (`sftp`/`scp`) em modo pull, chave restrita somente leitura; verificação `sha256`; retenção local (30 diários + 12 mensais); criptografia em repouso (BitLocker na pasta/volume ou `age`).
+- PostgreSQL 18 client instalado no Windows para teste mensal de restore e restore de desastre (VPS perdida) — este último **manual**, por runbook, não pela tela.
+
+### Fases sugeridas
+1. Scripts versionados (backup esporádico, restore, pull Windows) + backup automático no deploy com migration + runbooks.
+2. Agente + `sgp_ops` + tela somente listagem e "fazer backup agora".
+3. Restore pela tela (após fase 2 estável e teste de restore real em HML).
+
+### Decisões pendentes
+- Quem pode restaurar (só administrador master?).
+- Restore pela tela só em produção, ou também "produção → HML".
+- Janela de indisponibilidade aceita durante restore (minutos, conforme tamanho da base).
+- Tela lista também cópias do on-premise, ou só da VPS.
+
+## Atualização 4 — decisões e inventário para a Fase 1 (2026-10-11)
+
+Decisões humanas:
+- Quem restaura: controlado pelo RBAC existente (permissões novas, atribuição por perfil).
+- Restore produção → HML: desejado; HML ainda não instalado → previsto, mas fora da Fase 1.
+- Indisponibilidade durante restore: aceita.
+
+Fatos novos do código (`origin/develop`):
+- `deploy-hostgator-vps.yml` **não roda migrations** ("Guardrail: migrations are intentionally disabled") → migrations são manuais; o backup pré-migration entra no runbook manual, não no workflow (não é preciso mexer no deploy na Fase 1).
+- API na VPS roda sob **PM2** (`pm2 restart sgp-api`), não systemd; app em `/opt/sgp/sgp-main`.
+- Versão publicada disponível em `GET /api/version` (APP_VERSION/GIT_SHA) e via `git -C /opt/sgp/sgp-main rev-parse` → fonte para o manifesto.
+
+### Já disponível
+- Configuração do backup diário (VPS, `sgp_prod`, PG 18, porta 5433, cron 02h30, `/opt/sgp/backups/local/`, 14 dias, `.dump`).
+- Padrão de scripts existente (`scripts/db/backup_all_databases.*`: nome com timestamp, sem sobrescrita, validações).
+- Runbook de restore em base isolada (`docs/runbooks/load-prod-data-into-dev.md`).
+- Decisões: pull pelo Windows, confirmação digitando nome, RBAC, manutenção aceita.
+
+### Escopo proposto da Fase 1
+1. `scripts/db/backup-adhoc.sh` — dump + globals + manifesto + sha256 em `/opt/sgp/backups/adhoc/`.
+2. `scripts/db/restore-db.sh` — restore em base nova, validação, troca por rename com PM2 parado, desfazer; confirmação digitando o nome do arquivo.
+3. `scripts/db/pull-backups-windows.ps1` — Tarefa Agendada, OpenSSH, sha256, retenção.
+4. Manifesto/sha256 também no backup diário (ajuste do `backup-sgp.sh`, depois de versionado).
+5. Runbooks: backup esporádico, restore, migration manual com backup prévio, instalação no Windows, teste mensal.
+Sem alteração de código da aplicação nem migration na Fase 1.
+
+### Faltando para iniciar (informação do servidor/cliente)
+- Conteúdo de `/opt/sgp/backup-sgp.sh` (sem senhas) e linha do crontab; usuário do SO que roda o cron.
+- Caminho do binário PG 18 (`which pg_dump`, `ls /usr/lib/postgresql/`) e se há outro cluster na 5432.
+- Como o script autentica hoje (`.pgpass`/usuário) e se pode ser criado role dedicado de backup.
+- Porta interna da API na VPS (para `/api/version`) e nome do processo PM2 confirmado (`sgp-api`).
+- Windows: versão, pasta de destino, se a rede do cliente alcança a porta SSH da VPS, PG 18 client instalado ou não, BitLocker disponível.
+- Retenção no Windows (proposta: 30 diários + 12 mensais).
+- Canal de alerta de falha (e-mail? nenhum por ora?).
+- Autorização para seguir com a Fase 1 e abrir PR para `develop`.
+
+## Riscos / ressalvas
+- Backup de banco depende inteiramente de execução manual; se ninguém rodar, não há cópia.
+- Backups de frontend em `/opt/sgp/backups/` crescem sem rotação (inferido pelo workflow; não verificado no servidor).
+- Clone é raso (`shallow`); datas de introdução dos arquivos no histórico não são confiáveis.
+- Não foi possível verificar o estado real dos servidores (crons do SO, snapshots do provedor/VPS) — fora do repositório.
+
+## Próximo passo recomendado (se desejado, requer decisão humana)
+Automatizar backup diário do banco de produção/HML (cron na VPS ou workflow agendado) com compressão, retenção e cópia off-site, e um backup automático antes de `migrate_on_deploy=1`.
+
+## Arquivos
+- Criado: `docs/ai/returns/verificar-backups-bases-retorno.md`
+- Nenhum código alterado. Migrations envolvidas: nenhuma.
+
+## Validação executada
+- `git fetch origin develop`; `git ls-tree -r origin/develop | grep -iE 'backup|dump|restore'`; `git grep -il 'backup|pg_dump|pg_restore' origin/develop`; leitura dos arquivos listados.
+- Build/lint/testes: não aplicável (análise sem alteração de código).
+
+## Git
+- `git status` final: limpo após commit.
+- Commit/push: na branch `ccr-9273502a-59u7mt`. Sem PR.
+
+Uso/tokens disponíveis: INDISPONÍVEL — a sessão não fornece métrica confiável.

@@ -1,5 +1,7 @@
 # Backup de todas as bases PostgreSQL (`pg_dumpall`)
 
+> **Nota (2026-10-11):** para o backup diário/esporádico da base `sgp_prod` na VPS (`.dump` com manifesto e checksum), restore seguro com troca de base e cópia para o servidor Windows do cliente, use o runbook **[runbooks/backup-restore-postgresql.md](runbooks/backup-restore-postgresql.md)**. Este documento continua válido para o backup completo do cluster via `pg_dumpall`.
+
 ## Objetivo
 
 Fornecer um fluxo **operacional, simples e auditável** para gerar **um único ficheiro lógico** (plain SQL) com **timestamp**, contendo:
