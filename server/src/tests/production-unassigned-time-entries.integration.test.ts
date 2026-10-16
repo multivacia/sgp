@@ -180,6 +180,13 @@ describe.skipIf(!hasDb)('production unassigned time entries + candidates (integr
       await setConveyorProductionStatusForIntegration(pool, conv.id)
       const code = `7070${Date.now().toString().slice(-6)}`
       await pool.query(`UPDATE conveyors SET code = $2 WHERE id = $1::uuid`, [conv.id, code])
+      // A develop exige planejamento publicado para que a atividade seja pesquisável.
+      await seedPublishedPlanItem(pool, {
+        conveyorId: conv.id,
+        stepNodeId: await firstStepId(pool, conv.id),
+        collaboratorId: UOA_UNASSIGNED_COLLAB_ID,
+        createdByUserId: MARIA_APP_USER_ID,
+      })
 
       const cookie = productionSessionCookie(SEED_COLLABORATOR_MARIA_ID)
       const search = async (q: string) => {

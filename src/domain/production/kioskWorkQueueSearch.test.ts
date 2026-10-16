@@ -51,9 +51,6 @@ function target(activityTitle: string): ProductionWorkQueueItem {
     conveyorId: 'cv-target',
     conveyorTitle: 'Esteira 7070',
     conveyorCode: '7070',
-    clientName: 'Cliente Alfa',
-    vehicleDescription: 'Gol GTI',
-    licensePlate: 'ABC1D23',
     activityTitle,
     taskTitle: 'Bancos dianteiros',
     sectorTitle: 'Tapeçaria',
@@ -135,11 +132,24 @@ describe('filterKioskWorkQueueBySearch — "Esteira/OS & atividade"', () => {
     expect(search('7070 &')).toHaveLength(5)
   })
 
-  it('termo esquerdo casa nome, código, cliente, veículo e placa da esteira', () => {
+  it('termo esquerdo casa nome e código da esteira/OS', () => {
     expect(search('esteira 7070 & lixar')).toEqual(['7070:Lixar estrutura'])
-    expect(search('alfa & lixar')).toEqual(['7070:Lixar estrutura'])
-    expect(search('gol gti & lixar')).toEqual(['7070:Lixar estrutura'])
-    expect(search('abc1d23 & lixar')).toEqual(['7070:Lixar estrutura'])
+    expect(search('70 & lixar')).toEqual(['7070:Lixar estrutura'])
+  })
+
+  it('não pesquisa cliente, veículo nem placa (dados fora do contrato do Kiosk)', () => {
+    // Mesmo que um payload antigo/indevido trouxesse esses campos, a busca os ignora.
+    const leaked = [
+      {
+        ...target('Lixar estrutura'),
+        clientName: 'Cliente Alfa',
+        vehicleDescription: 'Gol GTI',
+        licensePlate: 'ABC1D23',
+      } as ProductionWorkQueueItem,
+    ]
+    expect(filterKioskWorkQueueBySearch(leaked, 'alfa & lixar')).toEqual([])
+    expect(filterKioskWorkQueueBySearch(leaked, 'abc1d23')).toEqual([])
+    expect(filterKioskWorkQueueBySearch(leaked, 'gol gti')).toEqual([])
   })
 
   it('termo direito sozinho → atividade em qualquer esteira', () => {
@@ -167,12 +177,10 @@ describe('filterKioskWorkQueueBySearch — pesquisa livre (sem &)', () => {
     expect(search('bancos dianteiros')).toHaveLength(5)
   })
 
-  it('OS encontra as atividades da esteira (código, nome, cliente, veículo, placa)', () => {
+  it('OS encontra as atividades da esteira (código e nome)', () => {
     expect(search('7070')).toHaveLength(5)
     expect(search('9090')).toEqual(['9090:Costura do tecido XPTO'])
-    expect(search('cliente alfa')).toHaveLength(5)
-    expect(search('gol')).toHaveLength(5)
-    expect(search('abc1d23')).toHaveLength(5)
+    expect(search('esteira 7070')).toHaveLength(5)
   })
 
   it('sem &, mantém a sensibilidade a acentos de antes (como o ILIKE da referência)', () => {
