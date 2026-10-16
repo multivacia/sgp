@@ -50,6 +50,7 @@ import { JustificationSelect } from '../../components/operational/JustificationS
 import { resolvePreferredJustificationCategory } from '../../domain/operational/timeEntryJustificationField'
 import { QuickTimeEntryCandidateActions } from './QuickTimeEntryCandidateActions'
 import { WorkDateField } from '../../components/ui/WorkDateField'
+import { notifyOperationalDataChanged } from '../../lib/operational/operationalDataEvents'
 import {
   formatIsoDateBr,
   operationalTodayIso,
@@ -90,6 +91,7 @@ export function QuickTimeEntryDrawer({
   const { presentBlocking } = useSgpErrorSurface()
   const [phase, setPhase] = useState<Phase>('list')
   const [tab, setTab] = useState<DrawerTab>('conveyor')
+  /** Pesquisa livre; `esteira & atividade` restringe a esteira/OS e o nome da atividade (backend). */
   const [search, setSearch] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
   /** Inclui atividades em aberto fora da alocação do colaborador (com critério no servidor). */
@@ -391,6 +393,7 @@ export function QuickTimeEntryDrawer({
           workDate,
         }),
       )
+      notifyOperationalDataChanged(markAsDone ? 'activity_completed' : 'time_entry_created')
       pushToast(
         workDate === operationalTodayIso()
           ? resolveTimeEntrySuccessToast(markAsDone)
@@ -461,6 +464,7 @@ export function QuickTimeEntryDrawer({
             }
           : {}),
       })
+      notifyOperationalDataChanged('activity_completed')
       pushToast(QUICK_TIME_ENTRY_TOAST.activityCompleted, 'success')
       setCompleteConfirmCandidate(null)
       setCompleteJustification(emptyJustificationValue())
@@ -524,6 +528,7 @@ export function QuickTimeEntryDrawer({
         minutes: extraMinutes,
         notes: extraNotes.trim() || undefined,
       })
+      notifyOperationalDataChanged('extra_time_entry_created')
       pushToast('Apontamento extra esteira registrado com sucesso.', 'success')
       setExtraDescriptionId('')
       setExtraMinutesStr('30')
@@ -645,16 +650,26 @@ export function QuickTimeEntryDrawer({
                           <p className="mt-1 text-amber-50/90">{unavailableReason}</p>
                         </div>
                       ) : null}
-                      <label className="block text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">
+<label className="block text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">
                         Pesquisar
                         <input
                           type="search"
                           value={search}
                           onChange={(e) => setSearch(e.target.value)}
-                          placeholder="Esteira, cliente, veículo, placa, setor, tarefa, atividade…"
+                          placeholder="Esteira & atividade (ex.: 7070 & XPTO)"
+                          aria-label="Pesquisar atividades"
                           className="mt-1.5 w-full rounded-xl border border-[color:var(--semantic-border-glass-strong)] bg-sgp-app-panel-deep/90 px-3 py-2 text-sm text-slate-200 outline-none ring-sgp-blue-bright/0 transition focus:ring-2 focus:ring-sgp-blue-bright/25"
                         />
                       </label>
+                      {search.includes('&') ? (
+                        <p className="text-[11px] text-slate-500">
+                          Antes do «&»: esteira/OS · depois do «&»: nome da atividade.
+                        </p>
+                      ) : (
+                        <p className="text-[11px] text-slate-600">
+                          Sem «&», busca em esteira, cliente, veículo, placa, setor e atividade.
+                        </p>
+                      )}
                       <label className="flex cursor-pointer items-start gap-2.5 rounded-xl border border-white/[0.06] bg-black/15 px-3 py-2.5 text-xs text-slate-300">
                         <input
                           type="checkbox"

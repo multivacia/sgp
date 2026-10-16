@@ -35,6 +35,7 @@ import {
   listAllTimeEntriesForCollaboratorInPeriod,
   listCollaboratorBriefs,
   listExtraTimeEntriesInPeriodForCollaborator,
+  listExtraTimeEntriesInPeriodForCollaborators,
   listTopExtraTimeEntryDescriptionsInPeriodForCollaborators,
   listTimeEntriesForCollaboratorsInPeriod,
   summarizeExtraTimeEntriesInPeriodForCollaborators,
@@ -42,6 +43,7 @@ import {
   sumRealizedMinutesTotalForCollaborators,
 } from './operational-journey.repository.js'
 import type { OperationalJourneyQuery } from './operational-journey.schemas.js'
+import { resolveTimeEntryJustificationText } from '../../shared/timeEntryJustificationDisplay.js'
 
 const COBERTURA_FORMULA =
   'realizado_minutos_acumulados_nos_steps_alocados / previsto_estrutural_unitario_x_quantidade (escopo fechado; previsto conta uma vez por alocação colaborador × STEP; null se previsto ≤ 0)'
@@ -293,8 +295,14 @@ export async function serviceGetOperationalJourneyForCollaborators(
 
   const cobertura = computeCoberturaTempo(realizadoAcumuladoEscopo, plannedSum)
 
-  const [realizedInPeriod, realizedTotal, rawEntries, extraSummary, extraTopDescriptions] =
-    await Promise.all([
+  const [
+    realizedInPeriod,
+    realizedTotal,
+    rawEntries,
+    extraSummary,
+    extraTopDescriptions,
+    rawExtraEntries,
+  ] = await Promise.all([
     sumRealizedMinutesInPeriodForCollaborators(pool, {
       collaboratorIds,
       from,
@@ -319,6 +327,12 @@ export async function serviceGetOperationalJourneyForCollaborators(
       from,
       to,
       limit: MAX_TOP_EXTRA_DESCRIPTIONS,
+    }),
+    listExtraTimeEntriesInPeriodForCollaborators(pool, {
+      collaboratorIds,
+      from,
+      to,
+      limit,
     }),
   ])
 
@@ -345,6 +359,19 @@ export async function serviceGetOperationalJourneyForCollaborators(
     exceptionJustification: r.exception_justification,
     isOutOfSequence: Boolean(r.is_out_of_sequence),
     outOfSequenceJustification: r.out_of_sequence_justification,
+    standardJustificationLabel: r.standard_justification_label?.trim() || null,
+    standardJustificationComplement: r.standard_justification_complement?.trim() || null,
+  }))
+
+  const recentExtraTimeEntries = rawExtraEntries.map((r) => ({
+    id: r.id,
+    collaboratorId: r.collaborator_id,
+    collaboratorName: r.collaborator_name,
+    entryDate: r.entry_date,
+    minutes: r.minutes,
+    description: r.description,
+    notes: r.notes,
+    origin: r.origin === 'PRODUCTION' ? ('PRODUCTION' as const) : ('WEB' as const),
   }))
 
   const pressaoAtraso = byBucket.em_atraso
@@ -401,6 +428,7 @@ export async function serviceGetOperationalJourneyForCollaborators(
     assignmentsOpen,
     assignmentsAtRisk,
     recentTimeEntries,
+    recentExtraTimeEntries,
   }
 }
 
@@ -461,11 +489,12 @@ export async function serviceExportOperationalJourneyXlsx(
         executedQuantity: e.executed_quantity,
         entryOrigin: e.entry_origin,
         isOutOfSequence: Boolean(e.is_out_of_sequence),
-        justification:
-          [e.exception_justification, e.out_of_sequence_justification]
-            .map((j) => j?.trim())
-            .filter(Boolean)
-            .join(' · ') || null,
+        justification: resolveTimeEntryJustificationText({
+          exceptionJustification: e.exception_justification,
+          outOfSequenceJustification: e.out_of_sequence_justification,
+          standardJustificationLabel: e.standard_justification_label,
+          standardJustificationComplement: e.standard_justification_complement,
+        }),
         notes: e.notes,
       })),
       extraEntries: extraEntries.map((e) => ({

@@ -22,6 +22,7 @@ import {
   listStepHierarchyForConveyors,
   listTimeEntriesForConveyors,
 } from './conveyor-progress.repository.js'
+import { resolveTimeEntryJustificationText } from '../../shared/timeEntryJustificationDisplay.js'
 
 function metricsFromTotals(planned: number, realized: number) {
   return computeConveyorProgressMetrics(planned, realized)
@@ -90,6 +91,12 @@ function buildProgressTree(
       durationMinutes: te.minutes,
       executedQuantity: te.executed_quantity,
       notes: te.notes,
+      justification: resolveTimeEntryJustificationText({
+        exceptionJustification: te.exception_justification,
+        outOfSequenceJustification: te.out_of_sequence_justification,
+        standardJustificationLabel: te.standard_justification_label,
+        standardJustificationComplement: te.standard_justification_complement,
+      }),
       entryMode: te.entry_mode,
     })
     entriesByStep.set(te.conveyor_node_id, list)

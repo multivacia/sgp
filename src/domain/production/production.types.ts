@@ -38,6 +38,11 @@ export type ProductionWorkQueueItem = {
 
   conveyorId: string
   conveyorTitle: string
+  /**
+   * Código da esteira/OS (pesquisa "Esteira/OS & atividade"). O Kiosk não recebe
+   * cliente, veículo nem placa (isolamento do Modo Fábrica).
+   */
+  conveyorCode?: string | null
 
   activityNodeId: string
   activityTitle: string
