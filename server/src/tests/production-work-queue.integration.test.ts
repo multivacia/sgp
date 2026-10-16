@@ -376,4 +376,159 @@ describe.skipIf(!hasDb)('production work queue (integração)', () => {
       expect(items.some((i) => i.activityTitle === 'Limpar e inspecionar')).toBe(false)
     })
   })
+  /**
+   * Contrato de privacidade com lista NÃO vazia: o teste "não retorna campos sensíveis"
+   * acima itera sobre a fila da Maria, que pode estar vazia no banco de teste e, então,
+   * passa sem verificar nada. Aqui a fixture garante ao menos um item do colaborador.
+   */
+  describe('contrato com lista não vazia — campos sensíveis e isolamento', () => {
+    const plannedDate = '2030-04-10'
+    const weekStart = mondayOfWeekContaining(plannedDate)
+    const weekEnd = fridayAfterMonday(weekStart)
+    const sensitive = {
+      cliente: 'Cliente Sigiloso WQ',
+      veiculo: 'Veiculo Sigiloso WQ',
+      placa: 'SIG1L00',
+    }
+    let conveyorId = ''
+    let osCode = ''
+
+    beforeAll(async () => {
+      const conv = await serviceCreateConveyor(pool, {
+        dados: {
+          nome: `WQ-Contrato-${Date.now()}`,
+          cliente: sensitive.cliente,
+          veiculo: sensitive.veiculo,
+          modeloVersao: '',
+          placa: sensitive.placa,
+          observacoes: '',
+          responsavel: '',
+          prazoEstimado: '',
+          prioridade: 'media',
+          colaboradorId: null,
+        },
+        originType: 'MANUAL',
+        baseId: null,
+        baseCode: null,
+        baseName: null,
+        baseVersion: null,
+        options: [
+          {
+            titulo: 'Opção WQ contrato',
+            orderIndex: 1,
+            sourceOrigin: 'manual',
+            areas: [
+              {
+                titulo: 'Área WQ contrato',
+                orderIndex: 1,
+                sourceOrigin: 'manual',
+                steps: [
+                  {
+                    titulo: 'Costura do tecido XPTO',
+                    orderIndex: 1,
+                    plannedMinutes: 30,
+                    sourceOrigin: 'manual',
+                    required: true,
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      })
+      conveyorId = conv.id
+      osCode = `8${String(Date.now()).slice(-6)}`
+      await pool.query(`UPDATE conveyors SET code = $2 WHERE id = $1::uuid`, [conveyorId, osCode])
+
+      const step = await pool.query<{ id: string }>(
+        `
+        SELECT id::text FROM conveyor_nodes
+        WHERE conveyor_id = $1::uuid AND node_type = 'STEP' AND deleted_at IS NULL
+        ORDER BY order_index ASC LIMIT 1
+        `,
+        [conveyorId],
+      )
+      const stepId = step.rows[0]?.id
+      if (!stepId) throw new Error('STEP não encontrado')
+
+      await pool.query(
+        `UPDATE operational_work_plans SET deleted_at = now() WHERE week_start_date = $1::date AND deleted_at IS NULL`,
+        [weekStart],
+      )
+      const saved = await serviceSaveOperationalWeekPlan(pool, WQ_ADMIN_USER_ID, {
+        weekStartDate: weekStart,
+        weekEndDate: weekEnd,
+        items: [
+          {
+            conveyorId,
+            activityNodeId: stepId,
+            assignedCollaboratorId: WQ_TEST_COLLAB_ID,
+            assignedTeamId: null,
+            plannedDate,
+            plannedOrder: 0,
+            plannedMinutes: 30,
+            notes: null,
+            conveyorOperationalPlanItemId: null,
+          },
+        ],
+      })
+      const planId = saved.plan?.id
+      if (!planId) throw new Error('plano não criado')
+      await servicePublishOperationalWeekPlan(pool, planId, WQ_ADMIN_USER_ID)
+    })
+
+    afterAll(async () => {
+      await pool.query(
+        `UPDATE operational_work_plans SET deleted_at = now() WHERE week_start_date = $1::date AND deleted_at IS NULL`,
+        [weekStart],
+      )
+      if (conveyorId) {
+        await pool.query(`UPDATE conveyors SET deleted_at = now() WHERE id = $1::uuid`, [
+          conveyorId,
+        ])
+      }
+    })
+
+    it('item retornado traz o código da OS e não traz cliente, veículo nem placa', async () => {
+      const res = await request(app)
+        .get(`/api/v1/production/me/work-queue?date=${plannedDate}`)
+        .set('Cookie', productionSessionCookie(WQ_TEST_COLLAB_ID))
+      expect(res.status).toBe(200)
+      const items = (res.body.data as { items: Array<Record<string, unknown>> }).items
+      const mine = items.filter((i) => i.conveyorId === conveyorId)
+      expect(mine.length).toBeGreaterThanOrEqual(1)
+      expect(mine[0]?.conveyorCode).toBe(osCode)
+      expect(mine[0]?.activityTitle).toBe('Costura do tecido XPTO')
+      for (const item of items) {
+        expect(item).not.toHaveProperty('clientName')
+        expect(item).not.toHaveProperty('vehicleDescription')
+        expect(item).not.toHaveProperty('licensePlate')
+        expect(item).not.toHaveProperty('plannedVsCapacity')
+        expect(item).not.toHaveProperty('requiresUnassignedJustification')
+        expect(item).not.toHaveProperty('userId')
+        expect(item).not.toHaveProperty('workPlanId')
+      }
+      const raw = JSON.stringify(res.body)
+      expect(raw).not.toContain(sensitive.cliente)
+      expect(raw).not.toContain(sensitive.veiculo)
+      expect(raw).not.toContain(sensitive.placa)
+    })
+
+    it('isolamento: outro colaborador não recebe o item planejado para o primeiro', async () => {
+      const res = await request(app)
+        .get(`/api/v1/production/me/work-queue?date=${plannedDate}`)
+        .set('Cookie', productionSessionCookie(SEED_COLLABORATOR_MARIA_ID))
+      expect(res.status).toBe(200)
+      const items = (res.body.data as { items: Array<Record<string, unknown>> }).items
+      expect(items.some((i) => i.conveyorId === conveyorId)).toBe(false)
+    })
+
+    it('sessão de produção inválida → 401 (sem dados da fila)', async () => {
+      const res = await request(app)
+        .get(`/api/v1/production/me/work-queue?date=${plannedDate}`)
+        .set('Cookie', `${env.productionAuthCookieName}=token-invalido`)
+      expect(res.status).toBe(401)
+      expect(JSON.stringify(res.body)).not.toContain(osCode)
+    })
+  })
 })
