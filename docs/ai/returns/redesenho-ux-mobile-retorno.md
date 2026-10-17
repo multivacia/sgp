@@ -169,3 +169,21 @@ Fases 4 e 5 exigem o fluxo completo de `AGENTS.md` (contexto → impacto → spe
 - **Repositório:** nenhum código-fonte alterado; o protótipo não faz parte do build do SGP+. Só este retorno foi atualizado.
 - **Validação:** não houve build/testes (sem código no repositório). Protótipo não foi renderizado/inspecionado automaticamente nesta sessão — validar abrindo o link no celular.
 - **Próximo passo recomendado:** testar o protótipo com a gestora (cronometrar criação de uma esteira) e responder às decisões da seção 7; depois prototipar "Planejar semana" e o apontamento do colaborador (COMEÇAR/PAUSAR/TERMINEI + QR).
+
+---
+
+## 10. Continuação — protótipo do apontamento do colaborador (2026-10-17)
+
+- **Entregue:** nova tela "Apontamento do colaborador (tablet do setor)", 768×1024, no mesmo Artifact:
+  https://claude.ai/artifact/QBY3svGbjp7ALeewX1w9n2
+- **Fluxos cobertos:**
+  1. **Pelo QR do ticket:** ler QR → tocar no nome → PIN → já começa a contar (sem procurar tarefa).
+  2. **Pelo nome:** grade de pessoas → PIN → cartão "Sua próxima tarefa" com **COMEÇAR**; "ou escolha outra".
+  3. **Trabalhando:** cronômetro gigante, barra previsto × realizado (fica laranja ao passar do previsto), **PAUSAR** / **TERMINEI**.
+  4. **Pausa:** motivo em 6 botões grandes → estado pausado → **CONTINUAR**.
+  5. **Terminei:** "Quanto ficou pronto?" em 4 botões (¼ · ½ · ¾ · Tudo pronto) → "Registrado!" com tempo calculado, "Tempo errado? Corrigir" (±15 min), **COMEÇAR PRÓXIMA** e saída automática em 20 s.
+  6. **Fora de sequência:** tarefa cuja etapa anterior não terminou pede justificativa padronizada em botões antes de começar (preserva a regra atual).
+- **Simplificações do protótipo:** 1 s = 1 min no cronômetro; qualquer PIN de 4 dígitos entra; câmera simulada; nomes/placas/tempos fictícios.
+- **Impacto se for implementado:** o modelo "cronômetro" exige no backend o conceito de sessão de trabalho aberta/pausada/fechada, convertida no apontamento atual — fluxo completo de `AGENTS.md` (alto risco: regra de apontamento e kiosk/produção).
+- **Repositório:** nenhum código-fonte alterado; só este retorno.
+- **Validação:** sem build/testes (sem código); protótipo não renderizado automaticamente nesta sessão.
