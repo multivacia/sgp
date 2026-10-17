@@ -40,6 +40,10 @@ Dica: entre um tema e outro, use **Recomeçar** se quiser voltar aos dados inici
 
 ---
 
+## Fotos de exemplo (para escolher no lugar da câmera)
+
+Coloque fotos de carros/interiores em `apps/sgp-v2/src/demo/fotos-exemplo/` (`.jpg`, `.png`, `.webp`; o nome do arquivo vira o nome mostrado) e gere o pacote de novo. Aparece o botão **Escolher entre as fotos de exemplo** em Fotos das etapas e Fotos do carro. Útil dentro da página do Claude, onde a câmera é bloqueada. Hoje a pasta está vazia (aguardando fotos da Bravo).
+
 ## Rodar no seu computador
 
 Pré-requisito: Node 20+.

@@ -601,3 +601,12 @@ Fases 4 e 5 exigem o fluxo completo de `AGENTS.md` (contexto → impacto → spe
 - **Validação:** servidor 5/5 (esteira-fotos, etapa-imagens, producao-correcao) contra Postgres local; `tsc` ok; V2 `npm test` 29/29; `build` (sem código da demo no `dist/`) e `build:demo` ok; eslint ok; headless: foto de etapa pela Galeria → "Neste aparelho" → recarregar (continua) → Enviar todas → "Foto"; Nova esteira com 2 fotos do carro → Esteira criada! → "Enviar as 2 fotos" → "2 de 10". Sem erros. Demonstração republicada (versão 6).
 - **Docs:** documento vivo (cabeçalho, §4 linha 10, §8, §9 com 0056, §20, §23, §24) e `README_DEMO.md` atualizados.
 - **Uso/tokens disponíveis:** INDISPONÍVEL — a sessão não fornece métrica confiável.
+
+## 43. Fotos de carros da internet para escolher na demo (2026-10-17)
+
+- **Pedido:** pesquisar fotos de carros (de preferência no site da Bravo Tapeçaria, Indaiatuba), baixar e permitir selecionar para trocar a foto.
+- **Pesquisa:** a busca achou o site `bravotapecaria.com.br` (e `loja.bravotapecaria.com.br`), Instagram `@bravotapecaria`, Facebook e YouTube. **Os dois domínios não resolvem** (DNS: `ENOTFOUND`) nem pelo leitor web; Instagram/Facebook não permitem baixar. Alternativa com licença livre (Wikimedia Commons) **bloqueada pela política de rede** do ambiente (`commons.wikimedia.org`, `upload.wikimedia.org`: 403 no proxy). **Nenhuma foto foi baixada** e nenhuma foi inventada no lugar.
+- **Feito (mecanismo de seleção):** `src/ui/fotosExemplo.ts` (registro) + botão "Escolher entre as fotos de exemplo (N)" em `src/ui/EscolherFoto.tsx` (Fotos das etapas e Fotos do carro) + carga automática da pasta `src/demo/fotos-exemplo/` via `import.meta.glob` em `src/demo/api.ts` (só no pacote da demo) + `LEIA-ME.md` na pasta. Sem arquivos, o botão não aparece.
+- **Validação:** com uma imagem de teste temporária (removida depois, não versionada): botão "(1)" → escolher → foto do carro "Neste aparelho"; sem erros. `build` e `build:demo` ok; eslint ok. Demonstração online não republicada (sem fotos, nada muda na tela).
+- **Para concluir:** enviar as fotos no chat, ou liberar na rede do ambiente o domínio de onde baixar (o da Bravo está fora do ar).
+- **Uso/tokens disponíveis:** INDISPONÍVEL — a sessão não fornece métrica confiável.

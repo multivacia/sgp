@@ -5,6 +5,7 @@
  */
 import type { ConveyorDetail, ConveyorStatus, ConveyorStep, StepStatus } from '../domain/conveyors'
 import { agruparEsperando, isoLocal, segundaDe, simular, somarDias, type BacklogItem, type WeekResponse } from '../domain/planejarSemana'
+import { definirFotosExemplo } from '../ui/fotosExemplo'
 import matriz from './matriz.json'
 
 type Linha = [string, number, string | null]
@@ -528,3 +529,14 @@ window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
     return new Response(JSON.stringify({ error: { code: err.code, message: err.message } }), { status: err.status, headers: { 'Content-Type': 'application/json' } })
   }
 }
+
+// Fotos de exemplo (pasta demo/fotos-exemplo): aparecem no botão "Exemplos" ao escolher foto.
+const arquivosExemplo = import.meta.glob('./fotos-exemplo/*.{jpg,jpeg,png,webp,JPG,JPEG,PNG,WEBP}', { eager: true, query: '?url', import: 'default' }) as Record<string, string>
+definirFotosExemplo(
+  Object.entries(arquivosExemplo)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([caminho, url]) => {
+      const base = caminho.split('/').pop()!.replace(/\.[^.]+$/, '').replace(/[-_]+/g, ' ').trim()
+      return { nome: base.charAt(0).toUpperCase() + base.slice(1), url }
+    }),
+)
