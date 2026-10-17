@@ -143,7 +143,7 @@ export function NovaEsteira() {
             {filtradas.map((m) => {
               const fig = figuraDaEtapa(m.name) ?? `${import.meta.env.BASE_URL}etapas/18.webp`
               return (
-                <button key={m.id} type="button" onClick={() => void escolherMatriz(m)} className="flex min-h-24 items-center gap-3 rounded-2xl border border-line bg-white p-2.5 text-left">
+                <button key={m.id} type="button" onClick={() => void escolherMatriz(m)} className="flex min-h-24 items-center gap-3 card p-2.5 text-left">
                   <img src={fig} alt="" className="size-20 shrink-0 rounded-xl border border-ground object-contain" />
                   <span className="min-w-0">
                     <span className="block text-sm font-bold tracking-wide text-muted">MATRIZ</span>
@@ -190,7 +190,7 @@ export function NovaEsteira() {
 
         {passo === 'etapa' && etapa ? (
           <>
-            <div className="flex items-center gap-3 rounded-2xl border border-line bg-white p-2.5">
+            <div className="flex items-center gap-3 card p-2.5">
               {figura(etapa.name, etapa.id) ? <img src={figura(etapa.name, etapa.id)!} alt="" className="size-20 shrink-0 rounded-xl object-cover" /> : null}
               <div>
                 <p className="font-display text-xl font-extrabold leading-tight">{displayName(etapa.name)}</p>
@@ -250,7 +250,7 @@ export function NovaEsteira() {
               onEscolherResponsavel={() => setPicker({ titulo: 'Responsável pela esteira', setor: '', atividades: [] })}
             />
             {arvore ? (
-              <div className="mt-2 rounded-2xl border border-line bg-white p-3">
+              <div className="mt-2 card p-3">
                 <span className="text-sm font-bold text-muted">RESUMO</span>
                 <p className="font-display text-xl font-extrabold">{arvore.name}</p>
                 <p className="font-bold">{nomeFinal(dados, displayName(arvore.name))}</p>

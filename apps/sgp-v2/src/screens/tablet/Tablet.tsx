@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { ApiError } from '../../api/client'
 import { candidatos, entrar, justificativas, lancar, lancarOutra, listPessoas, minhaFila, sair, salvarTokenDoTablet, trocarPin } from '../../api/production'
 import { fmtMin } from '../../domain/format'
+import { Marca } from '../../ui/Marca'
 import { isoLocal, somarDias } from '../../domain/planejarSemana'
 import {
   buildOutraBody,
@@ -164,13 +165,16 @@ export function Tablet() {
 
   return (
     <div className="flex min-h-dvh flex-col bg-ground">
-      <header className="flex items-center gap-3 border-b border-line bg-white px-4 py-3">
-        <p className="flex-1 font-display text-xl font-extrabold">SGP+ · Tablet do setor</p>
+      <header className="brand-band flex items-center gap-3 px-4 pb-3 pt-[max(env(safe-area-inset-top),12px)]">
+        <span className="flex flex-1 items-center gap-3">
+          <Marca />
+          <span className="hidden text-sm font-bold uppercase tracking-wider text-white/65 sm:inline">Tablet do setor</span>
+        </span>
         {eu ? (
           <>
-            <span className="flex size-11 items-center justify-center rounded-full bg-accent font-bold">{eu.initials}</span>
+            <span className="flex size-11 items-center justify-center rounded-full bg-gold font-bold text-navy">{eu.initials}</span>
             <span className="hidden font-bold sm:block">{primeiroNome(eu.fullName)}</span>
-            <button type="button" onClick={() => void voltarAoInicio()} className="min-h-12 rounded-xl border-2 border-ink px-4 font-bold">
+            <button type="button" onClick={() => void voltarAoInicio()} className="min-h-12 rounded-xl border border-white/30 bg-white/10 px-4 font-bold text-white">
               Sair
             </button>
           </>
@@ -207,9 +211,9 @@ export function Tablet() {
                       type="button"
                       disabled={!pode}
                       onClick={() => setTela({ t: 'pin', pessoa: p })}
-                      className={`flex min-h-32 flex-col items-center justify-center gap-2 rounded-3xl p-2 ${pode ? 'border-2 border-line bg-white' : 'bg-line/60 text-muted'}`}
+                      className={`flex min-h-32 flex-col items-center justify-center gap-2 rounded-2xl p-2 ${pode ? 'border-2 border-line bg-white' : 'bg-line/60 text-muted'}`}
                     >
-                      {p.avatarUrl ? <img src={p.avatarUrl} alt="" className="size-16 rounded-full object-cover" /> : <span className="flex size-16 items-center justify-center rounded-full bg-accent text-2xl font-bold text-ink">{p.initials}</span>}
+                      {p.avatarUrl ? <img src={p.avatarUrl} alt="" className="size-16 rounded-full object-cover" /> : <span className="flex size-16 items-center justify-center rounded-full bg-blue-soft text-2xl font-bold text-navy-blue">{p.initials}</span>}
                       <span className="text-center text-lg font-bold leading-tight">{primeiroNome(p.fullName)}</span>
                       {!pode ? <span className="text-sm">{p.productionCredentialStatus === 'LOCKED' ? 'Bloqueado' : 'Fale com a gestora'}</span> : null}
                     </button>
@@ -266,7 +270,7 @@ export function Tablet() {
             <Cartao>
               <h1 className="font-display text-3xl font-extrabold">Nada planejado para você agora</h1>
               <p className="text-lg text-muted">Fale com a gestora se precisa de tarefa.</p>
-              <button type="button" onClick={() => setTela({ t: 'outra' })} className="min-h-16 rounded-2xl border-2 border-ink bg-white text-xl font-bold">
+              <button type="button" onClick={() => setTela({ t: 'outra' })} className="min-h-16 rounded-2xl border-2 border-line-strong bg-white text-xl font-bold">
                 Fiz outra atividade
               </button>
               <BotaoGrande onClick={() => void voltarAoInicio()}>SAIR</BotaoGrande>
@@ -283,14 +287,14 @@ export function Tablet() {
               <BotaoGrande verde onClick={() => comecar(abertas[0])}>
                 COMEÇAR
               </BotaoGrande>
-              <button type="button" onClick={() => setTela({ t: 'lancar', tarefaId: abertas[0].activityNodeId })} className="min-h-16 rounded-2xl border-2 border-ink bg-white text-xl font-bold">
+              <button type="button" onClick={() => setTela({ t: 'lancar', tarefaId: abertas[0].activityNodeId })} className="min-h-16 rounded-2xl border-2 border-line-strong bg-white text-xl font-bold">
                 Já fiz · lançar horas
               </button>
               {abertas.length > 1 ? (
                 <>
                   <h2 className="pt-2 font-display text-xl font-extrabold">Ou escolha outra</h2>
                   {abertas.slice(1).map((t) => (
-                    <button key={t.workPlanItemId} type="button" onClick={() => comecar(t)} className="flex min-h-16 flex-col justify-center rounded-2xl border border-line bg-white px-4 py-2 text-left">
+                    <button key={t.workPlanItemId} type="button" onClick={() => comecar(t)} className="flex min-h-16 flex-col justify-center card px-4 py-2 text-left">
                       <span className="text-lg font-bold">
                         {t.activityTitle} · {t.conveyorTitle}
                       </span>
@@ -354,7 +358,7 @@ export function Tablet() {
                     const j = crono && crono.stepNodeId === tela.tarefa.activityNodeId ? crono.justificativa : null
                     void registrar(tela.tarefa, tela.minutos, q.pct, { ontem: tela.ontem, pausas: tela.pausas, justificativa: j })
                   }}
-                  className={`flex min-h-28 flex-col items-center justify-center rounded-3xl text-xl font-bold ${q.pct === 100 ? 'bg-ok text-white' : 'border-2 border-ink bg-white'}`}
+                  className={`flex min-h-28 flex-col items-center justify-center rounded-2xl text-xl font-bold ${q.pct === 100 ? 'bg-ok text-white' : 'border-2 border-line-strong bg-white'}`}
                 >
                   <span className="text-4xl">{q.big}</span>
                   {q.label}
@@ -395,12 +399,12 @@ function primeiroNome(n: string): string {
 }
 
 function Cartao({ children }: { children: ReactNode }) {
-  return <div className="flex flex-col gap-4 rounded-3xl border border-line bg-white p-5">{children}</div>
+  return <div className="flex flex-col gap-4 rounded-2xl border border-line bg-white p-5">{children}</div>
 }
 
 function BotaoGrande({ children, onClick, verde }: { children: ReactNode; onClick: () => void; verde?: boolean }) {
   return (
-    <button type="button" onClick={onClick} className={`min-h-20 rounded-3xl text-2xl font-extrabold tracking-wide ${verde ? 'bg-ok text-white' : 'bg-ink text-white'}`}>
+    <button type="button" onClick={onClick} className={`min-h-20 rounded-2xl text-2xl font-extrabold tracking-wide ${verde ? 'bg-ok text-white' : 'bg-ink text-white'}`}>
       {children}
     </button>
   )
@@ -408,7 +412,7 @@ function BotaoGrande({ children, onClick, verde }: { children: ReactNode; onClic
 
 function CartaoTarefa({ t }: { t: Tarefa }) {
   return (
-    <div className="flex flex-col gap-1 rounded-3xl border-[3px] border-ink bg-white p-5">
+    <div className="flex flex-col gap-1 rounded-2xl border-[3px] border-blue bg-white p-5">
       <p className="font-bold text-muted">
         {t.taskTitle} · {t.sectorTitle}
       </p>
@@ -495,7 +499,7 @@ function Rodando({ crono, tarefa, agora, onPausar, onContinuar, onTerminei, onDe
                 onPausar(m)
                 setMotivos(false)
               }}
-              className="min-h-20 rounded-2xl border-2 border-ink bg-white text-lg font-bold"
+              className="min-h-20 rounded-2xl border-2 border-line-strong bg-white text-lg font-bold"
             >
               {m}
             </button>
@@ -508,7 +512,7 @@ function Rodando({ crono, tarefa, agora, onPausar, onContinuar, onTerminei, onDe
     )
   return (
     <>
-      <div className={`flex flex-col items-center gap-2 rounded-3xl p-6 text-center ${pausado ? 'bg-late-soft' : 'bg-ink text-white'}`}>
+      <div className={`flex flex-col items-center gap-2 rounded-2xl p-6 text-center ${pausado ? 'bg-late-soft' : 'bg-ink text-white'}`}>
         <p className="text-lg font-bold">{pausado ? `PAUSADO · ${crono.pausas.at(-1) ?? ''}` : 'TRABALHANDO EM'}</p>
         <p className="font-display text-3xl font-extrabold leading-tight">{tarefa.activityTitle}</p>
         <p className="text-lg">
@@ -523,7 +527,7 @@ function Rodando({ crono, tarefa, agora, onPausar, onContinuar, onTerminei, onDe
         {pausado ? (
           <BotaoGrande onClick={onContinuar}>CONTINUAR</BotaoGrande>
         ) : (
-          <button type="button" onClick={() => setMotivos(true)} className="min-h-20 rounded-3xl border-[3px] border-ink bg-white text-2xl font-extrabold">
+          <button type="button" onClick={() => setMotivos(true)} className="min-h-20 rounded-2xl border-[3px] border-blue bg-white text-2xl font-extrabold">
             PAUSAR
           </button>
         )}
@@ -574,15 +578,15 @@ function Lancar({ tarefas, inicial, onVoltar, onContinuar }: { tarefas: Tarefa[]
         ))}
       </div>
       <div className="flex items-center gap-3">
-        <button type="button" onClick={() => setMin((m) => Math.max(15, m - 15))} className="min-h-16 flex-1 rounded-2xl border-2 border-ink bg-white text-lg font-bold">
+        <button type="button" onClick={() => setMin((m) => Math.max(15, m - 15))} className="min-h-16 flex-1 rounded-2xl border-2 border-line-strong bg-white text-lg font-bold">
           − 15 min
         </button>
         <span className="min-w-28 text-center font-display text-2xl font-extrabold">{fmtMin(min)}</span>
-        <button type="button" onClick={() => setMin((m) => m + 15)} className="min-h-16 flex-1 rounded-2xl border-2 border-ink bg-white text-lg font-bold">
+        <button type="button" onClick={() => setMin((m) => m + 15)} className="min-h-16 flex-1 rounded-2xl border-2 border-line-strong bg-white text-lg font-bold">
           + 15 min
         </button>
       </div>
-      <button type="button" disabled={!t} onClick={() => t && onContinuar(t, min, ontem ? somarDias(isoLocal(new Date()), -1) : undefined)} className="min-h-18 rounded-3xl bg-ok text-2xl font-extrabold text-white">
+      <button type="button" disabled={!t} onClick={() => t && onContinuar(t, min, ontem ? somarDias(isoLocal(new Date()), -1) : undefined)} className="min-h-18 rounded-2xl bg-ok text-2xl font-extrabold text-white">
         CONTINUAR
       </button>
       <button type="button" onClick={onVoltar} className="min-h-14 rounded-2xl bg-line text-lg font-bold">
@@ -612,13 +616,13 @@ function Justificar({ motivo, tarefa, justs, onVoltar, onOk }: { motivo: Motivo;
       {justs.length === 0 ? <p className="font-bold text-danger">Nenhuma justificativa cadastrada na V1. Fale com a gestora.</p> : null}
       <div className="grid grid-cols-2 gap-3">
         {justs.map((j) => (
-          <button key={j.id} type="button" aria-pressed={sel?.id === j.id} onClick={() => setSel(j)} className={`min-h-18 rounded-2xl px-3 text-lg font-bold ${sel?.id === j.id ? 'bg-ink text-white' : 'border-2 border-ink bg-white'}`}>
+          <button key={j.id} type="button" aria-pressed={sel?.id === j.id} onClick={() => setSel(j)} className={`min-h-18 rounded-2xl px-3 text-lg font-bold ${sel?.id === j.id ? 'bg-ink text-white' : 'border-2 border-line-strong bg-white'}`}>
             {j.label}
           </button>
         ))}
       </div>
       {sel?.requiresComplement ? <textarea value={texto} onChange={(e) => setTexto(e.target.value)} placeholder="Explique em poucas palavras" className="field min-h-24 text-lg" /> : null}
-      <button type="button" disabled={!pronto} onClick={() => sel && onOk({ id: sel.id, label: sel.label, complemento: texto })} className={`min-h-18 rounded-3xl text-2xl font-extrabold ${pronto ? 'bg-ok text-white' : 'bg-line text-muted'}`}>
+      <button type="button" disabled={!pronto} onClick={() => sel && onOk({ id: sel.id, label: sel.label, complemento: texto })} className={`min-h-18 rounded-2xl text-2xl font-extrabold ${pronto ? 'bg-ok text-white' : 'bg-line text-muted'}`}>
         CONTINUAR
       </button>
       <button type="button" onClick={onVoltar} className="min-h-14 rounded-2xl bg-line text-lg font-bold">
@@ -652,12 +656,12 @@ function Registrado({ tarefa, minutos, pct, proxima, onProxima, onSair }: { tare
         {pct === null ? '' : pct >= 100 ? ' · tarefa terminada' : ` · ${pct}% pronto`}
       </p>
       {proxima ? (
-        <button type="button" onClick={() => onProxima(proxima)} className="flex min-h-20 flex-col items-center justify-center rounded-3xl bg-ok text-white">
+        <button type="button" onClick={() => onProxima(proxima)} className="flex min-h-20 flex-col items-center justify-center rounded-2xl bg-ok text-white">
           <span className="text-2xl font-extrabold">COMEÇAR PRÓXIMA</span>
           <span className="text-lg">{proxima.activityTitle}</span>
         </button>
       ) : null}
-      <button type="button" onClick={onSair} className="min-h-16 rounded-2xl border-2 border-ink bg-white text-xl font-bold">
+      <button type="button" onClick={onSair} className="min-h-16 rounded-2xl border-2 border-line-strong bg-white text-xl font-bold">
         Sair ({falta} s)
       </button>
     </Cartao>
@@ -743,15 +747,15 @@ function Outra({ ocupado, onVoltar, onContinuar }: { ocupado: boolean; onVoltar:
         ))}
       </div>
       <div className="flex items-center gap-3">
-        <button type="button" onClick={() => setMin((m) => Math.max(15, m - 15))} className="min-h-16 flex-1 rounded-2xl border-2 border-ink bg-white text-lg font-bold">
+        <button type="button" onClick={() => setMin((m) => Math.max(15, m - 15))} className="min-h-16 flex-1 rounded-2xl border-2 border-line-strong bg-white text-lg font-bold">
           − 15 min
         </button>
         <span className="min-w-28 text-center font-display text-2xl font-extrabold">{fmtMin(min)}</span>
-        <button type="button" onClick={() => setMin((m) => m + 15)} className="min-h-16 flex-1 rounded-2xl border-2 border-ink bg-white text-lg font-bold">
+        <button type="button" onClick={() => setMin((m) => m + 15)} className="min-h-16 flex-1 rounded-2xl border-2 border-line-strong bg-white text-lg font-bold">
           + 15 min
         </button>
       </div>
-      <button type="button" disabled={ocupado} onClick={() => onContinuar(sel, min, ontem ? somarDias(isoLocal(new Date()), -1) : undefined)} className="min-h-18 rounded-3xl bg-ok text-2xl font-extrabold text-white">
+      <button type="button" disabled={ocupado} onClick={() => onContinuar(sel, min, ontem ? somarDias(isoLocal(new Date()), -1) : undefined)} className="min-h-18 rounded-2xl bg-ok text-2xl font-extrabold text-white">
         REGISTRAR
       </button>
       <button type="button" onClick={() => setSel(null)} className="min-h-14 rounded-2xl bg-line text-lg font-bold">

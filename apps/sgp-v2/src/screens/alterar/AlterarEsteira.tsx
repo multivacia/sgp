@@ -160,7 +160,7 @@ export function AlterarEsteira() {
 
         {tela.t === 'etapas' ? (
           <>
-            <button type="button" onClick={() => setTela({ t: 'dados' })} className="flex flex-col gap-1 rounded-2xl border-2 border-ink bg-white p-3 text-left">
+            <button type="button" onClick={() => setTela({ t: 'dados' })} className="flex flex-col gap-1 rounded-2xl border-2 border-line-strong bg-white p-3 text-left">
               <span className="flex items-center justify-between gap-2">
                 <span className="text-sm font-bold tracking-wide text-muted">DADOS DA ESTEIRA</span>
                 {mudDados.length ? <span className="rounded-lg bg-late-soft px-2 py-0.5 text-sm font-bold text-late-ink">{mudDados.length} {mudDados.length === 1 ? 'mudança' : 'mudanças'}</span> : <span className="text-sm font-bold underline">Alterar</span>}
@@ -356,7 +356,7 @@ export function AlterarEsteira() {
         {tela.t === 'motivo' ? (
           <div className="flex flex-col gap-3">
             <p className="text-muted">{emElaboracao ? 'A esteira ainda está em elaboração: não precisa de motivo.' : 'Esta esteira já saiu do Backlog. Informe o motivo da alteração para manter a rastreabilidade operacional.'}</p>
-            <div className="rounded-2xl border border-line bg-white p-3">
+            <div className="card p-3">
               <span className="text-sm font-bold text-muted">O QUE MUDA</span>
               {mud.lista.map((m) => (
                 <p key={m}>· {m}</p>
@@ -372,7 +372,7 @@ export function AlterarEsteira() {
             </div>
             <label className="flex flex-col gap-2 text-lg font-bold">
               {motivo === 'Outro motivo' ? 'Explique o motivo (obrigatório)' : 'Detalhe (opcional)'}
-              <textarea value={detalhe} onChange={(e) => setDetalhe(e.target.value.slice(0, 480))} rows={3} placeholder="Ex.: cliente pediu para manter o volante original" className="rounded-2xl border-2 border-ink bg-white p-3 text-lg font-normal" />
+              <textarea value={detalhe} onChange={(e) => setDetalhe(e.target.value.slice(0, 480))} rows={3} placeholder="Ex.: cliente pediu para manter o volante original" className="rounded-2xl border-2 border-line-strong bg-white p-3 text-lg font-normal" />
             </label>
           </div>
         ) : null}
@@ -414,7 +414,7 @@ export function AlterarEsteira() {
 
 function EtapaTopo({ nome, info, figura: fig }: { nome: string; info: string; figura: string | null }) {
   return (
-    <div className="flex items-center gap-3 rounded-2xl border border-line bg-white p-2.5">
+    <div className="flex items-center gap-3 card p-2.5">
       {fig ? <img src={fig} alt="" className="size-20 shrink-0 object-contain" /> : null}
       <div>
         <p className="font-display text-xl font-extrabold leading-tight">{displayName(nome)}</p>

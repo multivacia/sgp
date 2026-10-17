@@ -43,9 +43,9 @@ export function ResponsavelPicker({ titulo, setor, padraoId, padraoLabel, atualI
                   type="button"
                   aria-pressed={c.id === atualId}
                   onClick={() => onPick(c.id)}
-                  className={`flex min-h-14 items-center gap-2 rounded-2xl px-2 text-left font-bold ${c.id === atualId ? 'border-[3px] border-ink bg-accent-soft' : 'border-2 border-line bg-white'}`}
+                  className={`flex min-h-14 items-center gap-2 rounded-2xl px-2 text-left font-bold ${c.id === atualId ? 'border-[3px] border-blue bg-accent-soft' : 'border-2 border-line bg-white'}`}
                 >
-                  <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-accent font-extrabold">{nomeCurto(c).charAt(0)}</span>
+                  <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-blue-soft text-navy-blue font-extrabold">{nomeCurto(c).charAt(0)}</span>
                   <span className="leading-tight">{nomeCurto(c)}</span>
                 </button>
               ))}

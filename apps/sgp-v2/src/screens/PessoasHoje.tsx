@@ -35,7 +35,7 @@ export function PessoasHoje({ versao }: { versao: number }) {
   if (erro) return <p className="text-muted">Não foi possível ver os apontamentos de hoje.</p>
   if (!dados) return null
   if (!dados.publicada)
-    return <p className="rounded-2xl border border-line bg-white p-3 font-bold text-late-ink">A semana ainda não foi publicada: a fábrica não vê tarefas. Publique em Semana.</p>
+    return <p className="card p-3 font-bold text-late-ink">A semana ainda não foi publicada: a fábrica não vê tarefas. Publique em Semana.</p>
 
   const linha = (p: Dados['semApontamento'][number], txt: string) => (
     <p key={p.id} className="flex justify-between gap-2 border-t border-line py-1.5">

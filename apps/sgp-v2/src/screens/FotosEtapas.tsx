@@ -108,7 +108,7 @@ export function FotosEtapas() {
               const foto = temFoto(t)
               const fig = foto ?? figuraDaEtapa(t.name)
               return (
-                <button key={t.id} type="button" onClick={() => setEtapa(t)} className="flex flex-col gap-1.5 rounded-2xl border border-line bg-white p-2 text-left">
+                <button key={t.id} type="button" onClick={() => setEtapa(t)} className="flex flex-col gap-1.5 card p-2 text-left">
                   <span className="relative block">
                     {fig ? <img src={fig} alt="" className="h-28 w-full rounded-xl bg-white object-cover" /> : <span className="block h-28 rounded-xl bg-ground" />}
                     <span className="absolute left-1.5 top-1.5 flex size-7 items-center justify-center rounded-full bg-ink text-sm font-bold text-white">{i + 1}</span>
@@ -138,7 +138,7 @@ export function FotosEtapas() {
                 </button>
               </>
             ) : null}
-            <label className="flex min-h-16 cursor-pointer items-center justify-center rounded-2xl border-2 border-ink text-lg font-bold">
+            <label className="flex min-h-16 cursor-pointer items-center justify-center rounded-2xl border-2 border-line-strong text-lg font-bold">
               {ocupado && !nova ? 'Preparando…' : nova ? 'Escolher outra' : 'Tirar ou escolher foto'}
               <input type="file" accept="image/*" className="sr-only" onChange={(e) => void escolher(e.target.files?.[0])} />
             </label>

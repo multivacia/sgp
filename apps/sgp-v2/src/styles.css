@@ -1,22 +1,40 @@
 @import 'tailwindcss';
 
-/* Tokens do SGP+ V2: letra grande, alvos de toque >= 48px, contraste AA (docs/v2/SGP_V2.md §3). */
+/*
+  SGP+ V2 sobre o design system do SGP+ (V1: src/styles/semantic-tokens.css, tema "light-executive"):
+  azul-marinho da marca nas faixas, superfícies claras, dourado/âmbar do CTA com texto escuro,
+  Montserrat nos títulos e Open Sans no texto. Letra grande e alvos >= 48 px continuam (docs/v2/SGP_V2.md §3).
+*/
 @theme {
-  --color-ground: #eef0f3;
-  --color-ink: #12161c;
-  --color-muted: #4a5260;
-  --color-line: #d5d9e0;
-  --color-accent: #e0b321;
+  /* superfícies e texto (light-executive) */
+  --color-ground: #f3f6fa;
+  --color-ink: #0f172a;
+  --color-muted: #566579;
+  --color-line: #d8e0ea;
+  --color-line-strong: #b4c3d7;
+  /* marca */
+  --color-navy: #101824;
+  --color-navy-mid: #152a3d;
+  --color-navy-blue: #1c4e7e;
+  --color-blue: #2f6d9b;
+  --color-blue-soft: #dceaf6;
+  --color-gold: #c9a227;
+  --color-cta: #d97706;
+  --color-cta-hover: #c46f14;
+  --color-accent: #e0a526;
+  --color-accent-soft: #fff7e6;
+  /* estados (ops do SGP+) */
   --color-ok: #15803d;
+  --color-ok-soft: #e8f5ec;
   --color-danger: #b91c1c;
   --color-danger-soft: #fef2f2;
   --color-late: #c2410c;
   --color-late-ink: #7c2d12;
   --color-late-soft: #fff4e5;
-  --color-ok-soft: #e8f5ec;
-  --color-accent-soft: #fff8db;
-  --font-display: 'Archivo', system-ui, sans-serif;
-  --font-sans: 'Atkinson Hyperlegible', system-ui, sans-serif;
+  --font-display: 'Montserrat', ui-sans-serif, system-ui, sans-serif;
+  --font-sans: 'Open Sans', ui-sans-serif, system-ui, sans-serif;
+  --shadow-card: 0 10px 30px rgba(15, 23, 42, 0.06);
+  --shadow-cta: 0 8px 22px -10px rgba(146, 64, 14, 0.45);
 }
 
 html {
@@ -25,14 +43,38 @@ html {
   background: var(--color-ground);
 }
 
+/* foco visível (anel azul do SGP+) */
+:focus-visible {
+  outline: 3px solid rgba(47, 109, 155, 0.45);
+  outline-offset: 2px;
+}
+
 @layer components {
-  .field {
-    @apply min-h-14 rounded-2xl border-2 border-ink bg-white px-4 text-lg font-normal;
+  /* faixa da marca (gradiente do cabeçalho do SGP+) */
+  .brand-band {
+    background: linear-gradient(92deg, #050a12 0%, #101824 45%, #1c4e7e 100%);
+    color: #fff;
   }
+  .card {
+    @apply rounded-2xl border border-line bg-white;
+    box-shadow: var(--shadow-card);
+  }
+  .field {
+    @apply min-h-14 rounded-xl border-2 border-line-strong bg-white px-4 text-lg font-normal transition-colors;
+  }
+  .field:focus {
+    @apply border-blue outline-none;
+    box-shadow: 0 0 0 3px rgba(47, 109, 155, 0.22);
+  }
+  /* CTA do SGP+: âmbar com texto escuro */
   .btn-primary {
-    @apply min-h-16 rounded-2xl bg-ink px-6 text-xl font-bold text-white disabled:opacity-60;
+    @apply min-h-16 rounded-xl bg-cta px-6 text-xl font-bold text-ink transition-colors hover:bg-cta-hover disabled:opacity-60;
+    box-shadow: var(--shadow-cta);
   }
   .btn-secondary {
-    @apply min-h-14 rounded-2xl border-2 border-ink bg-white px-6 text-lg font-bold;
+    @apply min-h-14 rounded-xl border-2 border-line-strong bg-white px-6 text-lg font-bold text-ink transition-colors hover:bg-ground;
+  }
+  .eyebrow {
+    @apply text-sm font-bold uppercase tracking-wider text-muted;
   }
 }

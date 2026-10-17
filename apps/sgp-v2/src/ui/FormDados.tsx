@@ -91,7 +91,7 @@ export function FormDados({ dados, onChange, parte, matriz = '', nomeResponsavel
           </div>
 
           <span className="mt-2 text-lg font-bold">Responsável pela esteira</span>
-          <button type="button" onClick={onEscolherResponsavel} className="flex min-h-14 items-center justify-between rounded-2xl border-2 border-ink bg-white px-4 text-lg font-bold">
+          <button type="button" onClick={onEscolherResponsavel} className="flex min-h-14 items-center justify-between rounded-2xl border-2 border-line-strong bg-white px-4 text-lg font-bold">
             <span>{nomeResponsavel || 'Escolher'}</span>
             <span className="text-sm underline">Trocar</span>
           </button>

@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { ApiError } from '../api/client'
 import { useSession } from '../auth/context'
+import { Marca } from '../ui/Marca'
 
 export function Login() {
   const { login } = useSession()
@@ -23,34 +24,26 @@ export function Login() {
   }
 
   return (
-    <main className="min-h-dvh bg-ground px-4 py-10">
-      <form onSubmit={submit} className="mx-auto flex max-w-sm flex-col gap-4">
-        <h1 className="font-display text-4xl font-extrabold">SGP+ V2</h1>
-        <p className="text-muted">Entre com o mesmo e-mail e senha do SGP.</p>
+    <main className="flex min-h-dvh flex-col bg-ground">
+      <section className="brand-band px-4 pb-16 pt-[max(env(safe-area-inset-top),40px)]">
+        <div className="mx-auto flex max-w-sm flex-col gap-4">
+          <Marca grande />
+          <p className="text-lg text-white/75">Esteiras, semana e apontamento da fábrica, no celular e no tablet.</p>
+        </div>
+      </section>
+      <form onSubmit={submit} className="card mx-4 -mt-10 flex flex-col gap-4 p-5 sm:mx-auto sm:w-full sm:max-w-sm">
+        <h1 className="font-display text-2xl font-extrabold">Entrar</h1>
+        <p className="text-muted">Use o mesmo e-mail e senha do SGP+.</p>
         <label className="flex flex-col gap-2 font-bold">
           E-mail
-          <input
-            type="email"
-            autoComplete="username"
-            required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="field"
-          />
+          <input type="email" autoComplete="username" required value={email} onChange={(e) => setEmail(e.target.value)} className="field" />
         </label>
         <label className="flex flex-col gap-2 font-bold">
           Senha
-          <input
-            type="password"
-            autoComplete="current-password"
-            required
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="field"
-          />
+          <input type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} className="field" />
         </label>
         {error ? (
-          <p role="alert" className="rounded-2xl border-2 border-danger bg-danger-soft p-3 font-bold text-danger">
+          <p role="alert" className="rounded-xl border-2 border-danger bg-danger-soft p-3 font-bold text-danger">
             {error}
           </p>
         ) : null}

@@ -531,3 +531,11 @@ Fases 4 e 5 exigem o fluxo completo de `AGENTS.md` (contexto → impacto → spe
 - **Demonstração atualizada:** https://claude.ai/artifact/RFAWgUFLAB541XT4839dhW (versão 2).
 - **Pendências:** aplicar 0054 em HML/produção; decisão sobre correção pelo colaborador; fluxo de status; confirmar interpretação do motivo.
 - **Uso/tokens disponíveis:** INDISPONÍVEL — a sessão não fornece métrica confiável.
+
+## 35. Visual refinado com o design system do SGP+ (2026-10-17)
+
+- **Pedido:** "Faça uma melhoria no visual do app, deixe ele mais refinado. Use o designer system do SGP+."
+- **Fonte:** design system da V1 (`src/styles/semantic-tokens.css`, `theme.css`, `index.css` — tema light-executive e identidade ARGOS; fontes Montserrat/Open Sans; logo `src/assets/bravo-logo.png`). Nada da V1 foi alterado.
+- **Feito (só V2):** tokens novos em `apps/sgp-v2/src/styles.css`; fontes em `index.html`; `public/brand/bravo-logo.png`; `src/ui/Marca.tsx`; Shell (cabeçalho da marca, menu com indicador), Login (faixa da marca + cartão), Início (saudação, destaque, atalhos com ícone), WizardHeader/BottomBar, Tablet (cabeçalho da marca); troca global de bordas pretas por bordas do SGP+, seleção em azul, cantos `rounded-2xl`, cartões com sombra do SGP+. Detalhes em `docs/v2/SGP_V2.md` §21.
+- **Validação:** `npm test` 28/28; `npm run build` e `build:demo` ok; eslint sem problemas; capturas headless de Login, Início, Hoje, Esteiras, Detalhe, Nova (etapas e personalizar), Semana e Tablet (grade e próxima tarefa) revisadas. Demonstração republicada (versão 3).
+- **Uso/tokens disponíveis:** INDISPONÍVEL — a sessão não fornece métrica confiável.

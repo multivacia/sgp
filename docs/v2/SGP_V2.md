@@ -228,3 +228,11 @@ Continuam abertas:
 - **V2:** tela **Fotos das etapas** (Início, para quem cuida da matriz): escolhe a etapa → tira/escolhe a foto → a foto é reduzida no próprio celular (até 1000 px, WebP) → Salvar; "Voltar à ilustração" remove. A foto aparece no cardápio da Nova esteira e na Alterar esteira (na esteira, achada pelo nome da etapa). Sem foto ou sem a tabela, fica a ilustração.
 - ⚠️ **Deploy:** o deploy da V1 não roda migrations (guardrail). Aplicar `0054` manualmente em HML/produção com aprovação humana. Antes disso a V2 funciona normalmente com as ilustrações.
 - Testes: servidor `src/tests/v2-etapa-imagens.test.ts` (regras + HTTP contra Postgres: grava, lê, 403 colaborador, 422 etapa errada/arquivo falso, 413, 401, remove); V2 `src/domain/fotosEtapas.test.ts`.
+
+## 21. Visual — design system do SGP+
+
+- Fonte do design system: V1 `src/styles/semantic-tokens.css` + `src/styles/theme.css` + `src/index.css` (tema claro **light-executive** e identidade ARGOS). Lidos, não alterados.
+- V2 (`apps/sgp-v2/src/styles.css`): superfícies claras (`#f3f6fa`/branco, borda `#d8e0ea`, sombra de cartão do SGP+), texto `#0f172a`/`#566579`, faixa da marca com o gradiente do cabeçalho do SGP+ (azul-marinho → azul), **CTA âmbar com texto escuro** (`#d97706`, como no light-executive), azul `#2f6d9b` para foco e **seleção**, dourado `#c9a227` da marca no selo "V2". Fontes **Montserrat** (títulos) e **Open Sans** (texto), as mesmas da V1.
+- Logo Bravo (cópia de `src/assets/bravo-logo.png` em `apps/sgp-v2/public/brand/`) no selo branco, como na barra lateral da V1: cabeçalho do app, login e tablet.
+- Componentes: `.brand-band`, `.card`, `.field` (foco azul), `.btn-primary` (CTA), `.btn-secondary`, `.eyebrow`; `ui/Marca.tsx`. Cabeçalho dos passos (Nova/Alterar) em azul-marinho com progresso âmbar; barra inferior com o CTA; menu inferior com indicador âmbar na aba ativa; Início com saudação, ação principal em destaque e atalhos com ícone.
+- Mantido do §3: letra base 18 px, alvos ≥ 48 px, verde para concluir/confirmar no tablet, cores de estado (ok, atraso, parada).

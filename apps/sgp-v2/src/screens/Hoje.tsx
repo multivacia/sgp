@@ -46,7 +46,7 @@ export function Hoje() {
         <p className="rounded-2xl border-2 border-ok bg-ok-soft p-4 text-center font-bold text-ok">Tudo em dia.</p>
       ) : null}
       {excecoes.map((x, i) => (
-        <div key={`${x.conveyor.id}-${i}`} className="overflow-hidden rounded-2xl border border-line bg-white">
+        <div key={`${x.conveyor.id}-${i}`} className="overflow-hidden card">
           <div className={`px-3 py-1.5 text-sm font-bold tracking-wide text-white ${x.kind === 'parada' ? 'bg-danger' : 'bg-late'}`}>
             {x.kind === 'parada' ? 'ATIVIDADE PARADA' : 'ATRASADA'}
           </div>
@@ -67,7 +67,7 @@ export function Hoje() {
         const d = details.get(c.id)
         const p = d ? progressOf(d) : null
         return (
-          <Link key={c.id} to={`/esteiras/${c.id}`} className="flex flex-col gap-1.5 rounded-2xl border border-line bg-white p-3">
+          <Link key={c.id} to={`/esteiras/${c.id}`} className="flex flex-col gap-1.5 card p-3">
             <span className="flex items-center justify-between gap-2">
               <span className="font-bold">{c.name}</span>
               {p ? <Tag tone="neutral">{`${p.pct}%`}</Tag> : null}

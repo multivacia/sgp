@@ -83,7 +83,7 @@ export function Apontamentos({ conveyorId, stepId, titulo, podeEditar, podeRemov
                 {podeEditar || podeRemover ? (
                   <div className="grid grid-cols-2 gap-2">
                     {podeEditar ? (
-                      <button type="button" onClick={() => abrir(l, 'corrigir')} className="min-h-12 rounded-xl border-2 border-ink font-bold">
+                      <button type="button" onClick={() => abrir(l, 'corrigir')} className="min-h-12 rounded-xl border-2 border-line-strong font-bold">
                         Corrigir tempo
                       </button>
                     ) : null}
@@ -106,11 +106,11 @@ export function Apontamentos({ conveyorId, stepId, titulo, podeEditar, podeRemov
               <>
                 <span className="text-lg font-bold">Tempo certo</span>
                 <div className="flex items-center gap-3">
-                  <button type="button" onClick={() => setMin((m) => Math.max(5, m - 15))} className="min-h-14 flex-1 rounded-2xl border-2 border-ink text-lg font-bold">
+                  <button type="button" onClick={() => setMin((m) => Math.max(5, m - 15))} className="min-h-14 flex-1 rounded-2xl border-2 border-line-strong text-lg font-bold">
                     − 15 min
                   </button>
                   <span className="min-w-28 text-center font-display text-2xl font-extrabold">{fmtMin(min)}</span>
-                  <button type="button" onClick={() => setMin((m) => m + 15)} className="min-h-14 flex-1 rounded-2xl border-2 border-ink text-lg font-bold">
+                  <button type="button" onClick={() => setMin((m) => m + 15)} className="min-h-14 flex-1 rounded-2xl border-2 border-line-strong text-lg font-bold">
                     + 15 min
                   </button>
                 </div>

@@ -5,21 +5,21 @@ import { fmtMin } from '../domain/format'
 
 export function WizardHeader({ sobre, pergunta, passo, total, onBack }: { sobre: string; pergunta: string; passo: number; total: number; onBack: () => void }) {
   return (
-    <header className="sticky top-0 z-10 flex flex-col gap-3 border-b border-line bg-white px-4 pb-3 pt-4">
+    <header className="brand-band sticky top-0 z-10 flex flex-col gap-3 px-4 pb-3 pt-[max(env(safe-area-inset-top),16px)] shadow-[0_8px_24px_-14px_rgba(5,10,18,0.8)]">
       <div className="flex items-center gap-3">
-        <button type="button" aria-label="Voltar" onClick={onBack} className="flex size-12 shrink-0 items-center justify-center rounded-2xl border border-line bg-white">
+        <button type="button" aria-label="Voltar" onClick={onBack} className="flex size-12 shrink-0 items-center justify-center rounded-xl border border-white/25 bg-white/10 text-white">
           <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
             <path d="M15 18l-6-6 6-6" />
           </svg>
         </button>
         <div className="min-w-0">
-          <p className="truncate font-bold text-muted">{sobre}</p>
+          <p className="truncate text-sm font-bold uppercase tracking-wider text-white/65">{sobre}</p>
           <h1 className="font-display text-2xl font-extrabold leading-tight">{pergunta}</h1>
         </div>
       </div>
       <div className="flex gap-1.5">
         {Array.from({ length: total }, (_, i) => (
-          <div key={i} className={`h-2 flex-1 rounded-full ${i < passo ? 'bg-ink' : 'bg-line'}`} />
+          <div key={i} className={`h-1.5 flex-1 rounded-full ${i < passo ? 'bg-cta' : 'bg-white/20'}`} />
         ))}
       </div>
     </header>
@@ -28,12 +28,12 @@ export function WizardHeader({ sobre, pergunta, passo, total, onBack }: { sobre:
 
 export function BottomBar({ titulo, sub, label, enabled, verde, onClick }: { titulo: string; sub: string; label: string; enabled: boolean; verde?: boolean; onClick: () => void }) {
   return (
-    <div className="fixed inset-x-0 bottom-0 z-10 flex items-center gap-3 border-t border-line bg-white px-4 pb-[max(env(safe-area-inset-bottom),16px)] pt-3">
+    <div className="fixed inset-x-0 bottom-0 z-10 flex items-center gap-3 border-t border-line bg-white/95 px-4 pb-[max(env(safe-area-inset-bottom),16px)] pt-3 shadow-[0_-10px_28px_-14px_rgba(15,23,42,0.25)] backdrop-blur">
       <div className="min-w-0 flex-1">
         <p className="font-display text-xl font-extrabold">{titulo}</p>
         <p className="text-muted">{sub}</p>
       </div>
-      <button type="button" disabled={!enabled} onClick={onClick} className={`min-h-15 rounded-2xl px-6 text-lg font-bold ${enabled ? (verde ? 'bg-ok text-white' : 'bg-ink text-white') : 'bg-line text-muted'}`}>
+      <button type="button" disabled={!enabled} onClick={onClick} className={`min-h-15 rounded-xl px-6 text-lg font-bold transition-colors ${enabled ? (verde ? 'bg-ok text-white shadow-[0_8px_22px_-10px_rgba(21,128,61,0.7)]' : 'bg-cta text-ink shadow-[var(--shadow-cta)] hover:bg-cta-hover') : 'bg-line text-muted'}`}>
         {label}
       </button>
     </div>
@@ -57,7 +57,7 @@ type EtapaCardProps = {
 export function EtapaCard({ numero, nome, figura, on, tag, tagTone = on ? 'ok' : 'fora', info, mudancas, toggleLabel, onToggle, onPersonalizar }: EtapaCardProps) {
   const tone = tagTone === 'ok' ? 'bg-ok text-white' : tagTone === 'feita' ? 'bg-ink text-white' : 'border border-line bg-white text-muted'
   return (
-    <div className={`rounded-2xl p-2 ${on ? 'border-[3px] border-ink bg-white' : 'border-[3px] border-transparent bg-line/60'}`}>
+    <div className={`rounded-2xl p-2 ${on ? 'border-[3px] border-blue bg-white' : 'border-[3px] border-transparent bg-line/60'}`}>
       <button type="button" aria-pressed={on} aria-label={toggleLabel} onClick={onToggle} className="flex w-full flex-col gap-1.5 text-left">
         <span className="relative block">
           {figura ? <img src={figura} alt="" className={`h-28 w-full rounded-xl bg-white object-contain ${on ? '' : 'opacity-40 grayscale'}`} /> : <span className="block h-28 w-full rounded-xl bg-ground" />}
@@ -71,7 +71,7 @@ export function EtapaCard({ numero, nome, figura, on, tag, tagTone = on ? 'ok' :
         <>
           {mudancas > 0 ? <span className="mt-1.5 block rounded-lg bg-late-soft px-2 py-1 text-sm font-bold text-late-ink">{mudancas} {mudancas === 1 ? 'mudança' : 'mudanças'}</span> : null}
           {onPersonalizar ? (
-            <button type="button" onClick={onPersonalizar} className="mt-2 min-h-11 w-full rounded-xl border-2 border-ink bg-white font-bold">
+            <button type="button" onClick={onPersonalizar} className="mt-2 min-h-11 w-full rounded-xl border-2 border-line-strong bg-white font-bold">
               Personalizar
             </button>
           ) : null}
@@ -97,7 +97,7 @@ export function SetorBox({ nome, info, ativo, toggle, trocarTodos, children }: {
         ) : null}
       </div>
       {trocarTodos ? (
-        <button type="button" onClick={trocarTodos} className="min-h-11 rounded-xl border-2 border-ink bg-white font-bold">
+        <button type="button" onClick={trocarTodos} className="min-h-11 rounded-xl border-2 border-line-strong bg-white font-bold">
           Trocar responsável de todo o setor
         </button>
       ) : null}
@@ -109,7 +109,7 @@ export function SetorBox({ nome, info, ativo, toggle, trocarTodos, children }: {
 export function AtividadeRow({ nome, min, on, onToggle, resp }: { nome: string; min: number; on: boolean; onToggle: () => void; resp?: { texto: string; trocado: boolean; onTrocar: () => void } }) {
   return (
     <div className="flex flex-col gap-1.5">
-      <button type="button" aria-pressed={on} onClick={onToggle} className={`flex min-h-14 items-center gap-3 rounded-2xl px-2.5 py-2 text-left ${on ? 'border-2 border-ink bg-white' : 'border-2 border-line bg-ground'}`}>
+      <button type="button" aria-pressed={on} onClick={onToggle} className={`flex min-h-14 items-center gap-3 rounded-2xl px-2.5 py-2 text-left ${on ? 'border-2 border-line-strong bg-white' : 'border-2 border-line bg-ground'}`}>
         <span aria-hidden="true" className={`flex size-8 shrink-0 items-center justify-center rounded-lg ${on ? 'bg-ok text-white' : 'border-2 border-muted bg-white'}`}>
           {on ? (
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round">

@@ -35,7 +35,7 @@ export function Esteiras() {
         const late = isOverdue(c)
         const tone = p?.blocked ? 'stop' : late ? 'late' : 'ok'
         return (
-          <Link key={c.id} to={`/esteiras/${c.id}`} className="flex flex-col gap-1.5 rounded-2xl border border-line bg-white p-3">
+          <Link key={c.id} to={`/esteiras/${c.id}`} className="flex flex-col gap-1.5 card p-3">
             <span className="flex items-start justify-between gap-2">
               <span className="text-lg font-bold leading-tight">{c.name}</span>
               {p?.blocked ? <Tag tone="stop">Parada</Tag> : late ? <Tag tone="late">Atrasada</Tag> : <Tag tone="neutral">{STATUS_LABEL[c.operationalStatus]}</Tag>}

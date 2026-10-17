@@ -157,13 +157,13 @@ export function PlanejarSemana() {
   const fimSemana = somarDias(weekStart, 4)
   const navSemana = (
     <div className="flex items-center gap-2">
-      <button type="button" aria-label="Semana anterior" onClick={() => trocarSemana(-1)} className="flex size-12 items-center justify-center rounded-2xl border border-line bg-white text-2xl font-bold">
+      <button type="button" aria-label="Semana anterior" onClick={() => trocarSemana(-1)} className="flex size-12 items-center justify-center card text-2xl font-bold">
         ‹
       </button>
       <p className="flex-1 text-center text-lg font-bold">
         Semana de {weekStart.slice(8, 10)}/{weekStart.slice(5, 7)} a {fimSemana.slice(8, 10)}/{fimSemana.slice(5, 7)}
       </p>
-      <button type="button" aria-label="Próxima semana" onClick={() => trocarSemana(1)} className="flex size-12 items-center justify-center rounded-2xl border border-line bg-white text-2xl font-bold">
+      <button type="button" aria-label="Próxima semana" onClick={() => trocarSemana(1)} className="flex size-12 items-center justify-center card text-2xl font-bold">
         ›
       </button>
     </div>
@@ -242,7 +242,7 @@ export function PlanejarSemana() {
         {espera.map((e) => {
           const min = e.atividades.reduce((s, a) => s + a.minutes, 0)
           return (
-            <div key={e.conveyorId} className="flex items-center gap-3 rounded-2xl border border-line bg-white p-3">
+            <div key={e.conveyorId} className="flex items-center gap-3 card p-3">
               <div className="min-w-0 flex-1">
                 <p className="text-lg font-bold leading-tight">{e.titulo}</p>
                 <p className="text-muted">
@@ -250,7 +250,7 @@ export function PlanejarSemana() {
                 </p>
               </div>
               {!semanaPassou ? (
-                <button type="button" onClick={() => setSheet(e.conveyorId)} className="min-h-12 shrink-0 rounded-xl border-2 border-ink px-3 font-bold">
+                <button type="button" onClick={() => setSheet(e.conveyorId)} className="min-h-12 shrink-0 rounded-xl border-2 border-line-strong px-3 font-bold">
                   Escolher início
                 </button>
               ) : null}
@@ -301,7 +301,7 @@ export function PlanejarSemana() {
           const aberto = diaAberto === i
           const itens = itensDoDia(d, final.mantidos, final.novos)
           return (
-            <div key={d} className="rounded-2xl border border-line bg-white">
+            <div key={d} className="card">
               <button type="button" aria-expanded={aberto} onClick={() => setDiaAberto(aberto ? null : i)} className="flex w-full flex-col gap-1.5 p-3 text-left">
                 <span className="flex items-center justify-between gap-2">
                   <span className="text-lg font-bold">{diaTxt(d, i)}</span>
@@ -344,7 +344,7 @@ export function PlanejarSemana() {
         ) : null}
         <div className="flex items-center gap-2">
           {mudou ? (
-            <button type="button" disabled={salvando} onClick={() => void gravar(false)} className="min-h-14 rounded-2xl border-2 border-ink px-3 font-bold">
+            <button type="button" disabled={salvando} onClick={() => void gravar(false)} className="min-h-14 rounded-2xl border-2 border-line-strong px-3 font-bold">
               Guardar
             </button>
           ) : null}
@@ -376,7 +376,7 @@ export function PlanejarSemana() {
                         setInicio({ ...inicio, [sheetE.conveyorId]: o.i })
                         setSheet(null)
                       }}
-                      className={`flex min-h-16 items-center justify-between gap-2 rounded-2xl px-3 py-2 text-left ${inicio[sheetE.conveyorId] === o.i ? 'border-[3px] border-ink' : 'border-2 border-line'}`}
+                      className={`flex min-h-16 items-center justify-between gap-2 rounded-2xl px-3 py-2 text-left ${inicio[sheetE.conveyorId] === o.i ? 'border-[3px] border-blue' : 'border-2 border-line'}`}
                     >
                       <span>
                         <span className="block text-lg font-bold">
@@ -436,7 +436,7 @@ export function PlanejarSemana() {
                     setAjustes(ajustarGrupo(ajustes, grupo.ids, { plannedDate: d }))
                     setGrupo(null)
                   }}
-                  className={`min-h-14 rounded-xl font-bold ${d === grupo.date ? 'bg-ink text-white' : i < desde ? 'bg-line text-muted' : 'border-2 border-ink'}`}
+                  className={`min-h-14 rounded-xl font-bold ${d === grupo.date ? 'bg-ink text-white' : i < desde ? 'bg-line text-muted' : 'border-2 border-line-strong'}`}
                 >
                   {CURTO[i]}
                 </button>

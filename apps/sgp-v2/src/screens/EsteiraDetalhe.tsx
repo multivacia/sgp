@@ -62,7 +62,7 @@ export function EsteiraDetalhe() {
   return (
     <section className="flex flex-col gap-3">
       <div className="flex items-center gap-3">
-        <Link to="/esteiras" aria-label="Voltar para Esteiras" className="flex size-12 shrink-0 items-center justify-center rounded-2xl border border-line bg-white">
+        <Link to="/esteiras" aria-label="Voltar para Esteiras" className="flex size-12 shrink-0 items-center justify-center card">
           <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
             <path d="M15 18l-6-6 6-6" />
           </svg>
@@ -72,7 +72,7 @@ export function EsteiraDetalhe() {
           <p className="text-muted">{[carro, d.clientName].filter(Boolean).join(' · ') || STATUS_LABEL[d.operationalStatus]}</p>
         </div>
       </div>
-      <div className="flex flex-col gap-1.5 rounded-2xl border border-line bg-white p-3">
+      <div className="flex flex-col gap-1.5 card p-3">
         <span className="flex items-center justify-between gap-2">
           <span className="font-bold">{d.baseNameSnapshot ? `Matriz ${d.baseNameSnapshot}` : STATUS_LABEL[d.operationalStatus]}</span>
           {p.blocked ? <Tag tone="stop">Parada</Tag> : late ? <Tag tone="late">Atrasada</Tag> : <Tag tone="neutral">{STATUS_LABEL[d.operationalStatus]}</Tag>}
@@ -103,7 +103,7 @@ export function EsteiraDetalhe() {
         const resumo = feitas === steps.length ? 'Feita' : parada ? 'Parada' : andando || feitas > 0 ? 'Em andamento' : 'Não começou'
         const open = aberta === o.id
         return (
-          <div key={o.id} id={`etapa-${o.id}`} className="scroll-mt-4 overflow-hidden rounded-2xl border border-line bg-white">
+          <div key={o.id} id={`etapa-${o.id}`} className="scroll-mt-4 overflow-hidden card">
             <button
               type="button"
               aria-expanded={open}
@@ -186,7 +186,7 @@ function DadosCard({ d }: { d: ConveyorDetail }) {
     ['Observações', d.initialNotes],
   ]
   return (
-    <div className="rounded-2xl border border-line bg-white">
+    <div className="card">
       <button type="button" aria-expanded={aberto} onClick={() => setAberto(!aberto)} className="flex min-h-14 w-full items-center justify-between px-3 text-left font-bold">
         Dados da esteira
         <span className="text-sm underline">{aberto ? 'Fechar' : 'Ver'}</span>
