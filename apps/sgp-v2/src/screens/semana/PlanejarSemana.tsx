@@ -232,7 +232,7 @@ export function PlanejarSemana() {
 
       <div className="flex flex-col gap-2">
         <h2 className="font-display text-xl font-extrabold">Esperando ({espera.length})</h2>
-        {espera.length > 1 && !semanaPassou ? (
+        {espera.length > 0 && !semanaPassou ? (
           <button type="button" onClick={() => setInicio(sugerirSemana(week, mantidos, esperando, inicio, desde))} className="flex min-h-16 flex-col items-start justify-center rounded-2xl bg-ink px-4 py-2 text-left text-white">
             <span className="text-lg font-bold">Sugerir semana</span>
             <span className="text-line">Distribui as esteiras pelos dias, pelo prazo. Você só confere.</span>

@@ -539,3 +539,14 @@ Fases 4 e 5 exigem o fluxo completo de `AGENTS.md` (contexto → impacto → spe
 - **Feito (só V2):** tokens novos em `apps/sgp-v2/src/styles.css`; fontes em `index.html`; `public/brand/bravo-logo.png`; `src/ui/Marca.tsx`; Shell (cabeçalho da marca, menu com indicador), Login (faixa da marca + cartão), Início (saudação, destaque, atalhos com ícone), WizardHeader/BottomBar, Tablet (cabeçalho da marca); troca global de bordas pretas por bordas do SGP+, seleção em azul, cantos `rounded-2xl`, cartões com sombra do SGP+. Detalhes em `docs/v2/SGP_V2.md` §21.
 - **Validação:** `npm test` 28/28; `npm run build` e `build:demo` ok; eslint sem problemas; capturas headless de Login, Início, Hoje, Esteiras, Detalhe, Nova (etapas e personalizar), Semana e Tablet (grade e próxima tarefa) revisadas. Demonstração republicada (versão 3).
 - **Uso/tokens disponíveis:** INDISPONÍVEL — a sessão não fornece métrica confiável.
+
+## 36. Correção pelo colaborador + "Sugerir semana" (2026-10-17)
+
+- **Pedido:** "Implementa a correção pelo colaborador como você propôs, e sumiu a sugestão de planejamento."
+- **Sugerir semana:** o botão só aparecia com 2+ esteiras esperando; na demonstração só uma estava liberada (a Polo nasce em elaboração). Agora aparece com 1 ou mais (`PlanejarSemana.tsx`).
+- **Correção pelo colaborador (regra proposta e aprovada):** só o próprio lançamento, lançado hoje (dia de São Paulo), atividade não concluída/dispensada, com motivo; senão só a gestora.
+- **Servidor (aditivo):** `server/migrations/0055_v2_correcoes_apontamento.sql` (tabela nova de registro), `server/src/modules/v2-producao-correcao/{logic,routes}.ts`, registro em `server/src/app.ts`, teste `server/src/tests/v2-producao-correcao.test.ts`. Reaproveita funções do repositório da V1 sem alterá-las. Auditoria própria porque `admin_audit_events` exige usuário do sistema e lista fixa de eventos no código da V1.
+- **V2:** `src/api/production.ts` (meusLancamentos/corrigirMeu/removerMeu), `src/domain/tablet.ts` (tipo), `src/domain/apontamentos.ts` (corpo reaproveitado), `src/screens/tablet/Tablet.tsx` (tela "Meus lançamentos de hoje", link "Tempo errado? Corrigir"), `src/demo/api.ts`.
+- **Migrations:** `0055` criada, **não aplicada** em ambiente compartilhado; aplicada no Postgres local de teste (2x, idempotente).
+- **Validação:** servidor `v2-producao-correcao.test.ts` 2/2 e `v2-etapa-imagens.test.ts` 2/2 contra Postgres local; `tsc` ok; V2 `npm test` 28/28; build e build:demo ok; eslint ok; headless no tablet (lançar 1 h → Tempo errado? → corrigir para 45 min com motivo → remover → "Nada lançado hoje") e Semana com "Sugerir semana" visível; sem erros. Demonstração republicada (versão 4). Front da V1 (`src/`) sem alteração.
+- **Uso/tokens disponíveis:** INDISPONÍVEL — a sessão não fornece métrica confiável.

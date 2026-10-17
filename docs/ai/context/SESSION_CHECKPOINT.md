@@ -24,7 +24,7 @@ Código das Fases 0–8 + 2b pronto e testado (V2 28/28, servidor v2-etapa-image
 
 ## Concluído
 
-- Fases 0 a 8 + 2b (ver `docs/v2/SGP_V2.md` §4 e §10–§20). Demo: https://claude.ai/artifact/RFAWgUFLAB541XT4839dhW
+- Fases 0 a 8 + 2b (ver `docs/v2/SGP_V2.md` §4 e §10–§22). Demo: https://claude.ai/artifact/RFAWgUFLAB541XT4839dhW
 
 ## Decisões já tomadas
 
@@ -32,7 +32,7 @@ Código das Fases 0–8 + 2b pronto e testado (V2 28/28, servidor v2-etapa-image
 
 ## Pendências
 
-- Humanas: aplicar a migration `server/migrations/0054_v2_etapa_imagens.sql` (manual); aplicar `deploy/nginx/sgp-v2.location.example` em HML; rodar `deploy-v2.yml` (homologacao).
+- Humanas: aplicar as migrations `server/migrations/0054_v2_etapa_imagens.sql` e `0055_v2_correcoes_apontamento.sql` (manual); aplicar `deploy/nginx/sgp-v2.location.example` em HML; rodar `deploy-v2.yml` (homologacao).
 - Decisões abertas: `docs/v2/SGP_V2.md` §8 (motivos reais, QR do ticket, token do tablet, corrigir apontamento, fotos reais).
 
 ## Próxima ação exata
@@ -47,7 +47,7 @@ Código das Fases 0–8 + 2b pronto e testado (V2 28/28, servidor v2-etapa-image
 ## Referências úteis
 
 - Documento vivo: `docs/v2/SGP_V2.md`
-- Retorno: `docs/ai/returns/redesenho-ux-mobile-retorno.md` (§24–§34 = V2)
+- Retorno: `docs/ai/returns/redesenho-ux-mobile-retorno.md` (§24–§36 = V2)
 - Protótipo: https://claude.ai/artifact/QBY3svGbjp7ALeewX1w9n2
 
 ## Uso de contexto / sessão

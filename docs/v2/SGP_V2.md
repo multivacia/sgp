@@ -54,6 +54,7 @@ Legenda: ⬜ não iniciada · 🟨 em andamento · ✅ concluída
 | 6 | Acabamento para a demonstração: Pessoas hoje, Outra atividade no tablet, ajustar atividade no planejamento, Liberar esteira, versão de demonstração | não | médio | ✅ código pronto (§17) |
 | 7 | Dados básicos da esteira (incluir, alterar, consultar) iguais à V1 | não | baixo | ✅ código pronto (§18) |
 | 8 | Corrigir/remover apontamento pela gestora | não (V1 já tem, auditado) | médio | ✅ código pronto (§19) |
+| 9 | Colaborador corrige o próprio apontamento no tablet | **sim**: módulo `server/src/modules/v2-producao-correcao` + migration `0055_v2_correcoes_apontamento.sql` | médio | ✅ código pronto (§22) · ⏳ aplicar a migration (manual) |
 
 Fases 4 e 5 (e qualquer mudança em regra de planejamento/apontamento) seguem o fluxo completo do `AGENTS.md`.
 
@@ -98,7 +99,7 @@ Decisões do dono do produto em 2026-10-17:
 - **Fluxo de status da esteira** — dono do produto ainda vai pensar. Até lá: botão "Liberar" manual (§17), nada automático, sem "Finalizar/Cancelar" na V2.
 - **Motivo de alteração** — segue a base do SGP+ (V1): texto obrigatório de 3–500 caracteres fora da elaboração (MSG-EST-001), o mesmo motivo vale para dados e estrutura (manual §41.2). Os botões da V2 são só atalhos para escrever o texto. *Confirmar com o dono do produto se "base do SGP+" é isso ou um catálogo a ser criado.*
 - **Fotos das etapas** — migration aprovada → feito (§20).
-- **Corrigir apontamento** — só a gestora (feito, §19). Em reflexão: deixar o colaborador ajustar o próprio lançamento enquanto a atividade não estiver concluída (precisa de endpoint novo no Modo Produção — proposta no retorno §34).
+- **Corrigir apontamento** — gestora corrige qualquer um (§19); colaborador corrige/remove o próprio, de hoje, com a atividade aberta (aprovado e feito, §22).
 
 Continuam abertas:
 - Quais matrizes existem além de "Gol GTI completo".
@@ -236,3 +237,13 @@ Continuam abertas:
 - Logo Bravo (cópia de `src/assets/bravo-logo.png` em `apps/sgp-v2/public/brand/`) no selo branco, como na barra lateral da V1: cabeçalho do app, login e tablet.
 - Componentes: `.brand-band`, `.card`, `.field` (foco azul), `.btn-primary` (CTA), `.btn-secondary`, `.eyebrow`; `ui/Marca.tsx`. Cabeçalho dos passos (Nova/Alterar) em azul-marinho com progresso âmbar; barra inferior com o CTA; menu inferior com indicador âmbar na aba ativa; Início com saudação, ação principal em destaque e atalhos com ícone.
 - Mantido do §3: letra base 18 px, alvos ≥ 48 px, verde para concluir/confirmar no tablet, cores de estado (ok, atraso, parada).
+
+## 22. Fase 9 — Colaborador corrige o próprio apontamento (tablet)
+
+- **Regra (aprovada):** o colaborador corrige o tempo ou remove **só o próprio lançamento**, **lançado hoje** (dia da fábrica, horário de São Paulo), **com a atividade ainda não concluída nem dispensada**, sempre com motivo. Fora disso, só a gestora (§19).
+- **Backend V2 (aditivo):** `server/src/modules/v2-producao-correcao` (sessão do Modo Produção da V1: PIN; reaproveita `updateConveyorTimeEntryMinutes` e `softDeleteConveyorTimeEntry` da V1 sem alterá-los) + migration `0055_v2_correcoes_apontamento.sql` (registro de cada correção/remoção: quem, antes, depois, motivo). Motivo da tabela própria: a auditoria da V1 exige usuário do sistema e o tablet entra só com PIN.
+- Rotas: `GET /api/v1/v2/producao/meus-lancamentos` (o meu de hoje, com `podeCorrigir`/`bloqueio`), `PATCH …/:id` (`minutes`, `reason`, `expectedUpdatedAt` — recusa 409 se mudou), `DELETE …/:id` (`reason`). Regras conferidas no servidor (403 lançamento de outro, 422 fora da regra/sem motivo).
+- **Tablet:** "Meus lançamentos de hoje" (na lista de tarefas e quando não há tarefa) e "Tempo errado? Corrigir" na tela Registrado (como no protótipo). Corrigir: ±15 min + motivo (atalhos ou texto). Remover: motivo.
+- Testes: servidor `src/tests/v2-producao-correcao.test.ts` (regras, incluindo virada de dia em São Paulo, + HTTP contra Postgres: lista, 422, 409, 403, 401, corrige, remove e registra antes/depois).
+- ⚠️ Aplicar `0055` manualmente (como a `0054`). Sem ela, o tablet mostra erro só nessa tela; o resto funciona.
+- **Planejar semana:** "Sugerir semana" aparece com 1 ou mais esteiras esperando (antes só com 2+).

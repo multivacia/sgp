@@ -81,7 +81,7 @@ function acharPasso(stepId: string) {
 }
 
 // ---- apontamentos ----
-type Apontamento = { id: string; conveyorId: string; stepId: string; collaboratorId: string; minutes: number; at: string; updatedAt?: string; notes?: string | null }
+type Apontamento = { id: string; conveyorId: string; stepId: string; collaboratorId: string; minutes: number; at: string; criadoEm?: string; updatedAt?: string; notes?: string | null }
 const apontamentos: Apontamento[] = []
 const realizado = (stepId: string) => apontamentos.filter((a) => a.stepId === stepId).reduce((s, a) => s + a.minutes, 0)
 
@@ -252,7 +252,7 @@ function registrar(stepId: string, collaboratorId: string, minutes: number, entr
   if (!x) throw new Erro(404, 'NOT_FOUND', 'Atividade não encontrada.')
   if (!['A_INICIAR', 'EM_ANDAMENTO'].includes(x.e.operationalStatus)) throw new Erro(422, 'CONVEYOR_TIME_ENTRY_STATUS_NOT_ALLOWED', 'Esta esteira ainda não foi liberada para a fábrica.')
   const at = entryAt && /^\d{4}-\d{2}-\d{2}$/.test(entryAt) ? new Date(`${entryAt}T12:00:00`).toISOString() : new Date().toISOString()
-  if (minutes > 0) apontamentos.push({ id: novoId(), conveyorId: x.e.id, stepId, collaboratorId, minutes, at })
+  if (minutes > 0) apontamentos.push({ id: novoId(), conveyorId: x.e.id, stepId, collaboratorId, minutes, at, criadoEm: new Date().toISOString() })
   x.s.operationalStatus = concluir ? 'COMPLETED' : 'IN_PROGRESS'
   if (concluir) x.s.completedByName = nomeDe(collaboratorId)
   if (x.e.operationalStatus === 'A_INICIAR') x.e.operationalStatus = 'EM_ANDAMENTO'
@@ -438,6 +438,32 @@ function rota(metodo: string, url: URL, corpo: unknown): unknown {
     return undefined
   }
   if (!tablet && p.startsWith('/production/')) throw new Erro(401, 'PRODUCTION_AUTH_INVALID', 'Entre com seu PIN.')
+  if (r === 'GET /v2/producao/meus-lancamentos') {
+    return apontamentos
+      .filter((a) => a.collaboratorId === tablet && a.criadoEm && isoLocal(new Date(a.criadoEm)) === hoje())
+      .sort((x, y) => (y.criadoEm ?? '').localeCompare(x.criadoEm ?? ''))
+      .map((a) => {
+        const x = acharPasso(a.stepId)
+        const st = x?.s.operationalStatus
+        const bloqueio = st === 'COMPLETED' ? 'A atividade já foi concluída. Peça para a gestora.' : st === 'ABORTED' ? 'A atividade foi dispensada. Peça para a gestora.' : null
+        return { id: a.id, conveyorTitle: x?.e.name ?? '', activityTitle: x?.s.name ?? '', minutes: a.minutes, entryAt: a.at, updatedAt: a.updatedAt ?? a.criadoEm, podeCorrigir: !bloqueio, bloqueio }
+      })
+  }
+  if ((m = r.match(/^(PATCH|DELETE) \/v2\/producao\/meus-lancamentos\/([\w-]+)$/))) {
+    const i = apontamentos.findIndex((a) => a.id === m![2] && a.collaboratorId === tablet)
+    if (i < 0) throw new Erro(404, 'NOT_FOUND', 'Lançamento não encontrado.')
+    const a = apontamentos[i]
+    if (acharPasso(a.stepId)?.s.operationalStatus === 'COMPLETED') throw new Erro(422, 'VALIDATION_ERROR', 'A atividade já foi concluída. Peça para a gestora.')
+    if (!(typeof b.reason === 'string' && b.reason.trim().length >= 3)) throw new Erro(422, 'VALIDATION_ERROR', 'Informe o motivo (3 a 500 caracteres).')
+    if (m[1] === 'DELETE') {
+      apontamentos.splice(i, 1)
+      return undefined
+    }
+    if (b.expectedUpdatedAt !== (a.updatedAt ?? a.criadoEm)) throw new Erro(409, 'CONFLICT', 'O lançamento mudou. Atualize a tela e tente de novo.')
+    a.minutes = Number(b.minutes)
+    a.updatedAt = new Date().toISOString()
+    return { id: a.id, minutes: a.minutes }
+  }
   if (r === 'GET /production/me/work-queue') return { date: hoje(), planStatus: 'PUBLISHED', summary: {}, items: filaDe(tablet!) }
   if (r === 'GET /production/time-entry-justifications') return JUSTIFICATIVAS
   if (r === 'POST /production/time-entries') {

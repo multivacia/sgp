@@ -185,3 +185,16 @@ export function buildOutraBody(c: Candidato, minutos: number, j: { id: string; l
     ...(j && sequencia ? { outOfSequenceJustification: texto, outOfSequenceJustificationId: j.id, ...(comp ? { outOfSequenceJustificationComplement: comp } : {}) } : {}),
   }
 }
+
+/** Lançamento de hoje do próprio colaborador (GET /v2/producao/meus-lancamentos, módulo V2 no servidor). */
+export type MeuLancamento = {
+  id: string
+  conveyorTitle: string
+  activityTitle: string
+  minutes: number
+  entryAt: string
+  updatedAt: string
+  podeCorrigir: boolean
+  /** Por que não dá para corrigir (só a gestora). */
+  bloqueio: string | null
+}

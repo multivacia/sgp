@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { ApiError } from '../../api/client'
-import { candidatos, entrar, justificativas, lancar, lancarOutra, listPessoas, minhaFila, sair, salvarTokenDoTablet, trocarPin } from '../../api/production'
+import { candidatos, corrigirMeu, entrar, justificativas, lancar, lancarOutra, listPessoas, meusLancamentos, minhaFila, removerMeu, sair, salvarTokenDoTablet, trocarPin } from '../../api/production'
+import { MOTIVOS_CORRECAO, corpoCorrecao, corpoRemocao, motivoCorrecao } from '../../domain/apontamentos'
 import { fmtMin } from '../../domain/format'
 import { Marca } from '../../ui/Marca'
 import { isoLocal, somarDias } from '../../domain/planejarSemana'
@@ -21,6 +22,7 @@ import {
   type Candidato,
   type Cronometro,
   type Justificativa,
+  type MeuLancamento,
   type Pessoa,
   type Tarefa,
 } from '../../domain/tablet'
@@ -45,6 +47,7 @@ type Tela =
   | { t: 'justif'; motivo: Motivo; tarefa: { activityTitle: string; conveyorTitle: string; sequenceWarningLabel?: string }; depois: (j: Escolha) => void }
   | { t: 'ok'; tarefa: { activityTitle: string; conveyorTitle: string }; minutos: number; pct: number | null }
   | { t: 'outra' }
+  | { t: 'meus' }
 
 type Motivo = 'sequencia' | 'excesso' | 'outra'
 type Escolha = { id: string; label: string; complemento: string }
@@ -273,6 +276,9 @@ export function Tablet() {
               <button type="button" onClick={() => setTela({ t: 'outra' })} className="min-h-16 rounded-2xl border-2 border-line-strong bg-white text-xl font-bold">
                 Fiz outra atividade
               </button>
+              <button type="button" onClick={() => setTela({ t: 'meus' })} className="min-h-16 rounded-2xl border-2 border-line-strong bg-white text-xl font-bold">
+                Meus lançamentos de hoje
+              </button>
               <BotaoGrande onClick={() => void voltarAoInicio()}>SAIR</BotaoGrande>
             </Cartao>
           ) : (
@@ -308,9 +314,14 @@ export function Tablet() {
               <button type="button" onClick={() => setTela({ t: 'outra' })} className="min-h-14 rounded-2xl bg-line text-lg font-bold">
                 Fiz outra atividade (fora do meu plano)
               </button>
+              <button type="button" onClick={() => setTela({ t: 'meus' })} className="min-h-14 rounded-2xl border-2 border-line-strong bg-white text-lg font-bold">
+                Meus lançamentos de hoje
+              </button>
             </>
           )
         ) : null}
+
+        {tela.t === 'meus' ? <MeusLancamentos onVoltar={() => setTela({ t: 'tarefas' })} onMudou={() => void minhaFila().then(setFila).catch(() => undefined)} /> : null}
 
         {tela.t === 'outra' ? <Outra ocupado={ocupado} onVoltar={() => setTela({ t: 'tarefas' })} onContinuar={(c, m, ontem) => void registrarOutra(c, m, ontem, null)} /> : null}
 
@@ -386,6 +397,7 @@ export function Tablet() {
             pct={tela.pct}
             proxima={abertas[0] ?? null}
             onProxima={(t) => comecar(t)}
+            onCorrigir={() => setTela({ t: 'meus' })}
             onSair={voltarAoInicio}
           />
         ) : null}
@@ -632,7 +644,7 @@ function Justificar({ motivo, tarefa, justs, onVoltar, onOk }: { motivo: Motivo;
   )
 }
 
-function Registrado({ tarefa, minutos, pct, proxima, onProxima, onSair }: { tarefa: { activityTitle: string; conveyorTitle: string }; minutos: number; pct: number | null; proxima: Tarefa | null; onProxima: (t: Tarefa) => void; onSair: () => void }) {
+function Registrado({ tarefa, minutos, pct, proxima, onProxima, onCorrigir, onSair }: { tarefa: { activityTitle: string; conveyorTitle: string }; minutos: number; pct: number | null; proxima: Tarefa | null; onProxima: (t: Tarefa) => void; onCorrigir: () => void; onSair: () => void }) {
   const [falta, setFalta] = useState(15)
   useEffect(() => {
     if (falta <= 0) {
@@ -655,6 +667,11 @@ function Registrado({ tarefa, minutos, pct, proxima, onProxima, onSair }: { tare
         Tempo: {fmtMin(minutos)}
         {pct === null ? '' : pct >= 100 ? ' · tarefa terminada' : ` · ${pct}% pronto`}
       </p>
+      {pct === null || pct < 100 ? (
+        <button type="button" onClick={onCorrigir} className="self-center font-bold text-navy-blue underline">
+          Tempo errado? Corrigir
+        </button>
+      ) : null}
       {proxima ? (
         <button type="button" onClick={() => onProxima(proxima)} className="flex min-h-20 flex-col items-center justify-center rounded-2xl bg-ok text-white">
           <span className="text-2xl font-extrabold">COMEÇAR PRÓXIMA</span>
@@ -760,6 +777,143 @@ function Outra({ ocupado, onVoltar, onContinuar }: { ocupado: boolean; onVoltar:
       </button>
       <button type="button" onClick={() => setSel(null)} className="min-h-14 rounded-2xl bg-line text-lg font-bold">
         Escolher outra
+      </button>
+    </Cartao>
+  )
+}
+
+/** O colaborador corrige ou remove o próprio lançamento de hoje (atividade ainda aberta), sempre com motivo. */
+function MeusLancamentos({ onVoltar, onMudou }: { onVoltar: () => void; onMudou: () => void }) {
+  const [lista, setLista] = useState<MeuLancamento[] | null>(null)
+  const [erro, setErro] = useState<string | null>(null)
+  const [sel, setSel] = useState<{ l: MeuLancamento; acao: 'corrigir' | 'remover' } | null>(null)
+  const [min, setMin] = useState(0)
+  const [botao, setBotao] = useState<string | null>(null)
+  const [detalhe, setDetalhe] = useState('')
+  const [ocupado, setOcupado] = useState(false)
+  const [versao, setVersao] = useState(0)
+
+  useEffect(() => {
+    let vivo = true
+    meusLancamentos()
+      .then((r) => vivo && setLista(r))
+      .catch((e) => vivo && setErro(e instanceof Error ? e.message : 'Não foi possível ver seus lançamentos.'))
+    return () => {
+      vivo = false
+    }
+  }, [versao])
+
+  const motivo = motivoCorrecao(botao, detalhe)
+  const corpo = sel ? (sel.acao === 'corrigir' ? corpoCorrecao(sel.l, min, motivo) : corpoRemocao(motivo)) : null
+
+  async function confirmar() {
+    if (!sel || !corpo) return
+    setOcupado(true)
+    setErro(null)
+    try {
+      if (sel.acao === 'corrigir') await corrigirMeu(sel.l.id, corpo)
+      else await removerMeu(sel.l.id, corpo)
+      setSel(null)
+      setLista(null)
+      setVersao((v) => v + 1)
+      onMudou()
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : 'Não foi possível salvar.')
+    } finally {
+      setOcupado(false)
+    }
+  }
+
+  if (sel)
+    return (
+      <Cartao>
+        <h1 className="font-display text-3xl font-extrabold">{sel.acao === 'corrigir' ? 'Corrigir o tempo' : 'Remover lançamento'}</h1>
+        <p className="text-lg text-muted">
+          {sel.l.activityTitle} · {sel.l.conveyorTitle} · você lançou {fmtMin(sel.l.minutes)}
+        </p>
+        {erro ? <p role="alert" className="text-lg font-bold text-danger">{erro}</p> : null}
+        {sel.acao === 'corrigir' ? (
+          <div className="flex items-center gap-3">
+            <button type="button" onClick={() => setMin((m) => Math.max(5, m - 15))} className="min-h-16 flex-1 rounded-2xl border-2 border-line-strong bg-white text-lg font-bold">
+              − 15 min
+            </button>
+            <span className="min-w-32 text-center font-display text-3xl font-extrabold">{fmtMin(min)}</span>
+            <button type="button" onClick={() => setMin((m) => m + 15)} className="min-h-16 flex-1 rounded-2xl border-2 border-line-strong bg-white text-lg font-bold">
+              + 15 min
+            </button>
+          </div>
+        ) : (
+          <p className="text-lg font-bold text-danger">O tempo sai da atividade. Fica registrado o motivo.</p>
+        )}
+        <h2 className="text-xl font-bold">Por quê?</h2>
+        <div className="grid grid-cols-2 gap-3">
+          {MOTIVOS_CORRECAO.map((m) => (
+            <button key={m} type="button" aria-pressed={botao === m} onClick={() => setBotao(botao === m ? null : m)} className={`min-h-16 rounded-2xl px-3 text-lg font-bold ${botao === m ? 'bg-ink text-white' : 'border-2 border-line-strong bg-white'}`}>
+              {m}
+            </button>
+          ))}
+        </div>
+        <textarea value={detalhe} onChange={(e) => setDetalhe(e.target.value.slice(0, 450))} rows={2} placeholder={botao ? 'Detalhe (opcional)' : 'Ou escreva o motivo'} aria-label="Detalhe do motivo" className="field min-h-20 py-3 text-lg" />
+        <button type="button" disabled={!corpo || ocupado} onClick={() => void confirmar()} className={`min-h-18 rounded-2xl text-2xl font-extrabold ${corpo && !ocupado ? (sel.acao === 'remover' ? 'bg-danger text-white' : 'bg-ok text-white') : 'bg-line text-muted'}`}>
+          {ocupado ? 'Salvando…' : sel.acao === 'remover' ? 'REMOVER' : `CORRIGIR PARA ${fmtMin(min).toUpperCase()}`}
+        </button>
+        <button type="button" onClick={() => setSel(null)} className="min-h-14 rounded-2xl bg-line text-lg font-bold">
+          Voltar
+        </button>
+      </Cartao>
+    )
+
+  return (
+    <Cartao>
+      <h1 className="font-display text-3xl font-extrabold">Meus lançamentos de hoje</h1>
+      <p className="text-lg text-muted">Você corrige o seu enquanto a atividade não estiver concluída. Depois disso, só a gestora.</p>
+      {erro ? <p role="alert" className="text-lg font-bold text-danger">{erro}</p> : null}
+      {lista === null && !erro ? <p className="text-lg text-muted">Carregando…</p> : null}
+      {lista?.length === 0 ? <p className="text-lg text-muted">Nada lançado hoje.</p> : null}
+      {lista?.map((l) => (
+        <div key={l.id} className="flex flex-col gap-2 rounded-2xl border border-line p-4">
+          <p className="flex items-start justify-between gap-3">
+            <span>
+              <span className="block text-lg font-bold">{l.activityTitle}</span>
+              <span className="block text-muted">
+                {l.conveyorTitle} · {new Date(l.entryAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+              </span>
+            </span>
+            <span className="font-display text-2xl font-extrabold">{fmtMin(l.minutes)}</span>
+          </p>
+          {l.podeCorrigir ? (
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setSel({ l, acao: 'corrigir' })
+                  setMin(l.minutes)
+                  setBotao(null)
+                  setDetalhe('')
+                }}
+                className="min-h-14 rounded-2xl border-2 border-line-strong bg-white text-lg font-bold"
+              >
+                Corrigir tempo
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setSel({ l, acao: 'remover' })
+                  setBotao(null)
+                  setDetalhe('')
+                }}
+                className="min-h-14 rounded-2xl border-2 border-danger bg-white text-lg font-bold text-danger"
+              >
+                Remover
+              </button>
+            </div>
+          ) : (
+            <p className="font-bold text-muted">{l.bloqueio}</p>
+          )}
+        </div>
+      ))}
+      <button type="button" onClick={onVoltar} className="min-h-14 rounded-2xl bg-line text-lg font-bold">
+        Voltar
       </button>
     </Cartao>
   )

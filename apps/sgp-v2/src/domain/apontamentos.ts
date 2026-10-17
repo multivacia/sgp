@@ -23,7 +23,7 @@ export function motivoCorrecao(botao: string | null, detalhe: string): string | 
 }
 
 /** Só corrige se o tempo mudou e há motivo. */
-export function corpoCorrecao(l: Lancamento, minutos: number, motivo: string | null) {
+export function corpoCorrecao(l: Pick<Lancamento, 'minutes' | 'updatedAt'>, minutos: number, motivo: string | null) {
   const m = Math.round(minutos)
   if (!motivo || m <= 0 || m === l.minutes) return null
   return { expectedUpdatedAt: l.updatedAt, reason: motivo, minutes: m }

@@ -1,4 +1,4 @@
-import type { Candidato, Justificativa, Pessoa, Tarefa } from '../domain/tablet'
+import type { Candidato, Justificativa, MeuLancamento, Pessoa, Tarefa } from '../domain/tablet'
 import { api } from './client'
 
 /** Modo Produção da V1 (cookie próprio do tablet, separado da sessão da gestora). */
@@ -61,4 +61,17 @@ export function candidatos(q: string): Promise<Candidato[]> {
 
 export function lancarOutra(body: unknown): Promise<unknown> {
   return api<unknown>('/production/time-entries/unassigned-exception', { method: 'POST', body: JSON.stringify(body) }, false)
+}
+
+/** O que eu lancei hoje; corrigir/remover só o meu, de hoje, com a atividade aberta (regra no servidor). */
+export function meusLancamentos(): Promise<MeuLancamento[]> {
+  return api<MeuLancamento[]>('/v2/producao/meus-lancamentos', {}, false)
+}
+
+export function corrigirMeu(id: string, body: unknown): Promise<unknown> {
+  return api<unknown>(`/v2/producao/meus-lancamentos/${id}`, { method: 'PATCH', body: JSON.stringify(body) }, false)
+}
+
+export function removerMeu(id: string, body: unknown): Promise<unknown> {
+  return api<unknown>(`/v2/producao/meus-lancamentos/${id}`, { method: 'DELETE', body: JSON.stringify(body) }, false)
 }
