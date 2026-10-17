@@ -416,3 +416,23 @@ Fases 4 e 5 exigem o fluxo completo de `AGENTS.md` (contexto → impacto → spe
 - **Riscos:** N pedidos de detalhe (um por esteira) — ver §12 do documento vivo; exceções "sem apontamento" e "sem tarefa" do protótipo ainda não implementadas.
 - **Próximo passo:** publicar Fases 0+1 em HML (nginx + deploy manual) e validar com a gestora; depois Fase 2 (Nova esteira cardápio).
 - **Uso/tokens disponíveis:** INDISPONÍVEL — a sessão não fornece métrica confiável.
+
+---
+
+## 28. Fase 2 do SGP+ V2 — Nova esteira (cardápio) (2026-10-17)
+
+- **Status:** concluída no código (publicação depende do nginx/deploy manual da Fase 0).
+- **Contexto verificado:** matriz `GET /operation-matrix/items` (`operation_matrix.view`) e `/items/:id/tree` (`MatrixNodeTreeApi`: TASK→SECTOR→ACTIVITY, `planned_minutes`, `default_responsible_id`, `team_ids`, `required`, `source_key`); `GET /collaborators` (`CollaboratorApi` com `sector_name`); `POST /conveyors` (`conveyors.create`, `postConveyorBodySchema`: options/areas/steps `orderIndex ≥ 1`, `plannedMinutes` inteiro, assignees com exatamente 1 COLLABORATOR principal, TEAM nunca principal). Tradução de referência da V1: `src/features/esteiras/nova-esteira/matrixToConveyorCreateInput.ts` e `novaEsteiraDraftFromMatrix.ts` (lidas, não alteradas).
+- **Arquivos criados:** `apps/sgp-v2/src/domain/novaEsteira.ts`, `src/domain/novaEsteira.test.ts`, `src/api/matrix.ts`, `src/screens/nova/NovaEsteira.tsx`, `src/screens/Inicio.tsx`, `src/ui/ResponsavelPicker.tsx`, `public/etapas/01..20.webp` (≈104 KB).
+- **Arquivos alterados (só V2):** `src/App.tsx` (rotas `/nova` e Início), `src/api/conveyors.ts` (`createConveyor`), `vite.config.ts` (alias `zod` para o teste de contrato), `tsconfig.json` (testes fora do `tsc` do build), `package.json`/`package-lock.json` (`zod@3.25.76` dev, mesma versão do backend), `docs/v2/SGP_V2.md` (§4, §13).
+- **Backend/migrations:** nenhum.
+- **Decisões:** `originType: 'BASE'` mesmo com atividades tiradas (igual à V1 sem complementos); ordem renumerada contígua (1..n) por nível; minutos `floor`; `sourceKey` = `source_key` ou id do nó; responsável principal = escolhido ou `default_responsible_id`, equipe padrão (`team_ids[0]`) como apoio; nome da esteira = "veículo · PLACA" (ou nome da matriz); responsável da esteira = colaborador do usuário logado (trocável); prazo `YYYY-MM-DD` pelos atalhos; prioridade `media`; etapa desativada na matriz não entra.
+- **Validação:**
+  - `npm test` (V2) → 3 arquivos, **9/9** (3 novos: contrato com o validador real da V1; tirar atividade/etapa + renumeração + descarte de vazios + etapa desativada; responsável herdado/trocado + equipe de apoio).
+  - Teste e build também rodados **sem** `server/node_modules` (condição do CI da V2) → ok.
+  - `npm run build` ok; `npx eslint apps/sgp-v2` sem problemas.
+  - Navegador headless com API simulada usando a **matriz real da planilha** (20 etapas, 138 atividades, responsáveis): fluxo completo até "Esteira criada!"; POST capturado com 19 etapas/131 atividades (Volante tirado), Pré-montagem dos bancos dianteiros com João em todas as atividades, `colaboradorId` do usuário, prazo da sexta.
+  - V1: `git diff HEAD -- src server` vazio.
+- **Riscos/pendências:** figuras provisórias por nome (Fase 2b para fotos reais); criação sem matriz, complementos (HYBRID) e busca por placa continuam só na V1; grupo "Do setor" depende de `sector_name` do colaborador bater com o nome do setor.
+- **Próximo passo:** publicar Fases 0–2 em HML e validar com a gestora (medir tempo de criação vs. V1); depois Fase 3 (Alterar esteira).
+- **Uso/tokens disponíveis:** INDISPONÍVEL — a sessão não fornece métrica confiável.

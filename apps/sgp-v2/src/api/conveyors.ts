@@ -34,3 +34,8 @@ export async function getConveyors(ids: string[], onEach: (d: ConveyorDetail) =>
   }
   await Promise.all(Array.from({ length: Math.min(limit, ids.length) }, worker))
 }
+
+/** Cria a esteira pela API da V1 (POST /api/v1/conveyors). Devolve o id criado. */
+export function createConveyor(body: unknown): Promise<{ id: string; name: string }> {
+  return api<{ id: string; name: string }>('/conveyors', { method: 'POST', body: JSON.stringify(body) })
+}

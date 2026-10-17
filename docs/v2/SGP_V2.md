@@ -2,7 +2,7 @@
 
 > **Para que serve:** retomar o desenvolvimento da V2 em qualquer sessão/chat.
 > **Como usar:** ler isto + `git log` da branch antes de começar; atualizar **Status** e **Decisões** ao fim de cada passo.
-> **Branch de trabalho:** `ccr-683413c7-571rnk` · **Atualizado em:** 2026-10-17 (Fases 0 e 1 implementadas)
+> **Branch de trabalho:** `ccr-683413c7-571rnk` · **Atualizado em:** 2026-10-17 (Fases 0, 1 e 2 implementadas)
 
 ---
 
@@ -46,7 +46,7 @@ Legenda: ⬜ não iniciada · 🟨 em andamento · ✅ concluída
 |---|---|---|---|---|
 | 0 | Fundação: app vazio em `/V2`, PWA, login compartilhado, tokens de UI, build/deploy separados, guarda de CI "V2 não altera `src/`" | não | baixo | ✅ código pronto · ⏳ falta aplicar nginx + 1º deploy (manual) |
 | 1 | Hoje + Esteiras (só leitura): exceções do dia; ver esteira (etapas → setores → atividades → responsável) | não (usa `/api/v1/conveyors` e `/conveyors/:id`) | baixo | ✅ código pronto (§12) |
-| 2 | Nova esteira (cardápio): matriz → etapas com figura → personalizar (setor/atividade/responsável) → carro → prazo | imagens de etapa | médio | ⬜ |
+| 2 | Nova esteira (cardápio): matriz → etapas com figura → personalizar (setor/atividade/responsável) → carro → prazo | não (usa `/api/v1`); fotos reais das etapas ficam para 2b | médio | ✅ código pronto (§13) |
 | 3 | Alterar esteira = telas da criação + cadeados; motivo obrigatório (inclui troca de responsável) em catálogo + histórico | catálogo de motivos | médio | ⬜ |
 | 4 | Planejar semana por etapa (lotação por dia); "Sugerir semana" depois | motor de sugestão (depois) | alto | ⬜ |
 | 5 | Tablet do colaborador: lançar horas + QR do ticket; cronômetro depois | sessão de trabalho (cronômetro) | alto | ⬜ |
@@ -143,3 +143,13 @@ Commit: <sha> · branch <nome>
 - Backend: **nenhum endpoint novo**. Leitura: `GET /api/v1/conveyors` + `GET /api/v1/conveyors/:id` (só exigem login).
 - **Limites conhecidos:** sem figuras das etapas (Fase 2); "sem apontamento hoje" e "colaborador sem tarefa" ainda não aparecem (precisariam de dados de apontamento/fila — avaliar na Fase 5); ações (realocar, avisar) ficam para fases com escrita.
 - ⚠️ **Desempenho:** o % de cada esteira exige 1 pedido de detalhe por esteira (até 4 em paralelo, cache de 60 s). Se a fábrica tiver muitas esteiras em produção e ficar lento, criar o equivalente V2 agregado (`/api/v2/...`) chamando os services da V1.
+
+## 13. Fase 2 — Nova esteira (cardápio)
+
+- Rota `/V2/nova` (tela cheia): **Qual matriz?** → **Confira as etapas** (grade com figura, Incluída/Fora, Personalizar) → **Personalizar etapa** (setores, atividades, responsável por atividade ou setor inteiro) → **Pra qual carro?** (placa, veículo, cliente) → **Pra quando?** (Hoje/Amanhã/Até sexta/data + responsável da esteira) → **Esteira criada!** ("Ver esteira" / "Criar outra igual").
+- Botão "Nova esteira" no Início só aparece para quem tem `conveyors.create` **e** `operation_matrix.view` (mesmas permissões que a V1 exige).
+- API da V1, sem endpoint novo: `GET /operation-matrix/items?is_active=true`, `GET /operation-matrix/items/:id/tree`, `GET /collaborators?status=ACTIVE`, `POST /conveyors` (`originType: BASE`, `matrixRootItemId`, `sourceOrigin: base`, `sourceKey` da matriz, responsável = COLLABORATOR principal + equipe padrão como apoio — mesma tradução da V1).
+- **Teste de contrato:** `src/domain/novaEsteira.test.ts` valida o corpo gerado com o **validador real da V1** (`server/src/modules/conveyors/conveyors.schemas.ts`). Se a V1 mudar o contrato, o CI da V2 quebra.
+- **Ainda na V1 (não feito na V2):** montar esteira sem matriz; juntar complementos de outras matrizes (HYBRID); busca de carro pela placa (não há endpoint); prioridade (fica "média").
+- ⚠️ **Figuras das etapas são provisórias:** ilustrações do cartaz (geradas por IA), escolhidas pelo nome da etapa. Fotos reais por etapa exigem guardar imagem no backend → **Fase 2b** (equivalente V2 + migration aditiva), quando decidido.
+- "Do setor" no seletor de responsável usa o setor do cadastro do colaborador (`sector_name`) igual ao nome do setor da matriz.
