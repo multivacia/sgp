@@ -299,3 +299,18 @@ Fases 4 e 5 exigem o fluxo completo de `AGENTS.md` (contexto → impacto → spe
 - **Hoje:** árvore do "Ver esteira" também mostra o responsável.
 - **Dados pessoais:** nomes reais da planilha substituídos por fictícios com mapeamento fixo (mesma pessoa → mesmo nome), mantendo a distribuição de quem faz o quê.
 - **Validação:** lógica de todos os artboards executada em Node (troca individual, por setor, travamento de feitas, resumo) sem erro; tags balanceadas; não renderizado visualmente.
+
+---
+
+## 20. Alterar esteira em andamento com justificativa obrigatória (2026-10-17)
+
+- **Decisões do usuário:** só a **gestora** troca responsável; esteira **em andamento pode ser alterada**, com **justificativa obrigatória**.
+- **Código atual (referência, não alterado):** `src/features/esteiras/conveyorEditSavePolicy.ts` já exige motivo fora do Backlog (`requiresEditReason`, texto livre 3–500 caracteres, `ConveyorEditReasonDialog`) e permite editar estrutura em qualquer status (sync incremental) + inclusão tardia (`LateStructureAppendDrawer`).
+- **Protótipo (tela Esteiras → Ver esteira → "Alterar esteira"):**
+  - Fora do modo alteração tudo é só leitura (responsável aparece como texto).
+  - No modo alteração: tirar/incluir de volta atividades que **não começaram**; tirar etapa sem nada feito; **incluir etapa** (as que não estão na esteira, com responsáveis da matriz); trocar responsável por atividade ou setor. Atividade feita ou em andamento fica travada.
+  - Barra inferior "N mudanças · Descartar · Salvar alteração"; não deixa sair com mudança pendente.
+  - **"Por que está alterando?"**: mostra "O que muda" + motivos padronizados em botões (Cliente pediu mudança, Falta de peça ou material, Erro na montagem da esteira, Retrabalho, Mudança de prioridade, Outro motivo) + detalhe opcional (obrigatório em "Outro motivo", até 500 caracteres, compatível com a regra atual).
+  - Ao confirmar: grava **Histórico de alterações** na esteira (quando, quem, motivo, detalhe, itens alterados); lista mostra "alterada Nx"; progresso/horas recalculados.
+- **Proposta para o sistema real:** trocar o texto livre por catálogo de motivos (padrão já usado em justificativas de apontamento e motivos de aborto — migrations 0048/0051), mantendo complemento livre; permissão de alterar esteira/responsável restrita ao papel gestora via RBAC existente.
+- **Validação:** fluxos executados em Node (sem mudança não salva; tirar etapa; tirar atividade; troca por setor; "Outro motivo" exige texto; histórico; incluir etapa) sem erro; não renderizado visualmente.
