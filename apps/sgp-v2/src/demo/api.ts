@@ -185,10 +185,13 @@ for (const e of [A, C])
   planos.set(seg, { id: novoId(), weekStart: seg, status: 'PUBLISHED', items, publicados: items })
 }
 
+// ---- fotos das etapas (em memória; no servidor real ficam na tabela v2_etapa_imagens) ----
+const fotos: { matrixNodeId: string; nome: string; atualizadaEm: string; url: string }[] = []
+
 // ---- sessões ----
 let gestora = true
 let tablet: string | null = null
-const USER = { userId: 'demo', email: 'gestora@demonstracao', role: 'GESTOR', collaboratorId: ANA.id, permissions: ['conveyors.create', 'operation_matrix.view', 'conveyors.edit_status', 'time_entries.edit_any', 'time_entries.delete_any'], mustChangePassword: false }
+const USER = { userId: 'demo', email: 'gestora@demonstracao', role: 'GESTOR', collaboratorId: ANA.id, permissions: ['conveyors.create', 'operation_matrix.view', 'operation_matrix.manage', 'conveyors.edit_status', 'time_entries.edit_any', 'time_entries.delete_any'], mustChangePassword: false }
 
 const TRANSICOES = new Set(['EM_ELABORACAO|AGUARDANDO_PLANEJAMENTO', 'AGUARDANDO_PLANEJAMENTO|EM_PLANEJAMENTO', 'EM_PLANEJAMENTO|A_INICIAR', 'EM_ANDAMENTO|FINALIZADA'])
 const JUSTIFICATIVAS = [
@@ -367,6 +370,22 @@ function rota(metodo: string, url: URL, corpo: unknown): unknown {
     x.updatedAt = new Date().toISOString()
     return { id: x.id, collaboratorId: x.collaboratorId, collaboratorName: nomeDe(x.collaboratorId), minutes: x.minutes, notes: null, entryAt: x.at, updatedAt: x.updatedAt }
   }
+  if (r === 'GET /v2/etapa-imagens') return fotos
+  if ((m = r.match(/^PUT \/v2\/etapa-imagens\/([\w-]+)$/))) {
+    if (!(corpo instanceof Blob)) throw new Erro(422, 'VALIDATION_ERROR', 'Envie a imagem.')
+    const no = MATRIZ.children.find((t) => t.id === m![1])
+    if (!no) throw new Erro(404, 'NOT_FOUND', 'Etapa não encontrada na matriz.')
+    const i = fotos.findIndex((f) => f.matrixNodeId === no.id)
+    const f = { matrixNodeId: no.id, nome: no.name, atualizadaEm: new Date().toISOString(), url: URL.createObjectURL(corpo) }
+    if (i >= 0) fotos[i] = f
+    else fotos.push(f)
+    return { matrixNodeId: no.id, atualizadaEm: f.atualizadaEm }
+  }
+  if ((m = r.match(/^DELETE \/v2\/etapa-imagens\/([\w-]+)$/))) {
+    const i = fotos.findIndex((f) => f.matrixNodeId === m![1])
+    if (i >= 0) fotos.splice(i, 1)
+    return undefined
+  }
   if (r === 'GET /operation-matrix/items') return [{ id: MATRIZ.id, name: MATRIZ.name, description: 'Planilha mestra (OS 7945)', is_active: true }]
   if ((m = r.match(/^GET \/operation-matrix\/items\/([\w-]+)\/tree$/))) return MATRIZ
   if (r === 'GET /collaborators') return todosColabs
@@ -457,7 +476,7 @@ window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
   const href = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url
   if (!href.includes('/api/v1/')) return original(input, init)
   const url = new URL(href, window.location.href)
-  const corpo = typeof init?.body === 'string' && init.body ? JSON.parse(init.body) : undefined
+  const corpo = init?.body instanceof Blob ? init.body : typeof init?.body === 'string' && init.body ? JSON.parse(init.body) : undefined
   await new Promise((ok) => setTimeout(ok, 120))
   try {
     const data = rota((init?.method ?? 'GET').toUpperCase(), url, corpo)

@@ -3,6 +3,7 @@ import { useSession } from './auth/context'
 import { EsteiraDetalhe } from './screens/EsteiraDetalhe'
 import { Esteiras } from './screens/Esteiras'
 import { Eu } from './screens/Eu'
+import { FotosEtapas } from './screens/FotosEtapas'
 import { Hoje } from './screens/Hoje'
 import { Inicio } from './screens/Inicio'
 import { NovaEsteira } from './screens/nova/NovaEsteira'
@@ -36,6 +37,7 @@ export function App() {
             <Route path="semana" element={<PlanejarSemana />} />
             <Route path="hoje" element={<Hoje />} />
             <Route path="eu" element={<Eu />} />
+            <Route path="fotos" element={<FotosEtapas />} />
             <Route path="*" element={<Placeholder title="Página não encontrada" fase="—" />} />
           </Route>
         </>

@@ -30,6 +30,7 @@ import {
 import { fmtMin } from '../../domain/format'
 import { dadosVazios, erroDados, nomeFinal, type DadosEsteira } from '../../domain/dadosEsteira'
 import { FormDados } from '../../ui/FormDados'
+import { useFiguras } from '../../ui/useFiguras'
 import { ResponsavelPicker } from '../../ui/ResponsavelPicker'
 import { AtividadeRow, BottomBar, EtapaCard, SetorBox, WizardHeader } from '../../ui/wizard'
 
@@ -64,6 +65,7 @@ export function NovaEsteira() {
   const [dados, setDados] = useState<DadosEsteira>(() => dadosVazios(prazoPara('sexta'), meuColab))
   const [erro, setErro] = useState<string | null>(null)
   const [salvando, setSalvando] = useState(false)
+  const figura = useFiguras()
   const [criada, setCriada] = useState<{ id: string; name: string; operationalStatus?: ConveyorStatus } | null>(null)
 
   useEffect(() => {
@@ -168,7 +170,7 @@ export function NovaEsteira() {
                     key={t.id}
                     numero={i + 1}
                     nome={displayName(t.name)}
-                    figura={figuraDaEtapa(t.name)}
+                    figura={figura(t.name, t.id)}
                     on={on}
                     tag={on ? 'Incluída' : 'Fora'}
                     info={`${sectorsOf(t).length} setor${sectorsOf(t).length === 1 ? '' : 'es'} · ${ligadas.length} ativ. · ~${fmtMin(ligadas.reduce((x, a) => x + minutesOf(a), 0))}`}
@@ -189,7 +191,7 @@ export function NovaEsteira() {
         {passo === 'etapa' && etapa ? (
           <>
             <div className="flex items-center gap-3 rounded-2xl border border-line bg-white p-2.5">
-              {figuraDaEtapa(etapa.name) ? <img src={figuraDaEtapa(etapa.name)!} alt="" className="size-20 shrink-0 object-contain" /> : null}
+              {figura(etapa.name, etapa.id) ? <img src={figura(etapa.name, etapa.id)!} alt="" className="size-20 shrink-0 rounded-xl object-cover" /> : null}
               <div>
                 <p className="font-display text-xl font-extrabold leading-tight">{displayName(etapa.name)}</p>
                 <p className="text-muted">

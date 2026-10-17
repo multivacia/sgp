@@ -7,6 +7,7 @@ export function Inicio() {
   const { state } = useSession()
   const user = state.status === 'authenticated' ? state.user : null
   const podeCriar = !!user && PODE_CRIAR.every((p) => user.permissions.includes(p))
+  const podeFotos = !!user && user.permissions.includes('operation_matrix.manage')
 
   return (
     <section className="flex flex-col gap-4 pt-2">
@@ -30,6 +31,12 @@ export function Inicio() {
       <Link to="/esteiras" className="flex min-h-24 items-center gap-4 rounded-3xl border-2 border-ink bg-white p-5">
         <span className="block font-display text-2xl font-extrabold">Esteiras</span>
       </Link>
+      {podeFotos ? (
+        <Link to="/fotos" className="flex min-h-20 flex-col justify-center rounded-3xl border-2 border-line bg-white p-5">
+          <span className="block font-display text-xl font-extrabold">Fotos das etapas</span>
+          <span className="block text-muted">Troque as figuras do cardápio por fotos reais</span>
+        </Link>
+      ) : null}
     </section>
   )
 }

@@ -21,7 +21,6 @@ import { fmtMin } from '../../domain/format'
 import {
   activitiesOf,
   displayName,
-  figuraDaEtapa,
   minutesOf,
   nomeCurto,
   responsavelDe,
@@ -36,6 +35,7 @@ import {
 } from '../../domain/novaEsteira'
 import { dadosDe, erroDados, mudancasDados, patchDados, PRIORIDADES, type DadosEsteira } from '../../domain/dadosEsteira'
 import { FormDados } from '../../ui/FormDados'
+import { useFiguras } from '../../ui/useFiguras'
 import { ResponsavelPicker } from '../../ui/ResponsavelPicker'
 import { AtividadeRow, AtividadeTravada, BottomBar, EtapaCard, SetorBox, WizardHeader } from '../../ui/wizard'
 
@@ -53,6 +53,7 @@ export function AlterarEsteira() {
   const [d, setD] = useState<ConveyorDetail | null>(null)
   const [matriz, setMatriz] = useState<MatrixNode | null>(null)
   const [colabs, setColabs] = useState<Collaborator[]>([])
+  const figura = useFiguras()
   const [edit, setEdit] = useState<Edit>(emptyEdit)
   const [dados, setDados] = useState<DadosEsteira | null>(null)
   const [tela, setTela] = useState<Tela>({ t: 'etapas' })
@@ -184,7 +185,7 @@ export function AlterarEsteira() {
                     key={o.id}
                     numero={i + 1}
                     nome={displayName(o.name)}
-                    figura={figuraDaEtapa(o.name)}
+                    figura={figura(o.name)}
                     on={on}
                     tag={toda ? 'Feita' : on ? 'Incluída' : 'Fora'}
                     tagTone={toda ? 'feita' : on ? 'ok' : 'fora'}
@@ -210,7 +211,7 @@ export function AlterarEsteira() {
                     key={t.id}
                     numero={d.structure.options.length + i + 1}
                     nome={displayName(t.name)}
-                    figura={figuraDaEtapa(t.name)}
+                    figura={figura(t.name, t.id)}
                     on={!!incluida}
                     tag={incluida ? 'Incluída agora' : 'Fora'}
                     info={incluida ? `${ligadas.length} ativ. · ~${fmtMin(ligadas.reduce((x, a) => x + minutesOf(a), 0))}` : 'Não está na esteira'}
@@ -232,7 +233,7 @@ export function AlterarEsteira() {
 
         {option ? (
           <>
-            <EtapaTopo nome={option.name} info={`${option.areas.flatMap((a) => a.steps).filter((s) => isLocked(s) || !edit.off.has(s.id)).length} de ${option.areas.flatMap((a) => a.steps).length} atividades`} />
+            <EtapaTopo figura={figura(option.name)} nome={option.name} info={`${option.areas.flatMap((a) => a.steps).filter((s) => isLocked(s) || !edit.off.has(s.id)).length} de ${option.areas.flatMap((a) => a.steps).length} atividades`} />
             <p className="text-muted">Toque para tirar o que não vai mais ser feito. O que tem cadeado já foi feito ou está em andamento e não muda.</p>
             {option.areas.map((a) => {
               const livres = a.steps.filter((s) => !isLocked(s))
@@ -285,7 +286,7 @@ export function AlterarEsteira() {
 
         {novaTask ? (
           <>
-            <EtapaTopo nome={novaTask.name} info="Etapa incluída agora (vem da matriz)" />
+            <EtapaTopo figura={figura(novaTask.name, novaTask.id)} nome={novaTask.name} info="Etapa incluída agora (vem da matriz)" />
             {sectorsOf(novaTask).map((sec) => {
               const ativs = activitiesOf(sec)
               const ligadas = ativs.filter((x) => !edit.addDraft.off.has(x.id))
@@ -411,8 +412,7 @@ export function AlterarEsteira() {
   )
 }
 
-function EtapaTopo({ nome, info }: { nome: string; info: string }) {
-  const fig = figuraDaEtapa(nome)
+function EtapaTopo({ nome, info, figura: fig }: { nome: string; info: string; figura: string | null }) {
   return (
     <div className="flex items-center gap-3 rounded-2xl border border-line bg-white p-2.5">
       {fig ? <img src={fig} alt="" className="size-20 shrink-0 object-contain" /> : null}

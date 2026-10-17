@@ -47,10 +47,13 @@ Legenda: ⬜ não iniciada · 🟨 em andamento · ✅ concluída
 | 0 | Fundação: app vazio em `/V2`, PWA, login compartilhado, tokens de UI, build/deploy separados, guarda de CI "V2 não altera `src/`" | não | baixo | ✅ código pronto · ⏳ falta aplicar nginx + 1º deploy (manual) |
 | 1 | Hoje + Esteiras (só leitura): exceções do dia; ver esteira (etapas → setores → atividades → responsável) | não (usa `/api/v1/conveyors` e `/conveyors/:id`) | baixo | ✅ código pronto (§12) |
 | 2 | Nova esteira (cardápio): matriz → etapas com figura → personalizar (setor/atividade/responsável) → carro → prazo | não (usa `/api/v1`); fotos reais das etapas ficam para 2b | médio | ✅ código pronto (§13) |
+| 2b | Fotos reais das etapas | **sim**: módulo isolado `server/src/modules/v2-etapa-imagens` + migration `0054_v2_etapa_imagens.sql` | médio | ✅ código pronto (§20) · ⏳ aplicar a migration (manual) |
 | 3 | Alterar esteira = telas da criação + cadeados; motivo obrigatório (inclui troca de responsável) | não (usa `PATCH /conveyors/:id/structure`; motivo vai como texto livre da V1) | médio | ✅ código pronto (§14) |
 | 4 | Planejar semana por esteira (início → dias pela folga de cada responsável) + lotação por dia + "Sugerir semana" | não (usa `/operational-planning/*` da V1; sugestão é cálculo no front) | alto | ✅ código pronto (§15) |
-| 6 | Acabamento para a demonstração: Pessoas hoje, Outra atividade no tablet, ajustar atividade no planejamento, Liberar esteira, versão de demonstração | não | médio | ✅ código pronto (§17) |
 | 5 | Tablet do colaborador (`/V2/tablet`): nome → PIN → próxima tarefa → cronômetro ou lançar horas → quanto ficou pronto | não (usa `/production/*` da V1; cronômetro fica no tablet) | alto | ✅ código pronto (§16) · QR do ticket pendente |
+| 6 | Acabamento para a demonstração: Pessoas hoje, Outra atividade no tablet, ajustar atividade no planejamento, Liberar esteira, versão de demonstração | não | médio | ✅ código pronto (§17) |
+| 7 | Dados básicos da esteira (incluir, alterar, consultar) iguais à V1 | não | baixo | ✅ código pronto (§18) |
+| 8 | Corrigir/remover apontamento pela gestora | não (V1 já tem, auditado) | médio | ✅ código pronto (§19) |
 
 Fases 4 e 5 (e qualquer mudança em regra de planejamento/apontamento) seguem o fluxo completo do `AGENTS.md`.
 
@@ -90,15 +93,17 @@ Commit: <sha> · branch <nome>
 
 ## 8. Pendências / perguntas abertas
 
-- Quais motivos de alteração vocês usam de verdade (protótipo tem 6 de exemplo).
-- Quais matrizes existem além de "Gol GTI completo" (planilha mestra em `docs/Nova Esteira v1.0 - MESTRA - Gol GTI - OS7945.xlsx`).
-- Fotos reais das peças/etapas (a figura do protótipo foi gerada por IA).
-- Como o usuário chega na V2 sem tocar na V1: link direto/atalho instalado no celular (padrão) ou um link no menu da V1 (exigiria exceção à regra 1).
+Decisões do dono do produto em 2026-10-17:
+- ~~QR do ticket~~ — **descontinuado** (não será feito).
+- **Fluxo de status da esteira** — dono do produto ainda vai pensar. Até lá: botão "Liberar" manual (§17), nada automático, sem "Finalizar/Cancelar" na V2.
+- **Motivo de alteração** — segue a base do SGP+ (V1): texto obrigatório de 3–500 caracteres fora da elaboração (MSG-EST-001), o mesmo motivo vale para dados e estrutura (manual §41.2). Os botões da V2 são só atalhos para escrever o texto. *Confirmar com o dono do produto se "base do SGP+" é isso ou um catálogo a ser criado.*
+- **Fotos das etapas** — migration aprovada → feito (§20).
+- **Corrigir apontamento** — só a gestora (feito, §19). Em reflexão: deixar o colaborador ajustar o próprio lançamento enquanto a atividade não estiver concluída (precisa de endpoint novo no Modo Produção — proposta no retorno §34).
 
-- **QR do ticket (Fase 5):** os tickets da V1 não têm QR. Ler QR exige mudar o ticket na V1 (exceção à regra 1) ou um ticket próprio da V2 — decidir.
-- **Token do tablet:** a V2 pede o `PRODUCTION_KIOSK_TOKEN` uma vez por aparelho (a gestora digita). Alternativa: passar o token no build da V2 (exigiria um secret novo no GitHub).
-- **Liberação automática:** hoje a gestora libera a esteira com um toque. Liberar sozinho ao publicar a semana seria regra nova — decidir.
-- **Corrigir apontamento** no tablet ("Tempo errado? Corrigir" do protótipo): a V1 não tem edição pelo Modo Produção — ficou fora.
+Continuam abertas:
+- Quais matrizes existem além de "Gol GTI completo".
+- Como o usuário chega na V2 sem tocar na V1: link direto/atalho no celular (padrão) ou link no menu da V1.
+- **Token do tablet:** a V2 pede o `PRODUCTION_KIOSK_TOKEN` uma vez por aparelho. Alternativa: secret novo no build.
 
 ## 9. Como retomar numa nova sessão
 
@@ -201,3 +206,25 @@ Commit: <sha> · branch <nome>
 - **Planejar semana → Ajustar:** no dia aberto, cada etapa tem "Ajustar" para mudar de dia ou passar para outra pessoa (o que já começou/terminou não se move).
 - **Liberar esteira** (`conveyors.edit_status`, `PATCH /conveyors/:id/status`): na V1 a esteira nasce *Em elaboração* e só entra no planejamento em *Em planejamento*; o tablet só aponta em *A iniciar/Em andamento*. A V2 mostra o botão no detalhe, na tela "Esteira criada!" e no Planejar semana (esteira na semana ainda não liberada). Passos só pelas transições da V1 (teste importa `canTransitionConveyorStatus`). Nada é liberado automaticamente.
 - **Versão de demonstração:** `npm run build:demo` gera `dist-demo/` com a API simulada no navegador (`src/demo/`: matriz da planilha mestra, nomes fictícios, dados em memória). O build normal não inclui nada de `src/demo` (conferido no `dist/`). Publicada como página privada para validação.
+
+## 18. Fase 7 — Dados básicos da esteira
+
+- Mesmos campos da aba "Dados básicos" da V1: **Nome** (obrigatório; em branco usa "veículo · PLACA"), Cliente, Veículo, Placa, Modelo/versão, Responsável (colaborador), Prioridade (Baixa/Média/Alta), Prazo, Observações; Tempo total previsto e Criada em só na consulta. "Início/Fim previsto" da tela da V1 não são gravados pela V1 → ficaram fora.
+- **Incluir:** passos "Pra qual carro?" (placa, veículo, modelo, cliente, nome) e "Pra quando?" (prazo, prioridade, responsável, observações) da Nova esteira → `dados` do `POST /conveyors`.
+- **Consultar:** "Dados da esteira" no detalhe (abre/fecha).
+- **Alterar:** cartão "Dados da esteira" no topo da Alterar esteira → mesmo formulário → "O que muda" mostra antes → depois → `PATCH /conveyors/:id` só com o que mudou + motivo; estrutura no mesmo salvamento com o mesmo motivo. Em elaboração não pede motivo (regra da V1).
+- Componente único `src/ui/FormDados.tsx` (criação e alteração iguais). Regras em `src/domain/dadosEsteira.ts`; teste com `postConveyorDadosSchema` e `patchConveyorDadosBodySchema` reais.
+
+## 19. Fase 8 — Corrigir apontamento (gestora)
+
+- No detalhe da esteira, cada atividade começada tem **Horas** (só com `time_entries.edit_any` ou `time_entries.delete_any`, papéis ADMIN/GESTOR na V1): lista os lançamentos (quem, quando, quanto, total) → **Corrigir tempo** (±15/±5, atalhos) ou **Remover**, sempre com motivo.
+- API da V1: `GET/PATCH/DELETE /conveyors/:id/steps/:stepId/time-entries[/:id]`. O PATCH leva o `updatedAt` lido: se alguém mudou antes, a V1 recusa ("Atualize a tela"). A V1 grava auditoria (`time_entry_edited_by_manager` / `time_entry_deleted_by_manager`) com motivo, antes e depois.
+- Teste com `patchTimeEntryBodySchema` e `deleteTimeEntryBodySchema` reais.
+
+## 20. Fase 2b — Fotos das etapas (com migration)
+
+- **Backend (único ponto em `server/`, aditivo):** migration `server/migrations/0054_v2_etapa_imagens.sql` (tabela nova `v2_etapa_imagens`: 1 foto por etapa TASK da matriz, WebP/JPEG/PNG, até 1 MB, no próprio banco → entra no backup) e módulo isolado `server/src/modules/v2-etapa-imagens` registrado em `server/src/app.ts` (1 linha). Nenhuma tabela/rota da V1 muda.
+- Rotas: `GET /api/v1/v2/etapa-imagens` (lista, logado), `GET /api/v1/v2/etapa-imagens/:etapaId` (imagem, logado, cache 1 dia com endereço que muda ao trocar), `PUT` e `DELETE` (só `operation_matrix.manage`). Tipo conferido pelo conteúdo do arquivo; acima de 1 MB → 413.
+- **V2:** tela **Fotos das etapas** (Início, para quem cuida da matriz): escolhe a etapa → tira/escolhe a foto → a foto é reduzida no próprio celular (até 1000 px, WebP) → Salvar; "Voltar à ilustração" remove. A foto aparece no cardápio da Nova esteira e na Alterar esteira (na esteira, achada pelo nome da etapa). Sem foto ou sem a tabela, fica a ilustração.
+- ⚠️ **Deploy:** o deploy da V1 não roda migrations (guardrail). Aplicar `0054` manualmente em HML/produção com aprovação humana. Antes disso a V2 funciona normalmente com as ilustrações.
+- Testes: servidor `src/tests/v2-etapa-imagens.test.ts` (regras + HTTP contra Postgres: grava, lê, 403 colaborador, 422 etapa errada/arquivo falso, 413, 401, remove); V2 `src/domain/fotosEtapas.test.ts`.
