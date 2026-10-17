@@ -369,3 +369,11 @@ Fases 4 e 5 exigem o fluxo completo de `AGENTS.md` (contexto → impacto → spe
 
 - Decisões: pasta separada, produto "SGP+ V2"; piloto para todos; reutilizar backend V1 (equivalente V2 só quando necessário); testes só do que importa; retornos curtos.
 - Criado `docs/v2/SGP_V2.md` (documento vivo: objetivo, regras, arquitetura, fases/status, política de testes, decisões, formato curto de retorno, pendências, como retomar).
+
+---
+
+## 25. Link /V2, política de retorno e especificação da Fase 0 (2026-10-17)
+
+- Decisões: link final `/V2` (`/v2` redireciona); retorno no chat em 6 linhas; arquivo de retorno continua detalhado.
+- Contexto/impacto da Fase 0 verificados no código: deploy da V1 usa `rsync --delete` na pasta web (V2 precisa de pasta própria — crítico); rotas de auth reaproveitáveis (`/api/v1/auth/login|me|logout`); CI da V1 restrito a `src/` (build `tsc -b` com `include: ["src"]`, vitest `src/**`); `eslint .` da raiz alcança `apps/`.
+- Especificação da Fase 0 registrada em `docs/v2/SGP_V2.md` §10 (escopo, 3 testes críticos, CI com guarda de `src/`, nginx/deploy separados; aprovações humanas listadas). Nenhum código alterado.
