@@ -343,3 +343,22 @@ Fases 4 e 5 exigem o fluxo completo de `AGENTS.md` (contexto → impacto → spe
   - Removido o filtro "Só o que falta" e as duas grades separadas (para ficar idêntico).
 - **Hoje:** o "Ver esteira" (só consulta) ganhou botão "Alterar esteira (abre Esteiras)".
 - **Validação:** lógica em Node (fluxo completo até o histórico) e capturas em navegador headless lado a lado com a criação — layout equivalente; sem erro de execução.
+
+---
+
+## 23. Proposta de implementação — SGP+ 2.0 sem tocar na versão atual (2026-10-17)
+
+**Premissa do usuário:** 2.0 é um "Plus"; a versão atual (1.9.8) não deve ser tocada.
+
+**Fatos verificados no código:** nginx (`deploy/nginx/sgp.conf.example`) serve `frontend-dist` em `/` e faz proxy de `/api/` → backend; sessão em cookie httpOnly `path: '/'`, `sameSite: lax` (`server/src/modules/auth/auth.cookies.ts`); rotas montadas em `/api/v1` (`server/src/app.ts`); migrations até `0053`.
+
+**Recomendação:** app novo ao lado do atual, mesmo backend e banco, mudanças só aditivas.
+- Frontend 2.0 em pasta própria (ex.: `apps/sgp-2/`), mesma stack (Vite/React 19/TS/Tailwind 4), PWA; servido em `/v2/` (gestor) e `/v2/tablet` (setor); não importa nada de `src/`.
+- Mesmo domínio → mesmo cookie de sessão (login único), sem mudança de CORS.
+- Backend: reutiliza `/api/v1`; endpoints novos em módulo próprio montado em `/api/v2` (acréscimo de 1 linha em `app.ts`); migrations só aditivas.
+- RBAC existente com permissões novas (acesso 2.0; alterar esteira em andamento — só gestora); rollout por usuário/papel.
+- 1.x congelada (só hotfix); guarda de CI para PRs da 2.0 não alterarem `src/`.
+
+**Fases:** 0 Fundação (app vazio, PWA, login, tokens de UI, deploy separado) · 1 Hoje + Esteiras só leitura · 2 Nova esteira cardápio (+ imagens de etapa) · 3 Alterar esteira com cadeados + catálogo de motivos/histórico · 4 Planejar semana (sugestão automática depois) · 5 Tablet (lançar horas/QR; cronômetro depois). Começar por 0+1. Fases 4 e 5 exigem fluxo completo do `AGENTS.md`.
+
+**Decisões pendentes:** `/v2/` vs subdomínio; nome do app; piloto (gestora + setor); aprovação para iniciar contexto/impacto/spec das fases 0+1.
