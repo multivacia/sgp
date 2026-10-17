@@ -10,6 +10,11 @@
   --color-ok: #15803d;
   --color-danger: #b91c1c;
   --color-danger-soft: #fef2f2;
+  --color-late: #c2410c;
+  --color-late-ink: #7c2d12;
+  --color-late-soft: #fff4e5;
+  --color-ok-soft: #e8f5ec;
+  --color-accent-soft: #fff8db;
   --font-display: 'Archivo', system-ui, sans-serif;
   --font-sans: 'Atkinson Hyperlegible', system-ui, sans-serif;
 }

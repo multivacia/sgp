@@ -401,3 +401,18 @@ Fases 4 e 5 exigem o fluxo completo de `AGENTS.md` (contexto → impacto → spe
 - **Riscos/ressalvas:** a config nginx real do VPS pode diferir do exemplo (`/opt/sgp/current/frontend-dist` vs `/var/www/sgp-web` usado no workflow) — por isso o bloco é só aditivo e a aplicação exige `nginx -t`; o deploy da V2 reaproveita os secrets de SSH existentes (aprovado); as 5 falhas da V1 devem ser vistas em outra atividade.
 - **Próximo passo:** aplicar nginx em HML + rodar deploy manual; em seguida Fase 1 (Hoje + Esteiras só leitura).
 - **Uso/tokens disponíveis:** INDISPONÍVEL — a sessão não fornece métrica confiável.
+
+---
+
+## 27. Fase 1 do SGP+ V2 — Hoje + Esteiras (só leitura) (2026-10-17)
+
+- **Status:** concluída no código (publicação depende do nginx/deploy manual da Fase 0).
+- **Contexto verificado:** `GET /api/v1/conveyors` (lista `ConveyorListItemApi`: status, prazo, totalSteps; só `requireAuth`) e `GET /api/v1/conveyors/:id` (`ConveyorDetailApi`: options/areas/steps com `operationalStatus`, `plannedMinutes`, `plannedQuantity`, `assignees`, `completedByName`, `baseNameSnapshot`) — `server/src/modules/conveyors/conveyors.dto.ts`. Regra de atraso em `server/src/shared/operationalBucket.ts`. `dashboard` e `conveyor-progress` exigem permissões específicas → não usados.
+- **Arquivos criados:** `apps/sgp-v2/src/domain/conveyors.ts`, `src/domain/conveyors.test.ts`, `src/api/conveyors.ts`, `src/screens/{Esteiras,EsteiraDetalhe,Hoje}.tsx`, `src/screens/useConveyors.ts`, `src/ui/bits.tsx`.
+- **Arquivos alterados (só V2):** `apps/sgp-v2/src/App.tsx` (rotas), `src/styles.css` (cores), `vite.config.ts` (testes `.ts`), `docs/v2/SGP_V2.md` (§4, §12).
+- **Backend/migrations:** nenhum.
+- **Decisões:** "Em produção" = `A_INICIAR` + `EM_ANDAMENTO`; % = minutos previstos das atividades concluídas ÷ previstos (exclui `ABORTED`); situação da atividade: COMPLETED→Feito, IN_PROGRESS→Em andamento, BLOCKED→Parado, ABORTED→Interrompido, PENDING/REOPENED→Não começou; exceções da tela Hoje limitadas ao que a V1 já fornece (parada e atrasada); detalhe com cache de 60 s e até 4 pedidos simultâneos.
+- **Validação:** `npm test` (V2) → 2 arquivos, **6/6** (3 novos: progresso, atraso igual à V1, ordem/filtro de exceções); `npm run build` ok; `npx eslint apps/sgp-v2` sem problemas; navegador headless com API simulada no formato real (dados da planilha mestra): Hoje, Esteiras, Ver esteira (atrasada e parada) renderizam corretamente. V1: `git diff` sem mudanças em `src/` e `server/`.
+- **Riscos:** N pedidos de detalhe (um por esteira) — ver §12 do documento vivo; exceções "sem apontamento" e "sem tarefa" do protótipo ainda não implementadas.
+- **Próximo passo:** publicar Fases 0+1 em HML (nginx + deploy manual) e validar com a gestora; depois Fase 2 (Nova esteira cardápio).
+- **Uso/tokens disponíveis:** INDISPONÍVEL — a sessão não fornece métrica confiável.

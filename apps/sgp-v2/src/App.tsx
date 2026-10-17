@@ -1,6 +1,9 @@
 import { Route, Routes } from 'react-router-dom'
 import { useSession } from './auth/context'
+import { EsteiraDetalhe } from './screens/EsteiraDetalhe'
+import { Esteiras } from './screens/Esteiras'
 import { Eu } from './screens/Eu'
+import { Hoje } from './screens/Hoje'
 import { Login } from './screens/Login'
 import { Placeholder } from './screens/Placeholder'
 import { Shell } from './shell/Shell'
@@ -20,9 +23,10 @@ export function App() {
       ) : (
         <Route element={<Shell />}>
           <Route index element={<Placeholder title="Início" fase="Fase 2" />} />
-          <Route path="esteiras" element={<Placeholder title="Esteiras" fase="Fase 1" />} />
+          <Route path="esteiras" element={<Esteiras />} />
+          <Route path="esteiras/:id" element={<EsteiraDetalhe />} />
           <Route path="semana" element={<Placeholder title="Planejar semana" fase="Fase 4" />} />
-          <Route path="hoje" element={<Placeholder title="Hoje na fábrica" fase="Fase 1" />} />
+          <Route path="hoje" element={<Hoje />} />
           <Route path="eu" element={<Eu />} />
           <Route path="*" element={<Placeholder title="Página não encontrada" fase="—" />} />
         </Route>

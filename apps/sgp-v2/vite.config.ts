@@ -10,6 +10,6 @@ export default defineConfig(({ mode }) => {
     base: '/V2/',
     plugins: [react(), tailwindcss()],
     server: { port: 5174, proxy: { '/api': { target: apiTarget, changeOrigin: true } } },
-    test: { environment: 'jsdom', include: ['src/**/*.test.tsx'] },
+    test: { environment: 'jsdom', include: ['src/**/*.test.{ts,tsx}'] },
   }
 })

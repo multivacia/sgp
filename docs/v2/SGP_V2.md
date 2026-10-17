@@ -2,7 +2,7 @@
 
 > **Para que serve:** retomar o desenvolvimento da V2 em qualquer sessão/chat.
 > **Como usar:** ler isto + `git log` da branch antes de começar; atualizar **Status** e **Decisões** ao fim de cada passo.
-> **Branch de trabalho:** `ccr-683413c7-571rnk` · **Atualizado em:** 2026-10-17 (Fase 0 implementada)
+> **Branch de trabalho:** `ccr-683413c7-571rnk` · **Atualizado em:** 2026-10-17 (Fases 0 e 1 implementadas)
 
 ---
 
@@ -45,7 +45,7 @@ Legenda: ⬜ não iniciada · 🟨 em andamento · ✅ concluída
 | # | Fase | Backend novo? | Risco | Status |
 |---|---|---|---|---|
 | 0 | Fundação: app vazio em `/V2`, PWA, login compartilhado, tokens de UI, build/deploy separados, guarda de CI "V2 não altera `src/`" | não | baixo | ✅ código pronto · ⏳ falta aplicar nginx + 1º deploy (manual) |
-| 1 | Hoje + Esteiras (só leitura): exceções do dia; ver esteira (etapas → setores → atividades → responsável) | talvez agregador de exceções | baixo | ⬜ |
+| 1 | Hoje + Esteiras (só leitura): exceções do dia; ver esteira (etapas → setores → atividades → responsável) | não (usa `/api/v1/conveyors` e `/conveyors/:id`) | baixo | ✅ código pronto (§12) |
 | 2 | Nova esteira (cardápio): matriz → etapas com figura → personalizar (setor/atividade/responsável) → carro → prazo | imagens de etapa | médio | ⬜ |
 | 3 | Alterar esteira = telas da criação + cadeados; motivo obrigatório (inclui troca de responsável) em catálogo + histórico | catálogo de motivos | médio | ⬜ |
 | 4 | Planejar semana por etapa (lotação por dia); "Sugerir semana" depois | motor de sugestão (depois) | alto | ⬜ |
@@ -133,3 +133,13 @@ Commit: <sha> · branch <nome>
 - Dependências: o `package-lock.json` da V2 foi semeado do lock da V1 (mesmas versões testadas). Motivo: o npm 10.9 falha ao resolver `vitest` do zero ("edgesOut").
 
 **Passos manuais pendentes (com aprovação):** (1) criar `/var/www/sgp-v2-hml` no servidor de HML, colar o bloco nginx, `nginx -t`, reload; (2) rodar "Deploy SGP+ V2" → homologação; (3) repetir em produção.
+
+## 12. Fase 1 — o que foi entregue
+
+- **Esteiras** (`/V2/esteiras`): lista "Em produção" (A iniciar + Em andamento) ou "Todas ativas"; cada cartão mostra prazo, situação (Parada / Atrasada / status) e % feito.
+- **Ver esteira** (`/V2/esteiras/:id`): etapas → setores → atividades com situação, minutos, responsável (ou "feito por"); abre e rola até a etapa onde o trabalho está.
+- **Hoje** (`/V2/hoje`): contadores + "Precisa de você" (atividade parada primeiro, depois esteira atrasada) + "Andando bem".
+- Regras em `apps/sgp-v2/src/domain/conveyors.ts`: % pelo previsto (minutos × quantidade, sem atividades interrompidas); atraso = mesma regra da V1 (`server/src/shared/operationalBucket.ts`).
+- Backend: **nenhum endpoint novo**. Leitura: `GET /api/v1/conveyors` + `GET /api/v1/conveyors/:id` (só exigem login).
+- **Limites conhecidos:** sem figuras das etapas (Fase 2); "sem apontamento hoje" e "colaborador sem tarefa" ainda não aparecem (precisariam de dados de apontamento/fila — avaliar na Fase 5); ações (realocar, avisar) ficam para fases com escrita.
+- ⚠️ **Desempenho:** o % de cada esteira exige 1 pedido de detalhe por esteira (até 4 em paralelo, cache de 60 s). Se a fábrica tiver muitas esteiras em produção e ficar lento, criar o equivalente V2 agregado (`/api/v2/...`) chamando os services da V1.
