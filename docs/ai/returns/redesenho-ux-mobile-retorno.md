@@ -573,3 +573,10 @@ Fases 4 e 5 exigem o fluxo completo de `AGENTS.md` (contexto → impacto → spe
 - **Validação:** `npm run build:demo` ok; nginx local com o bloco: `nginx -t` ok; `/` (V1 simulada) 200, `/V2-demo` 301, `/V2-demo/` 200 html, asset JS 200, logo 200, inexistente 404.
 - **Não feito por mim:** subir para a VPS (ação do dono do produto; sem acesso daqui).
 - **Uso/tokens disponíveis:** INDISPONÍVEL — a sessão não fornece métrica confiável.
+
+## 40. README_DEMO (2026-10-17)
+
+- **Pedido:** "Gere um readme_demo na branch."
+- **Feito:** `README_DEMO.md` na raiz: o que a demo tem (dados da planilha, esteiras prontas, PIN), roteiro de apresentação em 8 passos, rodar local (`npx vite --mode demo` e `build:demo` + servidor estático), publicar na VPS (`/V2-demo/`), cuidados, diferenças para a V2 real e onde está o código. Link no documento vivo §23.
+- **Validação:** `npx vite --mode demo` e o pacote `dist-demo` abertos no navegador com a faixa "DEMONSTRAÇÃO" e a esteira DEF-4G56.
+- **Uso/tokens disponíveis:** INDISPONÍVEL — a sessão não fornece métrica confiável.
