@@ -229,3 +229,27 @@ Fases 4 e 5 exigem o fluxo completo de `AGENTS.md` (contexto → impacto → spe
 - **Hoje / Planejar / Apontamento:** cartões com a figura da etapa/peça; tarefas do tablet renomeadas para setores do cartaz (Costura, Corte, Pré-montagem).
 - **Ressalvas:** horas por etapa e composição dos serviços são exemplos, não vieram do cartaz nem do banco; a imagem original foi gerada por IA (nome do arquivo indica ChatGPT) — para produção, usar fotos reais ou ilustrações com direito de uso.
 - **Repositório:** só este retorno; nenhum código-fonte; sem build/testes. Lógica dos 4 artboards executada em Node sem erro; não renderizado visualmente.
+
+---
+
+## 15. Pesquisa — personalização em níveis (combo → item → subitem) em fast food (2026-10-17)
+
+**Pergunta:** como cardápios de fast food tratam "escolho um combo, depois tiro/incluo itens e subitens", aplicado a Serviço › Etapa (Tarefa) › Setor › Atividade.
+
+**Achados (fontes na resposta do chat):**
+- Sistemas de PDV modelam isso como **grupos de modificadores** com regra mínimo/máximo (0 = opcional, ≥1 = obrigatório) — Club Essential, Spice On, Paloma.
+- **Aninhamento é limitado**: NCR Aloha permite no máximo **2 níveis**; Deliverect só aceita combo no topo; StoreKit: trocar o item-pai **limpa os filhos**, e grupo filho obrigatório precisa ser preenchido antes de "adicionar".
+- **Taco Bell**: cada item mostra a lista de ingredientes **já incluídos**; o cliente tira ou adiciona; "My Mods" salva preferências e aplica com 1 toque; >50% dos pedidos têm customização.
+- **McDonald's**: customização é a etapa mais difícil no kiosk; redesenho de bebidas reduziu para **1 página** (menos transições).
+- **NN/g / Nielsen**: divulgação progressiva com **até 2 níveis**; mais que isso confunde. Alternativa: várias telas secundárias, cada uma aberta por um controle.
+
+**Proposta para o SGP (não implementada):**
+1. Nível 1: escolher o serviço (combo) — já existe no protótipo.
+2. Nível 2: grade de etapas com padrão "tudo incluído" — já existe.
+3. Nível 3 **numa página só por etapa** ("Personalizar"): setores como seções e atividades como linhas marcadas por padrão; desligar o setor desliga todas as atividades dele. Evita o 4º nível de navegação.
+4. Regras mínimo/obrigatório: atividades/setores obrigatórios com cadeado (ex.: Inspeção de qualidade) — **decisão de negócio**.
+5. Mostrar **só as diferenças** no resumo ("Bancos dianteiros — sem Pintura") e selo "2 alterações" no cartão da etapa.
+6. Tirar a etapa remove setores/atividades; incluir de novo volta ao padrão.
+7. "Salvar como serviço" (equivalente a My Mods / nova matriz) para reaproveitar personalizações frequentes.
+
+**Repositório:** só este retorno; sem código-fonte.
