@@ -253,3 +253,13 @@ Fases 4 e 5 exigem o fluxo completo de `AGENTS.md` (contexto → impacto → spe
 7. "Salvar como serviço" (equivalente a My Mods / nova matriz) para reaproveitar personalizações frequentes.
 
 **Repositório:** só este retorno; sem código-fonte.
+
+---
+
+## 16. Localização da carga inicial da matriz (2026-10-17)
+
+- **Fonte principal:** `docs/Nova Esteira v1.0 - MESTRA - Gol GTI - OS7945.xlsx`, aba `ATIVIDADES E APONTAMENTOS` (TAREFA · SETOR · ATIVIDADE · ATRIBUÍDO PARA · Tempo previsto (min) · Tempo real · % conclusão).
+- **Importador:** `docs/import_matrix_nodes_from_excel*.py` (+ `docs/README_import_matrix_nodes_from_excel.md`) grava em `matrix_nodes` a árvore `ITEM → TASK → SECTOR → ACTIVITY`.
+- **Outros:** `src/mocks/matrix-bravo-build-tree.ts` (árvore "Tapeçaria automotiva · Bravo" para mocks), `server/src/tests/fixtures/bravo-matrix-matching-seed.fixture.ts` (fixture de testes); `server/seeds/0001_seed_base.sql` não contém matriz.
+- **Conteúdo da planilha:** 20 tarefas (idênticas às 20 etapas do cartaz), 15 setores distintos, 138 atividades, ~76,6 h previstas no total.
+- Busca feita em todas as 65 branches remotas; nenhuma outra seed de matriz encontrada.
