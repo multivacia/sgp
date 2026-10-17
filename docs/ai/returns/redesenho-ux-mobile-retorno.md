@@ -210,3 +210,11 @@ Fases 4 e 5 exigem o fluxo completo de `AGENTS.md` (contexto → impacto → spe
 - **Fluxo em uma tela:** 1) tarefa (botões grandes; próxima já marcada) → justificativa padronizada se a etapa anterior não terminou; 2) Hoje / Ontem; 3) tempo por botões (30 min · 1 h · 2 h · 3 h · 4 h · Turno todo) + ajuste ±15 min → **Continuar** → "Quanto ficou pronto?" (¼ ½ ¾ Tudo) → "Registrado!" com "hoje/ontem" e "Corrigir".
 - Convive com o cronômetro (ponto de decisão #5 da seção 7 continua em aberto).
 - **Repositório:** só este retorno; sem código-fonte, sem build/testes; protótipo não renderizado automaticamente.
+
+---
+
+## 13. Continuação — acesso à tela do tablet (2026-10-17)
+
+- Início do gestor ganhou o cartão **"Tablet do setor"** que abre o protótipo de apontamento; a tela do tablet ganhou o link "Voltar ao app do gestor (protótipo)".
+- **Ressalva aberta:** na captura enviada pelo usuário, a miniatura do artboard "Início + Nova esteira" aparece em branco no canvas. Lógica (`renderVals`) testada isoladamente em Node sem erro e tags balanceadas; causa não confirmada — pendente o usuário confirmar se a tela abre no Play.
+- Repositório: só este retorno; sem código-fonte.
