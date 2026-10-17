@@ -286,3 +286,16 @@ Fases 4 e 5 exigem o fluxo completo de `AGENTS.md` (contexto → impacto → spe
 - **Apontamento (tablet Costura):** tarefas = todas as atividades de Costura das esteiras em andamento, com tempos da matriz (240, 90 e 60 min).
 - **Validação:** lógica dos artboards executada em Node sem erro (inclui simulação do planejamento e árvore de andamento); tags balanceadas; não renderizado visualmente.
 - **Repositório:** só este retorno; nenhum código-fonte.
+
+---
+
+## 19. Tela Esteiras ("Ver esteira") + responsável por atividade (2026-10-17)
+
+- **Problema relatado:** usuário não encontrou "Ver esteira". Causa: o botão existia só dentro dos cartões de exceção da tela Hoje; o menu "Esteiras" mostrava "fora deste protótipo".
+- **Nova tela "Esteiras"** (artboard próprio, ligado no menu inferior de todas as telas do gestor): lista das 6 esteiras em produção com foto, matriz, % e situação (Atrasada / Parada / Em dia); "Ver esteira" abre todas as etapas → setores → atividades com estado, minutos e responsável.
+- **Responsável por atividade:** vem da matriz (coluna "Atribuído para" da planilha) e pode ser trocado por colaborador cadastrado; seletor agrupa "Da matriz", "Indicados para <setor>" (aba Colaboradores da planilha) e "Outros colaboradores"; atalho "Trocar todos"/"Trocar responsável de todo o setor"; troca destacada "(trocado · matriz: X)"; voltar ao da matriz remove a troca.
+  - Na **criação** (Personalizar etapa): troca por atividade ou setor; grade e resumo mostram "N responsáveis trocados"; "Voltar ao padrão da matriz" desfaz.
+  - Na **esteira em produção**: atividade já feita fica travada ("Feito por X · já apontado, não muda"), preservando o histórico.
+- **Hoje:** árvore do "Ver esteira" também mostra o responsável.
+- **Dados pessoais:** nomes reais da planilha substituídos por fictícios com mapeamento fixo (mesma pessoa → mesmo nome), mantendo a distribuição de quem faz o quê.
+- **Validação:** lógica de todos os artboards executada em Node (troca individual, por setor, travamento de feitas, resumo) sem erro; tags balanceadas; não renderizado visualmente.
