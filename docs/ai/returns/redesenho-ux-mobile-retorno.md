@@ -362,3 +362,10 @@ Fases 4 e 5 exigem o fluxo completo de `AGENTS.md` (contexto → impacto → spe
 **Fases:** 0 Fundação (app vazio, PWA, login, tokens de UI, deploy separado) · 1 Hoje + Esteiras só leitura · 2 Nova esteira cardápio (+ imagens de etapa) · 3 Alterar esteira com cadeados + catálogo de motivos/histórico · 4 Planejar semana (sugestão automática depois) · 5 Tablet (lançar horas/QR; cronômetro depois). Começar por 0+1. Fases 4 e 5 exigem fluxo completo do `AGENTS.md`.
 
 **Decisões pendentes:** `/v2/` vs subdomínio; nome do app; piloto (gestora + setor); aprovação para iniciar contexto/impacto/spec das fases 0+1.
+
+---
+
+## 24. Regras da V2 + documento vivo (2026-10-17)
+
+- Decisões: pasta separada, produto "SGP+ V2"; piloto para todos; reutilizar backend V1 (equivalente V2 só quando necessário); testes só do que importa; retornos curtos.
+- Criado `docs/v2/SGP_V2.md` (documento vivo: objetivo, regras, arquitetura, fases/status, política de testes, decisões, formato curto de retorno, pendências, como retomar).
