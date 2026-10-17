@@ -30,10 +30,10 @@ A faixa amarela no topo (**DEMONSTRAÇÃO · dados de exemplo**) troca entre **G
 1. **Início** → saudação, "Nova esteira" em destaque e os atalhos.
 2. **Hoje** → "Precisa de você": a atividade **parada** e a esteira **atrasada**, com "Ver esteira". "Pessoas hoje" (quem não apontou e quem está sem tarefa) aparece só em dia útil.
 3. **Esteiras → Gol GT · DEF-4G56** → progresso, etapas → setores → atividades com responsável. Mostre **Dados da esteira** e o botão **Horas** numa atividade feita (a gestora corrige ou remove um lançamento, sempre com motivo).
-4. **Nova esteira (o "cardápio")** → matriz → etapas com figura (tirar/incluir) → **Personalizar** uma etapa (tirar atividade, trocar responsável do setor inteiro) → placa, veículo, modelo, cliente → prazo, prioridade, responsável → **Criar esteira** → **Liberar para planejar**.
+4. **Nova esteira (o "cardápio")** → matriz → etapas com figura (tirar/incluir) → **Personalizar** uma etapa (tirar atividade, trocar responsável do setor inteiro) → placa, veículo, modelo, cliente, **fotos do carro** (Tirar foto / Galeria) → prazo, prioridade, responsável → **Criar esteira** → **Liberar para planejar**.
 5. **Alterar esteira** (na DEF-4G56) → as **mesmas telas da criação**; o que já foi feito vem com **cadeado**; incluir uma etapa da matriz (ex.: Volante); alterar o prazo nos **Dados da esteira** → **O que muda** → motivo obrigatório → Confirmar.
 6. **Semana** → **Sugerir semana** → "Escolher início" mostra em que dia cada esteira termina e se cabe no prazo → **Lotação** por dia → abrir um dia → **Ajustar** (mudar o dia ou a pessoa) → **Publicar semana**.
-7. **Fotos das etapas** (Início) → escolher uma etapa → tirar/escolher foto → Salvar → voltar à Nova esteira e ver a foto no cardápio.
+7. **Fotos das etapas** (Início) → escolher uma etapa → **Tirar foto** ou **Galeria** → a foto fica **"Neste aparelho"** → **Enviar para o banco** → voltar à Nova esteira e ver a foto no cardápio. Na **Esteira criada!** e no detalhe da esteira, **Fotos do carro** funcionam do mesmo jeito (guarda no aparelho → Enviar).
 8. **Tablet** (faixa amarela → Tablet) → tocar no nome → PIN → **Sua próxima tarefa** → **COMEÇAR** (cronômetro com segundos) → **PAUSAR** (motivo) → **TERMINEI** → **Quanto ficou pronto?** → **Registrado!** → **Tempo errado? Corrigir** (o colaborador corrige o próprio lançamento de hoje enquanto a atividade não terminou). Mostre também **Já fiz · lançar horas** e **Fiz outra atividade**.
 
 Dica: entre um tema e outro, use **Recomeçar** se quiser voltar aos dados iniciais.
@@ -92,6 +92,7 @@ sudo nginx -t && sudo systemctl reload nginx
 - **Não instale como app** no celular a partir da demo (o atalho instalado aponta para a V2 real, `/V2/`).
 - A página online do Claude é **privada**: para outra pessoa abrir, compartilhe pelo menu "Compartilhar" da página.
 - A página pede para não ser indexada por buscadores (`noindex`).
+- **Câmera:** dentro da página do Claude, o visualizador bloqueia a câmera (use **Galeria**). Na VPS, no navegador do celular, **Tirar foto** abre a câmera.
 
 ## Diferenças para a V2 real
 
@@ -99,7 +100,7 @@ sudo nginx -t && sudo systemctl reload nginx
 |---|---|
 | Dados em memória no navegador | API da V1 (`/api/v1`) com o banco do SGP+ |
 | Qualquer PIN entra | PIN real do colaborador (Modo Produção da V1) |
-| Fotos das etapas ficam só no navegador | Tabela `v2_etapa_imagens` (migration `0054`) |
+| Fotos "enviadas" ficam só no navegador | Fotos das etapas na tabela `v2_etapa_imagens` (migration `0054`) e do carro em `v2_esteira_fotos` (migration `0056`) |
 | Correção pelo colaborador sem registro no banco | Tabela `v2_correcoes_apontamento` (migration `0055`) |
 | Sem login | Mesmo e-mail e senha do SGP+ |
 

@@ -187,6 +187,7 @@ for (const e of [A, C])
 
 // ---- fotos das etapas (em memória; no servidor real ficam na tabela v2_etapa_imagens) ----
 const fotos: { matrixNodeId: string; nome: string; atualizadaEm: string; url: string }[] = []
+const fotosCarro: { id: string; conveyorId: string; criadaEm: string; url: string }[] = []
 
 // ---- sessões ----
 let gestora = true
@@ -369,6 +370,20 @@ function rota(metodo: string, url: URL, corpo: unknown): unknown {
     x.minutes = Number(b.minutes)
     x.updatedAt = new Date().toISOString()
     return { id: x.id, collaboratorId: x.collaboratorId, collaboratorName: nomeDe(x.collaboratorId), minutes: x.minutes, notes: null, entryAt: x.at, updatedAt: x.updatedAt }
+  }
+  if ((m = r.match(/^GET \/v2\/esteiras\/([\w-]+)\/fotos$/))) return fotosCarro.filter((f) => f.conveyorId === m![1]).map(({ id, criadaEm, url }) => ({ id, criadaEm, url }))
+  if ((m = r.match(/^POST \/v2\/esteiras\/([\w-]+)\/fotos$/))) {
+    if (!(corpo instanceof Blob)) throw new Erro(422, 'VALIDATION_ERROR', 'Envie a imagem.')
+    if (!esteiras.has(m[1])) throw new Erro(404, 'NOT_FOUND', 'Esteira não encontrada.')
+    if (fotosCarro.filter((f) => f.conveyorId === m![1]).length >= 10) throw new Erro(422, 'VALIDATION_ERROR', 'A esteira já tem 10 fotos. Remova uma para incluir outra.')
+    const f = { id: novoId(), conveyorId: m[1], criadaEm: new Date().toISOString(), url: URL.createObjectURL(corpo) }
+    fotosCarro.push(f)
+    return { id: f.id, criadaEm: f.criadaEm }
+  }
+  if ((m = r.match(/^DELETE \/v2\/esteiras\/[\w-]+\/fotos\/([\w-]+)$/))) {
+    const i = fotosCarro.findIndex((f) => f.id === m![1])
+    if (i >= 0) fotosCarro.splice(i, 1)
+    return undefined
   }
   if (r === 'GET /v2/etapa-imagens') return fotos
   if ((m = r.match(/^PUT \/v2\/etapa-imagens\/([\w-]+)$/))) {

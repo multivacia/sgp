@@ -20,11 +20,11 @@ SGP+ V2 (`apps/sgp-v2`, link `/V2`) — todas as fases 0–5 implementadas para 
 
 ## Estado em uma frase
 
-Código das Fases 0–8 + 2b pronto e testado (V2 28/28, servidor v2-etapa-imagens 2/2, build, lint, e2e headless); falta publicar em HML (nginx + deploy manual, aprovação humana).
+Código das Fases 0–10 + 2b pronto e testado (V2 29/29, servidor módulos V2 5/5, build, lint, e2e headless); falta publicar em HML (nginx + deploy manual, aprovação humana).
 
 ## Concluído
 
-- Fases 0 a 8 + 2b (ver `docs/v2/SGP_V2.md` §4 e §10–§22). Demo: https://claude.ai/artifact/RFAWgUFLAB541XT4839dhW
+- Fases 0 a 10 + 2b (ver `docs/v2/SGP_V2.md` §4 e §10–§24). Demo: https://claude.ai/artifact/RFAWgUFLAB541XT4839dhW
 
 ## Decisões já tomadas
 
@@ -32,7 +32,7 @@ Código das Fases 0–8 + 2b pronto e testado (V2 28/28, servidor v2-etapa-image
 
 ## Pendências
 
-- Humanas: aplicar as migrations `server/migrations/0054_v2_etapa_imagens.sql` e `0055_v2_correcoes_apontamento.sql` (manual); aplicar `deploy/nginx/sgp-v2.location.example` em HML; rodar `deploy-v2.yml` (homologacao).
+- Humanas: aplicar as migrations `server/migrations/0054_v2_etapa_imagens.sql` e `0055_v2_correcoes_apontamento.sql` e `0056_v2_esteira_fotos.sql` (manual); aplicar `deploy/nginx/sgp-v2.location.example` em HML; rodar `deploy-v2.yml` (homologacao).
 - Decisões abertas: `docs/v2/SGP_V2.md` §8 (motivos reais, QR do ticket, token do tablet, corrigir apontamento, fotos reais).
 
 ## Próxima ação exata
@@ -47,7 +47,7 @@ Código das Fases 0–8 + 2b pronto e testado (V2 28/28, servidor v2-etapa-image
 ## Referências úteis
 
 - Documento vivo: `docs/v2/SGP_V2.md`
-- Retorno: `docs/ai/returns/redesenho-ux-mobile-retorno.md` (§24–§36 = V2)
+- Retorno: `docs/ai/returns/redesenho-ux-mobile-retorno.md` (§24–§42 = V2)
 - Protótipo: https://claude.ai/artifact/QBY3svGbjp7ALeewX1w9n2
 
 ## Uso de contexto / sessão

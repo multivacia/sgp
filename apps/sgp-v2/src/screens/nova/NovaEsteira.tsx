@@ -31,6 +31,9 @@ import { fmtMin } from '../../domain/format'
 import { dadosVazios, erroDados, nomeFinal, type DadosEsteira } from '../../domain/dadosEsteira'
 import { FormDados } from '../../ui/FormDados'
 import { useFiguras } from '../../ui/useFiguras'
+import { EscolherFoto } from '../../ui/EscolherFoto'
+import { FotosDoCarro } from '../../ui/FotosDoCarro'
+import { guardarFotoDoCarro } from '../../ui/fotosLocais'
 import { ResponsavelPicker } from '../../ui/ResponsavelPicker'
 import { AtividadeRow, BottomBar, EtapaCard, SetorBox, WizardHeader } from '../../ui/wizard'
 
@@ -66,6 +69,7 @@ export function NovaEsteira() {
   const [erro, setErro] = useState<string | null>(null)
   const [salvando, setSalvando] = useState(false)
   const figura = useFiguras()
+  const [fotosNova, setFotosNova] = useState<{ blob: Blob; url: string }[]>([])
   const [criada, setCriada] = useState<{ id: string; name: string; operationalStatus?: ConveyorStatus } | null>(null)
 
   useEffect(() => {
@@ -106,7 +110,12 @@ export function NovaEsteira() {
     try {
       const resp = dados.colaboradorId ? colabPorId.get(dados.colaboradorId) : undefined
       const body = buildCreateBody(arvore, draft, { ...dados, responsavel: resp?.full_name ?? dados.responsavel })
-      setCriada(await createConveyor(body))
+      const nova = await createConveyor(body)
+      // fotos do carro ficam neste aparelho, ligadas à esteira, até alguém enviar para o banco
+      for (const f of fotosNova) await guardarFotoDoCarro(nova.id, f.blob)
+      fotosNova.forEach((f) => URL.revokeObjectURL(f.url))
+      setFotosNova([])
+      setCriada(nova)
       setPasso('pronto')
     } catch (e) {
       setErro(e instanceof Error ? e.message : 'Não foi possível criar a esteira.')
@@ -237,7 +246,35 @@ export function NovaEsteira() {
         ) : null}
 
         {passo === 'carro' ? (
-          <FormDados parte="carro" dados={dados} onChange={setDados} matriz={arvore ? displayName(arvore.name) : ''} nomeResponsavel="" onEscolherResponsavel={() => undefined} />
+          <div className="flex flex-col gap-4">
+            <FormDados parte="carro" dados={dados} onChange={setDados} matriz={arvore ? displayName(arvore.name) : ''} nomeResponsavel="" onEscolherResponsavel={() => undefined} />
+            <div className="card flex flex-col gap-3 p-3">
+              <span className="font-bold">Fotos do carro (opcional)</span>
+              {fotosNova.length ? (
+                <div className="grid grid-cols-3 gap-2">
+                  {fotosNova.map((f, i) => (
+                    <div key={f.url} className="relative">
+                      <img src={f.url} alt="" className="aspect-square w-full rounded-xl bg-ground object-cover" />
+                      <button
+                        type="button"
+                        aria-label="Tirar esta foto"
+                        onClick={() => {
+                          URL.revokeObjectURL(f.url)
+                          setFotosNova(fotosNova.filter((_, j) => j !== i))
+                        }}
+                        className="absolute right-1 top-1 flex size-8 items-center justify-center rounded-full bg-white/90 text-lg font-bold text-danger shadow"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-muted">Ficam guardadas neste aparelho; você envia para o banco depois de criar a esteira.</p>
+              )}
+              {fotosNova.length < 10 ? <EscolherFoto onFoto={(blob) => setFotosNova((x) => [...x, { blob, url: URL.createObjectURL(blob) }])} /> : null}
+            </div>
+          </div>
         ) : null}
 
         {passo === 'quando' ? (
@@ -274,6 +311,9 @@ export function NovaEsteira() {
             <p className="text-muted">
               {tot.etapas} etapas · {tot.atividades} atividades · ~{fmtMin(tot.minutos)}. Ela nasce em elaboração: libere quando quiser planejar.
             </p>
+            <div className="w-full text-left">
+              <FotosDoCarro conveyorId={criada.id} />
+            </div>
             {criada.operationalStatus ? <Liberar id={criada.id} status={criada.operationalStatus} onFeito={(novo) => setCriada({ ...criada, operationalStatus: novo })} /> : null}
             <Link to={`/esteiras/${criada.id}`} className="btn-primary flex w-full items-center justify-center">
               Ver esteira

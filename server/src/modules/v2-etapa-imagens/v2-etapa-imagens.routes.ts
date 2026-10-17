@@ -74,7 +74,7 @@ async function remover(req: Request, res: Response): Promise<void> {
 const lerCorpo = express.raw({ type: [...V2_ETAPA_IMAGEM_TIPOS], limit: V2_ETAPA_IMAGEM_MAX_BYTES })
 
 /** Corpo binário da imagem; acima do limite responde 413 com mensagem clara (sem cair no 500 genérico). */
-function corpoImagem(req: Request, res: Response, next: NextFunction): void {
+export function corpoImagem(req: Request, res: Response, next: NextFunction): void {
   lerCorpo(req, res, (err?: unknown) => {
     if (err && (err as { type?: string }).type === 'entity.too.large') return next(new AppError('A imagem passa de 1 MB.', 413, ErrorCodes.VALIDATION_ERROR))
     next(err)

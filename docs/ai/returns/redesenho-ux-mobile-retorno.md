@@ -589,3 +589,15 @@ Fases 4 e 5 exigem o fluxo completo de `AGENTS.md` (contexto → impacto → spe
 - **Dificuldade:** baixa (≈ 1 tela + 1 módulo de armazenamento local; backend já existe). Ressalvas: fica só naquele navegador/aparelho; some se limparem os dados do navegador; Safari/iPhone pode apagar dados de site sem uso por ~7 dias; não sincroniza entre aparelhos.
 - **Aguardando decisão** para implementar.
 - **Uso/tokens disponíveis:** INDISPONÍVEL — a sessão não fornece métrica confiável.
+
+## 42. Fotos no aparelho antes de enviar + fotos do carro (2026-10-17)
+
+- **Pedido:** "Sim [foto local e depois subir], e outra opção é tirar foto também do veículo para deixar na esteira."
+- **Câmera:** dois botões (Tirar foto com `capture="environment"` / Galeria) em `src/ui/EscolherFoto.tsx`. Na página do Claude o visualizador bloqueia a câmera; na VPS funciona no navegador do celular.
+- **Local primeiro:** `src/ui/fotosLocais.ts` (IndexedDB, com memória de reserva) + selo "Neste aparelho" + Enviar/Descartar. Aplicado em Fotos das etapas (reescrita de `screens/FotosEtapas.tsx`) e no cardápio (`ui/useFiguras.ts`: aparelho → banco → ilustração).
+- **Fotos do carro:** `src/ui/FotosDoCarro.tsx` (detalhe da esteira e "Esteira criada!"), passo "Pra qual carro?" da Nova esteira com fotos opcionais, `src/api/esteiraFotos.ts`, rotas na demo.
+- **Servidor (aditivo):** `server/migrations/0056_v2_esteira_fotos.sql`, `server/src/modules/v2-esteira-fotos/v2-esteira-fotos.routes.ts`, registro em `server/src/app.ts`, `corpoImagem` exportado do módulo `v2-etapa-imagens` (V2), teste `server/src/tests/v2-esteira-fotos.test.ts`.
+- **Migrations:** `0056` criada, **não aplicada** em ambiente compartilhado; aplicada no Postgres local de teste (2x, idempotente).
+- **Validação:** servidor 5/5 (esteira-fotos, etapa-imagens, producao-correcao) contra Postgres local; `tsc` ok; V2 `npm test` 29/29; `build` (sem código da demo no `dist/`) e `build:demo` ok; eslint ok; headless: foto de etapa pela Galeria → "Neste aparelho" → recarregar (continua) → Enviar todas → "Foto"; Nova esteira com 2 fotos do carro → Esteira criada! → "Enviar as 2 fotos" → "2 de 10". Sem erros. Demonstração republicada (versão 6).
+- **Docs:** documento vivo (cabeçalho, §4 linha 10, §8, §9 com 0056, §20, §23, §24) e `README_DEMO.md` atualizados.
+- **Uso/tokens disponíveis:** INDISPONÍVEL — a sessão não fornece métrica confiável.

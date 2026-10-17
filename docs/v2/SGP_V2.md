@@ -2,7 +2,7 @@
 
 > **Para que serve:** retomar o desenvolvimento da V2 em qualquer sessão/chat.
 > **Como usar:** ler isto + `git log` da branch antes de começar; atualizar **Status** e **Decisões** ao fim de cada passo.
-> **Branch de trabalho:** `ccr-683413c7-571rnk` · **Atualizado em:** 2026-10-17 (Fases 0 a 9 + 2b implementadas, visual com o design system do SGP+; pronta para apresentar à gestora) · **Demonstração:** https://claude.ai/artifact/RFAWgUFLAB541XT4839dhW (e na VPS em `/V2-demo/`, §23)
+> **Branch de trabalho:** `ccr-683413c7-571rnk` · **Atualizado em:** 2026-10-17 (Fases 0 a 10 + 2b implementadas, incluindo fotos no aparelho e fotos do carro, visual com o design system do SGP+; pronta para apresentar à gestora) · **Demonstração:** https://claude.ai/artifact/RFAWgUFLAB541XT4839dhW (e na VPS em `/V2-demo/`, §23)
 
 ---
 
@@ -55,6 +55,7 @@ Legenda: ⬜ não iniciada · 🟨 em andamento · ✅ concluída
 | 7 | Dados básicos da esteira (incluir, alterar, consultar) iguais à V1 | não | baixo | ✅ código pronto (§18) |
 | 8 | Corrigir/remover apontamento pela gestora | não (V1 já tem, auditado) | médio | ✅ código pronto (§19) |
 | 9 | Colaborador corrige o próprio apontamento no tablet | **sim**: módulo `server/src/modules/v2-producao-correcao` + migration `0055_v2_correcoes_apontamento.sql` | médio | ✅ código pronto (§22) · ⏳ aplicar a migration (manual) |
+| 10 | Fotos guardadas no aparelho antes de enviar + fotos do carro na esteira (laboratório) | **sim**: módulo `server/src/modules/v2-esteira-fotos` + migration `0056_v2_esteira_fotos.sql` | médio | ✅ código pronto (§24) · ⏳ aplicar a migration (manual) |
 
 Fases 4 e 5 (e qualquer mudança em regra de planejamento/apontamento) seguem o fluxo completo do `AGENTS.md`.
 
@@ -102,6 +103,7 @@ Decisões do dono do produto em 2026-10-17:
 - **Corrigir apontamento** — gestora corrige qualquer um (§19); colaborador corrige/remove o próprio, de hoje, com a atividade aberta (aprovado e feito, §22).
 
 Continuam abertas:
+- **Fotos no aparelho (laboratório, §24):** decidir se, depois do teste, as fotos passam a ir direto para o banco ou continuam com o passo "Enviar".
 - Quais matrizes existem além de "Gol GTI completo".
 - Como o usuário chega na V2 sem tocar na V1: link direto/atalho no celular (padrão) ou link no menu da V1.
 - **Token do tablet:** a V2 pede o `PRODUCTION_KIOSK_TOKEN` uma vez por aparelho. Alternativa: secret novo no build.
@@ -113,7 +115,7 @@ Continuam abertas:
 3. Continuar a próxima fase ⬜/🟨; ao terminar, atualizar §4/§6 e responder no formato da §7.
 
 **Para publicar (ações humanas pendentes, em ordem):**
-1. Aplicar as migrations `server/migrations/0054_v2_etapa_imagens.sql` e `0055_v2_correcoes_apontamento.sql` (o deploy da V1 não roda migrations).
+1. Aplicar as migrations `server/migrations/0054_v2_etapa_imagens.sql`, `0055_v2_correcoes_apontamento.sql` e `0056_v2_esteira_fotos.sql` (o deploy da V1 não roda migrations).
 2. Aplicar o bloco `deploy/nginx/sgp-v2.location.example` no servidor (HML primeiro).
 3. Levar `deploy-v2.yml` para a branch padrão (merge aprovado) e rodar em `homologacao`.
 4. Validar em celular e tablet reais e só então em `producao`.
@@ -232,7 +234,7 @@ Continuam abertas:
 
 - **Backend (único ponto em `server/`, aditivo):** migration `server/migrations/0054_v2_etapa_imagens.sql` (tabela nova `v2_etapa_imagens`: 1 foto por etapa TASK da matriz, WebP/JPEG/PNG, até 1 MB, no próprio banco → entra no backup) e módulo isolado `server/src/modules/v2-etapa-imagens` registrado em `server/src/app.ts` (1 linha). Nenhuma tabela/rota da V1 muda.
 - Rotas: `GET /api/v1/v2/etapa-imagens` (lista, logado), `GET /api/v1/v2/etapa-imagens/:etapaId` (imagem, logado, cache 1 dia com endereço que muda ao trocar), `PUT` e `DELETE` (só `operation_matrix.manage`). Tipo conferido pelo conteúdo do arquivo; acima de 1 MB → 413.
-- **V2:** tela **Fotos das etapas** (Início, para quem cuida da matriz): escolhe a etapa → tira/escolhe a foto → a foto é reduzida no próprio celular (até 1000 px, WebP) → Salvar; "Voltar à ilustração" remove. A foto aparece no cardápio da Nova esteira e na Alterar esteira (na esteira, achada pelo nome da etapa). Sem foto ou sem a tabela, fica a ilustração.
+- **V2:** tela **Fotos das etapas** (Início, para quem cuida da matriz): escolhe a etapa → **Tirar foto** (abre a câmera traseira) ou **Galeria** → a foto é reduzida no aparelho (até 1000 px, WebP) e **guardada só neste aparelho** (selo "Neste aparelho") → **Enviar para o banco** (uma ou "Enviar todas") ou **Descartar**; "Voltar à ilustração" remove a do banco. No cardápio vale: foto deste aparelho → foto do banco → ilustração (na esteira, achada pelo nome da etapa). Ver §24.
 - ⚠️ **Deploy:** o deploy da V1 não roda migrations (guardrail). Aplicar `0054` manualmente em HML/produção com aprovação humana. Antes disso a V2 funciona normalmente com as ilustrações.
 - Testes: servidor `src/tests/v2-etapa-imagens.test.ts` (regras + HTTP contra Postgres: grava, lê, 403 colaborador, 422 etapa errada/arquivo falso, 413, 401, remove); V2 `src/domain/fotosEtapas.test.ts`.
 
@@ -260,4 +262,16 @@ Continuam abertas:
 - Pacote: `cd apps/sgp-v2 && npm ci && npm run build:demo` → `apps/sgp-v2/dist-demo/` (arquivos com caminho relativo, endereços com `#`; abre em qualquer pasta).
 - **Não usa o backend:** toda chamada `/api/v1` é respondida no próprio navegador (`src/demo/api.ts`), com a matriz da planilha mestra e nomes fictícios. Cada visitante tem os próprios dados; recarregar recomeça. Nada vai para o banco.
 - Publicar: pasta própria `/var/www/sgp-v2-demo/` (nunca a da V1 nem `/var/www/sgp-v2`) + bloco `deploy/nginx/sgp-v2-demo.location.example` dentro do `server` existente (`nginx -t` antes do reload). Testado em nginx local: V1 intacta, `/V2-demo` → 301, `/V2-demo/` 200, assets 200, inexistente 404, `X-Robots-Tag: noindex`.
+- Dentro da página do Claude a câmera é bloqueada pelo visualizador (só "Galeria"); na VPS, no navegador do celular, "Tirar foto" abre a câmera.
 - A demo mostra a faixa "DEMONSTRAÇÃO · dados de exemplo". Não instalar como app no celular (o atalho instalado aponta para a V2 real, `/V2/`).
+
+## 24. Fase 10 — Fotos no aparelho antes de enviar + fotos do carro (laboratório)
+
+- **Pedido:** "tirar foto não está habilitado"; guardar a foto localmente e subir para o banco depois da confirmação; e foto do veículo na esteira.
+- **Câmera:** componente `src/ui/EscolherFoto.tsx` com dois botões: **Tirar foto** (`capture="environment"`, câmera traseira) e **Galeria**. A foto é reduzida no aparelho (`ui/redimensionar.ts`). Dentro da página do Claude a câmera é bloqueada pelo visualizador.
+- **Guardar no aparelho:** `src/ui/fotosLocais.ts` (IndexedDB `sgp-v2-fotos`; sem IndexedDB fica só na memória da tela). Uma pendente por etapa (`etapa:<id>`, a nova substitui) e várias por esteira (`esteira:<id>:<n>`). A foto pendente aparece só naquele aparelho, com o selo **"Neste aparelho"**, e sobrevive a recarregar a página.
+- **Enviar:** botão explícito ("Enviar para o banco", "Enviar todas", "Enviar as N fotos"); ao enviar, a cópia local é apagada. **Descartar** apaga só a local.
+- **Fotos do carro:** até 10 por esteira. Na **Nova esteira**, passo "Pra qual carro?" (opcional); ao criar, ficam no aparelho ligadas à esteira e a tela "Esteira criada!" já mostra **Enviar**. No **detalhe da esteira**, bloco **Fotos do carro**: ver (toque amplia), incluir, enviar e remover (`conveyors.create`; remover pede confirmação).
+- **Backend (aditivo):** migration `0056_v2_esteira_fotos.sql` (tabela nova `v2_esteira_fotos`, WebP/JPEG/PNG até 1 MB, cascata ao apagar a esteira) + módulo `server/src/modules/v2-esteira-fotos` (GET lista e imagem: logado; POST/DELETE: `conveyors.create`; limite 10; tipo pelo conteúdo). Reaproveita a validação e o leitor de corpo do módulo `v2-etapa-imagens`.
+- **Ressalvas do laboratório:** foto pendente fica só naquele navegador/aparelho; some se limparem os dados do navegador; Safari/iPhone pode apagar dados de site sem uso por ~7 dias. O banco continua sendo a fonte oficial.
+- **Testes:** servidor `src/tests/v2-esteira-fotos.test.ts` (inclui, lista, lê, 403 colaborador, 422 arquivo falso, 404 esteira, limite 10, remove); V2 `src/ui/fotosLocais.test.ts` (guardar por etapa/esteira, substituir, remover).

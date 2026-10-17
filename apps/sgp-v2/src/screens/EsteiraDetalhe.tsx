@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom'
 import { getConveyor } from '../api/conveyors'
 import { useSession } from '../auth/context'
 import { Apontamentos } from '../ui/Apontamentos'
+import { FotosDoCarro } from '../ui/FotosDoCarro'
 import { Liberar } from '../ui/Liberar'
 import { PRIORIDADES } from '../domain/dadosEsteira'
 import {
@@ -83,6 +84,7 @@ export function EsteiraDetalhe() {
         </span>
       </div>
       <DadosCard d={d} />
+      <FotosDoCarro conveyorId={d.id} />
       <Liberar id={d.id} status={d.operationalStatus} onFeito={(novo) => setD({ ...d, operationalStatus: novo })} />
       {podeAlterar && !CLOSED.includes(d.operationalStatus) ? (
         <Link to={`/esteiras/${d.id}/alterar`} className="btn-secondary flex items-center justify-center gap-2">
