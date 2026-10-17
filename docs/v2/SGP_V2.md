@@ -2,7 +2,7 @@
 
 > **Para que serve:** retomar o desenvolvimento da V2 em qualquer sessão/chat.
 > **Como usar:** ler isto + `git log` da branch antes de começar; atualizar **Status** e **Decisões** ao fim de cada passo.
-> **Branch de trabalho:** `ccr-683413c7-571rnk` · **Atualizado em:** 2026-10-17 (Fases 0, 1 e 2 implementadas)
+> **Branch de trabalho:** `ccr-683413c7-571rnk` · **Atualizado em:** 2026-10-17 (Fases 0 a 9 + 2b implementadas, visual com o design system do SGP+; pronta para apresentar à gestora) · **Demonstração:** https://claude.ai/artifact/RFAWgUFLAB541XT4839dhW
 
 ---
 
@@ -50,7 +50,7 @@ Legenda: ⬜ não iniciada · 🟨 em andamento · ✅ concluída
 | 2b | Fotos reais das etapas | **sim**: módulo isolado `server/src/modules/v2-etapa-imagens` + migration `0054_v2_etapa_imagens.sql` | médio | ✅ código pronto (§20) · ⏳ aplicar a migration (manual) |
 | 3 | Alterar esteira = telas da criação + cadeados; motivo obrigatório (inclui troca de responsável) | não (usa `PATCH /conveyors/:id/structure`; motivo vai como texto livre da V1) | médio | ✅ código pronto (§14) |
 | 4 | Planejar semana por esteira (início → dias pela folga de cada responsável) + lotação por dia + "Sugerir semana" | não (usa `/operational-planning/*` da V1; sugestão é cálculo no front) | alto | ✅ código pronto (§15) |
-| 5 | Tablet do colaborador (`/V2/tablet`): nome → PIN → próxima tarefa → cronômetro ou lançar horas → quanto ficou pronto | não (usa `/production/*` da V1; cronômetro fica no tablet) | alto | ✅ código pronto (§16) · QR do ticket pendente |
+| 5 | Tablet do colaborador (`/V2/tablet`): nome → PIN → próxima tarefa → cronômetro ou lançar horas → quanto ficou pronto | não (usa `/production/*` da V1; cronômetro fica no tablet) | alto | ✅ código pronto (§16) · QR do ticket descontinuado |
 | 6 | Acabamento para a demonstração: Pessoas hoje, Outra atividade no tablet, ajustar atividade no planejamento, Liberar esteira, versão de demonstração | não | médio | ✅ código pronto (§17) |
 | 7 | Dados básicos da esteira (incluir, alterar, consultar) iguais à V1 | não | baixo | ✅ código pronto (§18) |
 | 8 | Corrigir/remover apontamento pela gestora | não (V1 já tem, auditado) | médio | ✅ código pronto (§19) |
@@ -111,6 +111,12 @@ Continuam abertas:
 1. Ler `CLAUDE.md`, `AGENTS.md` e este arquivo.
 2. `git log --oneline -15` na branch acima; conferir §4 (status) e §8 (pendências).
 3. Continuar a próxima fase ⬜/🟨; ao terminar, atualizar §4/§6 e responder no formato da §7.
+
+**Para publicar (ações humanas pendentes, em ordem):**
+1. Aplicar as migrations `server/migrations/0054_v2_etapa_imagens.sql` e `0055_v2_correcoes_apontamento.sql` (o deploy da V1 não roda migrations).
+2. Aplicar o bloco `deploy/nginx/sgp-v2.location.example` no servidor (HML primeiro).
+3. Levar `deploy-v2.yml` para a branch padrão (merge aprovado) e rodar em `homologacao`.
+4. Validar em celular e tablet reais e só então em `producao`.
 
 ## 10. Fase 0 — especificação (contexto + impacto)
 
@@ -198,7 +204,7 @@ Continuam abertas:
 - **Justificativa (regra da V1):** fora de sequência é pedida antes de começar; tempo acima do previsto é pedida ao registrar. Usa o catálogo de justificativas da V1 (com complemento quando exigido).
 - "Terminei a tarefa" só aparece se a V1 deixa concluir (`canCompleteStep`) → `markAsDone`.
 - **Teste:** `src/domain/tablet.test.ts` — corpo validado com `productionTimeEntryBodySchema` real; regra de justificativa; cronômetro com pausa; ordem da próxima tarefa.
-- **Fora (pendências §8):** QR do ticket; corrigir apontamento; "Outra atividade" (apontar em atividade não planejada — `unassigned-exception` da V1).
+- **Depois:** "Outra atividade" (feito na Fase 6, §17); colaborador corrige o próprio lançamento (Fase 9, §22); relógio do cronômetro mostra segundos (h:mm:ss) para não parecer parado no primeiro minuto. QR do ticket descontinuado (§8).
 
 ## 17. Fase 6 — acabamento para a demonstração
 

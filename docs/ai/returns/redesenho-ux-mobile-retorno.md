@@ -558,3 +558,10 @@ Fases 4 e 5 exigem o fluxo completo de `AGENTS.md` (contexto → impacto → spe
 - **Correção (mínima):** só a exibição na tela do cronômetro (`apps/sgp-v2/src/screens/tablet/Tablet.tsx`, componente `Rodando`) passou a mostrar os segundos ("0:00:02"). Nenhuma regra, função ou outra tela alterada (`git diff`: 1 arquivo, 2 linhas + 1).
 - **Validação:** build e build:demo ok; eslint ok; headless com relógio real: COMEÇAR → "0:00:00" → 3 s depois "0:00:02". Demonstração republicada (versão 5).
 - **Uso/tokens disponíveis:** INDISPONÍVEL — a sessão não fornece métrica confiável.
+
+## 38. Conferência do documento vivo no GitHub (2026-10-17)
+
+- **Pedido:** confirmar se o documento vivo está atualizado no GitHub antes da apresentação à gestora.
+- **Conferência:** `origin/ccr-683413c7-571rnk` = HEAD local (`409a3dc3`), sem diferença em `docs/v2/SGP_V2.md`. Revisão de conteúdo achou trechos antigos: cabeçalho ("Fases 0, 1 e 2"), Fase 5 com "QR pendente", §16 listando como fora itens já feitos, falta da correção do cronômetro e do roteiro de publicação.
+- **Ajuste (só documentação):** cabeçalho com estado atual e link da demonstração; QR como descontinuado; §16 atualizado; §9 com as ações humanas pendentes em ordem (migrations 0054/0055 → nginx HML → `deploy-v2.yml` na branch padrão → validação → produção).
+- **Uso/tokens disponíveis:** INDISPONÍVEL — a sessão não fornece métrica confiável.
