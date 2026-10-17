@@ -314,3 +314,17 @@ Fases 4 e 5 exigem o fluxo completo de `AGENTS.md` (contexto → impacto → spe
   - Ao confirmar: grava **Histórico de alterações** na esteira (quando, quem, motivo, detalhe, itens alterados); lista mostra "alterada Nx"; progresso/horas recalculados.
 - **Proposta para o sistema real:** trocar o texto livre por catálogo de motivos (padrão já usado em justificativas de apontamento e motivos de aborto — migrations 0048/0051), mantendo complemento livre; permissão de alterar esteira/responsável restrita ao papel gestora via RBAC existente.
 - **Validação:** fluxos executados em Node (sem mudança não salva; tirar etapa; tirar atividade; troca por setor; "Outro motivo" exige texto; histórico; incluir etapa) sem erro; não renderizado visualmente.
+
+---
+
+## 21. Alterar esteira = mesmas telas da criação, com cadeados + correção de renderização (2026-10-17)
+
+- **Bug corrigido:** cartões de etapa apareciam como linhas vazias. Causa: filhos com `overflow: hidden` dentro de coluna flex com rolagem eram comprimidos (`flex-shrink`). Correção: classe `scroll` (`.scroll>*{flex-shrink:0}`) em todas as áreas com rolagem dos 5 artboards. **Reproduzido e confirmado em navegador headless** (Chromium + runtime do Artifact servido localmente), com capturas antes/depois.
+- **Decisões do usuário:** só a gestora troca responsável; **troca de responsável também exige justificativa** (entra no mesmo fluxo de alteração).
+- **Novo fluxo (Esteiras → Ver esteira → Alterar esteira):**
+  - **Grade de etapas com figuras** igual à da criação: "Nesta esteira" (Em andamento X/Y · Não começou · Feita com cadeado) e "+ Incluir outra etapa" (figuras cinza; um toque inclui). Tocar numa etapa que não começou tira; numa que já começou abre Personalizar.
+  - **Personalizar etapa**: setores e atividades já visíveis; feito/em andamento/parado com **cadeado** e "Feito por X · não muda"; pendentes com marcar/desmarcar e **Trocar responsável** (atividade ou setor inteiro).
+  - **"Só o que falta"** ligado por padrão: esconde etapas/atividades feitas (ex.: Gol GTI completo esconde 14 etapas).
+  - Barra "N mudanças · Descartar tudo · Salvar alteração" (Pronto na etapa); não sai com mudança pendente; motivo obrigatório (6 motivos padronizados + detalhe; "Outro motivo" exige texto) → histórico.
+- **Validação:** lógica em Node (troca de responsável → salvar exige motivo → histórico; bloqueio de saída; incluir/tirar etapa) e **capturas reais** das telas Esteiras (detalhe, grade, personalizar, motivo), Início, Nova esteira e Hoje — sem erro de execução (só avisos de parse do template e imagens `/_blob` indisponíveis localmente).
+- **Repositório:** só este retorno; nenhum código-fonte.
