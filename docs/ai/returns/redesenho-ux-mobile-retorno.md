@@ -218,3 +218,14 @@ Fases 4 e 5 exigem o fluxo completo de `AGENTS.md` (contexto → impacto → spe
 - Início do gestor ganhou o cartão **"Tablet do setor"** que abre o protótipo de apontamento; a tela do tablet ganhou o link "Voltar ao app do gestor (protótipo)".
 - **Ressalva aberta:** na captura enviada pelo usuário, a miniatura do artboard "Início + Nova esteira" aparece em branco no canvas. Lógica (`renderVals`) testada isoladamente em Node sem erro e tags balanceadas; causa não confirmada — pendente o usuário confirmar se a tela abre no Play.
 - Repositório: só este retorno; sem código-fonte.
+
+---
+
+## 14. Continuação — protótipo com imagens do fluxo real de revestimento (2026-10-17)
+
+- **Insumo recebido:** `Fluxo_do_Processo_de_Operação.docx` (cartaz "Fluxo do processo de revestimento automotivo", 20 etapas ilustradas com setores: Desmontagem, Preparação, Corte, Aplicação de cola, Colagem, Modelagem, Pré-montagem, Montagem, Costura, Espuma, Serralheria, Pintura, Finalização, Limpeza, Qualidade).
+- **Feito:** recortadas as 20 ilustrações do cartaz e enviadas como imagens do Artifact (não foram ao repositório).
+- **Nova esteira:** "cardápio" agora usa as 20 etapas reais com figura, número, setores e horas de exemplo; serviços prontos (Revestimento completo, Bancos, Teto, Forros de portas, Porta-malas + tampão, Volante) pré-marcam as etapas; toque na figura inclui/tira; quantidade em Forros de portas (4) e Bancos dianteiros (2); resumo e tela final mostram as miniaturas.
+- **Hoje / Planejar / Apontamento:** cartões com a figura da etapa/peça; tarefas do tablet renomeadas para setores do cartaz (Costura, Corte, Pré-montagem).
+- **Ressalvas:** horas por etapa e composição dos serviços são exemplos, não vieram do cartaz nem do banco; a imagem original foi gerada por IA (nome do arquivo indica ChatGPT) — para produção, usar fotos reais ou ilustrações com direito de uso.
+- **Repositório:** só este retorno; nenhum código-fonte; sem build/testes. Lógica dos 4 artboards executada em Node sem erro; não renderizado visualmente.
