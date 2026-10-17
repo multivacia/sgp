@@ -47,7 +47,7 @@ Legenda: ⬜ não iniciada · 🟨 em andamento · ✅ concluída
 | 0 | Fundação: app vazio em `/V2`, PWA, login compartilhado, tokens de UI, build/deploy separados, guarda de CI "V2 não altera `src/`" | não | baixo | ✅ código pronto · ⏳ falta aplicar nginx + 1º deploy (manual) |
 | 1 | Hoje + Esteiras (só leitura): exceções do dia; ver esteira (etapas → setores → atividades → responsável) | não (usa `/api/v1/conveyors` e `/conveyors/:id`) | baixo | ✅ código pronto (§12) |
 | 2 | Nova esteira (cardápio): matriz → etapas com figura → personalizar (setor/atividade/responsável) → carro → prazo | não (usa `/api/v1`); fotos reais das etapas ficam para 2b | médio | ✅ código pronto (§13) |
-| 3 | Alterar esteira = telas da criação + cadeados; motivo obrigatório (inclui troca de responsável) em catálogo + histórico | catálogo de motivos | médio | ⬜ |
+| 3 | Alterar esteira = telas da criação + cadeados; motivo obrigatório (inclui troca de responsável) | não (usa `PATCH /conveyors/:id/structure`; motivo vai como texto livre da V1) | médio | ✅ código pronto (§14) |
 | 4 | Planejar semana por etapa (lotação por dia); "Sugerir semana" depois | motor de sugestão (depois) | alto | ⬜ |
 | 5 | Tablet do colaborador: lançar horas + QR do ticket; cronômetro depois | sessão de trabalho (cronômetro) | alto | ⬜ |
 
@@ -153,3 +153,13 @@ Commit: <sha> · branch <nome>
 - **Ainda na V1 (não feito na V2):** montar esteira sem matriz; juntar complementos de outras matrizes (HYBRID); busca de carro pela placa (não há endpoint); prioridade (fica "média").
 - ⚠️ **Figuras das etapas são provisórias:** ilustrações do cartaz (geradas por IA), escolhidas pelo nome da etapa. Fotos reais por etapa exigem guardar imagem no backend → **Fase 2b** (equivalente V2 + migration aditiva), quando decidido.
 - "Do setor" no seletor de responsável usa o setor do cadastro do colaborador (`sector_name`) igual ao nome do setor da matriz.
+
+## 14. Fase 3 — Alterar esteira
+
+- Rota `/V2/esteiras/:id/alterar` (tela cheia), aberta pelo botão **Alterar esteira** no detalhe (só com `conveyors.create` e esteira não finalizada/cancelada).
+- Mesmas peças visuais da criação (`src/ui/wizard.tsx`): **Confira as etapas** (etapas da esteira + etapas da matriz que ainda não estão) → **Personalizar etapa** → **Por que está alterando?** (resumo "O que muda" + motivo obrigatório).
+- **Cadeado:** atividade feita ou em andamento não sai e não troca responsável (`isLocked`). "Tirar setor/etapa" só tira o que está livre.
+- API da V1, sem endpoint novo: `PATCH /conveyors/:id/structure` com a árvore desejada (nó com id = mantém; sem id = novo; ausente = sai). Como a V1 **substitui** os responsáveis de cada atividade, a V2 reenvia os atuais e troca só o principal (equipe de apoio fica).
+- **Motivo:** 6 botões + detalhe opcional, enviados como texto "Motivo: detalhe" (campo `reason` da V1, 3–500 caracteres). "Outro motivo" exige o texto. Catálogo de motivos no backend fica para quando a lista real for decidida (§8).
+- `sourceOrigin` = `manual` se a esteira foi criada manual, senão `base`. Ressalva (igual à V1): atividades existentes perdem o `sourceKey` ao alterar.
+- **Teste de contrato:** `src/domain/alterarEsteira.test.ts` valida o corpo com `patchConveyorStructureBodySchema` real da V1 + cadeados + troca de responsável + etapa incluída/tirada + motivo.

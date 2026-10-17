@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { getConveyor } from '../api/conveyors'
+import { useSession } from '../auth/context'
 import {
+  CLOSED,
   STATUS_LABEL,
   STEP_LABEL,
   deadlineText,
@@ -22,6 +24,8 @@ function fmtMin(m: number): string {
 
 export function EsteiraDetalhe() {
   const { id = '' } = useParams()
+  const { state } = useSession()
+  const podeAlterar = state.status === 'authenticated' && state.user.permissions.includes('conveyors.create')
   const [d, setD] = useState<ConveyorDetail | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [aberta, setAberta] = useState<string | null>(null)
@@ -71,6 +75,15 @@ export function EsteiraDetalhe() {
           {d.structure.options.length} etapas · {p.totalSteps} atividades · {p.pct}% feito · faltam ~{fmtMin(p.totalMinutes - p.doneMinutes)} · prazo {deadlineText(d.estimatedDeadline)}
         </span>
       </div>
+      {podeAlterar && !CLOSED.includes(d.operationalStatus) ? (
+        <Link to={`/esteiras/${d.id}/alterar`} className="btn-secondary flex items-center justify-center gap-2">
+          <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M4 20h4L19 9l-4-4L4 16z" />
+            <path d="M13 7l4 4" />
+          </svg>
+          Alterar esteira
+        </Link>
+      ) : null}
       <p className="text-muted">Toque numa etapa para ver setores, atividades e responsáveis.</p>
       {d.structure.options.map((o, i) => {
         const steps = o.areas.flatMap((a) => a.steps)

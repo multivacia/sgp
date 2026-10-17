@@ -26,7 +26,9 @@ import {
   type Draft,
   type MatrixNode,
 } from '../../domain/novaEsteira'
+import { fmtMin } from '../../domain/format'
 import { ResponsavelPicker } from '../../ui/ResponsavelPicker'
+import { AtividadeRow, BottomBar, EtapaCard, SetorBox, WizardHeader } from '../../ui/wizard'
 
 type Passo = 'matriz' | 'etapas' | 'etapa' | 'carro' | 'quando' | 'pronto'
 
@@ -40,13 +42,6 @@ const PERGUNTA: Record<Passo, string> = {
   pronto: 'Esteira criada!',
 }
 const VOLTA: Partial<Record<Passo, Passo>> = { etapas: 'matriz', etapa: 'etapas', carro: 'etapas', quando: 'carro' }
-
-function fmtMin(m: number): string {
-  if (m < 60) return `${m} min`
-  const h = Math.floor(m / 60)
-  const r = m % 60
-  return `${h} h${r ? ` ${r} min` : ''}`
-}
 
 type Picker = { titulo: string; setor: string; atividades: MatrixNode[] }
 
@@ -128,29 +123,7 @@ export function NovaEsteira() {
   return (
     <div className="flex min-h-dvh flex-col bg-ground">
       {passo !== 'pronto' ? (
-        <header className="sticky top-0 z-10 flex flex-col gap-3 border-b border-line bg-white px-4 pb-3 pt-4">
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              aria-label="Voltar"
-              onClick={() => (VOLTA[passo] ? setPasso(VOLTA[passo]!) : navigate('/'))}
-              className="flex size-12 shrink-0 items-center justify-center rounded-2xl border border-line bg-white"
-            >
-              <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M15 18l-6-6 6-6" />
-              </svg>
-            </button>
-            <div>
-              <p className="font-bold text-muted">Nova esteira · passo {NUM[passo]} de 4</p>
-              <h1 className="font-display text-2xl font-extrabold leading-tight">{PERGUNTA[passo]}</h1>
-            </div>
-          </div>
-          <div className="flex gap-1.5">
-            {[1, 2, 3, 4].map((n) => (
-              <div key={n} className={`h-2 flex-1 rounded-full ${n <= NUM[passo] ? 'bg-ink' : 'bg-line'}`} />
-            ))}
-          </div>
-        </header>
+        <WizardHeader sobre={`Nova esteira · passo ${NUM[passo]} de 4`} pergunta={PERGUNTA[passo]} passo={NUM[passo]} total={4} onBack={() => (VOLTA[passo] ? setPasso(VOLTA[passo]!) : navigate('/'))} />
       ) : null}
 
       <main className="flex flex-1 flex-col gap-3 px-4 pb-40 pt-4">
@@ -188,33 +161,23 @@ export function NovaEsteira() {
                 const ligadas = ativs.filter((a) => !draft.off.has(a.id))
                 const on = ligadas.length > 0
                 const mudancas = ativs.length - ligadas.length + ativs.filter((a) => draft.resp[a.id]).length
-                const fig = figuraDaEtapa(t.name)
                 return (
-                  <div key={t.id} className={`rounded-2xl p-2 ${on ? 'border-[3px] border-ink bg-white' : 'border-[3px] border-transparent bg-line/60'}`}>
-                    <button type="button" aria-pressed={on} aria-label={`${on ? 'Tirar' : 'Incluir'} ${displayName(t.name)}`} onClick={() => setDraft(toggleGroup(draft, ativs))} className="flex w-full flex-col gap-1.5 text-left">
-                      <span className="relative block">
-                        {fig ? (
-                          <img src={fig} alt="" className={`h-28 w-full rounded-xl bg-white object-contain ${on ? '' : 'opacity-40 grayscale'}`} />
-                        ) : (
-                          <span className="block h-28 w-full rounded-xl bg-ground" />
-                        )}
-                        <span className="absolute left-1.5 top-1.5 flex size-7 items-center justify-center rounded-full bg-ink text-sm font-bold text-white">{i + 1}</span>
-                        <span className={`absolute right-1.5 top-1.5 rounded-full px-2.5 py-0.5 text-sm font-bold ${on ? 'bg-ok text-white' : 'border border-line bg-white text-muted'}`}>{on ? 'Incluída' : 'Fora'}</span>
-                      </span>
-                      <span className={`font-bold leading-tight ${on ? '' : 'text-muted'}`}>{displayName(t.name)}</span>
-                      <span className="text-sm text-muted">
-                        {sectorsOf(t).length} setor{sectorsOf(t).length === 1 ? '' : 'es'} · {ligadas.length} ativ. · ~{fmtMin(ligadas.reduce((s, a) => s + minutesOf(a), 0))}
-                      </span>
-                    </button>
-                    {on ? (
-                      <>
-                        {mudancas > 0 ? <span className="mt-1.5 block rounded-lg bg-late-soft px-2 py-1 text-sm font-bold text-late-ink">{mudancas} {mudancas === 1 ? 'mudança' : 'mudanças'}</span> : null}
-                        <button type="button" onClick={() => { setEtapaId(t.id); setPasso('etapa') }} className="mt-2 min-h-11 w-full rounded-xl border-2 border-ink bg-white font-bold">
-                          Personalizar
-                        </button>
-                      </>
-                    ) : null}
-                  </div>
+                  <EtapaCard
+                    key={t.id}
+                    numero={i + 1}
+                    nome={displayName(t.name)}
+                    figura={figuraDaEtapa(t.name)}
+                    on={on}
+                    tag={on ? 'Incluída' : 'Fora'}
+                    info={`${sectorsOf(t).length} setor${sectorsOf(t).length === 1 ? '' : 'es'} · ${ligadas.length} ativ. · ~${fmtMin(ligadas.reduce((x, a) => x + minutesOf(a), 0))}`}
+                    mudancas={mudancas}
+                    toggleLabel={`${on ? 'Tirar' : 'Incluir'} ${displayName(t.name)}`}
+                    onToggle={() => setDraft(toggleGroup(draft, ativs))}
+                    onPersonalizar={() => {
+                      setEtapaId(t.id)
+                      setPasso('etapa')
+                    }}
+                  />
                 )
               })}
             </div>
@@ -237,59 +200,33 @@ export function NovaEsteira() {
               const ativs = activitiesOf(s)
               const ligadas = ativs.filter((a) => !draft.off.has(a.id))
               return (
-                <div key={s.id} className={`flex flex-col gap-2 rounded-2xl p-3 ${ligadas.length ? 'border border-line bg-white' : 'border border-dashed border-muted bg-line/60'}`}>
-                  <div className="flex items-center justify-between gap-2">
-                    <div>
-                      <span className="block text-sm font-bold tracking-wide text-muted">SETOR</span>
-                      <span className="block font-display text-xl font-extrabold">{displayName(s.name)}</span>
-                      <span className="block text-muted">
-                        {ligadas.length} de {ativs.length} · {fmtMin(ligadas.reduce((x, a) => x + minutesOf(a), 0))}
-                      </span>
-                    </div>
-                    <button type="button" onClick={() => setDraft(toggleGroup(draft, ativs))} className={`min-h-11 shrink-0 rounded-xl px-3 font-bold ${ligadas.length ? 'border-2 border-line bg-white' : 'bg-ink text-white'}`}>
-                      {ligadas.length ? 'Tirar setor' : 'Incluir setor'}
-                    </button>
-                  </div>
-                  {ligadas.length > 1 ? (
-                    <button type="button" onClick={() => setPicker({ titulo: `Setor ${displayName(s.name)} · ${ligadas.length} atividades`, setor: displayName(s.name), atividades: ligadas })} className="min-h-11 rounded-xl border-2 border-ink bg-white font-bold">
-                      Trocar responsável de todo o setor
-                    </button>
-                  ) : null}
+                <SetorBox
+                  key={s.id}
+                  nome={displayName(s.name)}
+                  info={`${ligadas.length} de ${ativs.length} · ${fmtMin(ligadas.reduce((x, a) => x + minutesOf(a), 0))}`}
+                  ativo={ligadas.length > 0}
+                  toggle={{ label: ligadas.length ? 'Tirar setor' : 'Incluir setor', onClick: () => setDraft(toggleGroup(draft, ativs)) }}
+                  trocarTodos={ligadas.length > 1 ? () => setPicker({ titulo: `Setor ${displayName(s.name)} · ${ligadas.length} atividades`, setor: displayName(s.name), atividades: ligadas }) : undefined}
+                >
                   {ativs.map((a) => {
-                    const on = !draft.off.has(a.id)
                     const resp = responsavelDe(draft, a)
                     const trocado = !!draft.resp[a.id]
                     return (
-                      <div key={a.id} className="flex flex-col gap-1.5">
-                        <button type="button" aria-pressed={on} onClick={() => setDraft(toggleActivity(draft, a))} className={`flex min-h-14 items-center gap-3 rounded-2xl px-2.5 py-2 text-left ${on ? 'border-2 border-ink bg-white' : 'border-2 border-line bg-ground'}`}>
-                          <span aria-hidden="true" className={`flex size-8 shrink-0 items-center justify-center rounded-lg ${on ? 'bg-ok text-white' : 'border-2 border-muted bg-white'}`}>
-                            {on ? (
-                              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round">
-                                <path d="M5 12l5 5 9-10" />
-                              </svg>
-                            ) : null}
-                          </span>
-                          <span className="min-w-0">
-                            <span className={`block font-bold leading-snug ${on ? '' : 'text-muted line-through'}`}>{a.name}</span>
-                            <span className="block text-sm text-muted">{minutesOf(a) ? fmtMin(minutesOf(a)) : 'sem tempo previsto'}</span>
-                          </span>
-                        </button>
-                        {on ? (
-                          <button
-                            type="button"
-                            onClick={() => setPicker({ titulo: a.name, setor: displayName(s.name), atividades: [a] })}
-                            className={`ml-11 flex min-h-11 items-center gap-2 rounded-xl px-3 text-left font-bold ${trocado ? 'border-2 border-late bg-late-soft text-late-ink' : 'border border-line bg-ground'}`}
-                          >
-                            <span className="flex-1">
-                              {resp ? nomeCurto(colabPorId.get(resp)) : 'Sem responsável'} {trocado ? `(trocado · matriz: ${nomeCurto(colabPorId.get(a.default_responsible_id ?? ''))})` : resp ? '(da matriz)' : ''}
-                            </span>
-                            <span className="text-sm underline">Trocar</span>
-                          </button>
-                        ) : null}
-                      </div>
+                      <AtividadeRow
+                        key={a.id}
+                        nome={a.name}
+                        min={minutesOf(a)}
+                        on={!draft.off.has(a.id)}
+                        onToggle={() => setDraft(toggleActivity(draft, a))}
+                        resp={{
+                          texto: `${resp ? nomeCurto(colabPorId.get(resp)) : 'Sem responsável'} ${trocado ? `(trocado · matriz: ${nomeCurto(colabPorId.get(a.default_responsible_id ?? ''))})` : resp ? '(da matriz)' : ''}`.trim(),
+                          trocado,
+                          onTrocar: () => setPicker({ titulo: a.name, setor: displayName(s.name), atividades: [a] }),
+                        }}
+                      />
                     )
                   })}
-                </div>
+                </SetorBox>
               )
             })}
           </>
@@ -406,22 +343,14 @@ export function NovaEsteira() {
       </main>
 
       {['etapas', 'etapa', 'carro', 'quando'].includes(passo) ? (
-        <div className="fixed inset-x-0 bottom-0 z-10 flex items-center gap-3 border-t border-line bg-white px-4 pb-[max(env(safe-area-inset-bottom),16px)] pt-3">
-          <div className="min-w-0 flex-1">
-            <p className="font-display text-xl font-extrabold">{tot.etapas} etapas</p>
-            <p className="text-muted">
-              {tot.atividades} atividades · ~{fmtMin(tot.minutos)}
-            </p>
-          </div>
-          <button
-            type="button"
-            disabled={!podeSeguir}
-            onClick={seguir}
-            className={`min-h-15 rounded-2xl px-6 text-lg font-bold ${podeSeguir ? (passo === 'quando' ? 'bg-ok text-white' : 'bg-ink text-white') : 'bg-line text-muted'}`}
-          >
-            {passo === 'quando' ? (salvando ? 'Criando…' : 'Criar esteira') : passo === 'etapa' ? 'Pronto' : 'Continuar'}
-          </button>
-        </div>
+        <BottomBar
+          titulo={`${tot.etapas} etapas`}
+          sub={`${tot.atividades} atividades · ~${fmtMin(tot.minutos)}`}
+          label={passo === 'quando' ? (salvando ? 'Criando…' : 'Criar esteira') : passo === 'etapa' ? 'Pronto' : 'Continuar'}
+          enabled={podeSeguir}
+          verde={passo === 'quando'}
+          onClick={seguir}
+        />
       ) : null}
 
       {picker ? (

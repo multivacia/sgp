@@ -34,7 +34,15 @@ export type ConveyorStep = {
   plannedQuantity?: number
   operationalStatus: StepStatus
   completedByName: string | null
-  assignees: { collaboratorName: string | null; teamName: string | null; isPrimary: boolean }[]
+  assignees: {
+    type: 'COLLABORATOR' | 'TEAM'
+    collaboratorId: string | null
+    collaboratorName: string | null
+    teamId: string | null
+    teamName: string | null
+    isPrimary: boolean
+    orderIndex: number | null
+  }[]
 }
 
 export type ConveyorDetail = ConveyorListItem & {
@@ -42,6 +50,8 @@ export type ConveyorDetail = ConveyorListItem & {
   modelVersion: string | null
   plate: string | null
   baseNameSnapshot: string | null
+  originRegister: 'MANUAL' | 'BASE' | 'HYBRID'
+  matrixRootItemId: string | null
   structure: {
     options: { id: string; name: string; orderIndex: number; areas: { id: string; name: string; orderIndex: number; steps: ConveyorStep[] }[] }[]
   }

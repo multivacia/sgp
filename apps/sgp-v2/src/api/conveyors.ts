@@ -39,3 +39,9 @@ export async function getConveyors(ids: string[], onEach: (d: ConveyorDetail) =>
 export function createConveyor(body: unknown): Promise<{ id: string; name: string }> {
   return api<{ id: string; name: string }>('/conveyors', { method: 'POST', body: JSON.stringify(body) })
 }
+
+/** Altera a estrutura pela API da V1 (PATCH /api/v1/conveyors/:id/structure, motivo obrigatório fora do backlog). */
+export async function patchConveyorStructure(id: string, body: unknown): Promise<void> {
+  await api<unknown>(`/conveyors/${id}/structure`, { method: 'PATCH', body: JSON.stringify(body) })
+  detailCache.delete(id)
+}

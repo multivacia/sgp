@@ -6,6 +6,7 @@ import { Eu } from './screens/Eu'
 import { Hoje } from './screens/Hoje'
 import { Inicio } from './screens/Inicio'
 import { NovaEsteira } from './screens/nova/NovaEsteira'
+import { AlterarEsteira } from './screens/alterar/AlterarEsteira'
 import { Login } from './screens/Login'
 import { Placeholder } from './screens/Placeholder'
 import { Shell } from './shell/Shell'
@@ -25,6 +26,7 @@ export function App() {
       ) : (
         <>
           <Route path="nova" element={<NovaEsteira />} />
+          <Route path="esteiras/:id/alterar" element={<AlterarEsteira />} />
           <Route element={<Shell />}>
             <Route index element={<Inicio />} />
             <Route path="esteiras" element={<Esteiras />} />

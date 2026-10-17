@@ -436,3 +436,20 @@ Fases 4 e 5 exigem o fluxo completo de `AGENTS.md` (contexto → impacto → spe
 - **Riscos/pendências:** figuras provisórias por nome (Fase 2b para fotos reais); criação sem matriz, complementos (HYBRID) e busca por placa continuam só na V1; grupo "Do setor" depende de `sector_name` do colaborador bater com o nome do setor.
 - **Próximo passo:** publicar Fases 0–2 em HML e validar com a gestora (medir tempo de criação vs. V1); depois Fase 3 (Alterar esteira).
 - **Uso/tokens disponíveis:** INDISPONÍVEL — a sessão não fornece métrica confiável.
+
+## 29. Fase 3 do SGP+ V2 — Alterar esteira (2026-10-17)
+
+- **Status:** concluída no código (publicação depende do nginx/deploy manual da Fase 0).
+- **Contexto verificado:** `PATCH /api/v1/conveyors/:id/structure` (`conveyors.create`, `patchConveyorStructureBodySchema`; `reason` obrigatório fora de EM_ELABORACAO, 3–500); semântica de árvore desejada (id = mantém/atualiza, sem id = insere, ausente = remove/inativa); responsáveis substituídos por atividade; fluxo de edição da V1 envia `sourceOrigin: manual` (lido, não alterado).
+- **Arquivos criados:** `apps/sgp-v2/src/domain/alterarEsteira.ts`, `src/domain/alterarEsteira.test.ts`, `src/domain/format.ts`, `src/ui/wizard.tsx`, `src/screens/alterar/AlterarEsteira.tsx`.
+- **Arquivos alterados (só V2):** `src/App.tsx` (rota `esteiras/:id/alterar`), `src/api/conveyors.ts` (`patchConveyorStructure` + invalida cache), `src/domain/conveyors.ts` (+`originRegister`, `matrixRootItemId`, campos completos dos responsáveis), `src/domain/conveyors.test.ts` (fixture), `src/screens/EsteiraDetalhe.tsx` (botão Alterar), `src/screens/nova/NovaEsteira.tsx` (passa a usar `ui/wizard.tsx` — telas iguais), `docs/v2/SGP_V2.md` (§4, §14).
+- **Backend/migrations:** nenhum.
+- **Decisões:** motivo como texto livre "Motivo: detalhe" (sem catálogo no backend por ora); reenvio dos responsáveis atuais trocando só o principal; etapas da matriz casadas por nome normalizado; etapa nova entra no fim sem id e com `sourceKey`; setores/etapas vazios saem e a ordem é renumerada.
+- **Validação:**
+  - `npm test` (V2) → 4 arquivos, **13/13** (4 novos: contrato PATCH com validador real e preservação de ids/responsáveis; cadeados; troca de responsável/etapa tirada/etapa incluída; motivo).
+  - `npm run build` ok; `npx eslint apps/sgp-v2` sem problemas.
+  - Headless com API simulada (matriz real): alteração de esteira em andamento → PATCH com motivo "Retrabalho: costura do encosto saiu torta", 8 etapas (Volante nova sem id), Bancos dianteiros com 13 atividades com id, Pré-montagem para João, atividade em andamento manteve Marta; volta ao detalhe. Fluxo da Fase 2 reexecutado após refatoração → ok.
+  - V1: `git diff HEAD -- src server` vazio.
+- **Riscos/pendências:** lista real de motivos; `sourceKey` das atividades existentes se perde ao alterar (comportamento da V1).
+- **Próximo passo:** Fase 4 (Planejar semana).
+- **Uso/tokens disponíveis:** INDISPONÍVEL — a sessão não fornece métrica confiável.

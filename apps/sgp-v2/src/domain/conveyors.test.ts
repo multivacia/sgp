@@ -18,6 +18,8 @@ function detail(base: ConveyorListItem, steps: ConveyorStep[]): ConveyorDetail {
     modelVersion: null,
     plate: null,
     baseNameSnapshot: null,
+    originRegister: 'BASE',
+    matrixRootItemId: null,
     structure: { options: [{ id: 'o1', name: 'Bancos dianteiros', orderIndex: 0, areas: [{ id: 'a1', name: 'Costura', orderIndex: 0, steps }] }] },
   }
 }
