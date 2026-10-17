@@ -275,3 +275,14 @@ Fases 4 e 5 exigem o fluxo completo de `AGENTS.md` (contexto → impacto → spe
 - **Removido:** quantidade (±) de Forros de portas e Bancos dianteiros — os minutos da planilha já são do veículo inteiro.
 - **Pendente (decisão de negócio):** quais etapas/setores/atividades são obrigatórios (cadeado). Telas Hoje/Planejar/Apontamento ainda usam horas de exemplo.
 - **Validação:** lógica executada em Node (fluxo serviço → personalizar → tirar setor/atividade → resumo → etapa zerada) sem erro; tags balanceadas; não renderizado visualmente.
+
+---
+
+## 18. Nível Matriz + horas reais em todas as telas (2026-10-17)
+
+- **Nova esteira:** passo 1 virou **"Qual matriz?"** — a matriz é o combo principal (Matriz › Etapa › Setor › Atividade). Filtro por veículo (Todos · Gol GTI · Gol GT); cartões "MATRIZ · Gol GTI" com etapas, atividades e horas reais. Só **Gol GTI completo** vem da planilha; Gol GT completo, Gol GT somente bancos, Gol GTI somente teto, forros de portas, porta-malas + tampão e volante são **recortes de exemplo** dela (sinalizado no cartão). "Sem matriz: montar do zero" mantido.
+- **Hoje:** esteiras ligadas a matrizes; progresso, % e horas restantes calculados pela matriz real; "Ver esteira" mostra **todas as etapas → setores → atividades** com estado (feito / em andamento / parado / não começou) e minutos; "Andando bem" também abre a árvore.
+- **Planejar:** planejamento passou a ser **por etapa** (uma esteira completa tem 76,6 h e não cabe num dia): cada esteira tem dia de início; as etapas seguem a ordem da matriz e ocupam a folga dos dias seguintes, dividindo etapas quando preciso; mostra "Seg → Sex", dentro/fora do prazo e o que não cabe na semana; o dia mostra as etapas encaixadas. Capacidade de 80 h/dia e carga de outras esteiras são **exemplo**.
+- **Apontamento (tablet Costura):** tarefas = todas as atividades de Costura das esteiras em andamento, com tempos da matriz (240, 90 e 60 min).
+- **Validação:** lógica dos artboards executada em Node sem erro (inclui simulação do planejamento e árvore de andamento); tags balanceadas; não renderizado visualmente.
+- **Repositório:** só este retorno; nenhum código-fonte.
