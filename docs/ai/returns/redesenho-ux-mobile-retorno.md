@@ -610,3 +610,10 @@ Fases 4 e 5 exigem o fluxo completo de `AGENTS.md` (contexto → impacto → spe
 - **Validação:** com uma imagem de teste temporária (removida depois, não versionada): botão "(1)" → escolher → foto do carro "Neste aparelho"; sem erros. `build` e `build:demo` ok; eslint ok. Demonstração online não republicada (sem fotos, nada muda na tela).
 - **Para concluir:** enviar as fotos no chat, ou liberar na rede do ambiente o domínio de onde baixar (o da Bravo está fora do ar).
 - **Uso/tokens disponíveis:** INDISPONÍVEL — a sessão não fornece métrica confiável.
+
+## 44. Nova tentativa: https://loja.bravotapecaria.com.br/home (2026-10-17)
+
+- **Leitor web:** `getaddrinfo ENOTFOUND loja.bravotapecaria.com.br` (o domínio não resolve).
+- **Download direto do ambiente:** `CONNECT tunnel failed, response 403` (host não liberado na política de rede).
+- **Resultado:** nenhuma foto baixada. A pasta `apps/sgp-v2/src/demo/fotos-exemplo/` continua vazia, aguardando as fotos.
+- **Uso/tokens disponíveis:** INDISPONÍVEL — a sessão não fornece métrica confiável.
