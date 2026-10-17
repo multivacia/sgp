@@ -24,7 +24,7 @@ Código das Fases 0–5 pronto e testado (20/20, build, lint, e2e headless); fal
 
 ## Concluído
 
-- Fases 0 a 5 (ver `docs/v2/SGP_V2.md` §4 e §10–§16).
+- Fases 0 a 6 (ver `docs/v2/SGP_V2.md` §4 e §10–§17). Demo: https://claude.ai/artifact/RFAWgUFLAB541XT4839dhW
 
 ## Decisões já tomadas
 
@@ -47,7 +47,7 @@ Código das Fases 0–5 pronto e testado (20/20, build, lint, e2e headless); fal
 ## Referências úteis
 
 - Documento vivo: `docs/v2/SGP_V2.md`
-- Retorno: `docs/ai/returns/redesenho-ux-mobile-retorno.md` (§24–§31 = V2)
+- Retorno: `docs/ai/returns/redesenho-ux-mobile-retorno.md` (§24–§32 = V2)
 - Protótipo: https://claude.ai/artifact/QBY3svGbjp7ALeewX1w9n2
 
 ## Uso de contexto / sessão

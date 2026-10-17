@@ -1,20 +1,23 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { ApiError } from '../../api/client'
-import { entrar, justificativas, lancar, listPessoas, minhaFila, sair, salvarTokenDoTablet, trocarPin } from '../../api/production'
+import { candidatos, entrar, justificativas, lancar, lancarOutra, listPessoas, minhaFila, sair, salvarTokenDoTablet, trocarPin } from '../../api/production'
 import { fmtMin } from '../../domain/format'
 import { isoLocal, somarDias } from '../../domain/planejarSemana'
 import {
+  buildOutraBody,
   buildTimeEntryBody,
   continuar,
   decorridoMs,
   gravarCronometro,
   iniciar,
+  justificativasDaOutra,
   lerCronometros,
   minutosDe,
   pausar,
   precisaJustificar,
   relogio,
   tarefasAbertas,
+  type Candidato,
   type Cronometro,
   type Justificativa,
   type Pessoa,
@@ -38,8 +41,12 @@ type Tela =
   | { t: 'rodando' }
   | { t: 'lancar'; tarefaId: string | null }
   | { t: 'quanto'; tarefa: Tarefa; minutos: number; ontem?: string; pausas?: string[] }
-  | { t: 'justif'; motivo: 'sequencia' | 'excesso'; tarefa: Tarefa; depois: (j: { id: string; complemento: string }) => void }
-  | { t: 'ok'; tarefa: Tarefa; minutos: number; pct: number }
+  | { t: 'justif'; motivo: Motivo; tarefa: { activityTitle: string; conveyorTitle: string; sequenceWarningLabel?: string }; depois: (j: Escolha) => void }
+  | { t: 'ok'; tarefa: { activityTitle: string; conveyorTitle: string }; minutos: number; pct: number | null }
+  | { t: 'outra' }
+
+type Motivo = 'sequencia' | 'excesso' | 'outra'
+type Escolha = { id: string; label: string; complemento: string }
 
 /** /V2/tablet: o colaborador toca no nome, digita o PIN e aponta. Sem login da gestora. */
 export function Tablet() {
@@ -114,6 +121,27 @@ export function Tablet() {
       if (crono && crono.stepNodeId === tarefa.activityNodeId) guardar(null)
       setFila(await minhaFila())
       setTela({ t: 'ok', tarefa, minutos, pct })
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : 'Não foi possível registrar.')
+      setTela({ t: 'tarefas' })
+    } finally {
+      setOcupado(false)
+    }
+  }
+
+  async function registrarOutra(c: Candidato, minutos: number, ontem: string | undefined, j: Escolha | null) {
+    const precisa = justificativasDaOutra(c)
+    const titulo = { activityTitle: c.activityTitle, conveyorTitle: c.conveyorName }
+    if ((precisa.excecao || precisa.sequencia) && !j) {
+      setTela({ t: 'justif', motivo: precisa.excecao ? 'outra' : 'sequencia', tarefa: titulo, depois: (x) => void registrarOutra(c, minutos, ontem, x) })
+      return
+    }
+    setOcupado(true)
+    setErro(null)
+    try {
+      await lancarOutra(buildOutraBody(c, minutos, j, ontem))
+      setFila(await minhaFila())
+      setTela({ t: 'ok', tarefa: titulo, minutos, pct: null })
     } catch (e) {
       setErro(e instanceof Error ? e.message : 'Não foi possível registrar.')
       setTela({ t: 'tarefas' })
@@ -238,6 +266,9 @@ export function Tablet() {
             <Cartao>
               <h1 className="font-display text-3xl font-extrabold">Nada planejado para você agora</h1>
               <p className="text-lg text-muted">Fale com a gestora se precisa de tarefa.</p>
+              <button type="button" onClick={() => setTela({ t: 'outra' })} className="min-h-16 rounded-2xl border-2 border-ink bg-white text-xl font-bold">
+                Fiz outra atividade
+              </button>
               <BotaoGrande onClick={() => void voltarAoInicio()}>SAIR</BotaoGrande>
             </Cartao>
           ) : (
@@ -270,9 +301,14 @@ export function Tablet() {
                   ))}
                 </>
               ) : null}
+              <button type="button" onClick={() => setTela({ t: 'outra' })} className="min-h-14 rounded-2xl bg-line text-lg font-bold">
+                Fiz outra atividade (fora do meu plano)
+              </button>
             </>
           )
         ) : null}
+
+        {tela.t === 'outra' ? <Outra ocupado={ocupado} onVoltar={() => setTela({ t: 'tarefas' })} onContinuar={(c, m, ontem) => void registrarOutra(c, m, ontem, null)} /> : null}
 
         {tela.t === 'rodando' && crono && tarefaDoCrono ? (
           <Rodando
@@ -556,13 +592,19 @@ function Lancar({ tarefas, inicial, onVoltar, onContinuar }: { tarefas: Tarefa[]
   )
 }
 
-function Justificar({ motivo, tarefa, justs, onVoltar, onOk }: { motivo: 'sequencia' | 'excesso'; tarefa: Tarefa; justs: Justificativa[]; onVoltar: () => void; onOk: (j: { id: string; complemento: string }) => void }) {
+const TITULO_JUSTIF: Record<Motivo, string> = {
+  sequencia: 'A etapa anterior ainda não terminou. Por que vai fazer esta agora?',
+  excesso: 'Passou do tempo previsto. O que aconteceu?',
+  outra: 'Esta atividade não está no seu plano. Por que fez?',
+}
+
+function Justificar({ motivo, tarefa, justs, onVoltar, onOk }: { motivo: Motivo; tarefa: { activityTitle: string; conveyorTitle: string; sequenceWarningLabel?: string }; justs: Justificativa[]; onVoltar: () => void; onOk: (j: Escolha) => void }) {
   const [sel, setSel] = useState<Justificativa | null>(null)
   const [texto, setTexto] = useState('')
   const pronto = sel && (!sel.requiresComplement || texto.trim().length >= 3)
   return (
     <Cartao>
-      <h1 className="font-display text-3xl font-extrabold">{motivo === 'sequencia' ? 'A etapa anterior ainda não terminou. Por que vai fazer esta agora?' : 'Passou do tempo previsto. O que aconteceu?'}</h1>
+      <h1 className="font-display text-3xl font-extrabold">{TITULO_JUSTIF[motivo]}</h1>
       <p className="text-lg text-muted">
         {tarefa.activityTitle} · {tarefa.conveyorTitle}
         {motivo === 'sequencia' && tarefa.sequenceWarningLabel ? ` · ${tarefa.sequenceWarningLabel}` : ''}
@@ -576,7 +618,7 @@ function Justificar({ motivo, tarefa, justs, onVoltar, onOk }: { motivo: 'sequen
         ))}
       </div>
       {sel?.requiresComplement ? <textarea value={texto} onChange={(e) => setTexto(e.target.value)} placeholder="Explique em poucas palavras" className="field min-h-24 text-lg" /> : null}
-      <button type="button" disabled={!pronto} onClick={() => sel && onOk({ id: sel.id, complemento: texto })} className={`min-h-18 rounded-3xl text-2xl font-extrabold ${pronto ? 'bg-ok text-white' : 'bg-line text-muted'}`}>
+      <button type="button" disabled={!pronto} onClick={() => sel && onOk({ id: sel.id, label: sel.label, complemento: texto })} className={`min-h-18 rounded-3xl text-2xl font-extrabold ${pronto ? 'bg-ok text-white' : 'bg-line text-muted'}`}>
         CONTINUAR
       </button>
       <button type="button" onClick={onVoltar} className="min-h-14 rounded-2xl bg-line text-lg font-bold">
@@ -586,7 +628,7 @@ function Justificar({ motivo, tarefa, justs, onVoltar, onOk }: { motivo: 'sequen
   )
 }
 
-function Registrado({ tarefa, minutos, pct, proxima, onProxima, onSair }: { tarefa: Tarefa; minutos: number; pct: number; proxima: Tarefa | null; onProxima: (t: Tarefa) => void; onSair: () => void }) {
+function Registrado({ tarefa, minutos, pct, proxima, onProxima, onSair }: { tarefa: { activityTitle: string; conveyorTitle: string }; minutos: number; pct: number | null; proxima: Tarefa | null; onProxima: (t: Tarefa) => void; onSair: () => void }) {
   const [falta, setFalta] = useState(15)
   useEffect(() => {
     if (falta <= 0) {
@@ -606,7 +648,8 @@ function Registrado({ tarefa, minutos, pct, proxima, onProxima, onSair }: { tare
         {tarefa.activityTitle} · {tarefa.conveyorTitle}
       </p>
       <p className="text-center text-lg text-muted">
-        Tempo: {fmtMin(minutos)} · {pct >= 100 ? 'tarefa terminada' : `${pct}% pronto`}
+        Tempo: {fmtMin(minutos)}
+        {pct === null ? '' : pct >= 100 ? ' · tarefa terminada' : ` · ${pct}% pronto`}
       </p>
       {proxima ? (
         <button type="button" onClick={() => onProxima(proxima)} className="flex min-h-20 flex-col items-center justify-center rounded-3xl bg-ok text-white">
@@ -629,6 +672,91 @@ function LiberarTablet({ onSalvar }: { onSalvar: (t: string) => void }) {
       <p className="text-lg text-muted">A gestora digita uma vez o código do tablet da fábrica (o mesmo do Modo Produção da V1). Fica guardado só neste aparelho.</p>
       <input value={t} onChange={(e) => setT(e.target.value)} type="password" autoComplete="off" aria-label="Código do tablet" className="field text-lg" />
       <BotaoGrande onClick={() => t.trim() && onSalvar(t)}>LIBERAR</BotaoGrande>
+    </Cartao>
+  )
+}
+
+function Outra({ ocupado, onVoltar, onContinuar }: { ocupado: boolean; onVoltar: () => void; onContinuar: (c: Candidato, minutos: number, ontem?: string) => void }) {
+  const [q, setQ] = useState('')
+  const [lista, setLista] = useState<Candidato[] | null>(null)
+  const [sel, setSel] = useState<Candidato | null>(null)
+  const [ontem, setOntem] = useState(false)
+  const [min, setMin] = useState(60)
+  useEffect(() => {
+    const t = q.trim()
+    if (t.length < 2) return
+    let vivo = true
+    const h = setTimeout(() => {
+      candidatos(t)
+        .then((r) => vivo && setLista(r))
+        .catch(() => vivo && setLista([]))
+    }, 300)
+    return () => {
+      vivo = false
+      clearTimeout(h)
+    }
+  }, [q])
+  const opcao = (on: boolean) => `min-h-16 rounded-2xl px-3 text-lg font-bold ${on ? 'bg-ink text-white' : 'border-2 border-line bg-white'}`
+  const achados = q.trim().length >= 2 ? lista : null
+  if (!sel)
+    return (
+      <Cartao>
+        <h1 className="font-display text-3xl font-extrabold">Qual atividade você fez?</h1>
+        <input value={q} onChange={(e) => setQ(e.target.value)} autoFocus placeholder="Placa, carro ou atividade" aria-label="Buscar atividade" className="field text-lg" />
+        {achados === null ? <p className="text-muted">Digite pelo menos 2 letras.</p> : achados.length === 0 ? <p className="text-muted">Nada encontrado.</p> : null}
+        {achados?.map((c) => (
+          <button key={c.stepNodeId} type="button" disabled={!c.canPointTime} onClick={() => setSel(c)} className={`flex min-h-16 flex-col justify-center rounded-2xl px-4 py-2 text-left ${c.canPointTime ? 'border border-line bg-white' : 'bg-line/60 text-muted'}`}>
+            <span className="text-lg font-bold">{c.activityTitle}</span>
+            <span className="text-muted">
+              {c.conveyorName}
+              {c.plate ? ` · ${c.plate}` : ''} · {c.sectorTitle}
+              {c.blockingReason ? ` · ${c.blockingReason}` : ''}
+            </span>
+          </button>
+        ))}
+        <button type="button" onClick={onVoltar} className="min-h-14 rounded-2xl bg-line text-lg font-bold">
+          Voltar
+        </button>
+      </Cartao>
+    )
+  return (
+    <Cartao>
+      <h1 className="font-display text-3xl font-extrabold">{sel.activityTitle}</h1>
+      <p className="text-lg text-muted">
+        {sel.conveyorName} · {sel.sectorTitle}
+      </p>
+      <h2 className="text-xl font-bold">Quando?</h2>
+      <div className="grid grid-cols-2 gap-3">
+        <button type="button" aria-pressed={!ontem} onClick={() => setOntem(false)} className={opcao(!ontem)}>
+          Hoje
+        </button>
+        <button type="button" aria-pressed={ontem} onClick={() => setOntem(true)} className={opcao(ontem)}>
+          Ontem
+        </button>
+      </div>
+      <h2 className="text-xl font-bold">Quanto tempo?</h2>
+      <div className="grid grid-cols-5 gap-2">
+        {PRESETS.map((p) => (
+          <button key={p} type="button" aria-pressed={min === p} onClick={() => setMin(p)} className={opcao(min === p)}>
+            {p < 60 ? `${p}m` : `${p / 60}h`}
+          </button>
+        ))}
+      </div>
+      <div className="flex items-center gap-3">
+        <button type="button" onClick={() => setMin((m) => Math.max(15, m - 15))} className="min-h-16 flex-1 rounded-2xl border-2 border-ink bg-white text-lg font-bold">
+          − 15 min
+        </button>
+        <span className="min-w-28 text-center font-display text-2xl font-extrabold">{fmtMin(min)}</span>
+        <button type="button" onClick={() => setMin((m) => m + 15)} className="min-h-16 flex-1 rounded-2xl border-2 border-ink bg-white text-lg font-bold">
+          + 15 min
+        </button>
+      </div>
+      <button type="button" disabled={ocupado} onClick={() => onContinuar(sel, min, ontem ? somarDias(isoLocal(new Date()), -1) : undefined)} className="min-h-18 rounded-3xl bg-ok text-2xl font-extrabold text-white">
+        REGISTRAR
+      </button>
+      <button type="button" onClick={() => setSel(null)} className="min-h-14 rounded-2xl bg-line text-lg font-bold">
+        Escolher outra
+      </button>
     </Cartao>
   )
 }

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { exceptionsOf, isOverdue, progressOf, type ConveyorDetail, type ConveyorListItem, type ConveyorStep, type StepStatus } from './conveyors'
+import { canTransitionConveyorStatus, CONVEYOR_TIME_ENTRY_ALLOWED_STATUSES } from '../../../../server/src/modules/conveyors/conveyorOperationalStatus'
+import { exceptionsOf, isOverdue, liberacaoDe, progressOf, type ConveyorDetail, type ConveyorListItem, type ConveyorStatus, type ConveyorStep, type StepStatus } from './conveyors'
 
 const NOW = new Date(2026, 9, 17, 10, 0) // 17/10/2026
 
@@ -58,5 +59,22 @@ describe('leitura de esteiras na V2', () => {
       ['atrasada', 'atrasada'],
     ])
     expect(out[0].detail).toBe('Bancos dianteiros · Costura: Costurar capa')
+  })
+
+  it('liberação segue só as transições permitidas pela V1 até a fábrica poder apontar', () => {
+    let s: ConveyorStatus = 'EM_ELABORACAO'
+    for (let i = 0; i < 3; i++) {
+      const lib = liberacaoDe(s)
+      if (!lib) break
+      for (const p of lib.passos) {
+        expect(canTransitionConveyorStatus(s, p), `${s} → ${p}`).toBe(true)
+        s = p
+      }
+    }
+    expect(CONVEYOR_TIME_ENTRY_ALLOWED_STATUSES).toContain(s)
+    expect(liberacaoDe('EM_ELABORACAO')?.passos).toEqual(['AGUARDANDO_PLANEJAMENTO', 'EM_PLANEJAMENTO'])
+    expect(liberacaoDe('EM_PLANEJAMENTO')?.passos).toEqual(['A_INICIAR'])
+    expect(liberacaoDe('A_INICIAR')).toBeNull()
+    expect(liberacaoDe('EM_ANDAMENTO')).toBeNull()
   })
 })

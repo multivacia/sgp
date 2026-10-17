@@ -8,7 +8,9 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
   const apiTarget = env.VITE_DEV_API_TARGET?.trim() || 'http://127.0.0.1:4000'
   return {
-    base: '/V2/',
+    // modo demo: arquivos relativos (abre em qualquer endereço) e pasta própria
+    base: mode === 'demo' ? './' : '/V2/',
+    build: mode === 'demo' ? { outDir: 'dist-demo' } : undefined,
     plugins: [react(), tailwindcss()],
     server: { port: 5174, proxy: { '/api': { target: apiTarget, changeOrigin: true } } },
     test: {

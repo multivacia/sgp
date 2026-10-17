@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { saveOperationalWeekPlanBodySchema } from '../../../../server/src/modules/operational-planning/operational-planning.schemas'
-import { agruparEsperando, buildSaveBody, devolvidos, juntar, mantidosDe, simular, sugerirSemana, type BacklogItem, type WeekPlanItem, type WeekResponse } from './planejarSemana'
+import { agruparEsperando, aplicarAjustes, buildSaveBody, lotacao, devolvidos, juntar, mantidosDe, simular, sugerirSemana, type BacklogItem, type WeekPlanItem, type WeekResponse } from './planejarSemana'
 
 const u = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`
 const JOAO = u(901)
@@ -106,5 +106,24 @@ describe('planejar semana → POST /api/v1/operational-planning/week', () => {
     expect(volta).toHaveLength(1)
     expect(volta[0].atividades.map((a) => a.activityNodeId)).toEqual([u(9100), u(9003)])
     expect(volta[0].atividades[1]).toMatchObject({ collaboratorId: MARTA, minutes: 60, copItemId: null })
+  })
+
+  it('ajuste manual muda dia/pessoa do que não começou (inclusive encaixe novo); o que começou fica; lotação acompanha', () => {
+    const mantidos = [noPlano(1, 9, DIAS[0], 120, 'IN_PROGRESS'), noPlano(2, 9, DIAS[0], 60)]
+    const w = semana(mantidos)
+    const r = simular(w, mantidos, agruparEsperando(backlog(1, 1, JOAO, 90), [], semPrazo), { [u(1)]: 0 })
+    const novoId = r.novos[0].activityNodeId
+    const aj = aplicarAjustes(mantidos, r.novos, {
+      [u(9001)]: { plannedDate: DIAS[2] },
+      [u(9002)]: { plannedDate: DIAS[2], collaboratorId: JOAO, collaboratorName: 'João' },
+      [novoId]: { plannedDate: DIAS[4] },
+    })
+    expect(aj.mantidos.map((i) => [i.plannedDate, i.assignedCollaboratorId])).toEqual([
+      [DIAS[0], MARTA],
+      [DIAS[2], JOAO],
+    ])
+    expect(aj.novos[0].plannedDate).toBe(DIAS[4])
+    expect(lotacao(w, aj.mantidos, aj.novos).map((d) => d.planejado)).toEqual([120, 0, 60, 0, 90])
+    expect(saveOperationalWeekPlanBodySchema.safeParse(buildSaveBody(w, aj.mantidos, aj.novos)).success).toBe(true)
   })
 })

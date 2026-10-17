@@ -1,3 +1,4 @@
+import type { AtividadeSemana } from '../domain/pessoasHoje'
 import type { BacklogItem, IntakeItem, WeekResponse } from '../domain/planejarSemana'
 import { getConveyor } from './conveyors'
 import { api } from './client'
@@ -44,4 +45,9 @@ export async function listBacklogOf(conveyorId: string): Promise<BacklogItem[]> 
   const porId = new Map(first.map((b) => [b.activityNodeId, b]))
   for (const p of pessoas) for (const b of await backlog(`conveyorId=${conveyorId}&collaboratorId=${p}`)) porId.set(b.activityNodeId, b)
   return [...porId.values()].sort((a, b) => (ordem.get(a.activityNodeId) ?? 1e9) - (ordem.get(b.activityNodeId) ?? 1e9))
+}
+
+/** Histórico da semana (apontamentos e conclusões), mais recentes primeiro; a V1 limita a 200. */
+export async function getWeekActivity(weekStart: string): Promise<AtividadeSemana[]> {
+  return (await api<{ data: AtividadeSemana[] }>(`/operational-planning/week-activity?weekStart=${weekStart}&limit=200`)).data
 }

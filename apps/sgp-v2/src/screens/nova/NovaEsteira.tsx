@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { ApiError } from '../../api/client'
 import { createConveyor } from '../../api/conveyors'
+import type { ConveyorStatus } from '../../domain/conveyors'
+import { Liberar } from '../../ui/Liberar'
 import { getMatrixTree, listCollaborators, listMatrices, type MatrixItem } from '../../api/matrix'
 import { useSession } from '../../auth/context'
 import {
@@ -62,7 +64,7 @@ export function NovaEsteira() {
   const [atalhoPrazo, setAtalhoPrazo] = useState<'hoje' | 'amanha' | 'sexta' | 'data'>('sexta')
   const [erro, setErro] = useState<string | null>(null)
   const [salvando, setSalvando] = useState(false)
-  const [criada, setCriada] = useState<{ id: string; name: string } | null>(null)
+  const [criada, setCriada] = useState<{ id: string; name: string; operationalStatus?: ConveyorStatus } | null>(null)
 
   useEffect(() => {
     listMatrices()
@@ -137,7 +139,7 @@ export function NovaEsteira() {
             ) : null}
             {matrizes === null && !erro ? <p className="text-muted">Carregando matrizes…</p> : null}
             {filtradas.map((m) => {
-              const fig = figuraDaEtapa(m.name) ?? '/V2/etapas/18.webp'
+              const fig = figuraDaEtapa(m.name) ?? `${import.meta.env.BASE_URL}etapas/18.webp`
               return (
                 <button key={m.id} type="button" onClick={() => void escolherMatriz(m)} className="flex min-h-24 items-center gap-3 rounded-2xl border border-line bg-white p-2.5 text-left">
                   <img src={fig} alt="" className="size-20 shrink-0 rounded-xl border border-ground object-contain" />
@@ -319,8 +321,9 @@ export function NovaEsteira() {
             <h1 className="font-display text-3xl font-extrabold">Esteira criada!</h1>
             <p className="text-lg">{criada.name}</p>
             <p className="text-muted">
-              {tot.etapas} etapas · {tot.atividades} atividades · ~{fmtMin(tot.minutos)}. Já está esperando planejamento.
+              {tot.etapas} etapas · {tot.atividades} atividades · ~{fmtMin(tot.minutos)}. Ela nasce em elaboração: libere quando quiser planejar.
             </p>
+            {criada.operationalStatus ? <Liberar id={criada.id} status={criada.operationalStatus} onFeito={(novo) => setCriada({ ...criada, operationalStatus: novo })} /> : null}
             <Link to={`/esteiras/${criada.id}`} className="btn-primary flex w-full items-center justify-center">
               Ver esteira
             </Link>

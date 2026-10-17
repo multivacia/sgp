@@ -363,3 +363,39 @@ export function somarDias(iso: string, n: number): string {
   const [y, m, d] = iso.split('-').map(Number)
   return isoLocal(new Date(y, m - 1, d + n, 12))
 }
+
+/** Ajuste manual de uma atividade na semana (mudar o dia e/ou a pessoa). */
+export type Ajuste = { plannedDate?: string; collaboratorId?: string; collaboratorName?: string }
+
+/** Aplica os ajustes sobre o plano mantido e os novos encaixes. O que já começou/terminou não se move. */
+export function aplicarAjustes(mantidos: WeekPlanItem[], novos: Colocado[], ajustes: Record<string, Ajuste>): { mantidos: WeekPlanItem[]; novos: Colocado[] } {
+  return {
+    mantidos: mantidos.map((it) => {
+      const a = ajustes[it.activityNodeId]
+      if (!a || fixo(it)) return it
+      return {
+        ...it,
+        plannedDate: a.plannedDate ?? it.plannedDate,
+        assignedCollaboratorId: a.collaboratorId ?? it.assignedCollaboratorId,
+        assignedCollaboratorName: a.collaboratorName ?? it.assignedCollaboratorName,
+      }
+    }),
+    novos: novos.map((n) => {
+      const a = ajustes[n.activityNodeId]
+      if (!a) return n
+      return { ...n, plannedDate: a.plannedDate ?? n.plannedDate, collaboratorId: a.collaboratorId ?? n.collaboratorId, collaboratorName: a.collaboratorName ?? n.collaboratorName }
+    }),
+  }
+}
+
+/** Lotação por dia: capacidade somada das pessoas e minutos planejados. */
+export function lotacao(week: WeekResponse, mantidos: WeekPlanItem[], novos: Colocado[]): { capacidade: number; planejado: number }[] {
+  return week.week.weekdayDates.map((date) => {
+    let capacidade = 0
+    for (const c of week.capacityByCollaboratorDay) if (c.date === date) capacidade += c.capacityMinutes
+    let planejado = 0
+    for (const it of mantidos) if (it.plannedDate === date) planejado += Math.max(0, it.plannedMinutes ?? 0)
+    for (const n of novos) if (n.plannedDate === date) planejado += n.minutes
+    return { capacidade, planejado }
+  })
+}

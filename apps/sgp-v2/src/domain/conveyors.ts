@@ -188,3 +188,22 @@ export function exceptionsOf(list: ConveyorListItem[], details: Map<string, Conv
   }
   return out.sort((x, y) => (x.kind === y.kind ? 0 : x.kind === 'parada' ? -1 : 1))
 }
+
+export type Liberacao = { label: string; explica: string; passos: ConveyorStatus[] }
+
+/**
+ * Próxima liberação pelas transições permitidas na V1 (PATCH /conveyors/:id/status):
+ * elaboração → aguardando → em planejamento (entra no Planejar semana) → a iniciar (a fábrica aponta).
+ */
+export function liberacaoDe(status: ConveyorStatus): Liberacao | null {
+  switch (status) {
+    case 'EM_ELABORACAO':
+      return { label: 'Liberar para planejar', explica: 'A esteira passa a aparecer em "Esperando" no Planejar semana.', passos: ['AGUARDANDO_PLANEJAMENTO', 'EM_PLANEJAMENTO'] }
+    case 'AGUARDANDO_PLANEJAMENTO':
+      return { label: 'Liberar para planejar', explica: 'A esteira passa a aparecer em "Esperando" no Planejar semana.', passos: ['EM_PLANEJAMENTO'] }
+    case 'EM_PLANEJAMENTO':
+      return { label: 'Liberar para a fábrica começar', explica: 'Os colaboradores passam a poder apontar nesta esteira no tablet.', passos: ['A_INICIAR'] }
+    default:
+      return null
+  }
+}

@@ -86,7 +86,7 @@ const FIGURAS: [RegExp, number][] = [
 export function figuraDaEtapa(name: string): string | null {
   const n = name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
   const hit = FIGURAS.find(([re]) => re.test(n))
-  return hit ? `/V2/etapas/${String(hit[1]).padStart(2, '0')}.webp` : null
+  return hit ? `${import.meta.env.BASE_URL}etapas/${String(hit[1]).padStart(2, '0')}.webp` : null
 }
 
 export type Totals = { etapas: number; atividades: number; minutos: number }

@@ -1,10 +1,13 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { IN_PRODUCTION, exceptionsOf, progressOf } from '../domain/conveyors'
 import { ProgressBar, RefreshButton, Tag } from '../ui/bits'
+import { PessoasHoje } from './PessoasHoje'
 import { useConveyors } from './useConveyors'
 
 export function Hoje() {
   const { list, details, error, reload } = useConveyors(IN_PRODUCTION)
+  const [versao, setVersao] = useState(0)
   const excecoes = list ? exceptionsOf(list, details) : []
   const comProblema = new Set(excecoes.map((x) => x.conveyor.id))
   const bem = (list ?? []).filter((c) => !comProblema.has(c.id))
@@ -17,7 +20,12 @@ export function Hoje() {
           <h1 className="font-display text-3xl font-extrabold">Hoje na fábrica</h1>
           <p className="text-muted">{carregando ? 'Atualizando…' : 'Atualizado agora'}</p>
         </div>
-        <RefreshButton onClick={() => void reload()} />
+        <RefreshButton
+          onClick={() => {
+            setVersao((v) => v + 1)
+            void reload()
+          }}
+        />
       </div>
       <div className="grid grid-cols-3 gap-2">
         {[
@@ -51,6 +59,8 @@ export function Hoje() {
           </div>
         </div>
       ))}
+
+      <PessoasHoje versao={versao} />
 
       <h2 className="mt-2 font-display text-xl font-extrabold">Andando bem</h2>
       {bem.map((c) => {

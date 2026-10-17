@@ -487,3 +487,20 @@ Fases 4 e 5 exigem o fluxo completo de `AGENTS.md` (contexto → impacto → spe
 - **Riscos/pendências:** cronômetro some se o navegador do tablet limpar dados; QR do ticket; corrigir apontamento; "Outra atividade" (não planejada) continua na V1.
 - **Próximo passo:** aplicar nginx + 1º deploy em HML (manual, aprovação humana) e demonstrar à gestora: Nova esteira → Alterar → Planejar semana → Tablet.
 - **Uso/tokens disponíveis:** INDISPONÍVEL — a sessão não fornece métrica confiável.
+
+## 32. Fase 6 do SGP+ V2 — acabamento para a demonstração (2026-10-17)
+
+- **Pedido:** "Pode seguir com as próximas fases, assim eu valido de uma vez antes de apresentar para a gestora." As fases 0–5 já estavam prontas; a Fase 6 fecha lacunas que não dependem de mudar a V1 nem de decisão.
+- **Status:** concluída no código; versão de demonstração publicada: https://claude.ai/artifact/RFAWgUFLAB541XT4839dhW (privada).
+- **Contexto verificado (V1, não alterada):** `week-activity` (limite 200), `time-entry-candidates` + `unassigned-exception` (quiosque `KioskOutraAtividadeFlow.tsx`), `PATCH /conveyors/:id/status` (`conveyors.edit_status`; transições `EM_ELABORACAO→AGUARDANDO_PLANEJAMENTO→EM_PLANEJAMENTO→A_INICIAR`; esteira nova nasce `EM_ELABORACAO`; apontamento só em `A_INICIAR/EM_ANDAMENTO`).
+- **Achado relevante:** sem "Liberar", uma esteira criada na V2 nunca chegaria ao Planejar semana nem ao tablet (a tela antiga dizia "já está esperando planejamento" — corrigido).
+- **Arquivos criados:** `src/domain/pessoasHoje.ts` (+teste), `src/screens/PessoasHoje.tsx`, `src/ui/Liberar.tsx`, `src/demo/api.ts`, `src/demo/DemoBar.tsx`, `src/demo/matriz.json`.
+- **Arquivos alterados (só V2):** `src/screens/Hoje.tsx`, `src/api/planning.ts`, `src/api/production.ts`, `src/api/conveyors.ts`, `src/domain/tablet.ts` (+teste), `src/domain/planejarSemana.ts` (+teste), `src/domain/conveyors.ts` (+teste), `src/domain/novaEsteira.ts` (figura usa `BASE_URL`), `src/screens/tablet/Tablet.tsx`, `src/screens/semana/PlanejarSemana.tsx`, `src/screens/EsteiraDetalhe.tsx`, `src/screens/nova/NovaEsteira.tsx`, `src/main.tsx` (modo demo), `index.html` (`%BASE_URL%`), `vite.config.ts`, `tsconfig.json` (`resolveJsonModule`), `package.json` (`build:demo`), `.gitignore`, `docs/v2/SGP_V2.md` (§4, §8, §17).
+- **Backend/migrations/secrets:** nenhum.
+- **Validação:**
+  - `npm test` → 7 arquivos, **24/24** (4 novos: pessoas hoje; outra atividade com `productionUnassignedTimeEntryBodySchema`; ajuste manual + lotação; liberação com `canTransitionConveyorStatus`).
+  - `npm run build` ok (sem nada da demo no `dist/`); `npm run build:demo` ok; `npx eslint apps/sgp-v2` sem problemas.
+  - Headless: Planejar (ajustar Seg→Qui e passar para Vítor → POST com o item na quinta para Vítor); tablet (outra atividade → POST unassigned com `exceptionJustificationId`); Hoje (1 sem apontar com 2 tarefas/6 h, 3 sem tarefa, 1 já apontou); demonstração estática (Início, Hoje, Liberar, Planejar + sugerir + publicar, Nova esteira, tablet) sem erros de console.
+  - V1: `git diff HEAD -- src server` vazio.
+- **Pendências:** decidir liberação automática ao publicar; QR; corrigir apontamento; deploy HML (nginx + `deploy-v2.yml`, que precisa estar na branch padrão para rodar por `workflow_dispatch`).
+- **Uso/tokens disponíveis:** INDISPONÍVEL — a sessão não fornece métrica confiável.

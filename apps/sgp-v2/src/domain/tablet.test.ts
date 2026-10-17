@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { productionTimeEntryBodySchema } from '../../../../server/src/modules/production/production-time-entries.schemas'
-import { buildTimeEntryBody, continuar, iniciar, minutosDe, pausar, precisaJustificar, tarefasAbertas, type Tarefa } from './tablet'
+import { productionTimeEntryBodySchema, productionUnassignedTimeEntryBodySchema } from '../../../../server/src/modules/production/production-time-entries.schemas'
+import { buildOutraBody, buildTimeEntryBody, continuar, iniciar, minutosDe, pausar, precisaJustificar, tarefasAbertas, type Tarefa } from './tablet'
 
 const u = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`
 
@@ -65,5 +65,15 @@ describe('tablet do setor → POST /api/v1/production/time-entries', () => {
       tarefa(5, { canTrackTime: false, blockingReason: 'Esteira parada' }),
     ])
     expect(fila.map((t) => t.activityTitle)).toEqual(['Atividade 3', 'Atividade 2', 'Atividade 1'])
+  })
+
+  it('"outra atividade": corpo passa no validador real da V1; justificativa vai como exceção e/ou fora de sequência', () => {
+    const c = { conveyorId: u(1), conveyorName: 'Gol', plate: 'ABC1D23', stepNodeId: u(300), activityTitle: 'Costura do volante', sectorTitle: 'Costura', isAssignedToMe: false, requiresJustification: true, isOutOfSequence: false, hasPreviousPendingStep: true, requiresOutOfSequenceJustification: false, canPointTime: true }
+    const body = buildOutraBody(c, 45, { id: u(9), label: 'Ajudei outro setor', complemento: 'faltou gente' }, '2026-10-18')
+    const parsed = productionUnassignedTimeEntryBodySchema.safeParse(body)
+    expect(parsed.success, JSON.stringify(parsed.error?.issues)).toBe(true)
+    expect(body).toMatchObject({ minutes: 45, entryAt: '2026-10-18', exceptionJustificationId: u(9), exceptionJustification: 'Ajudei outro setor: faltou gente', outOfSequenceJustificationId: u(9) })
+    const minha = buildOutraBody({ ...c, isAssignedToMe: true, requiresJustification: false, hasPreviousPendingStep: false }, 30, null)
+    expect(minha).toEqual({ conveyorId: u(1), stepNodeId: u(300), minutes: 30 })
   })
 })

@@ -1,4 +1,4 @@
-import type { Justificativa, Pessoa, Tarefa } from '../domain/tablet'
+import type { Candidato, Justificativa, Pessoa, Tarefa } from '../domain/tablet'
 import { api } from './client'
 
 /** Modo Produção da V1 (cookie próprio do tablet, separado da sessão da gestora). */
@@ -52,4 +52,13 @@ export function justificativas(): Promise<Justificativa[]> {
 
 export function lancar(body: unknown): Promise<unknown> {
   return api<unknown>('/production/time-entries', { method: 'POST', body: JSON.stringify(body) }, false)
+}
+
+/** Busca de "Outra atividade" (mínimo 2 letras), inclusive fora do meu plano. */
+export function candidatos(q: string): Promise<Candidato[]> {
+  return api<Candidato[]>(`/production/me/time-entry-candidates?q=${encodeURIComponent(q)}&includeUnassigned=true&limit=20`, {}, false)
+}
+
+export function lancarOutra(body: unknown): Promise<unknown> {
+  return api<unknown>('/production/time-entries/unassigned-exception', { method: 'POST', body: JSON.stringify(body) }, false)
 }

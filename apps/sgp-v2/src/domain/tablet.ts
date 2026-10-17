@@ -144,3 +144,44 @@ export function gravarCronometro(collaboratorId: string, c: Cronometro | null): 
     // sem armazenamento: o cronômetro vale só enquanto a tela está aberta
   }
 }
+
+/** Atividade fora do meu plano ("Outra atividade"), de GET /production/me/time-entry-candidates. */
+export type Candidato = {
+  conveyorId: string
+  conveyorName: string
+  plate: string | null
+  stepNodeId: string
+  activityTitle: string
+  taskTitle?: string
+  sectorTitle: string
+  isAssignedToMe: boolean
+  requiresJustification: boolean
+  isOutOfSequence: boolean
+  hasPreviousPendingStep: boolean
+  requiresOutOfSequenceJustification: boolean
+  canPointTime: boolean
+  blockingReason?: string
+}
+
+/** Mesmas regras do quiosque da V1: exceção (não é minha) e/ou fora de sequência. */
+export function justificativasDaOutra(c: Candidato): { excecao: boolean; sequencia: boolean } {
+  return {
+    excecao: c.requiresJustification || !c.isAssignedToMe,
+    sequencia: c.requiresOutOfSequenceJustification || c.hasPreviousPendingStep || c.isOutOfSequence,
+  }
+}
+
+/** Corpo de POST /api/v1/production/time-entries/unassigned-exception (a mesma justificativa serve às duas, como na V1). */
+export function buildOutraBody(c: Candidato, minutos: number, j: { id: string; label: string; complemento: string } | null, ontem?: string) {
+  const { excecao, sequencia } = justificativasDaOutra(c)
+  const comp = j?.complemento.trim() || null
+  const texto = j ? (comp ? `${j.label}: ${comp}` : j.label).slice(0, 500) : null
+  return {
+    conveyorId: c.conveyorId,
+    stepNodeId: c.stepNodeId,
+    minutes: Math.max(1, Math.round(minutos)),
+    ...(ontem ? { entryAt: ontem } : {}),
+    ...(j && excecao ? { exceptionJustification: texto, exceptionJustificationId: j.id, ...(comp ? { exceptionJustificationComplement: comp } : {}) } : {}),
+    ...(j && sequencia ? { outOfSequenceJustification: texto, outOfSequenceJustificationId: j.id, ...(comp ? { outOfSequenceJustificationComplement: comp } : {}) } : {}),
+  }
+}

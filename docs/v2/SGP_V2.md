@@ -49,6 +49,7 @@ Legenda: ⬜ não iniciada · 🟨 em andamento · ✅ concluída
 | 2 | Nova esteira (cardápio): matriz → etapas com figura → personalizar (setor/atividade/responsável) → carro → prazo | não (usa `/api/v1`); fotos reais das etapas ficam para 2b | médio | ✅ código pronto (§13) |
 | 3 | Alterar esteira = telas da criação + cadeados; motivo obrigatório (inclui troca de responsável) | não (usa `PATCH /conveyors/:id/structure`; motivo vai como texto livre da V1) | médio | ✅ código pronto (§14) |
 | 4 | Planejar semana por esteira (início → dias pela folga de cada responsável) + lotação por dia + "Sugerir semana" | não (usa `/operational-planning/*` da V1; sugestão é cálculo no front) | alto | ✅ código pronto (§15) |
+| 6 | Acabamento para a demonstração: Pessoas hoje, Outra atividade no tablet, ajustar atividade no planejamento, Liberar esteira, versão de demonstração | não | médio | ✅ código pronto (§17) |
 | 5 | Tablet do colaborador (`/V2/tablet`): nome → PIN → próxima tarefa → cronômetro ou lançar horas → quanto ficou pronto | não (usa `/production/*` da V1; cronômetro fica no tablet) | alto | ✅ código pronto (§16) · QR do ticket pendente |
 
 Fases 4 e 5 (e qualquer mudança em regra de planejamento/apontamento) seguem o fluxo completo do `AGENTS.md`.
@@ -96,6 +97,7 @@ Commit: <sha> · branch <nome>
 
 - **QR do ticket (Fase 5):** os tickets da V1 não têm QR. Ler QR exige mudar o ticket na V1 (exceção à regra 1) ou um ticket próprio da V2 — decidir.
 - **Token do tablet:** a V2 pede o `PRODUCTION_KIOSK_TOKEN` uma vez por aparelho (a gestora digita). Alternativa: passar o token no build da V2 (exigiria um secret novo no GitHub).
+- **Liberação automática:** hoje a gestora libera a esteira com um toque. Liberar sozinho ao publicar a semana seria regra nova — decidir.
 - **Corrigir apontamento** no tablet ("Tempo errado? Corrigir" do protótipo): a V1 não tem edição pelo Modo Produção — ficou fora.
 
 ## 9. Como retomar numa nova sessão
@@ -191,3 +193,11 @@ Commit: <sha> · branch <nome>
 - "Terminei a tarefa" só aparece se a V1 deixa concluir (`canCompleteStep`) → `markAsDone`.
 - **Teste:** `src/domain/tablet.test.ts` — corpo validado com `productionTimeEntryBodySchema` real; regra de justificativa; cronômetro com pausa; ordem da próxima tarefa.
 - **Fora (pendências §8):** QR do ticket; corrigir apontamento; "Outra atividade" (apontar em atividade não planejada — `unassigned-exception` da V1).
+
+## 17. Fase 6 — acabamento para a demonstração
+
+- **Hoje → Pessoas hoje** (só `conveyors.create`): quem tem tarefa hoje e ainda não apontou, quem trabalha hoje e está sem tarefa, quem já apontou. Lê `GET /operational-planning/week` + `GET /operational-planning/week-activity` (até 200 lançamentos da semana, mais recentes primeiro). Só considera o plano **publicado**; semana não publicada mostra aviso. Não aparece em sábado/domingo.
+- **Tablet → Fiz outra atividade:** busca (≥ 2 letras) em `GET /production/me/time-entry-candidates?includeUnassigned=true` e lança em `POST /production/time-entries/unassigned-exception`, com a justificativa como exceção e/ou fora de sequência (mesma regra do quiosque da V1).
+- **Planejar semana → Ajustar:** no dia aberto, cada etapa tem "Ajustar" para mudar de dia ou passar para outra pessoa (o que já começou/terminou não se move).
+- **Liberar esteira** (`conveyors.edit_status`, `PATCH /conveyors/:id/status`): na V1 a esteira nasce *Em elaboração* e só entra no planejamento em *Em planejamento*; o tablet só aponta em *A iniciar/Em andamento*. A V2 mostra o botão no detalhe, na tela "Esteira criada!" e no Planejar semana (esteira na semana ainda não liberada). Passos só pelas transições da V1 (teste importa `canTransitionConveyorStatus`). Nada é liberado automaticamente.
+- **Versão de demonstração:** `npm run build:demo` gera `dist-demo/` com a API simulada no navegador (`src/demo/`: matriz da planilha mestra, nomes fictícios, dados em memória). O build normal não inclui nada de `src/demo` (conferido no `dist/`). Publicada como página privada para validação.
