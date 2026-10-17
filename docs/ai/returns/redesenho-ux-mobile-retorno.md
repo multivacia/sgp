@@ -155,3 +155,17 @@ Fases 4 e 5 exigem o fluxo completo de `AGENTS.md` (contexto → impacto → spe
 - **Riscos/ressalvas:** contagens de classes CSS são aproximadas (grep); diagnóstico baseado em leitura de código, não em observação de uso real — validar na Fase 0.
 - **Próximo passo recomendado:** responder às decisões da seção 7; em seguida produzir protótipo clicável mobile da Nova Esteira (cardápio) e da tela Hoje para testar com a gestora antes de codificar.
 - **Commit/push:** branch `ccr-683413c7-571rnk`; sem PR.
+
+---
+
+## 9. Continuação — protótipo clicável (2026-10-17)
+
+- **Entregue:** protótipo clicável para celular (390×844), publicado como Artifact privado:
+  https://claude.ai/artifact/QBY3svGbjp7ALeewX1w9n2 (só o dono abre até compartilhar pelo menu Share).
+- **Telas:**
+  1. **Início + Nova esteira (cardápio):** início com 3 botões grandes + atalho "Repetir última"; fluxo de 4 passos (modelo → tirar/adicionar com ± → placa ou foto da OS com reconhecimento do carro → prazo/responsável), carrinho fixo com tarefas e horas, tela de sucesso com "Criar outra igual".
+  2. **Hoje na fábrica:** placar do dia, cartões de exceção (atrasada, parada, sem apontamento, colaborador sem tarefa) com "Ver" (andamento por atividade) e ação direta (realocar/resolver/avisar/dar tarefa) com confirmação e "Desfazer".
+- **Dados:** fictícios e ilustrativos (modelos, horas, placas); nomes de pessoas como placeholders `[COLABORADOR n]`, `[GESTOR n]`, `[CLIENTE]`. Nenhum dado real ou do banco.
+- **Repositório:** nenhum código-fonte alterado; o protótipo não faz parte do build do SGP+. Só este retorno foi atualizado.
+- **Validação:** não houve build/testes (sem código no repositório). Protótipo não foi renderizado/inspecionado automaticamente nesta sessão — validar abrindo o link no celular.
+- **Próximo passo recomendado:** testar o protótipo com a gestora (cronometrar criação de uma esteira) e responder às decisões da seção 7; depois prototipar "Planejar semana" e o apontamento do colaborador (COMEÇAR/PAUSAR/TERMINEI + QR).
