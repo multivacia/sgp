@@ -187,3 +187,17 @@ Fases 4 e 5 exigem o fluxo completo de `AGENTS.md` (contexto → impacto → spe
 - **Impacto se for implementado:** o modelo "cronômetro" exige no backend o conceito de sessão de trabalho aberta/pausada/fechada, convertida no apontamento atual — fluxo completo de `AGENTS.md` (alto risco: regra de apontamento e kiosk/produção).
 - **Repositório:** nenhum código-fonte alterado; só este retorno.
 - **Validação:** sem build/testes (sem código); protótipo não renderizado automaticamente nesta sessão.
+
+---
+
+## 11. Continuação — menu "Semana" + protótipo Planejar semana (2026-10-17)
+
+- **Menu:** barra inferior do gestor passou a ter 5 opções (Início · Esteiras · **Semana** · Hoje · Eu) nas telas Início e Hoje; o botão "Planejar semana" do Início agora abre a nova tela.
+- **Nova tela "Planejar semana"** (390×844), mesmo Artifact: https://claude.ai/artifact/QBY3svGbjp7ALeewX1w9n2
+  - Lista "Esperando" com botão **Sugerir semana** (distribui respeitando prazo e capacidade, mais cedo possível).
+  - "Escolher dia" por esteira: folha com os 5 dias, horas que sobram/passam, aviso de "depois do prazo" e selo **SUGERIDO**; "Mudar dia" e "Tirar da semana".
+  - **Lotação da semana:** 5 barras com cor + texto (Tem folga / Quase cheio / Passou X h); tocar no dia mostra as esteiras (novas destacadas).
+  - Rodapé com avisos (dia acima da capacidade, esteira depois do prazo) e **Publicar semana**; selo Rascunho / Publicada / Não publicada.
+- **Simplificações:** esteira inteira alocada num dia de início (o sistema real planeja por atividade); capacidade fixa de 40 h/dia; dados fictícios.
+- **Impacto se implementado:** a sugestão automática exige motor no backend sobre o módulo de capacidade e respeito ao planejamento semanal publicado — fluxo completo de `AGENTS.md` (alto risco).
+- **Repositório:** nenhum código-fonte alterado; só este retorno. Sem build/testes; protótipo não renderizado automaticamente nesta sessão.
