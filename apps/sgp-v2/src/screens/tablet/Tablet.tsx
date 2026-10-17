@@ -532,8 +532,9 @@ function Rodando({ crono, tarefa, agora, onPausar, onContinuar, onTerminei, onDe
         </p>
         <p className="font-display text-7xl font-extrabold tabular-nums" aria-label="Tempo trabalhado">
           {relogio(ms)}
+          <span className="text-4xl">:{String(Math.floor(ms / 1000) % 60).padStart(2, '0')}</span>
         </p>
-        <p>horas : minutos · previsto {tarefa.plannedMinutes ? fmtMin(tarefa.plannedMinutes) : 'sem tempo'}</p>
+        <p>horas : minutos : segundos · previsto {tarefa.plannedMinutes ? fmtMin(tarefa.plannedMinutes) : 'sem tempo'}</p>
       </div>
       <div className="grid grid-cols-2 gap-3">
         {pausado ? (

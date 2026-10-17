@@ -550,3 +550,11 @@ Fases 4 e 5 exigem o fluxo completo de `AGENTS.md` (contexto → impacto → spe
 - **Migrations:** `0055` criada, **não aplicada** em ambiente compartilhado; aplicada no Postgres local de teste (2x, idempotente).
 - **Validação:** servidor `v2-producao-correcao.test.ts` 2/2 e `v2-etapa-imagens.test.ts` 2/2 contra Postgres local; `tsc` ok; V2 `npm test` 28/28; build e build:demo ok; eslint ok; headless no tablet (lançar 1 h → Tempo errado? → corrigir para 45 min com motivo → remover → "Nada lançado hoje") e Semana com "Sugerir semana" visível; sem erros. Demonstração republicada (versão 4). Front da V1 (`src/`) sem alteração.
 - **Uso/tokens disponíveis:** INDISPONÍVEL — a sessão não fornece métrica confiável.
+
+## 37. Correção: cronômetro "parado" após COMEÇAR (2026-10-17)
+
+- **Relato:** "O cronômetro não está rodando após o start." Instrução: não alterar outras funções.
+- **Causa:** o tempo era contado (atualização a cada 1 s), mas o relógio mostrava só horas:minutos; no primeiro minuto ficava em "0:00" e parecia travado.
+- **Correção (mínima):** só a exibição na tela do cronômetro (`apps/sgp-v2/src/screens/tablet/Tablet.tsx`, componente `Rodando`) passou a mostrar os segundos ("0:00:02"). Nenhuma regra, função ou outra tela alterada (`git diff`: 1 arquivo, 2 linhas + 1).
+- **Validação:** build e build:demo ok; eslint ok; headless com relógio real: COMEÇAR → "0:00:00" → 3 s depois "0:00:02". Demonstração republicada (versão 5).
+- **Uso/tokens disponíveis:** INDISPONÍVEL — a sessão não fornece métrica confiável.
