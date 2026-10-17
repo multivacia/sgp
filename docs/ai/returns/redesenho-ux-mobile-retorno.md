@@ -263,3 +263,15 @@ Fases 4 e 5 exigem o fluxo completo de `AGENTS.md` (contexto → impacto → spe
 - **Outros:** `src/mocks/matrix-bravo-build-tree.ts` (árvore "Tapeçaria automotiva · Bravo" para mocks), `server/src/tests/fixtures/bravo-matrix-matching-seed.fixture.ts` (fixture de testes); `server/seeds/0001_seed_base.sql` não contém matriz.
 - **Conteúdo da planilha:** 20 tarefas (idênticas às 20 etapas do cartaz), 15 setores distintos, 138 atividades, ~76,6 h previstas no total.
 - Busca feita em todas as 65 branches remotas; nenhuma outra seed de matriz encontrada.
+
+---
+
+## 17. Protótipo — "Personalizar etapa" com dados reais da matriz mestra (2026-10-17)
+
+- **Dados:** as 20 tarefas, 15 setores e 138 atividades com minutos previstos da planilha `docs/Nova Esteira v1.0 - MESTRA - Gol GTI - OS7945.xlsx` (aba `ATIVIDADES E APONTAMENTOS`) embutidos no artboard "Início + Nova esteira". Responsáveis da planilha **não** foram usados (nomes reais).
+- **Fluxo:** Serviço → grade de etapas (tudo incluído) → **Personalizar** em cada etapa: setores como seções ("Tirar setor"/"Incluir setor") e atividades como itens marcados com minutos; "Voltar ao padrão da matriz"; "Pronto" volta à grade. Máx. 2 níveis de navegação (setor+atividade na mesma tela), conforme pesquisa da seção 15.
+- **Regras do protótipo:** tirar todas as atividades tira a etapa (aviso); tirar a etapa na grade limpa a personalização; cartão da etapa mostra "N atividades tiradas"; resumo e tela final listam só as diferenças (ex.: "Bancos dianteiros: sem 1 atividade de Preparação; sem setor Pintura").
+- **Horas agora reais:** Revestimento completo 138 atividades ~76,6 h; Bancos ~30,9 h; Teto ~19,3 h; Forros de portas ~15,6 h; Porta-malas + tampão ~17,4 h; Volante ~4,4 h. A composição dos serviços (quais etapas cada um inclui) continua sendo exemplo.
+- **Removido:** quantidade (±) de Forros de portas e Bancos dianteiros — os minutos da planilha já são do veículo inteiro.
+- **Pendente (decisão de negócio):** quais etapas/setores/atividades são obrigatórios (cadeado). Telas Hoje/Planejar/Apontamento ainda usam horas de exemplo.
+- **Validação:** lógica executada em Node (fluxo serviço → personalizar → tirar setor/atividade → resumo → etapa zerada) sem erro; tags balanceadas; não renderizado visualmente.
