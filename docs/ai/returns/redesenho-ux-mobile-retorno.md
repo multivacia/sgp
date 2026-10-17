@@ -328,3 +328,18 @@ Fases 4 e 5 exigem o fluxo completo de `AGENTS.md` (contexto → impacto → spe
   - Barra "N mudanças · Descartar tudo · Salvar alteração" (Pronto na etapa); não sai com mudança pendente; motivo obrigatório (6 motivos padronizados + detalhe; "Outro motivo" exige texto) → histórico.
 - **Validação:** lógica em Node (troca de responsável → salvar exige motivo → histórico; bloqueio de saída; incluir/tirar etapa) e **capturas reais** das telas Esteiras (detalhe, grade, personalizar, motivo), Início, Nova esteira e Hoje — sem erro de execução (só avisos de parse do template e imagens `/_blob` indisponíveis localmente).
 - **Repositório:** só este retorno; nenhum código-fonte.
+
+---
+
+## 22. Tela de alteração idêntica à de criação (2026-10-17)
+
+- **Pedido:** "na tela de alteração da esteira deixe igual a tela de criação".
+- **Feito (artboard Esteiras):** o modo alteração agora usa o mesmo layout da Nova esteira:
+  - Cabeçalho com voltar, "Alterar <placa> · passo X de 2" e barras de passos (1 = Confira as etapas / Personalizar etapa; 2 = Por que está alterando?).
+  - **Grade única das 20 etapas** com figura, número, selo "Incluída"/"Fora" (+ "Feita" para concluídas), linha "N ativ. · ~tempo · situação" e botão "Personalizar" — mesmo visual da criação; toque inclui/tira (etapas iniciadas abrem Personalizar).
+  - **Personalizar etapa** igual à criação (cartão da etapa, setores com "Tirar setor/Incluir setor", "Trocar responsável de todo o setor", atividades com marcação e responsável); feitas/em andamento aparecem no mesmo lugar com **cadeado**; "Desfazer mudanças nesta etapa".
+  - **Motivo virou o passo 2** (tela cheia, não mais folha): "O que muda", motivos em botões, detalhe.
+  - **Barra inferior igual à da criação**: "N etapas · ~h · N mudanças" + Continuar / Pronto / Confirmar alteração.
+  - Removido o filtro "Só o que falta" e as duas grades separadas (para ficar idêntico).
+- **Hoje:** o "Ver esteira" (só consulta) ganhou botão "Alterar esteira (abre Esteiras)".
+- **Validação:** lógica em Node (fluxo completo até o histórico) e capturas em navegador headless lado a lado com a criação — layout equivalente; sem erro de execução.
