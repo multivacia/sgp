@@ -19,7 +19,8 @@ export function setUnauthorizedHandler(fn: Unauthorized): void {
   onUnauthorized = fn
 }
 
-export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
+/** `avisar401: false` = o 401 é da tela (ex.: PIN errado no tablet), não da sessão da gestora. */
+export async function api<T>(path: string, init: RequestInit = {}, avisar401 = true): Promise<T> {
   const res = await fetch(`/api/v1${path}`, {
     ...init,
     credentials: 'include',
@@ -30,7 +31,7 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
     | { data?: T; error?: { code?: string; message?: string } }
     | null
   if (!res.ok) {
-    if (res.status === 401) onUnauthorized()
+    if (res.status === 401 && avisar401) onUnauthorized()
     throw new ApiError(res.status, body?.error?.message ?? 'Não foi possível falar com o servidor.', body?.error?.code ?? null)
   }
   return body?.data as T

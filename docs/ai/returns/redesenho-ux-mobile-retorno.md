@@ -470,3 +470,20 @@ Fases 4 e 5 exigem o fluxo completo de `AGENTS.md` (contexto → impacto → spe
 - **Riscos/pendências:** muitas esteiras = muitas chamadas de backlog (4 em paralelo); esteiras EM_ANDAMENTO com plano da esteira ativo seguem o fluxo de "aguardando encaixe" da V1 (entram via factory-intake); conflito 409 da V1 (atividade em outro plano) aparece como mensagem de erro.
 - **Próximo passo:** Fase 5 (Tablet do colaborador).
 - **Uso/tokens disponíveis:** INDISPONÍVEL — a sessão não fornece métrica confiável.
+
+## 31. Fase 5 do SGP+ V2 — Tablet do colaborador (2026-10-17)
+
+- **Status:** concluída no código, exceto QR do ticket (pendente de decisão: o ticket da V1 não tem QR).
+- **Contexto verificado (V1, não alterada):** `server/src/modules/production/*` — `requireKioskToken` só em `/production/collaborators` (`X-SGP-Kiosk-Token`, aberto se `PRODUCTION_KIOSK_TOKEN` não configurado); login por PIN 4–8 dígitos com `PIN_CHANGE_REQUIRED` (PIN 1234 proibido como definitivo); cookie próprio do Modo Produção com `path: /`; work-queue com `isNextRecommended`, `canTrackTime`, `canCompleteStep`, `requiresOutOfSequenceJustification`; `productionTimeEntryBodySchema`; serviço exige justificativa fora de sequência e quando realizado + novo > previsto; `markAsDone` conclui. V1 front usa `VITE_PRODUCTION_KIOSK_TOKEN` (build no VPS) — a V2 não tem acesso, por isso pede o token no aparelho.
+- **Arquivos criados:** `apps/sgp-v2/src/domain/tablet.ts`, `src/domain/tablet.test.ts`, `src/api/production.ts`, `src/screens/tablet/Tablet.tsx`.
+- **Arquivos alterados (só V2):** `src/App.tsx` (rota `/tablet/*`), `src/api/client.ts` (parâmetro `avisar401` — 401 de PIN errado não derruba a sessão da gestora), `src/screens/Eu.tsx` (atalho do modo tablet), `docs/v2/SGP_V2.md` (§4, §8, §16).
+- **Backend/migrations:** nenhum. **Secrets:** nenhum alterado.
+- **Decisões:** cronômetro local (localStorage por colaborador) que vira um único apontamento; pausas registradas na observação; justificativa fora de sequência pedida antes de começar e a de excesso ao registrar; "Ontem" envia `entryAt` = data (V1 usa meio-dia de SP); sair automático 15 s após registrar; token do tablet digitado uma vez por aparelho.
+- **Validação:**
+  - `npm test` (V2) → 6 arquivos, **20/20** (3 novos); também **sem** `server/node_modules` (condição do CI) → 20/20.
+  - `npm run build` ok; `npx eslint apps/sgp-v2` sem problemas.
+  - Headless (tablet 820×1180, relógio simulado): liberar tablet com token → grade (bloqueado apagado) → PIN errado ("PIN errado. Tente de novo.") → PIN 1234 → criar PIN → próxima tarefa → começar 30 min → pausar (almoço) 60 min → sair e voltar (cronômetro pausado mantido) → continuar 45 min → Terminei → POST `minutes: 75, markAsDone: true, note: "Pausas: Almoço / intervalo"` → Registrado → sair → lançar horas de ontem 2 h 15 em tarefa fora de sequência → Metade → justificativa "Outro motivo" + complemento → POST `minutes: 135, entryAt: 2026-10-18, justificationId, justificationComplement` → saiu sozinho para a grade.
+  - V1: `git diff HEAD -- src server` vazio.
+- **Riscos/pendências:** cronômetro some se o navegador do tablet limpar dados; QR do ticket; corrigir apontamento; "Outra atividade" (não planejada) continua na V1.
+- **Próximo passo:** aplicar nginx + 1º deploy em HML (manual, aprovação humana) e demonstrar à gestora: Nova esteira → Alterar → Planejar semana → Tablet.
+- **Uso/tokens disponíveis:** INDISPONÍVEL — a sessão não fornece métrica confiável.

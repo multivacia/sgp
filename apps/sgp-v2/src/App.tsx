@@ -11,6 +11,7 @@ import { Login } from './screens/Login'
 import { Placeholder } from './screens/Placeholder'
 import { PlanejarSemana } from './screens/semana/PlanejarSemana'
 import { Shell } from './shell/Shell'
+import { Tablet } from './screens/tablet/Tablet'
 
 export function App() {
   const { state } = useSession()
@@ -21,7 +22,7 @@ export function App() {
 
   return (
     <Routes>
-      <Route path="/tablet/*" element={<Placeholder title="Tablet do setor" fase="Fase 5" />} />
+      <Route path="/tablet/*" element={<Tablet />} />
       {state.status === 'anonymous' ? (
         <Route path="*" element={<Login />} />
       ) : (

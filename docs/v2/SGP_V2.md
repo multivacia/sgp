@@ -49,7 +49,7 @@ Legenda: ⬜ não iniciada · 🟨 em andamento · ✅ concluída
 | 2 | Nova esteira (cardápio): matriz → etapas com figura → personalizar (setor/atividade/responsável) → carro → prazo | não (usa `/api/v1`); fotos reais das etapas ficam para 2b | médio | ✅ código pronto (§13) |
 | 3 | Alterar esteira = telas da criação + cadeados; motivo obrigatório (inclui troca de responsável) | não (usa `PATCH /conveyors/:id/structure`; motivo vai como texto livre da V1) | médio | ✅ código pronto (§14) |
 | 4 | Planejar semana por esteira (início → dias pela folga de cada responsável) + lotação por dia + "Sugerir semana" | não (usa `/operational-planning/*` da V1; sugestão é cálculo no front) | alto | ✅ código pronto (§15) |
-| 5 | Tablet do colaborador: lançar horas + QR do ticket; cronômetro depois | sessão de trabalho (cronômetro) | alto | ⬜ |
+| 5 | Tablet do colaborador (`/V2/tablet`): nome → PIN → próxima tarefa → cronômetro ou lançar horas → quanto ficou pronto | não (usa `/production/*` da V1; cronômetro fica no tablet) | alto | ✅ código pronto (§16) · QR do ticket pendente |
 
 Fases 4 e 5 (e qualquer mudança em regra de planejamento/apontamento) seguem o fluxo completo do `AGENTS.md`.
 
@@ -93,6 +93,10 @@ Commit: <sha> · branch <nome>
 - Quais matrizes existem além de "Gol GTI completo" (planilha mestra em `docs/Nova Esteira v1.0 - MESTRA - Gol GTI - OS7945.xlsx`).
 - Fotos reais das peças/etapas (a figura do protótipo foi gerada por IA).
 - Como o usuário chega na V2 sem tocar na V1: link direto/atalho instalado no celular (padrão) ou um link no menu da V1 (exigiria exceção à regra 1).
+
+- **QR do ticket (Fase 5):** os tickets da V1 não têm QR. Ler QR exige mudar o ticket na V1 (exceção à regra 1) ou um ticket próprio da V2 — decidir.
+- **Token do tablet:** a V2 pede o `PRODUCTION_KIOSK_TOKEN` uma vez por aparelho (a gestora digita). Alternativa: passar o token no build da V2 (exigiria um secret novo no GitHub).
+- **Corrigir apontamento** no tablet ("Tempo errado? Corrigir" do protótipo): a V1 não tem edição pelo Modo Produção — ficou fora.
 
 ## 9. Como retomar numa nova sessão
 
@@ -176,3 +180,14 @@ Commit: <sha> · branch <nome>
 - Grava como a V1: `POST /operational-planning/week` com a semana inteira (ordem por pessoa/dia: existentes primeiro, novos depois) e `POST /week/:planId/publish`. "Guardar" grava rascunho sem publicar.
 - Não faz (fica na V1): mover atividade a atividade entre pessoas/dias, aplicar valores do plano da esteira, exportar Excel. Atividade sem responsável não entra (definir em Alterar esteira).
 - **Teste:** `src/domain/planejarSemana.test.ts` — corpo validado com `saveOperationalWeekPlanBodySchema` real; encaixe pela folga; sobra/sem responsável; sugerir; tirar mantendo o que começou.
+
+## 16. Fase 5 — Tablet do colaborador
+
+- Rota `/V2/tablet` (fora do login da gestora; atalho em **Eu → Abrir modo tablet neste aparelho**).
+- Fluxo: **Toque no seu nome** (grade com iniciais; bloqueado/sem PIN aparece apagado) → **PIN** (teclado grande; 1º acesso cria PIN novo, como a V1) → **Sua próxima tarefa** (a recomendada pela V1, depois atrasadas; "Ou escolha outra") → **COMEÇAR** (cronômetro com PAUSAR/motivo e TERMINEI) ou **Já fiz · lançar horas** (tarefa, Hoje/Ontem, tempo com atalhos e ±15) → **Quanto ficou pronto?** (¼, ½, ¾, Terminei) → **Registrado!** ("Começar próxima" ou sai sozinho em 15 s).
+- API da V1, sem endpoint novo: `GET /production/collaborators` (header `X-SGP-Kiosk-Token`), `POST /production/auth/login|logout|change-pin`, `GET /production/me/work-queue`, `GET /production/time-entry-justifications`, `POST /production/time-entries`.
+- **Cronômetro:** só no tablet (localStorage, por colaborador). Sair não para o tempo; ao voltar, o colaborador cai no cronômetro. Pausas não contam e vão na observação do apontamento ("Pausas: Almoço / intervalo"). Ao terminar vira **um** apontamento normal da V1 (minutos arredondados, mínimo 1).
+- **Justificativa (regra da V1):** fora de sequência é pedida antes de começar; tempo acima do previsto é pedida ao registrar. Usa o catálogo de justificativas da V1 (com complemento quando exigido).
+- "Terminei a tarefa" só aparece se a V1 deixa concluir (`canCompleteStep`) → `markAsDone`.
+- **Teste:** `src/domain/tablet.test.ts` — corpo validado com `productionTimeEntryBodySchema` real; regra de justificativa; cronômetro com pausa; ordem da próxima tarefa.
+- **Fora (pendências §8):** QR do ticket; corrigir apontamento; "Outra atividade" (apontar em atividade não planejada — `unassigned-exception` da V1).

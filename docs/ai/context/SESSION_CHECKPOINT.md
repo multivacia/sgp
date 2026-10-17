@@ -7,64 +7,48 @@
 
 ## Identificação
 
-- TASK_ID: `SEM_ATIVIDADE_ATIVA`
-- Atualizado em: `2026-10-02 16:49 UTC`
-- Branch: `develop`
-- HEAD: `4798efbac17bd73256a5df4f0435fa4cafa43f10`
-- Base/remoto relevante: `origin/develop`
-- Working tree: `clean`
+- TASK_ID: `redesenho-ux-mobile`
+- Atualizado em: `2026-10-17 UTC`
+- Branch: `ccr-683413c7-571rnk`
+- HEAD: ver `git log -1` (commit "feat(v2): Fase 5 — Tablet do colaborador …")
+- Base/remoto relevante: `origin/ccr-683413c7-571rnk`
+- Working tree: `clean` após o push da Fase 5
 
 ## Objetivo atual
 
-Nenhuma atividade ativa registrada.
+SGP+ V2 (`apps/sgp-v2`, link `/V2`) — todas as fases 0–5 implementadas para demonstrar à gestora. V1 intocada.
 
 ## Estado em uma frase
 
-`padronizar-contexto-ia` mergeado em `develop` via PR #31; tip `4798efba`.
+Código das Fases 0–5 pronto e testado (20/20, build, lint, e2e headless); falta publicar em HML (nginx + deploy manual, aprovação humana).
 
 ## Concluído
 
-- Padronização de contexto de IA mergeada em `develop` (`--no-ff`, sem force-push).
-- Somente arquivos de docs alterados no merge.
+- Fases 0 a 5 (ver `docs/v2/SGP_V2.md` §4 e §10–§16).
 
 ## Decisões já tomadas
 
-- Merge autorizado explicitamente pelo humano com cuidado para preservar homologação em `develop`.
-
-## Arquivos relevantes
-
-- `CLAUDE.md`
-- `docs/ai/context/PROJECT_CONTEXT.md`
-- `docs/ai/context/SESSION_CHECKPOINT.md`
-- `docs/ai/returns/padronizar-contexto-ia-retorno.md`
-
-## Validações já executadas
-
-- Diff do merge vs tip anterior: 4 arquivos docs only.
-- PR #31: `MERGED`.
+- Ver `docs/v2/SGP_V2.md` §2 (regras) e §6 (decisões). Backend só da V1; nenhuma migration.
 
 ## Pendências
 
-- N/A
+- Humanas: aplicar `deploy/nginx/sgp-v2.location.example` em HML; rodar `deploy-v2.yml` (homologacao).
+- Decisões abertas: `docs/v2/SGP_V2.md` §8 (motivos reais, QR do ticket, token do tablet, corrigir apontamento, fotos reais).
 
 ## Próxima ação exata
 
-- N/A
-
-## Riscos / ressalvas
-
-- N/A
+- Aguardar o retorno da demonstração com a gestora / aprovação de deploy em HML.
 
 ## Não repetir
 
-- Não recriar inventário longo no `CLAUDE.md`.
-- Não force-push em `develop`.
+- Não alterar `src/` nem `server/` (guarda `guard-v1` no CI).
+- Não usar `pkill -f` no shell da sessão (mata o shell); matar por PID.
 
 ## Referências úteis
 
-- Retorno da atividade: `docs/ai/returns/padronizar-contexto-ia-retorno.md`
-- Prompt da atividade: `N/A`
-- PR/issue relacionado: https://github.com/multivacia/sgp/pull/31
+- Documento vivo: `docs/v2/SGP_V2.md`
+- Retorno: `docs/ai/returns/redesenho-ux-mobile-retorno.md` (§24–§31 = V2)
+- Protótipo: https://claude.ai/artifact/QBY3svGbjp7ALeewX1w9n2
 
 ## Uso de contexto / sessão
 
