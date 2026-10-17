@@ -2,7 +2,7 @@
 
 > **Para que serve:** retomar o desenvolvimento da V2 em qualquer sessão/chat.
 > **Como usar:** ler isto + `git log` da branch antes de começar; atualizar **Status** e **Decisões** ao fim de cada passo.
-> **Branch de trabalho:** `ccr-683413c7-571rnk` · **Atualizado em:** 2026-10-17 (Fases 0 a 9 + 2b implementadas, visual com o design system do SGP+; pronta para apresentar à gestora) · **Demonstração:** https://claude.ai/artifact/RFAWgUFLAB541XT4839dhW
+> **Branch de trabalho:** `ccr-683413c7-571rnk` · **Atualizado em:** 2026-10-17 (Fases 0 a 9 + 2b implementadas, visual com o design system do SGP+; pronta para apresentar à gestora) · **Demonstração:** https://claude.ai/artifact/RFAWgUFLAB541XT4839dhW (e na VPS em `/V2-demo/`, §23)
 
 ---
 
@@ -253,3 +253,10 @@ Continuam abertas:
 - Testes: servidor `src/tests/v2-producao-correcao.test.ts` (regras, incluindo virada de dia em São Paulo, + HTTP contra Postgres: lista, 422, 409, 403, 401, corrige, remove e registra antes/depois).
 - ⚠️ Aplicar `0055` manualmente (como a `0054`). Sem ela, o tablet mostra erro só nessa tela; o resto funciona.
 - **Planejar semana:** "Sugerir semana" aparece com 1 ou mais esteiras esperando (antes só com 2+).
+
+## 23. Demonstração na VPS (`/V2-demo/`)
+
+- Pacote: `cd apps/sgp-v2 && npm ci && npm run build:demo` → `apps/sgp-v2/dist-demo/` (arquivos com caminho relativo, endereços com `#`; abre em qualquer pasta).
+- **Não usa o backend:** toda chamada `/api/v1` é respondida no próprio navegador (`src/demo/api.ts`), com a matriz da planilha mestra e nomes fictícios. Cada visitante tem os próprios dados; recarregar recomeça. Nada vai para o banco.
+- Publicar: pasta própria `/var/www/sgp-v2-demo/` (nunca a da V1 nem `/var/www/sgp-v2`) + bloco `deploy/nginx/sgp-v2-demo.location.example` dentro do `server` existente (`nginx -t` antes do reload). Testado em nginx local: V1 intacta, `/V2-demo` → 301, `/V2-demo/` 200, assets 200, inexistente 404, `X-Robots-Tag: noindex`.
+- A demo mostra a faixa "DEMONSTRAÇÃO · dados de exemplo". Não instalar como app no celular (o atalho instalado aponta para a V2 real, `/V2/`).

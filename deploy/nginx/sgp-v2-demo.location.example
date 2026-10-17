@@ -1,0 +1,26 @@
+# SGP+ V2 — DEMONSTRAÇÃO (dados de exemplo, API simulada no navegador). Bloco para COLAR dentro do
+# `server { ... }` já existente. Só acrescenta /V2-demo; não toca nas regras da V1 nem na V2 real (/V2/).
+#
+# A demo não chama o backend: toda chamada /api/v1 é atendida no próprio navegador (src/demo/api.ts),
+# cada visitante tem os seus dados e recarregar a página recomeça. Nada é gravado no banco.
+#
+# Publicar (manual):
+#   1) no seu computador:  cd apps/sgp-v2 && npm ci && npm run build:demo      (gera apps/sgp-v2/dist-demo/)
+#   2) sudo mkdir -p /var/www/sgp-v2-demo && sudo chown <usuario> /var/www/sgp-v2-demo
+#   3) rsync -a --delete apps/sgp-v2/dist-demo/ <usuario>@<vps>:/var/www/sgp-v2-demo/
+#      ATENÇÃO: o destino tem de ser /var/www/sgp-v2-demo/ — nunca a pasta da V1 nem /var/www/sgp-v2 (V2 real).
+#   4) colar o bloco abaixo, `sudo nginx -t` (só seguir se "test is successful"), `sudo systemctl reload nginx`
+#   5) abrir https://<dominio>/V2-demo/
+# Desfazer: remover o bloco, `nginx -t`, reload, e apagar /var/www/sgp-v2-demo.
+
+    location = /V2-demo { return 301 /V2-demo/; }
+
+    location ^~ /V2-demo/ {
+        alias /var/www/sgp-v2-demo/;
+        index index.html;
+        # a demo usa endereços com # (não precisa de fallback para index.html)
+        try_files $uri $uri/ =404;
+        # não indexar em buscadores
+        add_header X-Robots-Tag "noindex, nofollow" always;
+        location ~ ^/V2-demo/assets/ { expires 1y; add_header Cache-Control "public, immutable"; add_header X-Robots-Tag "noindex, nofollow" always; }
+    }
