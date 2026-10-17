@@ -504,3 +504,12 @@ Fases 4 e 5 exigem o fluxo completo de `AGENTS.md` (contexto → impacto → spe
   - V1: `git diff HEAD -- src server` vazio.
 - **Pendências:** decidir liberação automática ao publicar; QR; corrigir apontamento; deploy HML (nginx + `deploy-v2.yml`, que precisa estar na branch padrão para rodar por `workflow_dispatch`).
 - **Uso/tokens disponíveis:** INDISPONÍVEL — a sessão não fornece métrica confiável.
+
+## 33. Levantamento "o que falta implementar" (2026-10-17)
+
+- **Tipo:** análise, sem alteração de código.
+- **Decisões do dono do produto:** QR do ticket; liberar esteira automaticamente ao publicar; lista real de motivos; fotos reais das etapas (Fase 2b: backend + migration); corrigir apontamento (V1 não tem); outras matrizes; token do tablet (digitado no aparelho ou secret no build).
+- **Ações humanas:** nginx em HML; merge para a branch padrão (requisito do `workflow_dispatch` do `deploy-v2.yml`); deploy; validação em celular/tablet real.
+- **Ainda só na V1:** finalizar/cancelar/devolver esteira; editar dados da esteira (prazo, cliente, placa); esteira sem matriz e complementos (HYBRID); busca por placa; prioridade; dispensar atividade; ações sobre atividade parada; exportar Excel; sincronizar com o plano da esteira; cadastros/administração; trocar PIN fora do 1º acesso.
+- **Técnico:** 5 testes da V1 que já falhavam (datas) — atividade separada; cronômetro do tablet só no aparelho.
+- **Uso/tokens disponíveis:** INDISPONÍVEL — a sessão não fornece métrica confiável.
