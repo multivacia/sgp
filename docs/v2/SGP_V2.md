@@ -48,7 +48,7 @@ Legenda: ⬜ não iniciada · 🟨 em andamento · ✅ concluída
 | 1 | Hoje + Esteiras (só leitura): exceções do dia; ver esteira (etapas → setores → atividades → responsável) | não (usa `/api/v1/conveyors` e `/conveyors/:id`) | baixo | ✅ código pronto (§12) |
 | 2 | Nova esteira (cardápio): matriz → etapas com figura → personalizar (setor/atividade/responsável) → carro → prazo | não (usa `/api/v1`); fotos reais das etapas ficam para 2b | médio | ✅ código pronto (§13) |
 | 3 | Alterar esteira = telas da criação + cadeados; motivo obrigatório (inclui troca de responsável) | não (usa `PATCH /conveyors/:id/structure`; motivo vai como texto livre da V1) | médio | ✅ código pronto (§14) |
-| 4 | Planejar semana por etapa (lotação por dia); "Sugerir semana" depois | motor de sugestão (depois) | alto | ⬜ |
+| 4 | Planejar semana por esteira (início → dias pela folga de cada responsável) + lotação por dia + "Sugerir semana" | não (usa `/operational-planning/*` da V1; sugestão é cálculo no front) | alto | ✅ código pronto (§15) |
 | 5 | Tablet do colaborador: lançar horas + QR do ticket; cronômetro depois | sessão de trabalho (cronômetro) | alto | ⬜ |
 
 Fases 4 e 5 (e qualquer mudança em regra de planejamento/apontamento) seguem o fluxo completo do `AGENTS.md`.
@@ -163,3 +163,16 @@ Commit: <sha> · branch <nome>
 - **Motivo:** 6 botões + detalhe opcional, enviados como texto "Motivo: detalhe" (campo `reason` da V1, 3–500 caracteres). "Outro motivo" exige o texto. Catálogo de motivos no backend fica para quando a lista real for decidida (§8).
 - `sourceOrigin` = `manual` se a esteira foi criada manual, senão `base`. Ressalva (igual à V1): atividades existentes perdem o `sourceKey` ao alterar.
 - **Teste de contrato:** `src/domain/alterarEsteira.test.ts` valida o corpo com `patchConveyorStructureBodySchema` real da V1 + cadeados + troca de responsável + etapa incluída/tirada + motivo.
+
+## 15. Fase 4 — Planejar semana
+
+- Aba **Semana** (`/V2/semana`), só com `conveyors.create` (mesma permissão do planejamento da V1).
+- Lê da V1: `GET /operational-planning/week?weekStart=` (plano + capacidade por pessoa/dia), `GET /operational-planning/backlog?conveyorId=` para cada esteira em planejamento/a iniciar/em andamento, `GET /operational-planning/factory-intake` (itens do plano da esteira aguardando encaixe).
+- **Limite de 100 do backlog da V1:** esteira com 100 ou mais atividades esperando é buscada de novo por responsável (`collaboratorId`) e remontada na ordem da esteira (testado com 138).
+- **Esperando** (por esteira) → **Escolher início**: cada dia mostra "Termina Qua · dentro do prazo" / "depois do prazo" / "Não cabe: sobram ~X h". As atividades vão, na ordem da esteira, para o primeiro dia (≥ o da anterior) em que o responsável tem folga; atividade maior que um dia ocupa um dia vazio. Capacidade = a da V1 por colaborador/dia (8 h se a V1 não informar).
+- **Sugerir semana:** pela ordem do prazo, cada esteira começa no primeiro dia em que termina no prazo.
+- **Na semana:** esteiras já no plano + as escolhidas; **Tirar da semana** mantém o que já começou/terminou (a V1 também preserva concluídas) e o resto volta a esperar.
+- **Lotação:** barra por dia (planejado ÷ capacidade), toque abre o que entra no dia (por esteira + etapa).
+- Grava como a V1: `POST /operational-planning/week` com a semana inteira (ordem por pessoa/dia: existentes primeiro, novos depois) e `POST /week/:planId/publish`. "Guardar" grava rascunho sem publicar.
+- Não faz (fica na V1): mover atividade a atividade entre pessoas/dias, aplicar valores do plano da esteira, exportar Excel. Atividade sem responsável não entra (definir em Alterar esteira).
+- **Teste:** `src/domain/planejarSemana.test.ts` — corpo validado com `saveOperationalWeekPlanBodySchema` real; encaixe pela folga; sobra/sem responsável; sugerir; tirar mantendo o que começou.

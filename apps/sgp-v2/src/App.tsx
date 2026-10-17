@@ -9,6 +9,7 @@ import { NovaEsteira } from './screens/nova/NovaEsteira'
 import { AlterarEsteira } from './screens/alterar/AlterarEsteira'
 import { Login } from './screens/Login'
 import { Placeholder } from './screens/Placeholder'
+import { PlanejarSemana } from './screens/semana/PlanejarSemana'
 import { Shell } from './shell/Shell'
 
 export function App() {
@@ -31,7 +32,7 @@ export function App() {
             <Route index element={<Inicio />} />
             <Route path="esteiras" element={<Esteiras />} />
             <Route path="esteiras/:id" element={<EsteiraDetalhe />} />
-            <Route path="semana" element={<Placeholder title="Planejar semana" fase="Fase 4" />} />
+            <Route path="semana" element={<PlanejarSemana />} />
             <Route path="hoje" element={<Hoje />} />
             <Route path="eu" element={<Eu />} />
             <Route path="*" element={<Placeholder title="Página não encontrada" fase="—" />} />

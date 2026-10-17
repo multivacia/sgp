@@ -453,3 +453,20 @@ Fases 4 e 5 exigem o fluxo completo de `AGENTS.md` (contexto → impacto → spe
 - **Riscos/pendências:** lista real de motivos; `sourceKey` das atividades existentes se perde ao alterar (comportamento da V1).
 - **Próximo passo:** Fase 4 (Planejar semana).
 - **Uso/tokens disponíveis:** INDISPONÍVEL — a sessão não fornece métrica confiável.
+
+## 30. Fase 4 do SGP+ V2 — Planejar semana (2026-10-17)
+
+- **Status:** concluída no código (publicação depende do nginx/deploy manual da Fase 0).
+- **Contexto verificado (V1, não alterada):** `server/src/modules/operational-planning/*` — rotas com `conveyors.create`; `saveOperationalWeekPlanBodySchema` (itens com `assignedCollaboratorId` obrigatório, `plannedDate` dentro da semana seg–sex, `plannedOrder ≥ 0`); POST substitui os itens do rascunho (concluídas preservadas); publish exige ≥ 1 item; backlog exclui esteiras FINALIZADA/CANCELADA/EM_ELABORACAO/AGUARDANDO_PLANEJAMENTO, atividades concluídas, já em plano semanal ou em plano da esteira ativo, `limit ≤ 100`. Tela da V1 `src/features/operational-planning/OperationalPlanningPage.tsx` usa o mesmo fluxo (POST semana inteira + publish).
+- **Arquivos criados:** `apps/sgp-v2/src/domain/planejarSemana.ts`, `src/domain/planejarSemana.test.ts`, `src/api/planning.ts`, `src/screens/semana/PlanejarSemana.tsx`.
+- **Arquivos alterados (só V2):** `src/App.tsx` (rota `semana`), `docs/v2/SGP_V2.md` (§4, §15).
+- **Backend/migrations:** nenhum.
+- **Decisões:** planejamento por esteira (dia de início) em vez de atividade a atividade; encaixe pela capacidade por colaborador/dia da V1 (padrão 480 min se ausente), sem dividir atividade entre dias (a V1 não divide); "Sugerir semana" é cálculo puro no front; responsável = 1º colaborador da atividade no backlog (a V1 grava 1 colaborador principal por atividade); itens tirados que já começaram ficam; dias passados da semana atual não recebem atividade; semana passada só leitura; sábado/domingo abrem a próxima semana.
+- **Validação:**
+  - `npm test` (V2) → 5 arquivos, **17/17** (4 novos).
+  - `npm run build` ok; `npx eslint apps/sgp-v2` sem problemas.
+  - Headless com API simulada (relógio fixo em 17/10/2026): 3 esteiras (uma publicada na semana, uma de 25 e outra de 138 atividades da planilha real) → escolher início, tirar da semana, sugerir, abrir dia, publicar. POST com 167 itens (138 da esteira grande, prova do contorno do limite de 100; 26 chamadas de backlog), atividade em andamento mantida, publish chamado com o id do plano.
+  - V1: `git diff HEAD -- src server` vazio.
+- **Riscos/pendências:** muitas esteiras = muitas chamadas de backlog (4 em paralelo); esteiras EM_ANDAMENTO com plano da esteira ativo seguem o fluxo de "aguardando encaixe" da V1 (entram via factory-intake); conflito 409 da V1 (atividade em outro plano) aparece como mensagem de erro.
+- **Próximo passo:** Fase 5 (Tablet do colaborador).
+- **Uso/tokens disponíveis:** INDISPONÍVEL — a sessão não fornece métrica confiável.
