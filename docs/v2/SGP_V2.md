@@ -2,7 +2,7 @@
 
 > **Para que serve:** retomar o desenvolvimento da V2 em qualquer sessão/chat.
 > **Como usar:** ler isto + `git log` da branch antes de começar; atualizar **Status** e **Decisões** ao fim de cada passo.
-> **Branch de trabalho:** `ccr-683413c7-571rnk` · **Atualizado em:** 2026-10-17
+> **Branch de trabalho:** `ccr-683413c7-571rnk` · **Atualizado em:** 2026-10-17 (Fase 0 implementada)
 
 ---
 
@@ -44,7 +44,7 @@ Legenda: ⬜ não iniciada · 🟨 em andamento · ✅ concluída
 
 | # | Fase | Backend novo? | Risco | Status |
 |---|---|---|---|---|
-| 0 | Fundação: app vazio em `/V2`, PWA, login compartilhado, tokens de UI, build/deploy separados, guarda de CI "V2 não altera `src/`" | não | baixo | 🟨 spec pronta (§10), aguardando OK |
+| 0 | Fundação: app vazio em `/V2`, PWA, login compartilhado, tokens de UI, build/deploy separados, guarda de CI "V2 não altera `src/`" | não | baixo | ✅ código pronto · ⏳ falta aplicar nginx + 1º deploy (manual) |
 | 1 | Hoje + Esteiras (só leitura): exceções do dia; ver esteira (etapas → setores → atividades → responsável) | talvez agregador de exceções | baixo | ⬜ |
 | 2 | Nova esteira (cardápio): matriz → etapas com figura → personalizar (setor/atividade/responsável) → carro → prazo | imagens de etapa | médio | ⬜ |
 | 3 | Alterar esteira = telas da criação + cadeados; motivo obrigatório (inclui troca de responsável) em catálogo + histórico | catálogo de motivos | médio | ⬜ |
@@ -121,3 +121,15 @@ Commit: <sha> · branch <nome>
 - Usar os secrets de deploy existentes no workflow novo da V2.
 
 **Fora do escopo:** qualquer endpoint novo, migration, mudança em `src/` ou `server/`.
+
+## 11. Fase 0 — o que foi entregue e como usar
+
+- App: `apps/sgp-v2/` (login com a mesma conta da V1 → casca com menu inferior; telas das próximas fases vazias; `/V2/tablet` reservado). Sessão via `/api/v1/auth/{me,login,logout}`.
+- Rodar local: `cd apps/sgp-v2 && npm ci && npm run dev` (abre em `http://localhost:5174/V2/`; `/api` vai para o backend em `127.0.0.1:4000`, mude com `VITE_DEV_API_TARGET`).
+- Testes: `npm test` (3 testes críticos de sessão). Build: `npm run build`.
+- CI: `.github/workflows/verify-v2.yml` (só quando `apps/sgp-v2/**` muda): build + testes + **guarda que reprova PR que altere `src/`**.
+- Deploy: `.github/workflows/deploy-v2.yml` — **só manual** (Actions → "Deploy SGP+ V2" → homologação/produção). Publica em `/var/www/sgp-v2[-hml]/V2`; aborta se o destino for a pasta da V1.
+- Nginx: `deploy/nginx/sgp-v2.location.example` — blocos para colar no `server` da V1; passo a passo e como desfazer no próprio arquivo. Testado em nginx 1.24 local: V1 (`/`, rotas internas, `/api`) idêntica; `/V2/` ok; `/v2` e `/V2` redirecionam; asset inexistente dá 404.
+- Dependências: o `package-lock.json` da V2 foi semeado do lock da V1 (mesmas versões testadas). Motivo: o npm 10.9 falha ao resolver `vitest` do zero ("edgesOut").
+
+**Passos manuais pendentes (com aprovação):** (1) criar `/var/www/sgp-v2-hml` no servidor de HML, colar o bloco nginx, `nginx -t`, reload; (2) rodar "Deploy SGP+ V2" → homologação; (3) repetir em produção.

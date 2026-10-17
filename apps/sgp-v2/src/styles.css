@@ -1,0 +1,33 @@
+@import 'tailwindcss';
+
+/* Tokens do SGP+ V2: letra grande, alvos de toque >= 48px, contraste AA (docs/v2/SGP_V2.md §3). */
+@theme {
+  --color-ground: #eef0f3;
+  --color-ink: #12161c;
+  --color-muted: #4a5260;
+  --color-line: #d5d9e0;
+  --color-accent: #e0b321;
+  --color-ok: #15803d;
+  --color-danger: #b91c1c;
+  --color-danger-soft: #fef2f2;
+  --font-display: 'Archivo', system-ui, sans-serif;
+  --font-sans: 'Atkinson Hyperlegible', system-ui, sans-serif;
+}
+
+html {
+  font-size: 18px;
+  color: var(--color-ink);
+  background: var(--color-ground);
+}
+
+@layer components {
+  .field {
+    @apply min-h-14 rounded-2xl border-2 border-ink bg-white px-4 text-lg font-normal;
+  }
+  .btn-primary {
+    @apply min-h-16 rounded-2xl bg-ink px-6 text-xl font-bold text-white disabled:opacity-60;
+  }
+  .btn-secondary {
+    @apply min-h-14 rounded-2xl border-2 border-ink bg-white px-6 text-lg font-bold;
+  }
+}

@@ -1,0 +1,75 @@
+name: Deploy SGP+ V2 (manual)
+
+# Publica SOMENTE a V2 numa pasta própria do servidor (nunca na pasta web da V1).
+# Pré-requisito único (manual, no servidor): pasta criada e bloco nginx de
+# deploy/nginx/sgp-v2.location.example aplicado e validado com `nginx -t`.
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "Ambiente"
+        required: true
+        type: choice
+        options: [homologacao, producao]
+
+concurrency:
+  group: deploy-sgp-v2-${{ inputs.target }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      # Pasta raiz da V2; os arquivos vão para $V2_ROOT/V2 (bate com o bloco nginx).
+      V2_ROOT: ${{ inputs.target == 'producao' && (vars.V2_WEB_ROOT || '/var/www/sgp-v2') || (vars.HML_V2_WEB_ROOT || '/var/www/sgp-v2-hml') }}
+      SSH_HOST: ${{ inputs.target == 'producao' && secrets.VPS_HOST || secrets.HML_VPS_HOST }}
+      SSH_PORT: ${{ inputs.target == 'producao' && secrets.VPS_PORT || secrets.HML_VPS_PORT }}
+      SSH_USER: ${{ inputs.target == 'producao' && secrets.VPS_USER || secrets.HML_VPS_USER }}
+      SSH_KEY: ${{ inputs.target == 'producao' && secrets.VPS_SSH_KEY || secrets.HML_VPS_SSH_KEY }}
+      SSH_KNOWN_HOSTS: ${{ inputs.target == 'producao' && secrets.VPS_KNOWN_HOSTS || secrets.HML_VPS_KNOWN_HOSTS }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: apps/sgp-v2/package-lock.json
+
+      - name: Build e testes da V2
+        working-directory: apps/sgp-v2
+        run: |
+          npm ci
+          npm test
+          npm run build
+          test -f dist/index.html
+
+      - name: Proteção da V1
+        shell: bash
+        run: |
+          set -euo pipefail
+          case "$V2_ROOT" in
+            /var/www/sgp-web|/var/www/sgp-web/*|/var/www/sgp-web-hml|/var/www/sgp-web-hml/*)
+              echo "::error::V2_ROOT aponta para a pasta da V1 ($V2_ROOT). Abortado."; exit 1 ;;
+          esac
+
+      - name: Configurar SSH
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/v2_key && chmod 600 ~/.ssh/v2_key
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts && chmod 644 ~/.ssh/known_hosts
+
+      - name: Publicar
+        shell: bash
+        run: |
+          set -euo pipefail
+          SSH="ssh -i $HOME/.ssh/v2_key -p $SSH_PORT -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes"
+          # A pasta precisa existir (criada junto com o bloco nginx); o workflow não cria nada fora dela.
+          $SSH "$SSH_USER@$SSH_HOST" "test -d '$V2_ROOT' && test -w '$V2_ROOT' && mkdir -p '$V2_ROOT/V2'"
+          rsync -a --delete -e "$SSH" apps/sgp-v2/dist/ "$SSH_USER@$SSH_HOST:$V2_ROOT/V2/"
+          echo "Publicado em $V2_ROOT/V2 (${{ inputs.target }})."

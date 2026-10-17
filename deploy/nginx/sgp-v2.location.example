@@ -1,0 +1,32 @@
+# SGP+ V2 — blocos para COLAR dentro do `server { ... }` já existente da V1.
+# Não altera nenhuma regra da V1: só acrescenta caminhos que começam com /V2 e /v2.
+#
+# Por que não quebra a V1:
+#  - `location ^~ /V2/` só casa com URLs que começam por /V2/. As rotas da V1 (/, /app/..., /api/...) continuam
+#    caindo nos mesmos blocos de antes.
+#  - Os arquivos da V2 ficam em pasta própria (/var/www/sgp-v2/V2). O deploy da V1 faz
+#    `rsync --delete` só na pasta da V1, então nunca apaga a V2, e o deploy da V2 nunca toca a pasta da V1.
+#  - /api/ continua sendo atendido pelo bloco da V1 (mesmo backend, mesmo cookie de sessão).
+#
+# Aplicação (manual, com aprovação):
+#   1) sudo mkdir -p /var/www/sgp-v2/V2 && sudo chown <usuario-deploy> /var/www/sgp-v2 /var/www/sgp-v2/V2
+#   2) colar os blocos abaixo no server da V1 (HML: usar /var/www/sgp-v2-hml)
+#   3) sudo nginx -t   (só seguir se disser "syntax is ok" e "test is successful")
+#   4) sudo systemctl reload nginx
+#   5) conferir: a V1 abre normal em / e /api/v1/health responde; /V2/ abre o SGP+ V2
+# Desfazer: remover os blocos, `nginx -t`, reload. A V1 volta exatamente ao estado anterior.
+
+    # /v2 (minúsculo) e /V2 sem barra → /V2/
+    location = /v2 { return 301 /V2/; }
+    location = /V2 { return 301 /V2/; }
+    location ^~ /v2/ { rewrite ^/v2/(.*)$ /V2/$1 permanent; }
+
+    location ^~ /V2/ {
+        root /var/www/sgp-v2;
+        # index.html e service worker sempre revalidados, para atualização chegar logo ao celular
+        location = /V2/index.html { root /var/www/sgp-v2; add_header Cache-Control "no-cache"; }
+        location = /V2/sw.js { root /var/www/sgp-v2; add_header Cache-Control "no-cache"; }
+        # arquivos com hash no nome: cache longo e 404 de verdade se não existir
+        location ^~ /V2/assets/ { root /var/www/sgp-v2; expires 1y; add_header Cache-Control "public, immutable"; try_files $uri =404; }
+        try_files $uri $uri/ /V2/index.html;
+    }

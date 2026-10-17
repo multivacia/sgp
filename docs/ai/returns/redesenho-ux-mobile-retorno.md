@@ -377,3 +377,27 @@ Fases 4 e 5 exigem o fluxo completo de `AGENTS.md` (contexto → impacto → spe
 - Decisões: link final `/V2` (`/v2` redireciona); retorno no chat em 6 linhas; arquivo de retorno continua detalhado.
 - Contexto/impacto da Fase 0 verificados no código: deploy da V1 usa `rsync --delete` na pasta web (V2 precisa de pasta própria — crítico); rotas de auth reaproveitáveis (`/api/v1/auth/login|me|logout`); CI da V1 restrito a `src/` (build `tsc -b` com `include: ["src"]`, vitest `src/**`); `eslint .` da raiz alcança `apps/`.
 - Especificação da Fase 0 registrada em `docs/v2/SGP_V2.md` §10 (escopo, 3 testes críticos, CI com guarda de `src/`, nginx/deploy separados; aprovações humanas listadas). Nenhum código alterado.
+
+---
+
+## 26. Fase 0 do SGP+ V2 — implementação (2026-10-17)
+
+- **Status:** concluída no código; pendente aplicação manual do nginx e 1º deploy (exigem acesso ao servidor).
+- **Aprovação:** usuário aprovou condicionado a "o nginx não estragar a V1 nem os deploys dela".
+- **Arquivos criados (nenhum da V1 alterado):**
+  - `apps/sgp-v2/` — `package.json`, `package-lock.json`, `.gitignore`, `index.html`, `tsconfig.json`, `vite.config.ts`, `public/{manifest.webmanifest,icon.svg,sw.js}`, `src/{main.tsx,App.tsx,App.test.tsx,styles.css}`, `src/api/client.ts`, `src/auth/{context.ts,session.tsx}`, `src/screens/{Login,Eu,Placeholder}.tsx`, `src/shell/Shell.tsx`.
+  - `.github/workflows/verify-v2.yml` (CI da V2 + guarda "PR não altera `src/`").
+  - `.github/workflows/deploy-v2.yml` (deploy manual, pasta própria, trava contra pasta da V1).
+  - `deploy/nginx/sgp-v2.location.example` (blocos aditivos + passo a passo + rollback).
+  - `docs/v2/SGP_V2.md` atualizado (status Fase 0, §11).
+- **Decisões técnicas:** base `/V2/`; `BrowserRouter basename="/V2"`; cliente `fetch` com `credentials: 'include'` e handler global de 401; service worker mínimo só para instalação (sem cache); tokens de UI (html 18px, campos/botões ≥ 56px); `react-refresh` exigiu separar contexto (`context.ts`) do provider (`session.tsx`); lock semeado do lock da V1 por bug do npm 10.9.4 ("Cannot read properties of null (reading 'edgesOut')") ao resolver `vitest` do zero.
+- **Migrations:** nenhuma. **Backend:** nenhuma alteração.
+- **Validações executadas:**
+  - V2: `npm ci` ok; `npm test` → 1 arquivo, **3/3 testes passaram**; `npm run build` ok (JS 236,6 kB / 76 kB gzip).
+  - Lint: `npx eslint .` na raiz → **0 problemas em `apps/sgp-v2`** (há 94 erros/23 avisos **pré-existentes** na V1; lint não faz parte do CI `verify-deploy`).
+  - V1: `npm run verify:frontend` → build ok; testes **1382 ok / 5 falharam** em `src/features/colaborador/ApontamentoPage.test.tsx` (3) e `src/features/gestor/ApontamentoGestorPage.test.tsx` (2) — botões "Registar apontamento"/"Rever e registar" não encontrados nos testes de "data de realização". **Pré-existente e não relacionado:** `git diff HEAD -- src server` vazio (nenhum arquivo da V1 tocado); provável dependência de data (hoje é sábado, 2026-10-17). Não investigado (fora do escopo; não alterar V1).
+  - Nginx: `nginx -t` ok com config da V1 + blocos da V2 (nginx 1.24 local); requisições: `/`→V1 200, `/app/esteiras/123`→V1 200, `/api/v1/health`→200, `/V2/` e `/V2/hoje`→V2 200, `/V2/assets/<hash>.js`→200, asset inexistente→404, `/v2`, `/V2`, `/v2/x`→301 para `/V2/...`, `/V2abc`→V1 (não capturado), `index.html`/`sw.js` com `Cache-Control: no-cache`.
+  - Navegador (Chromium headless, `vite preview`): tela de login e casca com menu inferior renderizam.
+- **Riscos/ressalvas:** a config nginx real do VPS pode diferir do exemplo (`/opt/sgp/current/frontend-dist` vs `/var/www/sgp-web` usado no workflow) — por isso o bloco é só aditivo e a aplicação exige `nginx -t`; o deploy da V2 reaproveita os secrets de SSH existentes (aprovado); as 5 falhas da V1 devem ser vistas em outra atividade.
+- **Próximo passo:** aplicar nginx em HML + rodar deploy manual; em seguida Fase 1 (Hoje + Esteiras só leitura).
+- **Uso/tokens disponíveis:** INDISPONÍVEL — a sessão não fornece métrica confiável.

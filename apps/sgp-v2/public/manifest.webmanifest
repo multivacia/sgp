@@ -1,0 +1,11 @@
+{
+  "name": "SGP+ V2",
+  "short_name": "SGP+ V2",
+  "start_url": "/V2/",
+  "scope": "/V2/",
+  "display": "standalone",
+  "background_color": "#EEF0F3",
+  "theme_color": "#12161C",
+  "lang": "pt-BR",
+  "icons": [{ "src": "/V2/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+}

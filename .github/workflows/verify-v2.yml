@@ -1,0 +1,56 @@
+name: Verify SGP+ V2
+
+# Só roda quando a V2 muda. Não interfere nos workflows da V1.
+on:
+  pull_request:
+    paths:
+      - "apps/sgp-v2/**"
+      - ".github/workflows/verify-v2.yml"
+  push:
+    branches: [develop, homol, main]
+    paths:
+      - "apps/sgp-v2/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  guard-v1:
+    name: V1 intacta (PR da V2 não altera src/)
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Bloquear mudanças em src/ no mesmo PR
+        shell: bash
+        run: |
+          set -euo pipefail
+          changed="$(git diff --name-only "origin/${{ github.base_ref }}...HEAD")"
+          v1="$(printf '%s\n' "$changed" | grep -E '^src/' || true)"
+          if [ -n "$v1" ]; then
+            echo "::error::PR da V2 não pode alterar a V1 (src/). Arquivos:"
+            printf '%s\n' "$v1"
+            exit 1
+          fi
+          echo "OK: nenhum arquivo de src/ alterado."
+
+  build-test:
+    name: Build e testes da V2
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: apps/sgp-v2
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: apps/sgp-v2/package-lock.json
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
