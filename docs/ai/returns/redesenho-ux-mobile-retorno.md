@@ -1,0 +1,157 @@
+# Retorno — redesenho-ux-mobile
+
+- **TASK_ID:** `redesenho-ux-mobile`
+- **Data/hora:** 2026-10-17 (UTC)
+- **Objetivo:** analisar a UX atual e propor um redesenho completo, mobile-first (celular/tablet), para gestor de esteira e colaboradores de fábrica. **Sem codificação nesta etapa.**
+- **Status final:** ANÁLISE CONCLUÍDA — aguardando decisões humanas (seção 7).
+- **Branch:** `ccr-683413c7-571rnk`
+- **SHA inicial:** `c611d10` (release 1.9.8)
+- **SHA final:** ver commit deste retorno (docs only).
+- **Migrations envolvidas:** nenhuma.
+- **Uso/tokens disponíveis:** INDISPONÍVEL — a sessão não fornece métrica confiável.
+
+---
+
+## 1. Diagnóstico (evidência no código)
+
+| Achado | Evidência | Efeito no usuário |
+|---|---|---|
+| Telas desktop-first e gigantes | `OperationalPlanningPage.tsx` 2.407 linhas, `EsteiraDetalhePage.tsx` 2.182, `ConveyorCreateEditPage.tsx` 1.398, `DashboardPage.tsx` 1.035 | Uma tela faz tudo; no celular vira rolagem infinita |
+| Arrastar-e-soltar como interação principal | `@dnd-kit` em nova esteira, matriz, agenda semanal e planejamento | Arrastar com o dedo em celular é impreciso e cansativo |
+| Texto minúsculo e baixo contraste | **1.002** usos de `text-[9px/10px/11px]` e **1.115** de `text-slate-500/600` sobre fundo escuro | Ilegível para quem tem 45+ anos, no chão de fábrica |
+| Tabelas | `<table>` em 18 telas (dashboard, colaboradores, evolução, planejamento) | Tabela não cabe em celular |
+| Criação de esteira = muitas decisões | 3 modos (`novaEsteiraCreationMode.ts`), 6 campos digitados (`NovaEsteiraDadosIniciais.tsx`), mesa de montagem, revisão | Gestor precisa entender "matriz × complemento × manual" antes de começar |
+| Planejamento em duas telas | `planejamento-semanal` + `agenda-semanal`, backlog + grade + kanban | Duplicidade mental: "onde eu planejo?" |
+| Não instalável | Sem `manifest`/ícone em `public/` e `index.html` | Não vira "app" na tela inicial do celular |
+| Apontamento declarativo | Kiosk: grade → PIN → card → data + tempo (presets) + slider % + justificativa | Colaborador precisa **lembrar** quanto tempo trabalhou |
+| Jargão | "Matriz", "backlog", "Step", hierarquia Esteira › Tarefa › Setor › Atividade | Linguagem de sistema, não de fábrica |
+
+O que **já é bom** e deve ser reaproveitado: kiosk com grade de avatares + PIN, presets de tempo, justificativas padronizadas (UX Bravo), impressão térmica de tickets, importação de OS por documento (ARGOS), módulo de capacidade operacional.
+
+---
+
+## 2. Princípios do redesenho
+
+1. **Uma tela = uma pergunta.** Nunca formulário longo.
+2. **Tocar, não digitar.** Cartões grandes, chips, botões ±. Digitação só para placa/cliente, com autocompletar.
+3. **Polegar primeiro.** Ação principal fixa no rodapé; menu em barra inferior (não sidebar).
+4. **Legível para todas as idades.** Mínimo 16px corpo, 20px+ títulos, alvos ≥ 48px, contraste AA, modo claro disponível (sol de fábrica).
+5. **O sistema sugere, a pessoa confirma.** Padrões inteligentes + "desfazer" no lugar de "tem certeza?".
+6. **Exceção primeiro.** Gestor vê o que está fora do normal, não tudo.
+7. **Desktop continua existindo** para manutenção de cardápio (matrizes), análises e administração. Celular é para o dia a dia.
+
+---
+
+## 3. Gestor — novo app "de bolso"
+
+Tela inicial com **3 botões gigantes** + barra inferior:
+
+```
+┌───────────────────────────┐
+│ Bom dia, Ana     🔔 3     │
+│                           │
+│  [ ➕  NOVA ESTEIRA     ]  │
+│  [ 📅  PLANEJAR SEMANA  ]  │
+│  [ 👀  HOJE NA FÁBRICA  ]  │
+│                           │
+│ ⚠ 2 atrasadas · 1 parada  │
+├───────────────────────────┤
+│ Início  Esteiras  Hoje  Eu│
+└───────────────────────────┘
+```
+
+### 3.1 Nova esteira = cardápio de fast-food
+
+| Passo | Pergunta | Interação |
+|---|---|---|
+| 1 | **"O que vai ser feito?"** | Cartões grandes com ícone/foto dos **combos** (= matrizes), mais usados primeiro, filtro por categoria (ex.: bancos, teto, porta). Um toque escolhe. Opção "Montar do zero" discreta no fim. |
+| 2 | **"Quer adicionar ou tirar algo?"** | Lista do combo com toggles ✓/✗ por tarefa e chips "+ Adicionais" (blocos de outras matrizes). Quantidade com botões − / +. Sem arrastar. |
+| 3 | **"Pra qual carro?"** | Placa primeiro (teclado já em maiúsculas); se a placa já existe, preenche cliente/veículo/modelo sozinho. Alternativa: **📷 foto da OS** usando o fluxo ARGOS de importação já existente. |
+| 4 | **"Pra quando?"** | Chips: Hoje · Amanhã · Esta semana · Escolher data. Responsável = quem está criando (alterável). |
+
+**Carrinho fixo no rodapé** durante todo o fluxo: `3 tarefas · ~14 h · R$ —` → botão **CRIAR ESTEIRA**.
+Atalhos: **"Repetir última"** e **"Duplicar esteira"**.
+Meta: criar esteira padrão em **< 1 minuto, ~8 toques**.
+
+> Os três modos atuais (matriz inteira / matriz + complementos / manual) deixam de ser uma escolha inicial: viram consequência natural do passo 2 (não mexeu = matriz inteira; adicionou = complementos; "do zero" = manual). Payload enviado ao backend continua o mesmo.
+
+### 3.2 Planejar semana = "o sistema monta, você ajusta"
+
+- Lista única **"Esperando planejamento"** (substitui backlog + agenda).
+- Botão **"Sugerir semana"**: usa capacidade operacional já cadastrada para propor dia/equipe de cada esteira.
+- Visão da semana como **5 barras de lotação** (Seg–Sex) com semáforo verde/amarelo/vermelho.
+- Ajuste por toque: tocar na esteira → chips de dia → pronto. Sem drag-and-drop.
+- Um botão **PUBLICAR SEMANA**.
+
+### 3.3 Hoje na fábrica = feed de exceções
+
+- Só aparece o que precisa de ação: **atrasada**, **parada há X h**, **sem apontamento hoje**, **colaborador sem atividade**, **apontamento fora de sequência**.
+- Cada cartão tem 1–2 botões de ação (Ver · Realocar · Ligar/Avisar).
+- Rodapé com resumo do dia em 3 números (concluídas / em andamento / atrasadas).
+- Notificação no celular para exceções críticas (PWA).
+- Dashboard analítico completo permanece no desktop.
+
+---
+
+## 4. Colaboradores de fábrica (kiosk / tablet)
+
+| Hoje | Proposta |
+|---|---|
+| Lista de cards de atividades | **Um cartão gigante: "Sua próxima tarefa"** + "ver outras" |
+| Declara tempo depois (presets/minutos) | **▶ COMEÇAR / ⏸ PAUSAR / ✅ TERMINEI** — o sistema cronometra; só pergunta se o tempo ficar fora do esperado |
+| Slider de % | 4 botões: **¼ · ½ · ¾ · Pronto** |
+| Procurar atividade na lista | **QR code no ticket térmico** (já impresso hoje) → tablet lê → abre direto a atividade |
+| Justificativa em select | Botões grandes com ícone (falta material, retrabalho, aguardando outro setor…) |
+| Grade + PIN | Mantém (funciona), com fotos maiores |
+
+Opcional depois: modo "sem internet" (fila local de apontamentos que sincroniza quando o Wi-Fi volta).
+
+---
+
+## 5. Transversal
+
+- **PWA instalável** (ícone na tela inicial, abre em tela cheia).
+- **Barra inferior** de navegação no celular; sidebar só no desktop.
+- **Glossário de fábrica** (decisão de negócio): ex. Matriz → *Modelo* / *Combo*; Backlog → *Esperando*; Step → *Atividade*.
+- **Design system novo de tokens** (tamanho mínimo de fonte, contraste, modo claro/escuro) para eliminar os ~1.000 textos minúsculos.
+- Toda regra continua no backend: o novo front **reutiliza os endpoints atuais**; nenhuma regra de ciclo de vida, planejamento publicado ou sequência muda.
+
+---
+
+## 6. Roteiro sugerido (incremental, sem big-bang)
+
+| Fase | Entrega | Risco | Precisa backend? |
+|---|---|---|---|
+| 0 — Descoberta (1 semana) | Acompanhar gestora e 2–3 colaboradores; cronometrar hoje: criar esteira, planejar, apontar. Protótipo clicável no celular para validar | Baixo | Não |
+| 1 — Ganhos rápidos | PWA + barra inferior + tipografia/contraste mínimos + botões ¼ ½ ¾ | Baixo | Não |
+| 2 — Nova esteira cardápio | Fluxo de 4 passos em rota mobile nova (`/m/...`), mesma API de criação | Médio | Possivelmente busca por placa / "mais usadas" |
+| 3 — Hoje na fábrica | Feed de exceções + push | Médio | Endpoint agregado de exceções |
+| 4 — Apontamento por cronômetro + QR | COMEÇAR/PAUSAR/TERMINEI, QR no ticket | **Alto** (toca regra de apontamento) | Sim — sessão de trabalho aberta/fechada |
+| 5 — Planejamento por sugestão | "Sugerir semana" + barras de lotação | **Alto** (planejamento semanal publicado) | Sim — motor de sugestão |
+
+Fases 4 e 5 exigem o fluxo completo de `AGENTS.md` (contexto → impacto → spec → implementação → revisão).
+
+---
+
+## 7. Decisões humanas pendentes
+
+1. **Vocabulário:** aceitar renomear termos (Matriz → Modelo/Combo etc.)?
+2. **Dispositivo dos colaboradores:** tablet fixo compartilhado por setor, ou celular próprio? (define QR, PIN, offline).
+3. **Quantas matrizes ativas existem?** (até ~20 = cartões; mais que isso = categorias + busca).
+4. **Esteira "rascunho rápido"** sem cliente/placa pode existir e ser completada depois?
+5. **Apontamento por cronômetro** substitui ou convive com a declaração de tempo atual?
+6. **Métrica de sucesso:** qual o tempo atual para criar uma esteira e planejar a semana? (base para provar ganho).
+7. Começar pela **Fase 0 + 1** e pelo **cardápio da nova esteira** (Fase 2)?
+
+---
+
+## 8. Execução desta atividade
+
+- **Arquivos criados:** `docs/ai/returns/redesenho-ux-mobile-retorno.md`
+- **Arquivos alterados/removidos:** nenhum.
+- **Código-fonte:** não alterado (análise somente leitura).
+- **Comandos executados:** `git status`, `git log`, listagens de `src/features` e `src/routes`, `grep` pontuais (dnd-kit, `<table>`, tamanhos de fonte, manifest, campos da nova esteira e do kiosk), `wc -l` das telas.
+- **Build/lint/testes:** não executados — nenhuma alteração de código.
+- **Riscos/ressalvas:** contagens de classes CSS são aproximadas (grep); diagnóstico baseado em leitura de código, não em observação de uso real — validar na Fase 0.
+- **Próximo passo recomendado:** responder às decisões da seção 7; em seguida produzir protótipo clicável mobile da Nova Esteira (cardápio) e da tela Hoje para testar com a gestora antes de codificar.
+- **Commit/push:** branch `ccr-683413c7-571rnk`; sem PR.
