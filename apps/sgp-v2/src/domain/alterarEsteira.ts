@@ -112,7 +112,8 @@ export function reasonText(motivo: string | null, detalhe: string): string | nul
 }
 
 /** Corpo do PATCH /api/v1/conveyors/:id/structure. */
-export function buildPatchBody(d: ConveyorDetail, e: Edit, reason: string) {
+/** `reason` null = esteira ainda em elaboração (a V1 não exige motivo). */
+export function buildPatchBody(d: ConveyorDetail, e: Edit, reason: string | null) {
   const origemExistente = d.originRegister === 'MANUAL' ? 'manual' : 'base'
   const existentes = d.structure.options
     .slice()
@@ -183,6 +184,6 @@ export function buildPatchBody(d: ConveyorDetail, e: Edit, reason: string) {
     originType: d.originRegister,
     matrixRootItemId: d.matrixRootItemId,
     options,
-    reason,
+    ...(reason ? { reason } : {}),
   }
 }

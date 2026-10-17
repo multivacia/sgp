@@ -69,7 +69,7 @@ function semear(nome: string, placa: string, etapas: number[], status: ConveyorS
       }),
     })),
   }))
-  const e: Esteira = { id: novoId(), code: null, name: `${nome} · ${placa}`, clientName: null, responsible: 'Ana Gestora', operationalStatus: status, estimatedDeadline: prazo, totalSteps: k, vehicle: nome, modelVersion: null, plate: placa.replace('-', ''), baseNameSnapshot: 'Gol GTI completo', originRegister: 'BASE', matrixRootItemId: MATRIZ.id, structure: { options } }
+  const e: Esteira = { id: novoId(), code: null, name: `${nome} · ${placa}`, clientName: 'Cliente de exemplo', responsible: 'Ana Gestora', priority: 'media', initialNotes: null, createdAt: new Date(Date.now() - 86_400_000 * 5).toISOString(), operationalStatus: status, estimatedDeadline: prazo, totalSteps: k, vehicle: nome, modelVersion: null, plate: placa.replace('-', ''), baseNameSnapshot: 'Gol GTI completo', originRegister: 'BASE', matrixRootItemId: MATRIZ.id, structure: { options } }
   esteiras.set(e.id, e)
   return e
 }
@@ -81,7 +81,7 @@ function acharPasso(stepId: string) {
 }
 
 // ---- apontamentos ----
-type Apontamento = { id: string; conveyorId: string; stepId: string; collaboratorId: string; minutes: number; at: string }
+type Apontamento = { id: string; conveyorId: string; stepId: string; collaboratorId: string; minutes: number; at: string; updatedAt?: string; notes?: string | null }
 const apontamentos: Apontamento[] = []
 const realizado = (stepId: string) => apontamentos.filter((a) => a.stepId === stepId).reduce((s, a) => s + a.minutes, 0)
 
@@ -188,7 +188,7 @@ for (const e of [A, C])
 // ---- sessões ----
 let gestora = true
 let tablet: string | null = null
-const USER = { userId: 'demo', email: 'gestora@demonstracao', role: 'GESTOR', collaboratorId: ANA.id, permissions: ['conveyors.create', 'operation_matrix.view', 'conveyors.edit_status'], mustChangePassword: false }
+const USER = { userId: 'demo', email: 'gestora@demonstracao', role: 'GESTOR', collaboratorId: ANA.id, permissions: ['conveyors.create', 'operation_matrix.view', 'conveyors.edit_status', 'time_entries.edit_any', 'time_entries.delete_any'], mustChangePassword: false }
 
 const TRANSICOES = new Set(['EM_ELABORACAO|AGUARDANDO_PLANEJAMENTO', 'AGUARDANDO_PLANEJAMENTO|EM_PLANEJAMENTO', 'EM_PLANEJAMENTO|A_INICIAR', 'EM_ANDAMENTO|FINALIZADA'])
 const JUSTIFICATIVAS = [
@@ -311,14 +311,15 @@ function rota(metodo: string, url: URL, corpo: unknown): unknown {
     return undefined
   }
   if (r === 'GET /conveyors') return [...esteiras.values()].map(({ structure: _s, ...e }) => (void _s, e))
+  const minutosDe = (e: Esteira) => passos(e).reduce((x, p) => x + (p.s.plannedMinutes ?? 0), 0)
   if ((m = r.match(/^GET \/conveyors\/([\w-]+)$/))) {
     const e = esteiras.get(m[1])
     if (!e) throw new Erro(404, 'NOT_FOUND', 'Esteira não encontrada.')
-    return structuredClone(e)
+    return { ...structuredClone(e), totalPlannedMinutes: minutosDe(e) }
   }
   if (r === 'POST /conveyors') {
     const d = b.dados as Record<string, string>
-    const e: Esteira = { id: novoId(), code: null, name: d.nome, clientName: d.cliente || null, responsible: d.responsavel || null, operationalStatus: 'EM_ELABORACAO', estimatedDeadline: d.prazoEstimado || null, totalSteps: 0, vehicle: d.veiculo || null, modelVersion: null, plate: d.placa || null, baseNameSnapshot: 'Gol GTI completo', originRegister: 'BASE', matrixRootItemId: MATRIZ.id, structure: montar(b.options as CorpoEtapa[]) }
+    const e: Esteira = { id: novoId(), code: null, name: d.nome, clientName: d.cliente || null, responsible: d.responsavel || null, priority: (d.prioridade || 'media') as Esteira['priority'], initialNotes: d.observacoes || null, createdAt: new Date().toISOString(), operationalStatus: 'EM_ELABORACAO', estimatedDeadline: d.prazoEstimado || null, totalSteps: 0, vehicle: d.veiculo || null, modelVersion: d.modeloVersao || null, plate: d.placa || null, baseNameSnapshot: 'Gol GTI completo', originRegister: 'BASE', matrixRootItemId: MATRIZ.id, structure: montar(b.options as CorpoEtapa[]) }
     e.totalSteps = passos(e).length
     esteiras.set(e.id, e)
     return { id: e.id, name: e.name, operationalStatus: e.operationalStatus }
@@ -333,6 +334,15 @@ function rota(metodo: string, url: URL, corpo: unknown): unknown {
     for (const pl of planos.values()) pl.items = pl.items.filter((i) => i.conveyorId !== e.id || vivos.has(i.activityNodeId))
     return structuredClone(e)
   }
+  if ((m = r.match(/^PATCH \/conveyors\/([\w-]+)$/))) {
+    const e = esteiras.get(m[1])
+    if (!e) throw new Erro(404, 'NOT_FOUND', 'Esteira não encontrada.')
+    if (e.operationalStatus !== 'EM_ELABORACAO' && !(typeof b.reason === 'string' && b.reason.trim().length >= 3)) throw new Erro(422, 'VALIDATION_ERROR', 'Motivo deve ter entre 3 e 500 caracteres.')
+    const v = (k: string) => (typeof b[k] === 'string' ? (b[k] as string).trim() || null : undefined)
+    const campos: [string, keyof Esteira][] = [['nome', 'name'], ['cliente', 'clientName'], ['veiculo', 'vehicle'], ['modeloVersao', 'modelVersion'], ['placa', 'plate'], ['observacoes', 'initialNotes'], ['responsavel', 'responsible'], ['prazoEstimado', 'estimatedDeadline'], ['prioridade', 'priority']]
+    for (const [k, campo] of campos) if (v(k) !== undefined) (e as Record<string, unknown>)[campo] = k === 'nome' ? (v(k) ?? e.name) : v(k)
+    return structuredClone(e)
+  }
   if ((m = r.match(/^PATCH \/conveyors\/([\w-]+)\/status$/))) {
     const e = esteiras.get(m[1])
     if (!e) throw new Erro(404, 'NOT_FOUND', 'Esteira não encontrada.')
@@ -340,6 +350,22 @@ function rota(metodo: string, url: URL, corpo: unknown): unknown {
     if (!TRANSICOES.has(`${e.operationalStatus}|${para}`)) throw new Erro(422, 'INVALID_STATUS_TRANSITION', `Não é permitido mudar de ${e.operationalStatus} para ${para}.`)
     e.operationalStatus = para
     return structuredClone(e)
+  }
+  if ((m = r.match(/^GET \/conveyors\/[\w-]+\/steps\/([\w-]+)\/time-entries$/)))
+    return apontamentos.filter((x) => x.stepId === m![1]).map((x) => ({ id: x.id, collaboratorId: x.collaboratorId, collaboratorName: nomeDe(x.collaboratorId), minutes: x.minutes, notes: x.notes ?? null, entryAt: x.at, updatedAt: x.updatedAt ?? x.at }))
+  if ((m = r.match(/^(PATCH|DELETE) \/conveyors\/[\w-]+\/steps\/[\w-]+\/time-entries\/([\w-]+)$/))) {
+    const i = apontamentos.findIndex((x) => x.id === m![2])
+    if (i < 0) throw new Erro(404, 'NOT_FOUND', 'Apontamento não encontrado.')
+    if (!(typeof b.reason === 'string' && b.reason.trim())) throw new Erro(422, 'VALIDATION_ERROR', 'Informe o motivo.')
+    if (m[1] === 'DELETE') {
+      apontamentos.splice(i, 1)
+      return { deleted: true }
+    }
+    const x = apontamentos[i]
+    if (b.expectedUpdatedAt !== (x.updatedAt ?? x.at)) throw new Erro(409, 'CONFLICT', 'O apontamento foi alterado por outro usuário. Atualize a tela e tente novamente.')
+    x.minutes = Number(b.minutes)
+    x.updatedAt = new Date().toISOString()
+    return { id: x.id, collaboratorId: x.collaboratorId, collaboratorName: nomeDe(x.collaboratorId), minutes: x.minutes, notes: null, entryAt: x.at, updatedAt: x.updatedAt }
   }
   if (r === 'GET /operation-matrix/items') return [{ id: MATRIZ.id, name: MATRIZ.name, description: 'Planilha mestra (OS 7945)', is_active: true }]
   if ((m = r.match(/^GET \/operation-matrix\/items\/([\w-]+)\/tree$/))) return MATRIZ

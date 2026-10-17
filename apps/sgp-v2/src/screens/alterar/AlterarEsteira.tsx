@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { ApiError } from '../../api/client'
-import { getConveyor, patchConveyorStructure } from '../../api/conveyors'
+import { getConveyor, patchConveyorDados, patchConveyorStructure } from '../../api/conveyors'
 import { getMatrixTree, listCollaborators } from '../../api/matrix'
 import {
   buildPatchBody,
@@ -34,13 +34,15 @@ import {
   type Collaborator,
   type MatrixNode,
 } from '../../domain/novaEsteira'
+import { dadosDe, erroDados, mudancasDados, patchDados, PRIORIDADES, type DadosEsteira } from '../../domain/dadosEsteira'
+import { FormDados } from '../../ui/FormDados'
 import { ResponsavelPicker } from '../../ui/ResponsavelPicker'
 import { AtividadeRow, AtividadeTravada, BottomBar, EtapaCard, SetorBox, WizardHeader } from '../../ui/wizard'
 
 /** Motivos padronizados (o texto vai no campo "motivo" que a V1 já exige fora do backlog). */
 const MOTIVOS = ['Cliente pediu mudança', 'Falta de peça ou material', 'Erro na montagem da esteira', 'Retrabalho', 'Mudança de prioridade', 'Outro motivo']
 
-type Tela = { t: 'etapas' } | { t: 'etapa'; optionId: string } | { t: 'nova'; taskId: string } | { t: 'motivo' }
+type Tela = { t: 'etapas' } | { t: 'etapa'; optionId: string } | { t: 'nova'; taskId: string } | { t: 'dados' } | { t: 'motivo' }
 type Picker = { titulo: string; setor: string; padraoId: string | null; atualId: string | null; onPick: (id: string) => void }
 
 const norm = (s: string) => displayName(s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
@@ -52,6 +54,7 @@ export function AlterarEsteira() {
   const [matriz, setMatriz] = useState<MatrixNode | null>(null)
   const [colabs, setColabs] = useState<Collaborator[]>([])
   const [edit, setEdit] = useState<Edit>(emptyEdit)
+  const [dados, setDados] = useState<DadosEsteira | null>(null)
   const [tela, setTela] = useState<Tela>({ t: 'etapas' })
   const [picker, setPicker] = useState<Picker | null>(null)
   const [motivo, setMotivo] = useState<string | null>(null)
@@ -64,6 +67,7 @@ export function AlterarEsteira() {
     getConveyor(id, true)
       .then((x) => {
         setD(x)
+        setDados(dadosDe(x))
         if (x.matrixRootItemId) getMatrixTree(x.matrixRootItemId).then(setMatriz).catch(() => setMatriz(null))
       })
       .catch(() => setErro('Não foi possível abrir a esteira.'))
@@ -84,9 +88,15 @@ export function AlterarEsteira() {
   const nome = (cid: string | null) => (cid ? nomeCurto(colabPorId.get(cid)) : 'sem responsável')
 
   if (erro && !d) return <p role="alert" className="p-6 font-bold text-danger">{erro}</p>
-  if (!d) return <p className="p-6 text-muted">Carregando…</p>
+  if (!d || !dados) return <p className="p-6 text-muted">Carregando…</p>
 
-  const mud = changesOf(d, edit, nome)
+  const dadosAntes = dadosDe(d)
+  const mudEstrutura = changesOf(d, edit, nome)
+  const mudDados = mudancasDados(dadosAntes, dados)
+  const patchD = patchDados(dadosAntes, dados)
+  const mud = { ...mudEstrutura, lista: [...mudDados, ...mudEstrutura.lista] }
+  const emElaboracao = d.operationalStatus === 'EM_ELABORACAO'
+  const erroD = erroDados(dados)
   const nomesNaEsteira = new Set(d.structure.options.map((o) => norm(o.name)))
   const deFora = matriz ? tasksOf(matriz).filter((t) => !nomesNaEsteira.has(norm(t.name))) : []
 
@@ -99,13 +109,17 @@ export function AlterarEsteira() {
   const minutos =
     ativasExist.reduce((x, s) => x + (s.plannedMinutes ?? 0) * (s.plannedQuantity ?? 1), 0) + ativasNovas.reduce((x, a) => x + minutesOf(a), 0)
   const reason = reasonText(motivo, detalhe)
+  // V1: motivo só é exigido depois que a esteira sai da elaboração (MSG-EST-001)
+  const podeConfirmar = (emElaboracao || !!reason) && !erroD && !salvando
 
   async function salvar() {
-    if (!d || !reason) return
+    if (!d || !podeConfirmar) return
     setSalvando(true)
     setErro(null)
     try {
-      await patchConveyorStructure(d.id, buildPatchBody(d, edit, reason))
+      // mesmo motivo para dados e estrutura no mesmo salvamento (manual da V1, §41.2)
+      if (Object.keys(patchD).length) await patchConveyorDados(d.id, { ...patchD, ...(reason ? { reason } : {}) })
+      if (mudEstrutura.lista.length) await patchConveyorStructure(d.id, buildPatchBody(d, edit, reason))
       navigate(`/esteiras/${d.id}`, { replace: true })
     } catch (e) {
       setErro(e instanceof ApiError ? e.message : e instanceof Error ? e.message : 'Não foi possível salvar.')
@@ -122,7 +136,7 @@ export function AlterarEsteira() {
   }
 
   const passo = tela.t === 'motivo' ? 2 : 1
-  const pergunta = tela.t === 'etapas' ? 'Confira as etapas' : tela.t === 'motivo' ? 'Por que está alterando?' : 'Personalizar etapa'
+  const pergunta = tela.t === 'etapas' ? 'Confira as etapas' : tela.t === 'motivo' ? (emElaboracao ? 'Confira e salve' : 'Por que está alterando?') : tela.t === 'dados' ? 'Dados da esteira' : 'Personalizar etapa'
   const placa = d.plate || d.name
 
   function travadaTexto(s: ConveyorStep): { texto: string; tone: 'feito' | 'andando' | 'parado' } {
@@ -145,6 +159,16 @@ export function AlterarEsteira() {
 
         {tela.t === 'etapas' ? (
           <>
+            <button type="button" onClick={() => setTela({ t: 'dados' })} className="flex flex-col gap-1 rounded-2xl border-2 border-ink bg-white p-3 text-left">
+              <span className="flex items-center justify-between gap-2">
+                <span className="text-sm font-bold tracking-wide text-muted">DADOS DA ESTEIRA</span>
+                {mudDados.length ? <span className="rounded-lg bg-late-soft px-2 py-0.5 text-sm font-bold text-late-ink">{mudDados.length} {mudDados.length === 1 ? 'mudança' : 'mudanças'}</span> : <span className="text-sm font-bold underline">Alterar</span>}
+              </span>
+              <span className="font-display text-xl font-extrabold leading-tight">{dados.nome || d.name}</span>
+              <span className="text-muted">
+                {[dados.placa, dados.cliente, dados.prazoEstimado ? `prazo ${dados.prazoEstimado.slice(8, 10)}/${dados.prazoEstimado.slice(5, 7)}` : 'sem prazo', `prioridade ${PRIORIDADES.find((p) => p.v === dados.prioridade)?.label.toLowerCase()}`, dados.responsavel].filter(Boolean).join(' · ')}
+              </span>
+            </button>
             <p className="text-muted">Marcadas vão ser feitas. Toque na figura para tirar ou incluir. "Personalizar" mostra setores e atividades. O cadeado marca o que já foi feito.</p>
             <div className="grid grid-cols-2 gap-2.5">
               {d.structure.options.map((o, i) => {
@@ -307,16 +331,37 @@ export function AlterarEsteira() {
           </>
         ) : null}
 
+        {tela.t === 'dados' ? (
+          <>
+            <FormDados
+              parte="tudo"
+              dados={dados}
+              onChange={setDados}
+              nomeResponsavel={dados.responsavel}
+              onEscolherResponsavel={() =>
+                setPicker({
+                  titulo: 'Responsável pela esteira',
+                  setor: '',
+                  padraoId: null,
+                  atualId: dados.colaboradorId,
+                  onPick: (cid) => setDados({ ...dados, colaboradorId: cid, responsavel: colabPorId.get(cid)?.full_name ?? dados.responsavel }),
+                })
+              }
+            />
+            {erroD ? <p className="font-bold text-danger">{erroD}</p> : null}
+          </>
+        ) : null}
+
         {tela.t === 'motivo' ? (
           <div className="flex flex-col gap-3">
-            <p className="text-muted">A esteira está em andamento. O motivo fica registrado no histórico.</p>
+            <p className="text-muted">{emElaboracao ? 'A esteira ainda está em elaboração: não precisa de motivo.' : 'Esta esteira já saiu do Backlog. Informe o motivo da alteração para manter a rastreabilidade operacional.'}</p>
             <div className="rounded-2xl border border-line bg-white p-3">
               <span className="text-sm font-bold text-muted">O QUE MUDA</span>
               {mud.lista.map((m) => (
                 <p key={m}>· {m}</p>
               ))}
             </div>
-            <span className="text-lg font-bold">Motivo</span>
+            <span className="text-lg font-bold">{emElaboracao ? 'Motivo (opcional)' : 'Motivo'}</span>
             <div className="grid grid-cols-2 gap-2.5">
               {MOTIVOS.map((m) => (
                 <button key={m} type="button" aria-pressed={motivo === m} onClick={() => setMotivo(m)} className={`min-h-16 rounded-2xl px-3 text-left font-bold ${motivo === m ? 'bg-ink text-white' : 'border-2 border-line bg-white'}`}>
@@ -337,7 +382,7 @@ export function AlterarEsteira() {
         sub={`~${fmtMin(minutos)} · ${mud.lista.length ? `${mud.lista.length} ${mud.lista.length === 1 ? 'mudança' : 'mudanças'}` : 'sem mudanças'}`}
         label={tela.t === 'motivo' ? (salvando ? 'Salvando…' : 'Confirmar alteração') : tela.t === 'etapas' ? 'Continuar' : 'Pronto'}
         verde={tela.t === 'motivo'}
-        enabled={tela.t === 'motivo' ? !!reason && !salvando : tela.t === 'etapas' ? mud.lista.length > 0 : true}
+        enabled={tela.t === 'motivo' ? podeConfirmar : tela.t === 'etapas' ? mud.lista.length > 0 && !erroD : tela.t === 'dados' ? !erroD : true}
         onClick={() => (tela.t === 'motivo' ? void salvar() : tela.t === 'etapas' ? setTela({ t: 'motivo' }) : setTela({ t: 'etapas' }))}
       />
 

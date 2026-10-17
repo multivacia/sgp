@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { postConveyorBodySchema } from '../../../../server/src/modules/conveyors/conveyors.schemas'
-import { buildCreateBody, emptyDraft, setResponsavel, tasksOf, taskActivities, toggleActivity, toggleGroup, type Dados, type MatrixNode } from './novaEsteira'
+import { buildCreateBody, emptyDraft, setResponsavel, tasksOf, taskActivities, toggleActivity, toggleGroup, type MatrixNode } from './novaEsteira'
+import { dadosVazios, type DadosEsteira } from './dadosEsteira'
 
 let seq = 0
 function node(type: MatrixNode['node_type'], name: string, children: MatrixNode[] = [], extra: Partial<MatrixNode> = {}): MatrixNode {
@@ -40,7 +41,7 @@ function matriz() {
   ])
 }
 
-const DADOS: Dados = { placa: 'abc1d23', veiculo: 'Gol GTI', cliente: '', prazo: '2026-10-23', responsavelNome: 'Ana', responsavelId: null }
+const DADOS: DadosEsteira = { ...dadosVazios('2026-10-23', null), placa: 'abc1d23', veiculo: 'Gol GTI', responsavel: 'Ana', modeloVersao: '1.0 · 4 portas', prioridade: 'alta' }
 
 describe('nova esteira pelo cardápio → POST /api/v1/conveyors', () => {
   it('o corpo gerado passa no validador real da V1 (contrato)', () => {
@@ -48,7 +49,7 @@ describe('nova esteira pelo cardápio → POST /api/v1/conveyors', () => {
     const body = buildCreateBody(tree, emptyDraft(), DADOS)
     const parsed = postConveyorBodySchema.safeParse(body)
     expect(parsed.success, JSON.stringify(parsed.error?.issues)).toBe(true)
-    expect(body).toMatchObject({ originType: 'BASE', matrixRootItemId: tree.id, dados: { nome: 'Gol GTI · ABC1D23', placa: 'ABC1D23', prazoEstimado: '2026-10-23' } })
+    expect(body).toMatchObject({ originType: 'BASE', matrixRootItemId: tree.id, dados: { nome: 'Gol GTI · ABC1D23', placa: 'ABC1D23', prazoEstimado: '2026-10-23', modeloVersao: '1.0 · 4 portas', prioridade: 'alta' } })
   })
 
   it('tirar atividades/etapas some do corpo, renumera a ordem e descarta setor/etapa vazios; etapa desativada na matriz não entra', () => {

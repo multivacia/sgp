@@ -2,6 +2,7 @@
  * Nova esteira pelo "cardápio": matriz (combo) → etapas (TASK) → setores (SECTOR) → atividades (ACTIVITY).
  * Monta o corpo do POST /api/v1/conveyors da V1 — as regras finais continuam no backend.
  */
+import { dadosParaCriar, type DadosEsteira } from './dadosEsteira'
 
 export type MatrixNodeType = 'ITEM' | 'TASK' | 'SECTOR' | 'ACTIVITY'
 
@@ -136,19 +137,10 @@ export function setResponsavel(d: Draft, activities: MatrixNode[], collaboratorI
   return { ...d, resp }
 }
 
-export type Dados = {
-  placa: string
-  veiculo: string
-  cliente: string
-  prazo: string // YYYY-MM-DD ou ''
-  responsavelNome: string
-  responsavelId: string | null
-}
-
 type Assignee = { type: 'COLLABORATOR' | 'TEAM'; collaboratorId?: string; teamId?: string; isPrimary: boolean }
 
 /** Corpo do POST /api/v1/conveyors (mesma tradução matriz → esteira que a V1 faz). */
-export function buildCreateBody(item: MatrixNode, d: Draft, dados: Dados) {
+export function buildCreateBody(item: MatrixNode, d: Draft, dados: DadosEsteira) {
   const options = tasksOf(item)
     .map((task) => ({
       titulo: task.name.trim(),
@@ -185,21 +177,8 @@ export function buildCreateBody(item: MatrixNode, d: Draft, dados: Dados) {
 
   if (options.length === 0) throw new Error('Marque pelo menos uma atividade.')
 
-  const placa = dados.placa.trim().toUpperCase()
-  const veiculo = dados.veiculo.trim()
   return {
-    dados: {
-      nome: [veiculo || displayName(item.name), placa].filter(Boolean).join(' · '),
-      cliente: dados.cliente.trim(),
-      veiculo,
-      modeloVersao: '',
-      placa,
-      observacoes: '',
-      responsavel: dados.responsavelNome,
-      prazoEstimado: dados.prazo,
-      prioridade: 'media' as const,
-      colaboradorId: dados.responsavelId,
-    },
+    dados: dadosParaCriar(dados, displayName(item.name)),
     originType: 'BASE' as const,
     baseId: null,
     baseCode: null,

@@ -18,6 +18,7 @@ import { myActivitiesRouter } from './modules/my-activities/my-activities.routes
 import { myWorkQueueRouter } from './modules/my-work-queue/my-work-queue.routes.js'
 import { operationalSettingsRouter } from './modules/operational-settings/operational-settings.routes.js'
 import { operationMatrixRouter } from './modules/operation-matrix/operation-matrix.routes.js'
+import { v2EtapaImagensRouter } from './modules/v2-etapa-imagens/v2-etapa-imagens.routes.js'
 import { operationalPlanningRouter } from './modules/operational-planning/operational-planning.routes.js'
 import { healthRouter } from './modules/health/health.routes.js'
 import { rbacRouter } from './modules/rbac/rbac.routes.js'
@@ -54,6 +55,8 @@ export function createApp(pool: pg.Pool, logger: Logger, env: Env): Express {
   app.use('/api/v1', teamsRouter())
   app.use('/api/v1', collaboratorsRouter())
   app.use('/api/v1', operationMatrixRouter())
+  // SGP+ V2: fotos das etapas (módulo isolado, tabela própria)
+  app.use('/api/v1', v2EtapaImagensRouter())
   app.use('/api/v1', operationalPlanningRouter())
   app.locals.argosDocumentDraftAdapter = createArgosDocumentDraftAdapter(env, pool)
   app.use('/api/v1', conveyorsRouter(env))

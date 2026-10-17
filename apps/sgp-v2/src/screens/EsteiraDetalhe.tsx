@@ -2,7 +2,9 @@ import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { getConveyor } from '../api/conveyors'
 import { useSession } from '../auth/context'
+import { Apontamentos } from '../ui/Apontamentos'
 import { Liberar } from '../ui/Liberar'
+import { PRIORIDADES } from '../domain/dadosEsteira'
 import {
   CLOSED,
   STATUS_LABEL,
@@ -30,6 +32,10 @@ export function EsteiraDetalhe() {
   const [d, setD] = useState<ConveyorDetail | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [aberta, setAberta] = useState<string | null>(null)
+  const [aponta, setAponta] = useState<{ stepId: string; titulo: string } | null>(null)
+  const perms = state.status === 'authenticated' ? state.user.permissions : []
+  const podeEditarAp = perms.includes('time_entries.edit_any')
+  const podeRemoverAp = perms.includes('time_entries.delete_any')
 
   useEffect(() => {
     getConveyor(id)
@@ -76,6 +82,7 @@ export function EsteiraDetalhe() {
           {d.structure.options.length} etapas · {p.totalSteps} atividades · {p.pct}% feito · faltam ~{fmtMin(p.totalMinutes - p.doneMinutes)} · prazo {deadlineText(d.estimatedDeadline)}
         </span>
       </div>
+      <DadosCard d={d} />
       <Liberar id={d.id} status={d.operationalStatus} onFeito={(novo) => setD({ ...d, operationalStatus: novo })} />
       {podeAlterar && !CLOSED.includes(d.operationalStatus) ? (
         <Link to={`/esteiras/${d.id}/alterar`} className="btn-secondary flex items-center justify-center gap-2">
@@ -126,12 +133,17 @@ export function EsteiraDetalhe() {
                       return (
                         <div key={s.id} className="flex items-start gap-3 border-t border-ground py-2">
                           <StepDot state={st} />
-                          <span className="min-w-0">
+                          <span className="min-w-0 flex-1">
                             <span className="block font-bold leading-snug">{s.name}</span>
                             <span className="block text-sm text-muted">
                               {[STEP_LABEL[st], min ? fmtMin(min) : 'sem tempo previsto', quem ?? 'sem responsável'].join(' · ')}
                             </span>
                           </span>
+                          {(podeEditarAp || podeRemoverAp) && st !== 'falta' ? (
+                            <button type="button" onClick={() => setAponta({ stepId: s.id, titulo: s.name })} className="min-h-11 shrink-0 rounded-xl border-2 border-line px-2.5 text-sm font-bold">
+                              Horas
+                            </button>
+                          ) : null}
                         </div>
                       )
                     })}
@@ -142,6 +154,53 @@ export function EsteiraDetalhe() {
           </div>
         )
       })}
+      {aponta ? (
+        <Apontamentos
+          conveyorId={d.id}
+          stepId={aponta.stepId}
+          titulo={aponta.titulo}
+          podeEditar={podeEditarAp}
+          podeRemover={podeRemoverAp}
+          onFechar={() => setAponta(null)}
+          onMudou={() => void getConveyor(d.id, true).then(setD).catch(() => undefined)}
+        />
+      ) : null}
     </section>
+  )
+}
+
+/** Consulta dos dados básicos (os mesmos da V1). Fechado por padrão para não empurrar as etapas. */
+function DadosCard({ d }: { d: ConveyorDetail }) {
+  const [aberto, setAberto] = useState(false)
+  const prazo = d.estimatedDeadline?.slice(0, 10)
+  const linhas: [string, string | null | undefined][] = [
+    ['Cliente', d.clientName],
+    ['Veículo', d.vehicle],
+    ['Modelo / versão', d.modelVersion],
+    ['Placa', d.plate],
+    ['Responsável', d.responsible],
+    ['Prioridade', PRIORIDADES.find((p) => p.v === d.priority)?.label],
+    ['Prazo', prazo && /^\d{4}-\d{2}-\d{2}$/.test(prazo) ? `${prazo.slice(8, 10)}/${prazo.slice(5, 7)}/${prazo.slice(0, 4)}` : d.estimatedDeadline],
+    ['Tempo total previsto', d.totalPlannedMinutes ? fmtMin(d.totalPlannedMinutes) : null],
+    ['Criada em', d.createdAt ? new Date(d.createdAt).toLocaleDateString('pt-BR') : null],
+    ['Observações', d.initialNotes],
+  ]
+  return (
+    <div className="rounded-2xl border border-line bg-white">
+      <button type="button" aria-expanded={aberto} onClick={() => setAberto(!aberto)} className="flex min-h-14 w-full items-center justify-between px-3 text-left font-bold">
+        Dados da esteira
+        <span className="text-sm underline">{aberto ? 'Fechar' : 'Ver'}</span>
+      </button>
+      {aberto ? (
+        <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5 border-t border-line p-3">
+          {linhas.map(([k, v]) => (
+            <div key={k} className="contents">
+              <dt className="text-muted">{k}</dt>
+              <dd className={`min-w-0 break-words ${v ? 'font-bold' : 'text-muted'}`}>{v || '—'}</dd>
+            </div>
+          ))}
+        </dl>
+      ) : null}
+    </div>
   )
 }

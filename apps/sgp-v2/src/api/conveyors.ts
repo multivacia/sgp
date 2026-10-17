@@ -51,3 +51,9 @@ export async function patchConveyorStatus(id: string, operationalStatus: string)
   await api<unknown>(`/conveyors/${id}/status`, { method: 'PATCH', body: JSON.stringify({ operationalStatus }) })
   detailCache.delete(id)
 }
+
+/** Altera os dados básicos pela API da V1 (PATCH /conveyors/:id; motivo obrigatório fora da elaboração). */
+export async function patchConveyorDados(id: string, body: unknown): Promise<void> {
+  await api<unknown>(`/conveyors/${id}`, { method: 'PATCH', body: JSON.stringify(body) })
+  detailCache.delete(id)
+}

@@ -24,11 +24,12 @@ import {
   toggleGroup,
   totals,
   type Collaborator,
-  type Dados,
   type Draft,
   type MatrixNode,
 } from '../../domain/novaEsteira'
 import { fmtMin } from '../../domain/format'
+import { dadosVazios, erroDados, nomeFinal, type DadosEsteira } from '../../domain/dadosEsteira'
+import { FormDados } from '../../ui/FormDados'
 import { ResponsavelPicker } from '../../ui/ResponsavelPicker'
 import { AtividadeRow, BottomBar, EtapaCard, SetorBox, WizardHeader } from '../../ui/wizard'
 
@@ -60,8 +61,7 @@ export function NovaEsteira() {
   const [etapaId, setEtapaId] = useState<string | null>(null)
   const [colabs, setColabs] = useState<Collaborator[]>([])
   const [picker, setPicker] = useState<Picker | null>(null)
-  const [dados, setDados] = useState<Dados>({ placa: '', veiculo: '', cliente: '', prazo: prazoPara('sexta'), responsavelNome: '', responsavelId: meuColab })
-  const [atalhoPrazo, setAtalhoPrazo] = useState<'hoje' | 'amanha' | 'sexta' | 'data'>('sexta')
+  const [dados, setDados] = useState<DadosEsteira>(() => dadosVazios(prazoPara('sexta'), meuColab))
   const [erro, setErro] = useState<string | null>(null)
   const [salvando, setSalvando] = useState(false)
   const [criada, setCriada] = useState<{ id: string; name: string; operationalStatus?: ConveyorStatus } | null>(null)
@@ -102,8 +102,8 @@ export function NovaEsteira() {
     setSalvando(true)
     setErro(null)
     try {
-      const resp = dados.responsavelId ? colabPorId.get(dados.responsavelId) : undefined
-      const body = buildCreateBody(arvore, draft, { ...dados, responsavelNome: resp?.full_name ?? '' })
+      const resp = dados.colaboradorId ? colabPorId.get(dados.colaboradorId) : undefined
+      const body = buildCreateBody(arvore, draft, { ...dados, responsavel: resp?.full_name ?? dados.responsavel })
       setCriada(await createConveyor(body))
       setPasso('pronto')
     } catch (e) {
@@ -113,7 +113,7 @@ export function NovaEsteira() {
     }
   }
 
-  const podeSeguir = passo === 'etapas' ? tot.atividades > 0 : passo === 'carro' ? dados.placa.trim() !== '' || dados.veiculo.trim() !== '' : passo === 'quando' ? dados.prazo !== '' && !salvando : true
+  const podeSeguir = passo === 'etapas' ? tot.atividades > 0 : passo === 'carro' ? (dados.placa.trim() !== '' || dados.veiculo.trim() !== '') && !erroDados(dados, arvore ? displayName(arvore.name) : '') : passo === 'quando' ? dados.prazoEstimado !== '' && !salvando : true
   function seguir() {
     if (!podeSeguir) return
     if (passo === 'etapas') setPasso('carro')
@@ -235,74 +235,23 @@ export function NovaEsteira() {
         ) : null}
 
         {passo === 'carro' ? (
-          <div className="flex flex-col gap-4">
-            <label className="flex flex-col gap-2 font-bold">
-              Placa
-              <input
-                value={dados.placa}
-                onChange={(e) => setDados({ ...dados, placa: e.target.value.toUpperCase().replace(/[^A-Z0-9-]/g, '').slice(0, 8) })}
-                placeholder="ABC1D23"
-                autoCapitalize="characters"
-                className="field font-display text-3xl tracking-widest"
-              />
-            </label>
-            <label className="flex flex-col gap-2 font-bold">
-              Veículo
-              <input value={dados.veiculo} onChange={(e) => setDados({ ...dados, veiculo: e.target.value })} placeholder="Ex.: Gol GTI" className="field" />
-            </label>
-            <label className="flex flex-col gap-2 font-bold">
-              Cliente (opcional)
-              <input value={dados.cliente} onChange={(e) => setDados({ ...dados, cliente: e.target.value })} className="field" />
-            </label>
-          </div>
+          <FormDados parte="carro" dados={dados} onChange={setDados} matriz={arvore ? displayName(arvore.name) : ''} nomeResponsavel="" onEscolherResponsavel={() => undefined} />
         ) : null}
 
         {passo === 'quando' ? (
           <div className="flex flex-col gap-3">
-            <span className="text-lg font-bold">Prazo</span>
-            <div className="grid grid-cols-2 gap-2.5">
-              {(
-                [
-                  ['hoje', 'Hoje'],
-                  ['amanha', 'Amanhã'],
-                  ['sexta', 'Até sexta'],
-                  ['data', 'Escolher data'],
-                ] as const
-              ).map(([k, label]) => (
-                <button
-                  key={k}
-                  type="button"
-                  aria-pressed={atalhoPrazo === k}
-                  onClick={() => {
-                    setAtalhoPrazo(k)
-                    if (k !== 'data') setDados({ ...dados, prazo: prazoPara(k) })
-                  }}
-                  className={`min-h-16 rounded-2xl text-lg font-bold ${atalhoPrazo === k ? 'bg-ink text-white' : 'border-2 border-line bg-white'}`}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-            {atalhoPrazo === 'data' ? (
-              <label className="flex flex-col gap-2 font-bold">
-                Data de entrega
-                <input type="date" value={dados.prazo} onChange={(e) => setDados({ ...dados, prazo: e.target.value })} className="field" />
-              </label>
-            ) : null}
-            <span className="mt-2 text-lg font-bold">Responsável pela esteira</span>
-            <button
-              type="button"
-              onClick={() => setPicker({ titulo: 'Responsável pela esteira', setor: '', atividades: [] })}
-              className="flex min-h-14 items-center justify-between rounded-2xl border-2 border-ink bg-white px-4 text-lg font-bold"
-            >
-              <span>{dados.responsavelId ? nomeCurto(colabPorId.get(dados.responsavelId)) : 'Escolher'}</span>
-              <span className="text-sm underline">Trocar</span>
-            </button>
+            <FormDados
+              parte="quando"
+              dados={dados}
+              onChange={setDados}
+              nomeResponsavel={dados.colaboradorId ? nomeCurto(colabPorId.get(dados.colaboradorId)) : ''}
+              onEscolherResponsavel={() => setPicker({ titulo: 'Responsável pela esteira', setor: '', atividades: [] })}
+            />
             {arvore ? (
               <div className="mt-2 rounded-2xl border border-line bg-white p-3">
                 <span className="text-sm font-bold text-muted">RESUMO</span>
                 <p className="font-display text-xl font-extrabold">{arvore.name}</p>
-                <p>{[dados.veiculo, dados.placa].filter(Boolean).join(' · ')}</p>
+                <p className="font-bold">{nomeFinal(dados, displayName(arvore.name))}</p>
                 <p>
                   {tot.etapas} etapas · {tot.atividades} atividades · ~{fmtMin(tot.minutos)}
                 </p>
@@ -330,7 +279,7 @@ export function NovaEsteira() {
             <button
               type="button"
               onClick={() => {
-                setDados({ ...dados, placa: '', cliente: '' })
+                setDados({ ...dados, placa: '', cliente: '', nome: '' })
                 setCriada(null)
                 setPasso('carro')
               }}
@@ -362,11 +311,11 @@ export function NovaEsteira() {
           setor={picker.setor}
           padraoId={picker.atividades.length ? picker.atividades[0].default_responsible_id : meuColab}
           padraoLabel={picker.atividades.length ? 'Da matriz' : 'Você'}
-          atualId={picker.atividades.length ? responsavelDe(draft, picker.atividades[0]) : dados.responsavelId}
+          atualId={picker.atividades.length ? responsavelDe(draft, picker.atividades[0]) : dados.colaboradorId}
           colaboradores={colabs}
           onPick={(id) => {
             if (picker.atividades.length) setDraft(setResponsavel(draft, picker.atividades, id))
-            else setDados({ ...dados, responsavelId: id })
+            else setDados({ ...dados, colaboradorId: id, responsavel: colabPorId.get(id)?.full_name ?? '' })
             setPicker(null)
           }}
           onClose={() => setPicker(null)}

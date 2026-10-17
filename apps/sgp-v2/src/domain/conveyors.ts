@@ -46,6 +46,10 @@ export type ConveyorStep = {
 }
 
 export type ConveyorDetail = ConveyorListItem & {
+  initialNotes?: string | null
+  priority?: 'alta' | 'media' | 'baixa'
+  createdAt?: string
+  totalPlannedMinutes?: number
   vehicle: string | null
   modelVersion: string | null
   plate: string | null
