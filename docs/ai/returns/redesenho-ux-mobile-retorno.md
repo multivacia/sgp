@@ -580,3 +580,12 @@ Fases 4 e 5 exigem o fluxo completo de `AGENTS.md` (contexto → impacto → spe
 - **Feito:** `README_DEMO.md` na raiz: o que a demo tem (dados da planilha, esteiras prontas, PIN), roteiro de apresentação em 8 passos, rodar local (`npx vite --mode demo` e `build:demo` + servidor estático), publicar na VPS (`/V2-demo/`), cuidados, diferenças para a V2 real e onde está o código. Link no documento vivo §23.
 - **Validação:** `npx vite --mode demo` e o pacote `dist-demo` abertos no navegador com a faixa "DEMONSTRAÇÃO" e a esteira DEF-4G56.
 - **Uso/tokens disponíveis:** INDISPONÍVEL — a sessão não fornece métrica confiável.
+
+## 41. Análise: "tirar foto não está habilitado" + guardar local e subir depois (2026-10-17)
+
+- **Tipo:** análise, sem alteração de código.
+- **Por que a câmera não abre:** a tela usa um único `<input type="file" accept="image/*">` sem `capture`. Em navegador de celular (VPS) isso normalmente oferece câmera ou galeria; dentro da página do Claude (visualizador da demonstração) o acesso à câmera é bloqueado pelo próprio visualizador e só sobra escolher arquivo.
+- **Proposta "Laboratório":** dois botões ("Tirar foto" com `capture="environment"` e "Escolher da galeria"); foto reduzida no aparelho e **guardada localmente (IndexedDB)** como pendente por etapa; o cardápio deste aparelho já mostra a pendente com selo "Só neste aparelho"; botão **Enviar para o banco** quando confirmada (usa o `PUT` existente, migration 0054) e a pendente é apagada; "Descartar" remove local.
+- **Dificuldade:** baixa (≈ 1 tela + 1 módulo de armazenamento local; backend já existe). Ressalvas: fica só naquele navegador/aparelho; some se limparem os dados do navegador; Safari/iPhone pode apagar dados de site sem uso por ~7 dias; não sincroniza entre aparelhos.
+- **Aguardando decisão** para implementar.
+- **Uso/tokens disponíveis:** INDISPONÍVEL — a sessão não fornece métrica confiável.
