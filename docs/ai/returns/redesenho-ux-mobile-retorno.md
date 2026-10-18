@@ -627,3 +627,11 @@ Fases 4 e 5 exigem o fluxo completo de `AGENTS.md` (contexto → impacto → spe
 - **Para destravar:** (a) enviar as fotos no chat; ou (b) liberar na rede do ambiente um domínio de imagens (ex.: `upload.wikimedia.org` ou `images.pexels.com`). Doc: https://code.claude.com/docs/en/cloud-environments#network-access
 - **Validação:** sem alteração de código (nada a compilar/testar).
 - **Uso/tokens disponíveis:** INDISPONÍVEL — a sessão não fornece métrica confiável.
+
+## 46. Análise: como trabalhar na develop sem perder o redesign (2026-10-18)
+
+- **Estado:** a develop tem 13 commits desde a base comum `c611d10f` (2026-10-02). O redesign (`ccr-683413c7-571rnk`) tem 39. A `feat/v2-imagens-fluxo-revestimento` tem mais 3 sobre o redesign. Tudo está no GitHub.
+- **Sobreposição com a develop:** os dois lados só mexem em `docs/ai/context/SESSION_CHECKPOINT.md`. Fora de `apps/sgp-v2/` e `docs/`, o redesign só **acrescenta** arquivos (workflows V2, nginx, módulos `v2-*`, testes e migrations `0054`–`0056`); a única alteração é o registro de 3 rotas em `server/src/app.ts`.
+- **Risco principal:** numeração de migration. A develop está na `0053`, e as `0054`–`0056` do redesign não estão aplicadas em nenhum ambiente compartilhado.
+- **Recomendação:** o usuário segue na develop normalmente, em branches próprias. O redesign recebe a develop por merge (sem rebase), e as migrations V2 são renumeradas depois da última da develop na hora da integração. Até lá, não aplicar `0054`–`0056` em HML.
+- **Uso/tokens disponíveis:** INDISPONÍVEL — a sessão não fornece métrica confiável.
