@@ -2,7 +2,10 @@ import type { Request, Response } from 'express'
 import type pg from 'pg'
 import { ok } from '../../shared/http/ok.js'
 import { getConveyorsQuerySchema } from './conveyors.schemas.js'
-import { serviceListConveyors } from './conveyors.service.js'
+import {
+  serviceListConveyors,
+  serviceResolveConveyorListScope,
+} from './conveyors.service.js'
 
 function firstQueryString(v: unknown): string | undefined {
   if (typeof v === 'string') return v
@@ -19,11 +22,17 @@ export async function getConveyors(req: Request, res: Response): Promise<void> {
     operationalStatus: firstQueryString(q.operationalStatus),
   })
   const pool = req.app.locals.pool as pg.Pool
-  const list = await serviceListConveyors(pool, {
-    q: query.q,
-    priority: query.priority,
-    responsible: query.responsible,
-    operationalStatus: query.operationalStatus,
-  })
+  // Escopo derivado somente do usuário autenticado no servidor (Painel Operacional).
+  const scope = await serviceResolveConveyorListScope(pool, req.authUser!.id)
+  const list = await serviceListConveyors(
+    pool,
+    {
+      q: query.q,
+      priority: query.priority,
+      responsible: query.responsible,
+      operationalStatus: query.operationalStatus,
+    },
+    scope,
+  )
   res.status(200).json(ok(list))
 }

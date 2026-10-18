@@ -674,13 +674,46 @@ export type ListConveyorsFilters = {
   operationalStatus?: ConveyorOperationalStatusDb
 }
 
+/**
+ * Escopo de visibilidade da listagem do Painel Operacional, derivado no servidor
+ * a partir do usuário autenticado (nunca de parâmetro do cliente).
+ * - `ALL`: comportamento global (gestor, admin e demais perfis não-colaborador).
+ * - `COLLABORATOR`: somente esteiras com atividade (STEP ativo) alocada diretamente ao colaborador.
+ */
+export type ListConveyorsScope =
+  | { kind: 'ALL' }
+  | { kind: 'COLLABORATOR'; collaboratorId: string }
+
 export async function listConveyors(
   pool: pg.Pool,
   filters: ListConveyorsFilters,
+  scope: ListConveyorsScope,
 ): Promise<ConveyorListRow[]> {
   const conditions: string[] = ['deleted_at IS NULL']
   const params: unknown[] = []
   let n = 1
+
+  if (scope.kind === 'COLLABORATOR') {
+    // EXISTS correlacionado: não duplica a esteira quando o colaborador tem várias atividades nela.
+    // Somente alocação direta (assignment_type COLLABORATOR); alocação por equipe não conta.
+    conditions.push(
+      `EXISTS (
+        SELECT 1
+        FROM conveyor_node_assignees cna
+        INNER JOIN conveyor_nodes cn ON cn.id = cna.conveyor_node_id
+        WHERE cna.conveyor_id = conveyors.id
+          AND cn.conveyor_id = conveyors.id
+          AND cna.deleted_at IS NULL
+          AND cna.assignment_type = 'COLLABORATOR'
+          AND cna.collaborator_id = $${n}::uuid
+          AND cn.node_type = 'STEP'
+          AND cn.is_active = TRUE
+          AND cn.deleted_at IS NULL
+      )`,
+    )
+    params.push(scope.collaboratorId)
+    n++
+  }
 
   const q = filters.q?.trim() ?? ''
   if (q.length > 0) {

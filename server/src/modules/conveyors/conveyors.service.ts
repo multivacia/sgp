@@ -43,8 +43,10 @@ import {
   type ConveyorNodeFlatRow,
   type ConveyorOperationalStatusDb,
   type ListConveyorsFilters,
+  type ListConveyorsScope,
   type PatchConveyorDadosFields,
 } from './conveyors.repository.js'
+import { findAppUserProfileById } from '../auth/auth.repository.js'
 import type {
   PatchConveyorDadosBody,
   PatchConveyorStructureBody,
@@ -523,11 +525,39 @@ export async function servicePatchConveyorStatus(
   return mapDetailRowToApi(updated, structure)
 }
 
+/** Código do perfil de colaborador (mesmo valor usado em `rbac.service`). */
+const COLABORADOR_ROLE_CODE = 'COLABORADOR'
+
+/**
+ * Escopo resolvido para a listagem do Painel Operacional.
+ * `NONE` = conta COLABORADOR sem colaborador vinculado (ou conta não encontrada): lista vazia,
+ * nunca fallback para a lista global.
+ */
+export type ConveyorListAccessScope = ListConveyorsScope | { kind: 'NONE' }
+
+/**
+ * Deriva o escopo da listagem a partir do usuário autenticado (fonte: `app_users` + `app_roles`).
+ * Perfis diferentes de COLABORADOR mantêm a visão global.
+ */
+export async function serviceResolveConveyorListScope(
+  pool: pg.Pool,
+  userId: string,
+): Promise<ConveyorListAccessScope> {
+  const profile = await findAppUserProfileById(pool, userId)
+  if (!profile) return { kind: 'NONE' }
+  if (profile.role !== COLABORADOR_ROLE_CODE) return { kind: 'ALL' }
+  const collaboratorId = profile.collaboratorId?.trim() ?? ''
+  if (collaboratorId.length === 0) return { kind: 'NONE' }
+  return { kind: 'COLLABORATOR', collaboratorId }
+}
+
 export async function serviceListConveyors(
   pool: pg.Pool,
   filters: ListConveyorsFilters,
+  scope: ConveyorListAccessScope,
 ): Promise<ConveyorListItemApi[]> {
-  const rows = await listConveyors(pool, filters)
+  if (scope.kind === 'NONE') return []
+  const rows = await listConveyors(pool, filters, scope)
   return rows.map(mapListRowToApi)
 }
 
