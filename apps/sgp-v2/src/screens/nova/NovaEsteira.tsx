@@ -13,7 +13,7 @@ import {
   emptyDraft,
   ehIlustracao,
   figuraDaEtapa,
-  ilustracao,
+  recorte,
   minutesOf,
   nomeCurto,
   prazoPara,
@@ -32,6 +32,7 @@ import {
 import { fmtMin } from '../../domain/format'
 import { dadosVazios, erroDados, nomeFinal, type DadosEsteira } from '../../domain/dadosEsteira'
 import { FormDados } from '../../ui/FormDados'
+import { trocarPelaReserva } from '../../ui/figura'
 import { useFiguras } from '../../ui/useFiguras'
 import { EscolherFoto } from '../../ui/EscolherFoto'
 import { FotosDoCarro } from '../../ui/FotosDoCarro'
@@ -152,10 +153,10 @@ export function NovaEsteira() {
             ) : null}
             {matrizes === null && !erro ? <p className="text-muted">Carregando matrizes…</p> : null}
             {filtradas.map((m) => {
-              const fig = figuraDaEtapa(m.name) ?? ilustracao(18)
+              const fig = figuraDaEtapa(m.name) ?? recorte(18)
               return (
                 <button key={m.id} type="button" onClick={() => void escolherMatriz(m)} className="flex min-h-24 items-center gap-3 card p-2.5 text-left">
-                  <img src={fig} alt="" className={`size-20 shrink-0 rounded-xl border border-ground object-contain ${ehIlustracao(fig) ? 'p-3' : ''}`} />
+                  <img src={fig} alt="" onError={trocarPelaReserva} className={`size-20 shrink-0 rounded-xl border border-ground object-contain ${ehIlustracao(fig) ? 'p-3' : ''}`} />
                   <span className="min-w-0">
                     <span className="block text-sm font-bold tracking-wide text-muted">MATRIZ</span>
                     <span className="block font-display text-xl font-extrabold leading-tight">{m.name}</span>
@@ -202,7 +203,7 @@ export function NovaEsteira() {
         {passo === 'etapa' && etapa ? (
           <>
             <div className="flex items-center gap-3 card p-2.5">
-              {figura(etapa.name, etapa.id) ? <img src={figura(etapa.name, etapa.id)!} alt="" className={`size-20 shrink-0 rounded-xl ${ehIlustracao(figura(etapa.name, etapa.id)!) ? 'border border-ground bg-white object-contain p-3' : 'object-cover'}`} /> : null}
+              {figura(etapa.name, etapa.id) ? <img src={figura(etapa.name, etapa.id)!} alt="" onError={trocarPelaReserva} className={`size-20 shrink-0 rounded-xl ${ehIlustracao(figura(etapa.name, etapa.id)!) ? 'border border-ground bg-white object-contain p-3' : 'object-cover'}`} /> : null}
               <div>
                 <p className="font-display text-xl font-extrabold leading-tight">{displayName(etapa.name)}</p>
                 <p className="text-muted">

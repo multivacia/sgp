@@ -36,6 +36,7 @@ import {
 } from '../../domain/novaEsteira'
 import { dadosDe, erroDados, mudancasDados, patchDados, PRIORIDADES, type DadosEsteira } from '../../domain/dadosEsteira'
 import { FormDados } from '../../ui/FormDados'
+import { trocarPelaReserva } from '../../ui/figura'
 import { useFiguras } from '../../ui/useFiguras'
 import { ResponsavelPicker } from '../../ui/ResponsavelPicker'
 import { AtividadeRow, AtividadeTravada, BottomBar, EtapaCard, SetorBox, WizardHeader } from '../../ui/wizard'
@@ -416,7 +417,7 @@ export function AlterarEsteira() {
 function EtapaTopo({ nome, info, figura: fig }: { nome: string; info: string; figura: string | null }) {
   return (
     <div className="flex items-center gap-3 card p-2.5">
-      {fig ? <img src={fig} alt="" className={`size-20 shrink-0 object-contain ${ehIlustracao(fig) ? 'p-2' : ''}`} /> : null}
+      {fig ? <img src={fig} alt="" onError={trocarPelaReserva} className={`size-20 shrink-0 object-contain ${ehIlustracao(fig) ? 'p-2' : ''}`} /> : null}
       <div>
         <p className="font-display text-xl font-extrabold leading-tight">{displayName(nome)}</p>
         <p className="text-muted">{info}</p>

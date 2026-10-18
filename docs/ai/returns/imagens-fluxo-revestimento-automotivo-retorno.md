@@ -84,7 +84,7 @@ Nenhuma.
 ## Pendências e ressalvas
 
 - Os ícones são **simbólicos e aproximados**, não fotos das peças (teto, cintos, ombreira e tampão em especial). Se for exigida fidelidade à imagem de referência, a opção são os **recortes PNG fornecidos separadamente**, e é preciso **validar os direitos de uso** antes.
-- Decidir se os `public/etapas/NN.webp` antigos, do cartaz gerado por IA, devem ser removidos.
+- ~~Decidir sobre os `public/etapas/NN.webp`~~ → resolvido na seção "Revisão: recortes do documento" abaixo.
 - A demonstração online (artifact) **não foi republicada**, porque não houve autorização de publicação nesta atividade.
 - **Próximo passo recomendado:** a gestora valida no celular. Se aprovar, a branch é mesclada na base da V2 (`ccr-683413c7-571rnk`) por PR, com aprovação humana.
 
@@ -100,4 +100,29 @@ Nenhuma.
 - A demonstração anterior (https://claude.ai/artifact/RFAWgUFLAB541XT4839dhW) não foi alterada.
 - É só demonstração, com a API simulada no navegador e dados de exemplo. Não houve deploy em VPS, HML nem produção.
 - Inclui os 20 SVGs e o `LICENSE-TABLER.txt`. Os `.webp` antigos ficaram de fora, porque não são mais usados.
+- **Uso/tokens disponíveis:** INDISPONÍVEL — a sessão não fornece métrica confiável.
+
+## Revisão: recortes do documento como figura principal (2026-10-18)
+
+- **Pergunta do usuário:** "Você não consegue extrair a partir do doc em anexo?" (anexo: `Fluxo_do_Processo_de_Operação.docx`).
+- **Achado:** o documento tem **uma única imagem**, `word/media/image1.png` (1024×1536), que é o cartaz do fluxo. O MD5 `dae6a230…` é idêntico ao da imagem já recortada na Fase 2. Ou seja, os `apps/sgp-v2/public/etapas/01.webp` a `20.webp` **já são** os recortes desse documento. Mandei ao usuário uma comparação lado a lado (recorte × ícone).
+- **Decisão humana:** "Foi gerado pela Tati da Bravo, não há restrição para uso." Com isso, a validação de direitos de uso pedida no item 6 do prompt fica atendida.
+- **Feito:**
+  - `figuraDaEtapa` volta a devolver o recorte, agora pela nova função `recorte(n)`.
+  - Nova função `reservaDaFigura(src)`, que liga o recorte ao ícone Tabler da mesma etapa.
+  - Novo arquivo `src/ui/figura.ts` com `trocarPelaReserva` (no `onError` das imagens), que troca pelo ícone, com respiro, se o recorte não carregar.
+  - Aplicado em `ui/wizard.tsx`, `screens/nova/NovaEsteira.tsx`, `screens/alterar/AlterarEsteira.tsx` e `screens/FotosEtapas.tsx`.
+  - O `alt` da folha agora diz "Foto" só quando há foto, e "Ilustração" nos outros casos.
+- **Testes** (`novaEsteira.test.ts`): cobrem recorte, reserva e a existência dos 20 `.webp`.
+- **Validação (resultado real):**
+  - Testes: `npx vitest run` com 31/31.
+  - Lint e tipos: `eslint` ok; `tsc -b` ok.
+  - Build: `build` e `build:demo` ok.
+  - Validação no celular (Playwright, 390×844) com o recorte da Etapa 4 bloqueado de propósito:
+    - Cardápio, Fotos das etapas e Alterar mostram 20/20 figuras carregadas: 19 recortes e o ícone `04-teto.svg` no lugar do bloqueado.
+    - O `alt` da folha saiu "Ilustração da Etapa Teto".
+    - Sem rolagem horizontal e sem erros na página.
+  - Evidências: `mobile-4-recortes-cardapio.png` e `mobile-5-reserva-icone-etapa4.png`. As capturas `mobile-1` a `mobile-3` mostram a versão anterior, só com ícones.
+- **Demonstração:** republicada (versão 2) em https://claude.ai/artifact/Ftd7Zp8uR1Lc6tBb2Da1dq. Não houve deploy em VPS, HML nem produção.
+- **Docs:** `docs/v2/SGP_V2.md` teve o cabeçalho, a nota da Fase 2 e a §25 reescritos.
 - **Uso/tokens disponíveis:** INDISPONÍVEL — a sessão não fornece métrica confiável.

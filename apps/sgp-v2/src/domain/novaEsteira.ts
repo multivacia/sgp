@@ -84,8 +84,9 @@ const FIGURAS: [RegExp, number][] = [
 ]
 
 /**
- * Ilustrações das 20 etapas do fluxo de revestimento (Tabler Icons, MIT; ver
- * `public/etapas/revestimento-automotivo/`). São símbolos aproximados, não fotos das peças.
+ * Figura das 20 etapas: recorte do cartaz "Fluxo do Processo de Revestimento Automotivo"
+ * (feito pela Bravo, uso liberado) em `public/etapas/NN.webp`; se não carregar, o ícone
+ * Tabler (MIT) de `public/etapas/revestimento-automotivo/`.
  */
 export const ILUSTRACOES = [
   '01-retirada-pecas',
@@ -110,7 +111,12 @@ export const ILUSTRACOES = [
   '20-inspecao-qualidade',
 ] as const
 
-/** Endereço da ilustração da Etapa `n` (1 a 20) do fluxo. */
+/** Recorte do cartaz da Etapa `n` (1 a 20). */
+export function recorte(n: number): string {
+  return `${import.meta.env.BASE_URL}etapas/${String(n).padStart(2, '0')}.webp`
+}
+
+/** Ícone de reserva da Etapa `n` (1 a 20). */
 export function ilustracao(n: number): string {
   return `${import.meta.env.BASE_URL}etapas/revestimento-automotivo/${ILUSTRACOES[n - 1]}.svg`
 }
@@ -119,7 +125,13 @@ export function ilustracao(n: number): string {
 export function figuraDaEtapa(name: string): string | null {
   const n = name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
   const hit = FIGURAS.find(([re]) => re.test(n))
-  return hit ? ilustracao(hit[1]) : null
+  return hit ? recorte(hit[1]) : null
+}
+
+/** Ícone que substitui o recorte quando ele não carrega; `null` para fotos e para o próprio ícone. */
+export function reservaDaFigura(src: string): string | null {
+  const m = /\/etapas\/(\d{2})\.webp$/.exec(src)
+  return m ? ilustracao(Number(m[1])) : null
 }
 
 /** A ilustração é um ícone quadrado: mostrar inteira, com respiro, nunca recortada. */

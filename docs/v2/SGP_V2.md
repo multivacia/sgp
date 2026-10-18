@@ -2,7 +2,7 @@
 
 > **Para que serve:** retomar o desenvolvimento da V2 em qualquer sessão/chat.
 > **Como usar:** ler isto + `git log` da branch antes de começar; atualizar **Status** e **Decisões** ao fim de cada passo.
-> **Branch de trabalho:** `ccr-683413c7-571rnk` (ilustrações licenciadas das etapas em `feat/v2-imagens-fluxo-revestimento`, §25) · **Atualizado em:** 2026-10-18 (Fases 0 a 10 + 2b implementadas, incluindo fotos no aparelho e fotos do carro, visual com o design system do SGP+; pronta para apresentar à gestora) · **Demonstração:** https://claude.ai/artifact/RFAWgUFLAB541XT4839dhW (e na VPS em `/V2-demo/`, §23)
+> **Branch de trabalho:** `ccr-683413c7-571rnk` (figuras das etapas — recortes do cartaz da Bravo + ícone de reserva — em `feat/v2-imagens-fluxo-revestimento`, §25) · **Atualizado em:** 2026-10-18 (Fases 0 a 10 + 2b implementadas, incluindo fotos no aparelho e fotos do carro, visual com o design system do SGP+; pronta para apresentar à gestora) · **Demonstração:** https://claude.ai/artifact/RFAWgUFLAB541XT4839dhW (e na VPS em `/V2-demo/`, §23)
 
 ---
 
@@ -171,7 +171,7 @@ Continuam abertas:
 - API da V1, sem endpoint novo: `GET /operation-matrix/items?is_active=true`, `GET /operation-matrix/items/:id/tree`, `GET /collaborators?status=ACTIVE`, `POST /conveyors` (`originType: BASE`, `matrixRootItemId`, `sourceOrigin: base`, `sourceKey` da matriz, responsável = COLLABORATOR principal + equipe padrão como apoio — mesma tradução da V1).
 - **Teste de contrato:** `src/domain/novaEsteira.test.ts` valida o corpo gerado com o **validador real da V1** (`server/src/modules/conveyors/conveyors.schemas.ts`). Se a V1 mudar o contrato, o CI da V2 quebra.
 - **Ainda na V1 (não feito na V2):** montar esteira sem matriz; juntar complementos de outras matrizes (HYBRID); busca de carro pela placa (não há endpoint); prioridade (fica "média").
-- ⚠️ **Figuras das etapas são provisórias:** escolhidas pelo nome da etapa; na branch `feat/v2-imagens-fluxo-revestimento` passam a ser os 20 ícones licenciados (Tabler Icons, MIT) no lugar das ilustrações do cartaz geradas por IA (§25). Fotos reais por etapa exigem guardar imagem no backend → **Fase 2b** (equivalente V2 + migration aditiva), quando decidido.
+- **Figuras das etapas:** escolhidas pelo nome da etapa. São os recortes do cartaz "Fluxo do Processo de Revestimento Automotivo", feito pela Tati, da Bravo (uso liberado); se um recorte não carrega, entra o ícone Tabler (MIT). Ver §25. Fotos reais por etapa: Fase 2b.
 - "Do setor" no seletor de responsável usa o setor do cadastro do colaborador (`sector_name`) igual ao nome do setor da matriz.
 
 ## 14. Fase 3 — Alterar esteira
@@ -277,10 +277,10 @@ Continuam abertas:
 - **Ressalvas do laboratório:** foto pendente fica só naquele navegador/aparelho; some se limparem os dados do navegador; Safari/iPhone pode apagar dados de site sem uso por ~7 dias. O banco continua sendo a fonte oficial.
 - **Testes:** servidor `src/tests/v2-esteira-fotos.test.ts` (inclui, lista, lê, 403 colaborador, 422 arquivo falso, 404 esteira, limite 10, remove); V2 `src/ui/fotosLocais.test.ts` (guardar por etapa/esteira, substituir, remover).
 
-## 25. Ilustrações licenciadas das 20 etapas (2026-10-18, branch `feat/v2-imagens-fluxo-revestimento`)
+## 25. Figuras das 20 etapas: recortes do cartaz + ícone de reserva (2026-10-18, branch `feat/v2-imagens-fluxo-revestimento`)
 
-- **Origem:** 20 SVGs da branch `assets/fluxo-revestimento-automotivo-2026-10-18` (commit `30dc5cb8`), **Tabler Icons, licença MIT** (`LICENSE-TABLER.txt` junto). Copiados sem alteração (mesmo SHA-256) para `apps/sgp-v2/public/etapas/revestimento-automotivo/`, com `manifesto.json` e `README.md`. Nada foi posto no `public/` da V1.
-- **Uso (só visual):** `figuraDaEtapa` (em `src/domain/novaEsteira.ts`) continua achando a figura pelo **nome da etapa**. Agora aponta para o SVG da Etapa 1 a 20. Títulos, sequência e IDs da matriz não mudam, e a figura não vira regra. Vale onde já havia figura: o cardápio da Nova esteira, Personalizar, Alterar esteira, Fotos das etapas e o cartão da matriz. Ordem de prioridade: foto do aparelho → foto do banco → ilustração.
-- **Exibição:** ícone inteiro (`object-contain`), com respiro para não ficar sob os selos e sem recorte ou distorção. Ao lado do nome da etapa a imagem é decorativa (`alt=""`, para o leitor de tela não repetir o nome). Na folha de Fotos das etapas, o texto alternativo é "Ilustração da Etapa X".
-- **Ressalva:** são ícones simbólicos e aproximados (teto, cintos, ombreira e tampão em especial), não fotos das peças. As figuras antigas (`public/etapas/NN.webp`, cartaz gerado por IA) continuam no repositório, sem uso. Para fidelidade à imagem de referência, a opção são os recortes PNG fornecidos à parte, **depois de validar os direitos de uso**.
-- **Testes:** `src/domain/novaEsteira.test.ts`. Verifica que manifesto e código batem, que os 20 arquivos e a licença existem, e que os 20 títulos da planilha mestra caem cada um na sua ilustração (nome desconhecido fica sem figura).
+- **Figura principal:** recortes `apps/sgp-v2/public/etapas/01.webp` a `20.webp`, tirados da única imagem do documento *Fluxo do Processo de Operação.docx* (cartaz "Fluxo do Processo de Revestimento Automotivo"). O cartaz foi feito pela **Tati, da Bravo**; o usuário confirmou em 2026-10-18 que **não há restrição de uso**.
+- **Reserva:** 20 ícones Tabler (licença MIT, `LICENSE-TABLER.txt` junto) da branch `assets/fluxo-revestimento-automotivo-2026-10-18` (commit `30dc5cb8`). Foram copiados sem alteração (mesmo SHA-256) para `apps/sgp-v2/public/etapas/revestimento-automotivo/`, com `manifesto.json` e `README.md`. Se um recorte não carregar, `src/ui/figura.ts` (`trocarPelaReserva`, no `onError`) troca pelo ícone da mesma etapa, inteiro e com respiro. Nada foi posto no `public/` da V1.
+- **Uso (só visual):** `figuraDaEtapa` (`src/domain/novaEsteira.ts`) acha a figura pelo **nome da etapa** e devolve `recorte(n)`; `reservaDaFigura` devolve `ilustracao(n)`. Títulos, sequência e IDs da matriz não mudam, e a figura não vira regra. Vale no cardápio da Nova esteira, em Personalizar, Alterar esteira, Fotos das etapas e no cartão da matriz. Ordem: foto do aparelho → foto do banco → recorte → ícone.
+- **Acessibilidade:** ao lado do nome da etapa a imagem é decorativa (`alt=""`). Na folha de Fotos das etapas o texto alternativo é "Ilustração da Etapa X" (ou "Foto da Etapa X", quando há foto).
+- **Testes:** `src/domain/novaEsteira.test.ts`. Verifica que manifesto e código batem; que os 20 recortes, os 20 ícones e a licença existem; que os 20 títulos da planilha mestra caem cada um no seu recorte, com o ícone certo de reserva; que nome desconhecido fica sem figura; e que fotos não têm reserva.

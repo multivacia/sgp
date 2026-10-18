@@ -5,6 +5,7 @@ import { useSession } from '../auth/context'
 import { fotoDaEtapa, type FotoEtapa } from '../domain/fotosEtapas'
 import { displayName, ehIlustracao, figuraDaEtapa, tasksOf, type MatrixNode } from '../domain/novaEsteira'
 import { EscolherFoto } from '../ui/EscolherFoto'
+import { trocarPelaReserva } from '../ui/figura'
 import { aoMudarLocais, listarLocais, removerLocal, salvarLocal, type FotoLocal } from '../ui/fotosLocais'
 
 type Local = FotoLocal & { url: string }
@@ -149,7 +150,7 @@ export function FotosEtapas() {
                   className="card flex flex-col gap-1.5 p-2 text-left"
                 >
                   <span className="relative block">
-                    {fig ? <img src={fig} alt="" className={`h-28 w-full rounded-xl bg-white ${ehIlustracao(fig) ? 'object-contain px-6 pb-2 pt-9' : 'object-cover'}`} /> : <span className="block h-28 rounded-xl bg-ground" />}
+                    {fig ? <img src={fig} alt="" onError={trocarPelaReserva} className={`h-28 w-full rounded-xl bg-white ${ehIlustracao(fig) ? 'object-contain px-6 pb-2 pt-9' : 'object-cover'}`} /> : <span className="block h-28 rounded-xl bg-ground" />}
                     <span className="absolute left-1.5 top-1.5 flex size-7 items-center justify-center rounded-full bg-ink text-sm font-bold text-white">{i + 1}</span>
                     <span className={`absolute right-1.5 top-1.5 rounded-full px-2.5 py-0.5 text-sm font-bold ${tom}`}>{tag}</span>
                   </span>
@@ -171,7 +172,7 @@ function Folha({ etapa, local, banco, ocupado, erro, fazer, fechar }: { etapa: M
     <div className="fixed inset-0 z-30 flex items-end bg-ink/40" onClick={() => !ocupado && fechar()}>
       <div role="dialog" aria-label={`Foto de ${displayName(etapa.name)}`} onClick={(e) => e.stopPropagation()} className="flex max-h-[90dvh] w-full flex-col gap-3 overflow-y-auto rounded-t-3xl bg-white p-4 pb-[max(env(safe-area-inset-bottom),16px)]">
         <h2 className="font-display text-2xl font-extrabold">{displayName(etapa.name)}</h2>
-        {src ? <img src={src} alt={`${ehIlustracao(src) ? 'Ilustração' : 'Foto'} da Etapa ${displayName(etapa.name)}`} className={`w-full rounded-2xl object-contain ${ehIlustracao(src) ? 'max-h-48 border border-line bg-white p-8' : 'max-h-72 bg-ground'}`} /> : null}
+        {src ? <img src={src} alt={`${local || banco ? 'Foto' : 'Ilustração'} da Etapa ${displayName(etapa.name)}`} onError={trocarPelaReserva} className={`w-full rounded-2xl object-contain ${ehIlustracao(src) ? 'max-h-48 border border-line bg-white p-8' : 'max-h-72 bg-ground'}`} /> : null}
         <p className="font-bold text-muted">{local ? `Guardada só neste aparelho (${Math.round(local.blob.size / 1024)} KB), ainda não enviada.` : banco ? 'Foto no banco: todos veem.' : 'Sem foto: mostra a ilustração.'}</p>
         {erro ? <p role="alert" className="font-bold text-danger">{erro}</p> : null}
         {local ? (
