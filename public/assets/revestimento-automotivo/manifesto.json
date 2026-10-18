@@ -1,0 +1,147 @@
+{
+  "task_id": "imagens-fluxo-revestimento-automotivo",
+  "origem": "Tabler Icons",
+  "licenca": "MIT",
+  "itens": [
+    {
+      "etapa": 1,
+      "id": "01-retirada-pecas",
+      "titulo": "Retirada de peças do veículo / balcão",
+      "icone": "car",
+      "arquivo": "/assets/revestimento-automotivo/01-retirada-pecas.svg"
+    },
+    {
+      "etapa": 2,
+      "id": "02-limpeza-inicial",
+      "titulo": "Limpeza inicial",
+      "icone": "vacuum-cleaner",
+      "arquivo": "/assets/revestimento-automotivo/02-limpeza-inicial.svg"
+    },
+    {
+      "etapa": 3,
+      "id": "03-isolante-feltro",
+      "titulo": "Isolante ou feltro",
+      "icone": "layers-intersect",
+      "arquivo": "/assets/revestimento-automotivo/03-isolante-feltro.svg"
+    },
+    {
+      "etapa": 4,
+      "id": "04-teto",
+      "titulo": "Teto",
+      "icone": "layout-navbar",
+      "arquivo": "/assets/revestimento-automotivo/04-teto.svg"
+    },
+    {
+      "etapa": 5,
+      "id": "05-cintos",
+      "titulo": "Cintos",
+      "icone": "link",
+      "arquivo": "/assets/revestimento-automotivo/05-cintos.svg"
+    },
+    {
+      "etapa": 6,
+      "id": "06-carpete-assoalho",
+      "titulo": "Carpete / assoalho",
+      "icone": "texture",
+      "arquivo": "/assets/revestimento-automotivo/06-carpete-assoalho.svg"
+    },
+    {
+      "etapa": 7,
+      "id": "07-console-central",
+      "titulo": "Console central + peças",
+      "icone": "dashboard",
+      "arquivo": "/assets/revestimento-automotivo/07-console-central.svg"
+    },
+    {
+      "etapa": 8,
+      "id": "08-porta-malas",
+      "titulo": "Porta-malas",
+      "icone": "luggage",
+      "arquivo": "/assets/revestimento-automotivo/08-porta-malas.svg"
+    },
+    {
+      "etapa": 9,
+      "id": "09-tampa-traseira",
+      "titulo": "Tampa traseira",
+      "icone": "car-door",
+      "arquivo": "/assets/revestimento-automotivo/09-tampa-traseira.svg"
+    },
+    {
+      "etapa": 10,
+      "id": "10-laterais-traseiras",
+      "titulo": "Laterais traseiras",
+      "icone": "door",
+      "arquivo": "/assets/revestimento-automotivo/10-laterais-traseiras.svg"
+    },
+    {
+      "etapa": 11,
+      "id": "11-ombreira",
+      "titulo": "Ombreira",
+      "icone": "layers-subtract",
+      "arquivo": "/assets/revestimento-automotivo/11-ombreira.svg"
+    },
+    {
+      "etapa": 12,
+      "id": "12-forros-portas",
+      "titulo": "Forros de portas",
+      "icone": "door-exit",
+      "arquivo": "/assets/revestimento-automotivo/12-forros-portas.svg"
+    },
+    {
+      "etapa": 13,
+      "id": "13-acabamentos",
+      "titulo": "Acabamentos",
+      "icone": "manual-gearbox",
+      "arquivo": "/assets/revestimento-automotivo/13-acabamentos.svg"
+    },
+    {
+      "etapa": 14,
+      "id": "14-bancos-traseiros",
+      "titulo": "Bancos traseiros",
+      "icone": "sofa",
+      "arquivo": "/assets/revestimento-automotivo/14-bancos-traseiros.svg"
+    },
+    {
+      "etapa": 15,
+      "id": "15-bancos-dianteiros",
+      "titulo": "Bancos dianteiros",
+      "icone": "armchair",
+      "arquivo": "/assets/revestimento-automotivo/15-bancos-dianteiros.svg"
+    },
+    {
+      "etapa": 16,
+      "id": "16-volante",
+      "titulo": "Volante",
+      "icone": "steering-wheel",
+      "arquivo": "/assets/revestimento-automotivo/16-volante.svg"
+    },
+    {
+      "etapa": 17,
+      "id": "17-tampao",
+      "titulo": "Tampão",
+      "icone": "layers-selected-bottom",
+      "arquivo": "/assets/revestimento-automotivo/17-tampao.svg"
+    },
+    {
+      "etapa": 18,
+      "id": "18-montagem-veiculo",
+      "titulo": "Montagem veículo",
+      "icone": "car-garage",
+      "arquivo": "/assets/revestimento-automotivo/18-montagem-veiculo.svg"
+    },
+    {
+      "etapa": 19,
+      "id": "19-limpeza-final",
+      "titulo": "Limpeza final",
+      "icone": "spray",
+      "arquivo": "/assets/revestimento-automotivo/19-limpeza-final.svg"
+    },
+    {
+      "etapa": 20,
+      "id": "20-inspecao-qualidade",
+      "titulo": "Inspeção de qualidade",
+      "icone": "clipboard-check",
+      "arquivo": "/assets/revestimento-automotivo/20-inspecao-qualidade.svg"
+    }
+  ]
+}
