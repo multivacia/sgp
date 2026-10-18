@@ -83,11 +83,48 @@ const FIGURAS: [RegExp, number][] = [
   [/inspe|qualidade/, 20],
 ]
 
-/** Figura provisória da etapa pelo nome (ilustrações do cartaz do processo). */
+/**
+ * Ilustrações das 20 etapas do fluxo de revestimento (Tabler Icons, MIT; ver
+ * `public/etapas/revestimento-automotivo/`). São símbolos aproximados, não fotos das peças.
+ */
+export const ILUSTRACOES = [
+  '01-retirada-pecas',
+  '02-limpeza-inicial',
+  '03-isolante-feltro',
+  '04-teto',
+  '05-cintos',
+  '06-carpete-assoalho',
+  '07-console-central',
+  '08-porta-malas',
+  '09-tampa-traseira',
+  '10-laterais-traseiras',
+  '11-ombreira',
+  '12-forros-portas',
+  '13-acabamentos',
+  '14-bancos-traseiros',
+  '15-bancos-dianteiros',
+  '16-volante',
+  '17-tampao',
+  '18-montagem-veiculo',
+  '19-limpeza-final',
+  '20-inspecao-qualidade',
+] as const
+
+/** Endereço da ilustração da Etapa `n` (1 a 20) do fluxo. */
+export function ilustracao(n: number): string {
+  return `${import.meta.env.BASE_URL}etapas/revestimento-automotivo/${ILUSTRACOES[n - 1]}.svg`
+}
+
+/** Ilustração da etapa pelo nome; só visual, não muda a sequência nem os títulos da matriz. */
 export function figuraDaEtapa(name: string): string | null {
   const n = name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
   const hit = FIGURAS.find(([re]) => re.test(n))
-  return hit ? `${import.meta.env.BASE_URL}etapas/${String(hit[1]).padStart(2, '0')}.webp` : null
+  return hit ? ilustracao(hit[1]) : null
+}
+
+/** A ilustração é um ícone quadrado: mostrar inteira, com respiro, nunca recortada. */
+export function ehIlustracao(src: string): boolean {
+  return src.endsWith('.svg')
 }
 
 export type Totals = { etapas: number; atividades: number; minutos: number }

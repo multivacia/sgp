@@ -21,6 +21,7 @@ import { fmtMin } from '../../domain/format'
 import {
   activitiesOf,
   displayName,
+  ehIlustracao,
   minutesOf,
   nomeCurto,
   responsavelDe,
@@ -415,7 +416,7 @@ export function AlterarEsteira() {
 function EtapaTopo({ nome, info, figura: fig }: { nome: string; info: string; figura: string | null }) {
   return (
     <div className="flex items-center gap-3 card p-2.5">
-      {fig ? <img src={fig} alt="" className="size-20 shrink-0 object-contain" /> : null}
+      {fig ? <img src={fig} alt="" className={`size-20 shrink-0 object-contain ${ehIlustracao(fig) ? 'p-2' : ''}`} /> : null}
       <div>
         <p className="font-display text-xl font-extrabold leading-tight">{displayName(nome)}</p>
         <p className="text-muted">{info}</p>

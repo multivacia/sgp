@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { fmtMin } from '../domain/format'
+import { ehIlustracao } from '../domain/novaEsteira'
 
 /** Peças visuais comuns a "Nova esteira" e "Alterar esteira" (as duas telas devem ser iguais). */
 
@@ -60,7 +61,7 @@ export function EtapaCard({ numero, nome, figura, on, tag, tagTone = on ? 'ok' :
     <div className={`rounded-2xl p-2 ${on ? 'border-[3px] border-blue bg-white' : 'border-[3px] border-transparent bg-line/60'}`}>
       <button type="button" aria-pressed={on} aria-label={toggleLabel} onClick={onToggle} className="flex w-full flex-col gap-1.5 text-left">
         <span className="relative block">
-          {figura ? <img src={figura} alt="" className={`h-28 w-full rounded-xl bg-white object-contain ${on ? '' : 'opacity-40 grayscale'}`} /> : <span className="block h-28 w-full rounded-xl bg-ground" />}
+          {figura ? <img src={figura} alt="" className={`h-28 w-full rounded-xl bg-white object-contain ${ehIlustracao(figura) ? 'px-6 pb-2 pt-9' : ''} ${on ? '' : 'opacity-40 grayscale'}`} /> : <span className="block h-28 w-full rounded-xl bg-ground" />}
           <span className="absolute left-1.5 top-1.5 flex size-7 items-center justify-center rounded-full bg-ink text-sm font-bold text-white">{numero}</span>
           <span className={`absolute right-1.5 top-1.5 rounded-full px-2.5 py-0.5 text-sm font-bold ${tone}`}>{tag}</span>
         </span>

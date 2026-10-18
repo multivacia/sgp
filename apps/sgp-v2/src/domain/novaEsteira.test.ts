@@ -1,6 +1,8 @@
+import { existsSync, readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { postConveyorBodySchema } from '../../../../server/src/modules/conveyors/conveyors.schemas'
-import { buildCreateBody, emptyDraft, setResponsavel, tasksOf, taskActivities, toggleActivity, toggleGroup, type MatrixNode } from './novaEsteira'
+import { buildCreateBody, ehIlustracao, emptyDraft, figuraDaEtapa, ilustracao, ILUSTRACOES, setResponsavel, tasksOf, taskActivities, toggleActivity, toggleGroup, type MatrixNode } from './novaEsteira'
 import { dadosVazios, type DadosEsteira } from './dadosEsteira'
 
 let seq = 0
@@ -89,5 +91,30 @@ describe('nova esteira pelo cardápio → POST /api/v1/conveyors', () => {
 
     // escolher de novo o da matriz desfaz a troca
     expect(setResponsavel(setResponsavel(emptyDraft(), [costurar], PEDRO), [costurar], CARLOS).resp).toEqual({})
+  })
+})
+
+describe('ilustrações das 20 etapas (só visual)', () => {
+  const pasta = resolve(__dirname, '../../public/etapas/revestimento-automotivo')
+  const manifesto = JSON.parse(readFileSync(resolve(pasta, 'manifesto.json'), 'utf8')) as { itens: { etapa: number; id: string; titulo: string }[] }
+
+  it('cada título do manifesto cai na sua própria ilustração, e o arquivo existe com a licença', () => {
+    expect(manifesto.itens.map((i) => i.id)).toEqual([...ILUSTRACOES])
+    for (const i of manifesto.itens) {
+      expect(figuraDaEtapa(`${i.etapa} - ${i.titulo.toUpperCase()}`), i.titulo).toBe(ilustracao(i.etapa))
+      expect(existsSync(resolve(pasta, `${i.id}.svg`)), i.id).toBe(true)
+    }
+    expect(existsSync(resolve(pasta, 'LICENSE-TABLER.txt'))).toBe(true)
+  })
+
+  it('as 20 etapas da planilha mestra recebem 20 ilustrações diferentes; nome desconhecido fica sem figura', () => {
+    // Títulos das etapas como estão na planilha mestra (Gol GTI, OS7945).
+    const nomes = ['1 - RETIRADA DE PEÇAS DO VEÍCULO/BALCÃO', '2 - LIMPEZA INICIAL', '3 - ISOLANTE OU FELTRO', '4 - TETO', '5 - CINTOS', '6 - CARPETE / ASSOALHO', '7 - CONSOLE CENTRAL + PEÇAS', '8 - PORTA MALAS', '9 - TAMPA TRASEIRA', '10 - LATERAIS TRASEIRAS', '11 - OMBREIRA', '12 - FORROS DE PORTAS', '13 - ACABAMENTOS', '14 - BANCOS TRASEIROS', '15 - BANCOS DIANTEIROS', '16 - VOLANTE', '17 - TAMPÃO', '18 - MONTAGEM VEÍCULO', '19 - LIMPEZA FINAL', '20 - INSPEÇÃO DE QUALIDADE']
+    const figuras = nomes.map(figuraDaEtapa)
+    expect(figuras.every(Boolean)).toBe(true)
+    expect(figuras).toEqual(nomes.map((_, i) => ilustracao(i + 1)))
+    expect(figuraDaEtapa('Etapa sem correspondência')).toBeNull()
+    expect(ehIlustracao(ilustracao(1))).toBe(true)
+    expect(ehIlustracao('blob:https://x/123')).toBe(false)
   })
 })
