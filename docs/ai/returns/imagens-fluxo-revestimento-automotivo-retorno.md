@@ -93,3 +93,11 @@ Nenhuma.
 - **Commit/push:** um commit na branch `feat/v2-imagens-fluxo-revestimento`, enviado com `git push -u origin feat/v2-imagens-fluxo-revestimento`. Sem PR, sem merge e sem force-push.
 - **`git status` final:** limpo após o commit.
 - **Uso/tokens disponíveis:** INDISPONÍVEL — a sessão não fornece métrica confiável.
+
+## Validação pelo chat (2026-10-18)
+
+- A pedido do usuário ("subir o ambiente para validar aqui pelo chat"), publiquei a demonstração **desta branch** como página privada separada: https://claude.ai/artifact/Ftd7Zp8uR1Lc6tBb2Da1dq
+- A demonstração anterior (https://claude.ai/artifact/RFAWgUFLAB541XT4839dhW) não foi alterada.
+- É só demonstração, com a API simulada no navegador e dados de exemplo. Não houve deploy em VPS, HML nem produção.
+- Inclui os 20 SVGs e o `LICENSE-TABLER.txt`. Os `.webp` antigos ficaram de fora, porque não são mais usados.
+- **Uso/tokens disponíveis:** INDISPONÍVEL — a sessão não fornece métrica confiável.
