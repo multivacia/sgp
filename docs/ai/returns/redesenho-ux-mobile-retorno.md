@@ -617,3 +617,13 @@ Fases 4 e 5 exigem o fluxo completo de `AGENTS.md` (contexto → impacto → spe
 - **Download direto do ambiente:** `CONNECT tunnel failed, response 403` (host não liberado na política de rede).
 - **Resultado:** nenhuma foto baixada. A pasta `apps/sgp-v2/src/demo/fotos-exemplo/` continua vazia, aguardando as fotos.
 - **Uso/tokens disponíveis:** INDISPONÍVEL — a sessão não fornece métrica confiável.
+
+## 45. Fotos de carros de outros sites (2026-10-18)
+
+- **Pedido:** "Pesquise em outros sites fotos de carros e atualize o protótipo".
+- **Tentativas:** Wikimedia (`upload.wikimedia.org`), Unsplash (`images.unsplash.com`), Pexels (`images.pexels.com`), CDNs (`cdn.jsdelivr.net`, `unpkg.com`) e Google: **todos bloqueados** pela política de rede do ambiente (sem conexão / 403 no proxy). Só os registros de pacotes passam (npm, PyPI, crates, Go, JSR).
+- **Pacotes:** busca no npm por pacotes com fotos de carros com licença livre ("car image", "vehicle photo", "stanford cars", "sample images", "stock photos"): só achei clientes de API (Pexels, Unsplash, Meter), que precisam da mesma internet bloqueada. Nenhum traz as fotos dentro.
+- **Resultado:** nenhuma foto baixada e nenhuma inventada no lugar. O protótipo não mudou; a pasta `apps/sgp-v2/src/demo/fotos-exemplo/` continua vazia. O mecanismo de seleção (§43) já está pronto: basta colocar os arquivos e gerar o pacote.
+- **Para destravar:** (a) enviar as fotos no chat; ou (b) liberar na rede do ambiente um domínio de imagens (ex.: `upload.wikimedia.org` ou `images.pexels.com`). Doc: https://code.claude.com/docs/en/cloud-environments#network-access
+- **Validação:** sem alteração de código (nada a compilar/testar).
+- **Uso/tokens disponíveis:** INDISPONÍVEL — a sessão não fornece métrica confiável.
