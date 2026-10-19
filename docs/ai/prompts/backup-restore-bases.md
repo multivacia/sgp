@@ -14,7 +14,7 @@
 - Produção roda numa VPS HostGator, com PostgreSQL na própria VPS. Workflow: `.github/workflows/deploy-hostgator-vps.yml`, app em `/opt/sgp/sgp-main`. HML ainda não existe na VPS.
 - Já existem `scripts/db/backup_all_databases.sh|.ps1` (`pg_dumpall`, manual) e `docs/backup-bases.md`. Não há agendamento, retenção, cópia externa nem backup de banco antes do deploy (o workflow só copia o frontend).
 - `docs/deploy-sgp-ec2.md` descreve EC2, mas os workflows ativos são HostGator. Registrar essa divergência no retorno; não corrigir docs de deploy fora do necessário.
-- O runner `server/src/scripts/migrate.ts` **reexecuta todas as migrations** a cada execução (não há tabela de controle). Logo, as migrations são idempotentes.
+- O runner `server/src/scripts/migrate.ts` executa todas as migrations em sequência, sem tabela de controle, e **falha em base já migrada** a partir da `0002` (problema preexistente, confirmado na atividade `esteiras-historico-painel`). Em produção, o Gustavo aplica migrations manualmente com `npm run migrate:file`. **Não automatizar migrations nesta entrega.**
 - O papel `SUPER_ADMIN` existe e só ele tem `system_settings.manage`.
 
 ## Escopo desta entrega
@@ -69,8 +69,8 @@ Backend: módulo novo `server/src/modules/database-backups`, rotas em `/api/v1/a
    2. ativa **modo manutenção** na API: as demais requisições recebem 503 com mensagem em português até o fim;
    3. executa backup de segurança com `--reason pre-restore`; se falhar, aborta sem tocar na base;
    4. executa `pg_restore --clean --if-exists --single-transaction` do arquivo escolhido. Falha desfaz tudo;
-   5. em seguida, executa o runner de migrations existente, para levar a base restaurada ao nível do código atual;
-   6. se o passo 5 falhar, mantém o modo manutenção, registra o erro e informa que o backup de segurança está disponível;
+   5. **não** executa migrations. Ao concluir, sai do modo manutenção e a tela avisa que, se o backup for anterior a migrations já aplicadas, elas devem ser reaplicadas manualmente com `npm run migrate:file` (o runbook explica como identificar quais);
+   6. se o passo 4 falhar, sai do modo manutenção com a base intacta e mostra o erro;
    7. registra o restore no log da VPS **e** em `admin_audit_events` **depois** do restore, pois o restore substitui a tabela de auditoria.
 
 Frontend: página nova em Configurações do sistema (grupo Estrutura e administração), visível só com `system_settings.manage`:
@@ -88,10 +88,22 @@ Frontend: página nova em Configurações do sistema (grupo Estrutura e administ
 - Atualizar `docs/backup-bases.md`: registrar a decisão do Gustavo que permite restore destrutivo pela tela (Super-admin, com as proteções acima) e apontar para os scripts novos e o runbook.
 - Registrar para o futuro HML: restore a partir de produção deve **mascarar as senhas** dos usuários. Não implementar agora.
 
+### 7. Versão do pacote
+
+Esta entrega fecha o pacote **1.11.0** (Histórico de esteiras + Backup), que será promovido para produção depois da validação. Em commit separado e revertível, atualizar `app-version.json`:
+
+- `version`: `1.11.0`;
+- `releaseName`: `Histórico de esteiras no Painel operacional e backup da base`;
+- `releaseDate`: `2026-10-19`;
+- manter `product` e `channel`.
+
+Se algum teste espera a versão fixa (ex.: `server/src/tests/env.test.ts`, que já falhava na `develop` por esperar versão antiga), alinhar o teste à versão nova e registrar no retorno.
+
 ## Escopo congelado
 
 - Não alterar regras de negócio, telas ou permissões fora deste módulo.
 - Não criar migration (permissão reusada, log em arquivo).
+- Fora do módulo, só são permitidas as alterações de registro de rotas, item de menu, workflow de deploy (passo de backup), documentação e `app-version.json` (item 7).
 - Não alterar secrets, não acessar a VPS e não executar nada em ambiente compartilhado.
 - Sem deploy, merge ou push sem autorização explícita posterior.
 
@@ -100,7 +112,7 @@ Frontend: página nova em Configurações do sistema (grupo Estrutura e administ
 1. Retenção: com lista fictícia de arquivos, confirmar quais são mantidos e apagados.
 2. `sgp-backup-remote.sh`: recusa comando desconhecido e nome de arquivo fora da lista (incluindo `../`).
 3. API: 403 sem `system_settings.manage`; lista só com cópia confirmada e presente; 409 com trava ocupada; 422 com nome da base errado; download recusa nome inválido.
-4. Restore ponta a ponta em PostgreSQL local descartável (porta não padrão): gerar backup, alterar dados, restaurar, conferir os dados e a execução das migrations; simular falha no `pg_restore` e confirmar que a base ficou intacta.
+4. Restore ponta a ponta em PostgreSQL local descartável (porta não padrão): gerar backup, alterar dados, restaurar, conferir os dados e o aviso sobre migrations; simular falha no `pg_restore` e confirmar que a base ficou intacta.
 5. Modo manutenção: requisições comuns recebem 503 durante o restore.
 6. `shellcheck` nos scripts bash, se disponível no ambiente.
 
@@ -108,6 +120,6 @@ Execute build, lint/typecheck e os testes direcionados. Falha preexistente deve 
 
 ## Entrega esperada
 
-1. Siga `CLAUDE.md` e `AGENTS.md`. Faça `git fetch origin develop`, registre o SHA inicial e crie a branch `feat/backup-restore-bases`.
+1. Siga `CLAUDE.md` e `AGENTS.md`. Faça `git fetch origin develop`, registre o SHA inicial (base esperada: `develop` com o Histórico de esteiras já integrado) e crie a branch `feat/backup-restore-bases`.
 2. Não faça merge nem push sem autorização explícita.
 3. Gere `docs/ai/returns/backup-restore-bases-retorno.md` com: arquivos criados e alterados, passos manuais que o Gustavo precisa executar na VPS e na máquina de Compras, testes executados e resultado real, divergência EC2 × HostGator, pendências e riscos.
