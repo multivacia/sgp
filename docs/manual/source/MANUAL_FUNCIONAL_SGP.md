@@ -281,6 +281,32 @@ O FAQ atual afirma que uma esteira concluída pode ser reaberta por transição 
 
 **Classificação:** INCORRETO.
 
+## CIC-007 — Painel operacional: abas Operacional e Histórico
+
+O Painel operacional (`/app/backlog`) separa as esteiras em duas abas. A regra é aplicada no backend (`GET /api/v1/conveyors?view=operacional|historico|todas`; ausente = `operacional`), sobre o conjunto já autorizado pelo escopo do usuário (colaborador vê só as esteiras em que está alocado diretamente).
+
+**Data de encerramento:**
+- `FINALIZADA`: `conveyors.completed_at`;
+- `CANCELADA`: `conveyors.canceled_at` (gravada na transição para `CANCELADA`; esteiras canceladas antes da migration `0054` receberam `updated_at` como aproximação).
+
+**Regra automática:**
+- **Histórico**: `FINALIZADA` ou `CANCELADA` com data de encerramento anterior ao 1º dia do mês corrente (fuso `America/Sao_Paulo`). Encerrada sem data (legado) também vai para o Histórico.
+- **Operacional**: todas as demais (abertas e encerradas no mês corrente).
+
+Exemplo: esteira criada em agosto e finalizada em 19/10 fica no Operacional até 31/10 e passa ao Histórico em 01/11.
+
+Filtros, cards e paginação existentes continuam iguais e valem dentro da aba ativa. A aba fica na URL (`aba=historico`). Os links do Dashboard para Finalizadas ou Canceladas (com ou sem `days`) abrem a lista combinada (`aba=todas`) com o aviso “Exibindo Operacional + Histórico”; os demais links abrem a aba Operacional.
+
+## CIC-008 — Arquivar e desarquivar esteira encerrada
+
+- Permitido só para `FINALIZADA` ou `CANCELADA`; nos demais status o backend recusa (422).
+- Permissão: `conveyors.edit_status` (Gestor e Admin).
+- **Arquivar** (`POST /api/v1/conveyors/:id/archive`): a esteira vai para o Histórico imediatamente, mesmo encerrada no mês corrente.
+- **Desarquivar** (`POST /api/v1/conveyors/:id/unarchive`): a esteira volta ao Operacional até a próxima virada de mês ou até ser arquivada de novo.
+- Persistência: eventos `CONVEYOR_ARCHIVED` / `CONVEYOR_UNARCHIVED` em `conveyor_operational_events`, com `source = USER_ACTION` e o usuário que executou.
+- Estado efetivo, nesta ordem: último evento = arquivada → Histórico; último evento = desarquivada no mês corrente → Operacional; sem evento ou desarquivada em mês anterior → regra automática (CIC-007).
+- A ação disponível acompanha o estado efetivo (Operacional → Arquivar; Histórico → Desarquivar). Pedido incoerente retorna 409.
+
 ---
 
 # 4. Estados das Atividades
@@ -1437,7 +1463,8 @@ Esteira e atividade mantêm eventos como:
 - dispensa;
 - restauração;
 - edição estrutural;
-- retorno de ciclo de vida.
+- retorno de ciclo de vida;
+- arquivamento e desarquivamento no Painel operacional (CIC-008).
 
 ## AUD-003 — Correções gerenciais
 
