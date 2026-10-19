@@ -20,6 +20,7 @@ export async function getConveyors(req: Request, res: Response): Promise<void> {
     priority: firstQueryString(q.priority),
     responsible: firstQueryString(q.responsible),
     operationalStatus: firstQueryString(q.operationalStatus),
+    view: firstQueryString(q.view),
   })
   const pool = req.app.locals.pool as pg.Pool
   // Escopo derivado somente do usuário autenticado no servidor (Painel Operacional).
@@ -31,6 +32,7 @@ export async function getConveyors(req: Request, res: Response): Promise<void> {
       priority: query.priority,
       responsible: query.responsible,
       operationalStatus: query.operationalStatus,
+      view: query.view,
     },
     scope,
   )

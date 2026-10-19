@@ -24,6 +24,10 @@ import {
   postConveyorReturnToPlanning,
 } from './conveyor-lifecycle.controller.js'
 import { patchConveyorStatus } from './conveyors.status.controller.js'
+import {
+  postConveyorArchive,
+  postConveyorUnarchive,
+} from './conveyor-panel-archive.controller.js'
 import { registerConveyorOperationalPlanRoutes } from '../conveyor-operational-plan/conveyor-operational-plan.routes.js'
 import { registerConveyorHealthRoutes } from './health/conveyor-health.routes.js'
 import { registerConveyorOperationalEventsRoutes } from './operational-events/conveyor-operational-events.routes.js'
@@ -61,6 +65,19 @@ export function conveyorsRouter(env: Env): Router {
     requireAuth(),
     requirePermission('conveyors.edit_status'),
     asyncRoute(postConveyorReturnToPlanning),
+  )
+  // Painel operacional: arquivar/desarquivar esteira encerrada (aba Histórico).
+  r.post(
+    '/conveyors/:id/archive',
+    requireAuth(),
+    requirePermission('conveyors.edit_status'),
+    asyncRoute(postConveyorArchive),
+  )
+  r.post(
+    '/conveyors/:id/unarchive',
+    requireAuth(),
+    requirePermission('conveyors.edit_status'),
+    asyncRoute(postConveyorUnarchive),
   )
   r.patch(
     '/conveyors/:id/structure',

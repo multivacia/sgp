@@ -44,6 +44,111 @@ export type ConveyorListRow = {
   completed_at: string | null
   estimated_deadline: string | null
   total_steps: number
+  panel_section: ConveyorPanelSection
+  panel_section_manual: boolean
+}
+
+/** Seção efetiva da esteira no Painel operacional. */
+export type ConveyorPanelSection = 'OPERACIONAL' | 'HISTORICO'
+
+/** Visão da listagem do Painel operacional (`GET /conveyors?view=`). */
+export type ConveyorPanelView = 'operacional' | 'historico' | 'todas'
+
+/**
+ * Joins que calculam a seção efetiva (`ps.panel_section`) e se ela vem de
+ * arquivamento manual (`ps.panel_section_manual`), sem duplicar linhas de `conveyors`.
+ *
+ * Regra (avaliada nesta ordem, só para FINALIZADA/CANCELADA; abertas são sempre OPERACIONAL):
+ * 1. último evento de arquivamento = CONVEYOR_ARCHIVED → HISTORICO;
+ * 2. último evento = CONVEYOR_UNARCHIVED no mês corrente (São Paulo) → OPERACIONAL;
+ * 3. regra automática: data de encerramento (`completed_at` / `canceled_at`) anterior ao
+ *    1º dia do mês corrente em America/Sao_Paulo, ou nula (legado) → HISTORICO; senão OPERACIONAL.
+ *
+ * `refParam` = placeholder de um `timestamptz` opcional (NULL → `now()`); permite testar a
+ * virada de mês sem depender do relógio. Não é exposto na API.
+ */
+function conveyorPanelSectionJoinsSql(refParam: string): string {
+  return `
+    CROSS JOIN (
+      SELECT
+        date_trunc('month', COALESCE(${refParam}::timestamptz, now()) AT TIME ZONE 'America/Sao_Paulo')
+          AT TIME ZONE 'America/Sao_Paulo' AS month_start
+    ) psm
+    LEFT JOIN LATERAL (
+      SELECT
+        e.event_type AS archive_event_type,
+        e.occurred_at AS archive_event_at
+      FROM conveyor_operational_events e
+      WHERE e.conveyor_id = conveyors.id
+        AND e.event_type IN ('CONVEYOR_ARCHIVED', 'CONVEYOR_UNARCHIVED')
+      ORDER BY e.occurred_at DESC, e.created_at DESC
+      LIMIT 1
+    ) pse ON TRUE
+    CROSS JOIN LATERAL (
+      SELECT
+        CASE
+          WHEN conveyors.operational_status NOT IN ('FINALIZADA', 'CANCELADA') THEN 'OPERACIONAL'
+          WHEN pse.archive_event_type = 'CONVEYOR_ARCHIVED' THEN 'HISTORICO'
+          WHEN pse.archive_event_type = 'CONVEYOR_UNARCHIVED'
+            AND pse.archive_event_at >= psm.month_start THEN 'OPERACIONAL'
+          WHEN conveyors.operational_status = 'FINALIZADA' THEN
+            CASE
+              WHEN conveyors.completed_at IS NULL OR conveyors.completed_at < psm.month_start
+                THEN 'HISTORICO'
+              ELSE 'OPERACIONAL'
+            END
+          ELSE
+            CASE
+              WHEN conveyors.canceled_at IS NULL OR conveyors.canceled_at < psm.month_start
+                THEN 'HISTORICO'
+              ELSE 'OPERACIONAL'
+            END
+        END AS panel_section,
+        COALESCE(
+          conveyors.operational_status IN ('FINALIZADA', 'CANCELADA')
+          AND (
+            pse.archive_event_type = 'CONVEYOR_ARCHIVED'
+            OR (
+              pse.archive_event_type = 'CONVEYOR_UNARCHIVED'
+              AND pse.archive_event_at >= psm.month_start
+            )
+          ),
+          FALSE
+        ) AS panel_section_manual
+    ) ps
+  `
+}
+
+export type ConveyorPanelSectionLockedRow = {
+  id: string
+  operational_status: ConveyorOperationalStatusDb
+  panel_section: ConveyorPanelSection
+  panel_section_manual: boolean
+}
+
+/**
+ * Seção efetiva de uma esteira, com lock da linha (`FOR UPDATE OF conveyors`).
+ * Usar dentro de transação (arquivar/desarquivar).
+ */
+export async function lockConveyorPanelSection(
+  client: pg.PoolClient,
+  conveyorId: string,
+): Promise<ConveyorPanelSectionLockedRow | null> {
+  const r = await client.query<ConveyorPanelSectionLockedRow>(
+    `
+    SELECT
+      conveyors.id::text AS id,
+      conveyors.operational_status,
+      ps.panel_section,
+      ps.panel_section_manual
+    FROM conveyors
+    ${conveyorPanelSectionJoinsSql('$2')}
+    WHERE conveyors.id = $1::uuid AND conveyors.deleted_at IS NULL
+    FOR UPDATE OF conveyors
+    `,
+    [conveyorId, null],
+  )
+  return r.rows[0] ?? null
 }
 
 export type ConveyorDetailRow = {
@@ -483,6 +588,11 @@ export async function updateConveyorOperationalStatus(
         WHEN $3::text = 'clear' THEN NULL
         ELSE completed_at
       END,
+      -- Data de encerramento por cancelamento (aba Histórico do Painel operacional).
+      canceled_at = CASE
+        WHEN $2::varchar = 'CANCELADA' AND operational_status <> 'CANCELADA' THEN now()
+        ELSE canceled_at
+      END,
       updated_at = now()
     WHERE id = $1::uuid AND deleted_at IS NULL
     RETURNING
@@ -672,6 +782,8 @@ export type ListConveyorsFilters = {
   priority?: 'alta' | 'media' | 'baixa'
   responsible?: string
   operationalStatus?: ConveyorOperationalStatusDb
+  /** Recorte do Painel operacional; ausente = `operacional`. */
+  view?: ConveyorPanelView
 }
 
 /**
@@ -688,10 +800,19 @@ export async function listConveyors(
   pool: pg.Pool,
   filters: ListConveyorsFilters,
   scope: ListConveyorsScope,
+  /** Instante de referência para o mês corrente; omitido = `now()` (uso em testes). */
+  referenceNow: Date | null = null,
 ): Promise<ConveyorListRow[]> {
-  const conditions: string[] = ['deleted_at IS NULL']
-  const params: unknown[] = []
-  let n = 1
+  const conditions: string[] = ['conveyors.deleted_at IS NULL']
+  const params: unknown[] = [referenceNow ? referenceNow.toISOString() : null]
+  let n = 2
+
+  const view = filters.view ?? 'operacional'
+  if (view === 'operacional') {
+    conditions.push(`ps.panel_section = 'OPERACIONAL'`)
+  } else if (view === 'historico') {
+    conditions.push(`ps.panel_section = 'HISTORICO'`)
+  }
 
   if (scope.kind === 'COLLABORATOR') {
     // EXISTS correlacionado: não duplica a esteira quando o colaborador tem várias atividades nela.
@@ -756,8 +877,11 @@ export async function listConveyors(
       operational_status,
       completed_at,
       estimated_deadline,
-      total_steps
+      total_steps,
+      ps.panel_section,
+      ps.panel_section_manual
     FROM conveyors
+    ${conveyorPanelSectionJoinsSql('$1')}
     WHERE ${conditions.join(' AND ')}
     ORDER BY created_at DESC
   `
@@ -775,6 +899,8 @@ export async function listConveyors(
     completed_at: Date | null
     estimated_deadline: string | null
     total_steps: number
+    panel_section: ConveyorPanelSection
+    panel_section_manual: boolean
   }>(sql, params)
 
   return r.rows.map((row) => ({
@@ -790,6 +916,8 @@ export async function listConveyors(
     completed_at: row.completed_at ? row.completed_at.toISOString() : null,
     estimated_deadline: row.estimated_deadline,
     total_steps: row.total_steps,
+    panel_section: row.panel_section,
+    panel_section_manual: row.panel_section_manual,
   }))
 }
 

@@ -13,6 +13,10 @@ export const conveyorOperationalEventTypeValues = [
   'CONVEYOR_STRUCTURE_ITEM_ADDED',
   /** Edição incremental da estrutura (PATCH /structure). */
   'CONVEYOR_STRUCTURE_UPDATED',
+  /** Painel operacional: esteira encerrada arquivada manualmente (aba Histórico). */
+  'CONVEYOR_ARCHIVED',
+  /** Painel operacional: esteira encerrada desarquivada (volta ao Operacional até a virada do mês). */
+  'CONVEYOR_UNARCHIVED',
   'MANUAL_NOTE',
 ] as const
 
