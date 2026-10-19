@@ -24,6 +24,7 @@ import {
   type ConveyorStepSequenceCheckResult,
 } from '../../services/conveyors/conveyorsApiService'
 import { JustificationSelect } from '../../components/operational/JustificationSelect'
+import { TimeEntryJustificationNote } from '../../components/operational/TimeEntryJustificationNote'
 import {
   emptyJustificationValue,
   type JustificationFieldValue,
@@ -622,6 +623,13 @@ export function ApontamentoGestorPage() {
                       <p className="mt-0.5 text-[11px] text-slate-500">
                         Por {e.recordedByUserEmail}
                         {e.delegationReason ? ` · ${e.delegationReason}` : null}
+                      </p>
+                    ) : null}
+                    <TimeEntryJustificationNote entry={e} />
+                    {e.notes?.trim() ? (
+                      <p className="mt-0.5 text-[11px] leading-snug text-slate-500">
+                        <span className="font-semibold">Observação: </span>
+                        {e.notes.trim()}
                       </p>
                     ) : null}
                   </div>

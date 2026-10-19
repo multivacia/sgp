@@ -27,6 +27,8 @@ export type MyWorkQueueItemApi = {
   conveyorId: string
   conveyorOperationalStatus: string
   conveyorTitle: string
+  /** Código da esteira/OS. */
+  conveyorCode?: string | null
   clientName: string | null
   vehicleDescription: string | null
   licensePlate: string | null
@@ -73,6 +75,11 @@ export type MyWorkQueueItemApi = {
 
 export type MyWorkQueueResponseApi = {
   date: string
+  /**
+   * Pesquisa por período (data planejada, inclusiva) efetivamente aplicada; `null` no modo
+   * diário. No modo período os campos `*Today` do resumo referem-se ao período inteiro.
+   */
+  period?: { from: string; to: string } | null
   planStatus: 'PUBLISHED' | null
   summary: {
     plannedItemsToday: number

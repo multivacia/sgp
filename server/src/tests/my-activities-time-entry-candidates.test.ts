@@ -89,7 +89,7 @@ describe('serviceListTimeEntryCandidates — alocação estrutural vs plano sema
     })
 
     expect(result.items).toEqual([])
-    expect(result.unavailableReason).toContain('colaborador operacional vinculado')
+    expect(result.unavailableReason).toContain('não está vinculada a um colaborador operacional')
   })
 
   it('inclui atividade atribuída apenas pela estrutura', async () => {

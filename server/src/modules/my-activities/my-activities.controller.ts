@@ -11,6 +11,7 @@ import {
   serviceListTimeEntryCandidates,
 } from './my-activities.service.js'
 import { timeEntryCandidatesQuerySchema } from './my-activities.schemas.js'
+import { resolveCandidateSearchTerms } from './time-entry-candidates.search.js'
 import {
   getMyExtraTimeEntries as getMyExtraTimeEntriesController,
   getMyExtraTimeEntryDescriptions as getMyExtraTimeEntryDescriptionsController,
@@ -31,6 +32,8 @@ export async function getTimeEntryCandidates(
   const auth = req.authUser!
   const parsed = timeEntryCandidatesQuerySchema.parse({
     q: queryString(req.query.q),
+    conveyorQ: queryString(req.query.conveyorQ),
+    activityQ: queryString(req.query.activityQ),
     limit: queryString(req.query.limit),
     includeUnassigned:
       typeof req.query.includeUnassigned === 'boolean'
@@ -40,7 +43,7 @@ export async function getTimeEntryCandidates(
   const collaboratorId = await findCollaboratorIdByAppUserId(pool, auth.id)
   const result = await serviceListTimeEntryCandidates(pool, {
     collaboratorId,
-    q: parsed.q?.trim() ? parsed.q.trim() : null,
+    ...resolveCandidateSearchTerms(parsed),
     limit: parsed.limit,
     includeUnassigned: Boolean(parsed.includeUnassigned),
   })

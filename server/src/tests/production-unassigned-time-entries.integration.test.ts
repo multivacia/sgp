@@ -162,6 +162,103 @@ describe.skipIf(!hasDb)('production unassigned time entries + candidates (integr
       expect(found).toBeDefined()
       expect(found?.isAssignedToMe).toBe(false)
     })
+
+    it('pesquisa "Esteira & atividade" (q com &) — mesma regra de /me/time-entry-candidates', async () => {
+      const conv = await serviceCreateConveyor(
+        pool,
+        minimalConveyorBody(`UOA-Amp-${Date.now()}`),
+      )
+      await setConveyorProductionStatusForIntegration(pool, conv.id)
+      const code = `7070${Date.now().toString().slice(-6)}`
+      await pool.query(`UPDATE conveyors SET code = $2 WHERE id = $1::uuid`, [conv.id, code])
+
+      const cookie = productionSessionCookie(SEED_COLLABORATOR_MARIA_ID)
+      const search = async (q: string) => {
+        const res = await request(app)
+          .get('/api/v1/production/me/time-entry-candidates')
+          .set('Cookie', cookie)
+          .query({ q, includeUnassigned: 'true', limit: 20 })
+        expect(res.status).toBe(200)
+        return (res.body.data as Array<{ conveyorId: string }>).filter(
+          (i) => i.conveyorId === conv.id,
+        )
+      }
+
+      expect(await search(`${code} & Etapa UOA`)).toHaveLength(1)
+      // Sem diferenciar maiúsculas/acentos e com espaços extras ao redor do &.
+      expect(await search(`  ${code}   &   ÉTAPA uoa  `)).toHaveLength(1)
+      expect(await search(`${code} &`)).toHaveLength(1)
+      // Termo direito casa só o nome da atividade (não o setor "Área UOA").
+      expect(await search(`${code} & Área`)).toEqual([])
+      // Sem &, a pesquisa livre por OS segue como antes.
+      expect(await search(code)).toHaveLength(1)
+    })
+
+    it('OS & atividade separa esteiras com a mesma atividade; apontar o resultado segue as regras existentes', async () => {
+      const stamp = Date.now().toString().slice(-6)
+      const convA = await serviceCreateConveyor(pool, minimalConveyorBody(`UOA-AmpA-${stamp}`))
+      const convB = await serviceCreateConveyor(pool, minimalConveyorBody(`UOA-AmpB-${stamp}`))
+      await setConveyorProductionStatusForIntegration(pool, convA.id)
+      await setConveyorProductionStatusForIntegration(pool, convB.id)
+      const codeA = `7171${stamp}`
+      const codeB = `7272${stamp}`
+      await pool.query(`UPDATE conveyors SET code = $2 WHERE id = $1::uuid`, [convA.id, codeA])
+      await pool.query(`UPDATE conveyors SET code = $2 WHERE id = $1::uuid`, [convB.id, codeB])
+
+      const cookie = productionSessionCookie(UOA_UNASSIGNED_COLLAB_ID)
+      const search = async (q: string) => {
+        const res = await request(app)
+          .get('/api/v1/production/me/time-entry-candidates')
+          .set('Cookie', cookie)
+          .query({ q, includeUnassigned: 'true', limit: 50 })
+        expect(res.status).toBe(200)
+        return (
+          res.body.data as Array<{
+            conveyorId: string
+            stepNodeId: string
+            requiresJustification: boolean
+          }>
+        ).filter((i) => i.conveyorId === convA.id || i.conveyorId === convB.id)
+      }
+
+      // As duas esteiras têm a atividade "Etapa UOA"; o termo esquerdo isola a OS.
+      expect((await search(`${codeA} & etapa`)).map((i) => i.conveyorId)).toEqual([convA.id])
+      expect((await search(`${codeB} & ETAPA`)).map((i) => i.conveyorId)).toEqual([convB.id])
+      expect(await search(`& etapa uoa ${stamp}`)).toEqual([])
+      const both = await search(`UOA-Amp & etapa`)
+      expect(new Set(both.map((i) => i.conveyorId))).toEqual(new Set([convA.id, convB.id]))
+
+      const [target] = await search(`${codeA} & etapa`)
+      if (!target) throw new Error('atividade não encontrada pela pesquisa')
+      expect(target.requiresJustification).toBe(true)
+
+      // Encontrar pela OS não libera o apontamento: sem justificativa continua 422.
+      const noJust = await request(app)
+        .post('/api/v1/production/time-entries/unassigned-exception')
+        .set('Cookie', cookie)
+        .send({ conveyorId: target.conveyorId, stepNodeId: target.stepNodeId, minutes: 5 })
+      expect(noJust.status).toBe(422)
+      expect(noJust.body.error?.code).toBe(
+        ErrorCodes.TIME_ENTRY_UNASSIGNED_REQUIRES_JUSTIFICATION,
+      )
+
+      const ok = await request(app)
+        .post('/api/v1/production/time-entries/unassigned-exception')
+        .set('Cookie', cookie)
+        .send({
+          conveyorId: target.conveyorId,
+          stepNodeId: target.stepNodeId,
+          minutes: 5,
+          exceptionJustificationId: await planningJustificationId(pool),
+        })
+      expect(ok.status).toBe(201)
+      const row = await pool.query<{ collaborator_id: string; conveyor_id: string }>(
+        `SELECT collaborator_id::text, conveyor_id::text FROM conveyor_time_entries WHERE id = $1::uuid`,
+        [(ok.body.data as { id: string }).id],
+      )
+      expect(row.rows[0]?.collaborator_id).toBe(UOA_UNASSIGNED_COLLAB_ID)
+      expect(row.rows[0]?.conveyor_id).toBe(convA.id)
+    })
   })
 
   describe('POST /api/v1/production/time-entries/unassigned-exception', () => {

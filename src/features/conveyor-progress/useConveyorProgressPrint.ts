@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { ConveyorProgressItem } from '../../domain/conveyor-progress/conveyorProgress.types'
 import type { ConveyorProgressFiltersState } from './ConveyorProgressFilters'
+import {
+  DEFAULT_CONVEYOR_PROGRESS_PDF_ORIENTATION,
+  type ConveyorProgressPdfOrientation,
+} from './conveyorProgressPdfOrientation'
 
 export type ConveyorProgressPrintState =
   | { status: 'idle' }
@@ -9,6 +13,7 @@ export type ConveyorProgressPrintState =
       items: ConveyorProgressItem[]
       generatedAt: string
       appliedFilters?: ConveyorProgressFiltersState
+      orientation: ConveyorProgressPdfOrientation
     }
   | { status: 'done' }
   | { status: 'error'; message: string }
@@ -17,7 +22,11 @@ export function useConveyorProgressPrint() {
   const [state, setState] = useState<ConveyorProgressPrintState>({ status: 'idle' })
 
   const requestPrint = useCallback(
-    (items: readonly ConveyorProgressItem[], appliedFilters?: ConveyorProgressFiltersState) => {
+    (
+      items: readonly ConveyorProgressItem[],
+      appliedFilters?: ConveyorProgressFiltersState,
+      orientation: ConveyorProgressPdfOrientation = DEFAULT_CONVEYOR_PROGRESS_PDF_ORIENTATION,
+    ) => {
       if (items.length === 0) return
       const generatedAt = new Intl.DateTimeFormat('pt-BR', {
         dateStyle: 'short',
@@ -28,6 +37,7 @@ export function useConveyorProgressPrint() {
         items: [...items],
         generatedAt,
         appliedFilters,
+        orientation,
       })
     },
     [],
@@ -67,6 +77,7 @@ export function useConveyorProgressPrint() {
           items: state.items,
           generatedAt: state.generatedAt,
           appliedFilters: state.appliedFilters,
+          orientation: state.orientation,
         }
       : null
 

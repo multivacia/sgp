@@ -40,6 +40,7 @@ function mapToProductionItem(
     workPlanItemId: item.workPlanItemId,
     conveyorId: item.conveyorId,
     conveyorTitle: item.conveyorTitle,
+    conveyorCode: item.conveyorCode ?? null,
     activityNodeId: item.activityNodeId,
     activityTitle: item.activityTitle,
     taskTitle: item.taskTitle,

@@ -3,6 +3,7 @@ import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { visualizer } from 'rollup-plugin-visualizer'
+import { manualUsuarioPlugin } from './vite-plugin-manual-usuario'
 
 type AppVersionManifest = {
   product?: string
@@ -20,7 +21,7 @@ export default defineConfig(({ mode }) => {
     readFileSync(new URL('./app-version.json', import.meta.url), 'utf-8'),
   ) as AppVersionManifest
 
-  const plugins = [react(), tailwindcss()]
+  const plugins = [react(), tailwindcss(), manualUsuarioPlugin()]
   if (mode === 'analyze') {
     plugins.push(
       visualizer({

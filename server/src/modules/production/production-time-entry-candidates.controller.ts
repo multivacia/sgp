@@ -3,6 +3,7 @@ import type pg from 'pg'
 import { ok } from '../../shared/http/ok.js'
 import { timeEntryCandidatesQuerySchema } from '../my-activities/my-activities.schemas.js'
 import { serviceListTimeEntryCandidates } from '../my-activities/my-activities.service.js'
+import { resolveCandidateSearchTerms } from '../my-activities/time-entry-candidates.search.js'
 
 function queryString(v: unknown): string | undefined {
   if (typeof v === 'string') return v
@@ -12,8 +13,8 @@ function queryString(v: unknown): string | undefined {
 
 /**
  * Candidatos apontáveis para "Outra Atividade" (Modo Fábrica) — mesma lógica de
- * `GET /me/time-entry-candidates`, resolvendo o colaborador direto da sessão de produção
- * (nunca via `app_users`).
+ * `GET /me/time-entry-candidates` (inclusive a pesquisa "Esteira & atividade" em `q`),
+ * resolvendo o colaborador direto da sessão de produção (nunca via `app_users`).
  */
 export async function getProductionTimeEntryCandidates(
   req: Request,
@@ -23,6 +24,8 @@ export async function getProductionTimeEntryCandidates(
   const session = req.productionSession!
   const parsed = timeEntryCandidatesQuerySchema.parse({
     q: queryString(req.query.q),
+    conveyorQ: queryString(req.query.conveyorQ),
+    activityQ: queryString(req.query.activityQ),
     limit: queryString(req.query.limit),
     includeUnassigned:
       typeof req.query.includeUnassigned === 'boolean'
@@ -31,7 +34,7 @@ export async function getProductionTimeEntryCandidates(
   })
   const result = await serviceListTimeEntryCandidates(pool, {
     collaboratorId: session.collaboratorId,
-    q: parsed.q?.trim() ? parsed.q.trim() : null,
+    ...resolveCandidateSearchTerms(parsed),
     limit: parsed.limit,
     includeUnassigned: Boolean(parsed.includeUnassigned),
   })

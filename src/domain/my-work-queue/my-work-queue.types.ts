@@ -78,6 +78,8 @@ export type MyWorkQueueSummary = {
 
 export type MyWorkQueueResponse = {
   date: string
+  /** Período (data planejada) aplicado; `null`/ausente no modo diário. */
+  period?: { from: string; to: string } | null
   planStatus: 'PUBLISHED' | null
   summary: MyWorkQueueSummary
   items: MyWorkQueueItem[]

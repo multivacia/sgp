@@ -1,6 +1,11 @@
 import type { ReactNode } from 'react'
 import { CONVEYOR_OPERATIONAL_STATUS_LABELS } from '../../domain/conveyors/conveyorOperationalStatus'
 import type { ConveyorOperationalStatus } from '../../domain/conveyors/conveyor.types'
+import {
+  CONVEYOR_PROGRESS_PDF_ORIENTATION_OPTIONS,
+  parseConveyorProgressPdfOrientation,
+  type ConveyorProgressPdfOrientation,
+} from './conveyorProgressPdfOrientation'
 
 export type ConveyorProgressFiltersState = {
   search: string
@@ -32,6 +37,8 @@ type Props = {
   onGeneratePdf: () => void
   pdfDisabled: boolean
   pdfLoading: boolean
+  pdfOrientation: ConveyorProgressPdfOrientation
+  onPdfOrientationChange: (next: ConveyorProgressPdfOrientation) => void
   selectionHint?: string
 }
 
@@ -45,6 +52,8 @@ export function ConveyorProgressFilters({
   onGeneratePdf,
   pdfDisabled,
   pdfLoading,
+  pdfOrientation,
+  onPdfOrientationChange,
   selectionHint,
 }: Props) {
   const patch = (partial: Partial<ConveyorProgressFiltersState>) =>
@@ -121,6 +130,25 @@ export function ConveyorProgressFilters({
         </button>
 
         <div className="ml-auto flex flex-col items-end gap-1">
+          <div className="flex items-end gap-2">
+          <label className="flex flex-col gap-1 text-[11px] font-medium text-slate-500">
+            Orientação do PDF
+            <select
+              className="conveyor-progress-filter-input"
+              value={pdfOrientation}
+              onChange={(e) =>
+                onPdfOrientationChange(parseConveyorProgressPdfOrientation(e.target.value))
+              }
+              disabled={pdfLoading}
+              aria-label="Orientação do PDF"
+            >
+              {CONVEYOR_PROGRESS_PDF_ORIENTATION_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
+          </label>
           <button
             type="button"
             className="inline-flex items-center gap-2 rounded-lg bg-amber-500 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-amber-600 disabled:cursor-not-allowed disabled:opacity-50"
@@ -129,6 +157,7 @@ export function ConveyorProgressFilters({
           >
             {pdfLoading ? 'Gerando PDF…' : 'Gerar PDF'}
           </button>
+          </div>
           {selectionHint ? (
             <span className="text-[11px] text-slate-500">{selectionHint}</span>
           ) : null}
