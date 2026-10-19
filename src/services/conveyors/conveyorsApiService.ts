@@ -2,6 +2,7 @@ import type {
   ConveyorCreatedSummary,
   ConveyorDetail,
   ConveyorListItem,
+  ConveyorPanelArchiveResult,
   CreateConveyorInput,
   ListConveyorsQuery,
   PatchConveyorDadosBody,
@@ -28,6 +29,7 @@ function buildConveyorsQueryString(q: ListConveyorsQuery): string {
   if (q.priority) sp.set('priority', q.priority)
   if (q.responsible?.trim()) sp.set('responsible', q.responsible.trim())
   if (q.operationalStatus) sp.set('operationalStatus', q.operationalStatus)
+  if (q.view) sp.set('view', q.view)
   const s = sp.toString()
   return s ? `?${s}` : ''
 }
@@ -183,6 +185,30 @@ export async function postConveyorReturnToPlanning(
     'POST',
     `${BASE}/conveyors/${encodeURIComponent(id)}/return-to-planning`,
     { body },
+  )
+}
+
+/**
+ * Painel operacional: arquivar esteira encerrada — POST /api/v1/conveyors/:id/archive.
+ * RBAC: `conveyors.edit_status`.
+ */
+export async function postConveyorArchive(id: string): Promise<ConveyorPanelArchiveResult> {
+  return requestJson<ConveyorPanelArchiveResult>(
+    'POST',
+    `${BASE}/conveyors/${encodeURIComponent(id)}/archive`,
+    { body: {} },
+  )
+}
+
+/**
+ * Painel operacional: desarquivar esteira encerrada — POST /api/v1/conveyors/:id/unarchive.
+ * RBAC: `conveyors.edit_status`.
+ */
+export async function postConveyorUnarchive(id: string): Promise<ConveyorPanelArchiveResult> {
+  return requestJson<ConveyorPanelArchiveResult>(
+    'POST',
+    `${BASE}/conveyors/${encodeURIComponent(id)}/unarchive`,
+    { body: {} },
   )
 }
 

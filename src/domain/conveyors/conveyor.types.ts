@@ -327,6 +327,23 @@ export type ConveyorListItem = {
   /** Prazo estimado (esteira) — usado no painel operacional / atraso. */
   estimatedDeadline: string | null
   totalSteps: number
+  /** Seção efetiva no Painel operacional (calculada no servidor). */
+  panelSection?: ConveyorPanelSection
+  /** `true` quando a seção vem de arquivamento/desarquivamento manual vigente. */
+  panelSectionManual?: boolean
+}
+
+/** Aba do Painel operacional em que a esteira aparece. */
+export type ConveyorPanelSection = 'OPERACIONAL' | 'HISTORICO'
+
+/** Recorte do `GET /api/v1/conveyors?view=` (ausente = `operacional`). */
+export type ConveyorPanelView = 'operacional' | 'historico' | 'todas'
+
+/** Resposta de POST /api/v1/conveyors/:id/archive|unarchive */
+export type ConveyorPanelArchiveResult = {
+  id: string
+  panelSection: ConveyorPanelSection
+  panelSectionManual: boolean
 }
 
 export type ListConveyorsQuery = {
@@ -334,4 +351,5 @@ export type ListConveyorsQuery = {
   priority?: ConveyorPriority
   responsible?: string
   operationalStatus?: ConveyorOperationalStatus
+  view?: ConveyorPanelView
 }

@@ -5,6 +5,9 @@ import {
   normalizeBacklogSearchParams,
   parseBacklogDaysWindow,
   parseBacklogSituationFilter,
+  parseBacklogTab,
+  preserveBacklogTab,
+  withBacklogTab,
 } from './backlogUrlParams'
 
 function params(qs: string) {
@@ -117,5 +120,72 @@ describe('listConveyorsQueryFromBacklogUrl', () => {
     const sp = params('situacao=em_atraso')
     const situation = parseBacklogSituationFilter(sp)
     expect(listConveyorsQueryFromBacklogUrl(sp, situation)).toEqual({})
+  })
+})
+
+describe('aba do Painel operacional (aba=)', () => {
+  it('padrão é Operacional; aba=historico e aba=todas são lidas da URL', () => {
+    expect(parseBacklogTab(params(''))).toBe('operacional')
+    expect(parseBacklogTab(params('aba=operacional'))).toBe('operacional')
+    expect(parseBacklogTab(params('aba=historico'))).toBe('historico')
+    expect(parseBacklogTab(params('aba=todas'))).toBe('todas')
+    expect(parseBacklogTab(params('aba=xyz'))).toBe('operacional')
+  })
+
+  it('link do dashboard situacao=finalizadas&days=N (sem aba) abre a lista combinada', () => {
+    for (const n of [7, 30, 90]) {
+      expect(parseBacklogTab(params(`situacao=finalizadas&days=${n}`))).toBe('todas')
+    }
+    // Sem days, sem aba: Operacional (o dashboard grava aba=todas explicitamente).
+    expect(parseBacklogTab(params('situacao=finalizadas'))).toBe('operacional')
+    expect(parseBacklogTab(params('situacao=canceladas'))).toBe('operacional')
+    expect(parseBacklogTab(params('scope=ativas'))).toBe('operacional')
+    // aba explícita prevalece.
+    expect(parseBacklogTab(params('situacao=finalizadas&days=30&aba=historico'))).toBe(
+      'historico',
+    )
+  })
+
+  it('withBacklogTab grava a aba sem quebrar scope, situacao, days e q; remove page', () => {
+    const h = withBacklogTab(params('scope=ativas&q=abc&page=3'), 'historico')
+    expect(h.get('aba')).toBe('historico')
+    expect(h.get('scope')).toBe('ativas')
+    expect(h.get('q')).toBe('abc')
+    expect(h.has('page')).toBe(false)
+
+    const f = withBacklogTab(params('situacao=finalizadas&days=30'), 'historico')
+    expect(f.get('aba')).toBe('historico')
+    expect(f.get('situacao')).toBe('finalizadas')
+    expect(f.get('days')).toBe('30')
+  })
+
+  it('voltar ao Operacional remove aba; com URL de dashboard grava aba=operacional', () => {
+    const a = withBacklogTab(params('aba=historico&situacao=canceladas'), 'operacional')
+    expect(a.has('aba')).toBe(false)
+    expect(a.get('situacao')).toBe('canceladas')
+    expect(parseBacklogTab(a)).toBe('operacional')
+
+    const b = withBacklogTab(params('aba=todas&situacao=finalizadas&days=30'), 'operacional')
+    expect(b.get('aba')).toBe('operacional')
+    expect(b.get('days')).toBe('30')
+    expect(parseBacklogTab(b)).toBe('operacional')
+  })
+
+  it('preserveBacklogTab mantém a lista combinada quando um filtro remove days', () => {
+    const current = params('situacao=finalizadas&days=30')
+    const next = params('situacao=em_planejamento')
+    expect(parseBacklogTab(preserveBacklogTab(current, next))).toBe('todas')
+
+    const keepOp = preserveBacklogTab(params('aba=historico'), params('situacao=finalizadas'))
+    expect(keepOp.get('aba')).toBe('historico')
+  })
+
+  it('normalize mantém aba válida e remove aba desconhecida', () => {
+    expect(normalizeBacklogSearchParams(params('aba=historico&scope=ativas'))).toBeNull()
+    expect(normalizeBacklogSearchParams(params('aba=todas&situacao=finalizadas&days=30'))).toBeNull()
+    const n = normalizeBacklogSearchParams(params('aba=arquivadas&situacao=finalizadas'))
+    expect(n).not.toBeNull()
+    expect(n!.has('aba')).toBe(false)
+    expect(n!.get('situacao')).toBe('finalizadas')
   })
 })

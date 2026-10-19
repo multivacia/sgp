@@ -137,6 +137,16 @@ export function formatConveyorOperationalEvent(
         event.reason?.trim() ||
           'A esteira saiu da fila de produção para ajuste de planejamento.',
       )
+    case 'CONVEYOR_ARCHIVED':
+      return baseDisplay(
+        event,
+        'A esteira encerrada foi arquivada manualmente e passou para o Histórico do Painel operacional.',
+      )
+    case 'CONVEYOR_UNARCHIVED':
+      return baseDisplay(
+        event,
+        'A esteira encerrada foi desarquivada e voltou ao Operacional do Painel operacional até a virada do mês.',
+      )
     case 'CONVEYOR_STRUCTURE_UPDATED': {
       const reasonLine = formatOperationalEventReasonLine(event)
       return baseDisplay(

@@ -58,6 +58,10 @@ export type BacklogRow = {
   estimatedDeadline?: string | null
   /** Texto auxiliar para busca (ex.: cliente da API). */
   clientName?: string
+  /** Aba efetiva no Painel operacional (API real); ausente = Operacional. */
+  panelSection?: 'OPERACIONAL' | 'HISTORICO'
+  /** Seção vinda de arquivamento/desarquivamento manual vigente. */
+  panelSectionManual?: boolean
   /** Última leitura executiva ARGOS (opcional; não bloqueia listagem). */
   argosSummary?: {
     analysisId: string
