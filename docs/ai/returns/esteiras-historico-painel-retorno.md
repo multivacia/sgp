@@ -150,3 +150,12 @@ Revisão do Gustavo (diff dos três commits), medição dos legados na base real
 - `git status` final: working tree limpo (o `server/.env` local é ignorado pelo Git).
 
 Uso/tokens disponíveis: INDISPONÍVEL — a sessão não fornece métrica confiável.
+
+## Validação independente (sgp-test-reviewer, 19/10/2026)
+
+- **Veredito:** APROVADO COM RESSALVAS. Os 14 critérios do prompt têm teste e passam; nenhuma regressão (comparação teste a teste com a `develop`).
+- **Reexecutado:** build frontend e servidor (exit 0), testes frontend (1457 aprovados), testes do servidor de esteiras/dashboard (457 aprovados), suíte completa do servidor com as mesmas falhas preexistentes da `develop` (`env.test`, exportação XLSX `=SUM`, `production-auth` por collation do ambiente).
+- **Lint:** sem problema novo nos fontes. O total maior (146) vem de `server/dist/` gerado pelo build, que o `eslint.config` não ignora (preexistente).
+- **Lacunas de teste:** ação Arquivar/Desarquivar só coberta no helper (sem teste de renderização); transição FINALIZADA → CANCELADA sem teste dedicado; virada de mês testada no repositório, não pela rota HTTP.
+- **Comportamento a observar na homologação:** esteira arquivada que passa de FINALIZADA para CANCELADA continua no Histórico; ao limpar o filtro Situação a partir do link do dashboard, a tela volta para a aba Operacional.
+- **Publicação:** autorizada pelo Gustavo direto na `develop` por fast-forward.
