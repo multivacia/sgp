@@ -62,24 +62,42 @@ permitido pela tela, com estas proteções:
 1. digitar o nome exato da base (senão 422);
 2. a API entra em **modo manutenção**: todas as requisições recebem 503 com mensagem em português;
 3. backup de segurança `pre-restore`; se falhar, nada é alterado;
-4. `pg_restore --clean --if-exists --single-transaction --exit-on-error` do arquivo escolhido
-   (as entradas de extensão ficam de fora: `uuid-ossp`/`pgcrypto` já existem e costumam pertencer ao superusuário).
-   Se falhar, a transação é desfeita e a base continua como estava;
+4. `pg_restore --clean --if-exists --single-transaction` do arquivo escolhido, executado pelo `psql` com
+   `ON_ERROR_STOP` (as entradas de extensão ficam de fora: `uuid-ossp`/`pgcrypto` já existem e costumam pertencer
+   ao superusuário), com `lock_timeout` de **2 minutos** (`SGP_RESTORE_LOCK_TIMEOUT_MS`, padrão 120000; só no
+   restore). O `SET lock_timeout = 0` que o próprio dump traz é substituído por esse valor.
+   Se falhar — inclusive porque outra sessão (ex.: um `psql` aberto, um job) segurou bloqueio numa tabela por mais
+   de 2 minutos — a transação é desfeita, a base continua como estava, a API sai do modo manutenção e a tela mostra o erro;
 5. sai do modo manutenção; registra o restore no log da VPS e em `admin_audit_events`
    (evento `database_restored`, gravado **depois** do restore porque a tabela foi substituída);
 6. **não executa migrations.**
 
 ### 4.1 Reaplicar migrations depois do restore
 
-Se o backup for anterior a migrations já aplicadas, a base restaurada fica sem elas. Como o runner não tem
-tabela de controle, identifique pelo efeito de cada migration:
+**Risco (decisão do Gustavo, 20/10/2026: comportamento mantido, só documentado).** O restore com `--clean` só
+apaga e recria os objetos que **estão no backup**. Se o backup for anterior a migrations já aplicadas:
+
+- o restore pode **falhar** — por exemplo, uma FK criada por migration posterior aponta para tabela do backup e
+  impede o `DROP`. A transação é desfeita e a base fica **intacta** (como antes do restore);
+- ou pode **concluir em estado misto** — tabelas, colunas e índices criados depois do backup **permanecem**, com
+  dados posteriores à data do backup (ou ficam órfãos de registros que deixaram de existir), enquanto as tabelas
+  do backup voltam à data dele.
+
+Por isso, prefira restaurar backups **posteriores** à última migration aplicada. Para backup anterior, avalie
+antes, numa cópia (HML/local), o que a migration posterior cria, e decida com cuidado.
+
+Como o runner não tem tabela de controle, identifique as migrations posteriores ao backup:
 
 1. Liste as migrations do código em produção: `ls /opt/sgp/sgp-main/server/migrations`.
 2. Descubra a data do backup (nome do arquivo) e as migrations que entraram depois dela:
    `git -C /opt/sgp/sgp-main log --since="<data do backup>" --name-only --format= -- server/migrations | sort -u`.
-3. Para cada uma, confira se o objeto que ela cria já existe (ex.: `0054_conveyors_canceled_at.sql` →
-   `\d conveyors` deve mostrar `canceled_at`).
-4. Aplique as que faltam, **na ordem**, uma a uma:
+3. Para cada uma, verifique o que ela cria ou altera (ex.: `0054_conveyors_canceled_at.sql` → coluna `canceled_at`
+   em `conveyors`). **Atenção:** o objeto existir **não prova** que a migration está aplicada de forma consistente —
+   pelo risco acima, ele pode ter sobrado da base anterior ao restore, com dados que não combinam com o backup
+   (ex.: `canceled_at` preenchido para esteiras cujo estado voltou à data do backup), e migrations com `UPDATE`/backfill
+   podem precisar ser reexecutadas. Confira também os dados, não só o esquema.
+4. Aplique as que faltam ou precisam ser refeitas, **na ordem**, uma a uma (só migrations idempotentes podem ser
+   reexecutadas sem ajuste):
    `cd /opt/sgp/sgp-main && npm --prefix server run migrate:file -- migrations/<arquivo>.sql`
 5. `pm2 restart sgp-api` e valide `GET /api/v1/health` e `GET /api/v1/health/db`.
 
