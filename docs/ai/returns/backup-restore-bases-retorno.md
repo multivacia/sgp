@@ -210,3 +210,33 @@ Uso/tokens disponíveis: INDISPONÍVEL — a sessão não fornece métrica confi
 - **Achados baixos:** `stat` segue link simbólico na listagem; `printf %b` em senha com `\`; `restorePhase` no 503 sem autenticação; `stderr` do `pg_*` no erro para o super-admin; arquivos `.partial` não limpos.
 - **Riscos de VPS a conferir:** dono único das tabelas, `pg_dump` com versão ≥ servidor, PM2 em modo fork, `.ps1` não testado no Windows PowerShell 5.1.
 - **Publicação:** autorizada pelo Gustavo direto na `develop` por fast-forward.
+
+## Ajuste pós-revisão: M1 e M2 (20/10/2026)
+
+- **Branch:** `fix/backup-restore-lock-timeout`, a partir de `origin/develop` `da8a745f`. Commits locais, sem push.
+- **Decisões do Gustavo:**
+  - M1: comportamento mantido (opção b), só documentado;
+  - M2: `lock_timeout` de 2 minutos no restore.
+- **M1 (`docs/backup-restore-runbook.md`, seção 4.1):** o runbook passa a documentar o risco. Restore de backup anterior a migrations pode falhar (ex.: FK, com a base intacta) ou concluir em estado misto (tabelas e colunas criadas depois do backup permanecem com dados posteriores). O passo "confira se o objeto existe" foi corrigido: existir não prova migration aplicada de forma consistente.
+- **M2 (`scripts/db/backup/sgp-db-backup.sh`):** o restore usa `lock_timeout` = `SGP_RESTORE_LOCK_TIMEOUT_MS`, com padrão 120000 e só dígitos aceitos. O backup não é afetado.
+  - **Achado:** só `PGOPTIONS` **não funciona**, porque o SQL gerado pelo `pg_restore` traz `SET lock_timeout = 0;` no cabeçalho e anula o valor. Reproduzido: com `PGOPTIONS`, o restore ficou esperando o bloqueio (`wait_event=Lock/relation`) até a sessão liberar e terminou com exit 0.
+  - **Solução:** `pg_restore --clean --if-exists --single-transaction --file=-`, depois `sed` troca só a primeira ocorrência daquela linha, e o `psql -X -v ON_ERROR_STOP=1` executa (`PGOPTIONS` fica como reforço). O `BEGIN`/`COMMIT` vem do `--single-transaction`: em erro, o `psql` sai antes do `COMMIT` e a transação é desfeita. `psql` entrou na verificação de ferramentas.
+  - Quando o tempo estoura, a mensagem diz "tempo limite de espera por bloqueio (N s) esgotado". A API sai do modo manutenção e a tela mostra o erro (fluxo de falha já existente).
+- **Teste novo** (`database-backups-restore-e2e`): uma sessão segura `ACCESS SHARE` em `sectors` com transação aberta e o restore roda com timeout de 2000 ms. Resultado esperado e obtido:
+  - falha em cerca de 3 s com `lock timeout`;
+  - base intacta;
+  - modo manutenção desligado;
+  - log da VPS `restore`/`failure`;
+  - API responde.
+- **Validação** (PostgreSQL 16 descartável criado do zero na 55432, porta conferida livre antes; derrubado e apagado ao final):
+  - testes do módulo database-backups (3 arquivos) em base recriada e migrada do zero: exit 0, **33/33**;
+  - `shellcheck scripts/db/backup/*.sh`: exit 0;
+  - `npm run server:build`: exit 0;
+  - `eslint` no teste alterado: exit 0;
+  - verificação manual do script:
+    - bloqueio segurado: exit 4 em 3 s, base intacta;
+    - sem bloqueio: exit 0, base restaurada;
+    - dono não superusuário com senha com espaço e `#`: sucesso;
+    - view dependente: falha com a base intacta.
+
+Uso/tokens disponíveis: INDISPONÍVEL — a sessão não fornece métrica confiável.
