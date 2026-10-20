@@ -39,10 +39,14 @@ export async function getExecutiveDashboard(
   req: Request,
   res: Response,
 ): Promise<void> {
+  const startDate = queryString(req.query.startDate)
+  const endDate = queryString(req.query.endDate)
+  const hasPeriod = Boolean(startDate?.trim() || endDate?.trim())
   const q = executiveDashboardQuerySchema.parse({
-    startDate: queryString(req.query.startDate),
-    endDate: queryString(req.query.endDate),
-    days: queryString(req.query.days),
+    startDate,
+    endDate,
+    // Com datas, `days` (legado) é ignorado — não valida nem interfere.
+    days: hasPeriod ? undefined : queryString(req.query.days),
   })
   const period = resolveDashboardPeriod(q.startDate, q.endDate)
   const pool = req.app.locals.pool as pg.Pool

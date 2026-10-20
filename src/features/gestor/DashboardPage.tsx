@@ -184,7 +184,13 @@ export function DashboardPage() {
   const [period, setPeriod] = useState<DashboardDateRange>(() =>
     readStoredDashboardDateRange(),
   )
-  const periodLabel = formatDashboardDateRange(period)
+  /**
+   * Período dos dados exibidos. Enquanto um novo período carrega, os números anteriores
+   * continuam com o rótulo e o detalhamento do período a que pertencem.
+   */
+  const [dataPeriod, setDataPeriod] = useState<DashboardDateRange | null>(null)
+  const shownPeriod = dataPeriod ?? period
+  const periodLabel = formatDashboardDateRange(shownPeriod)
   const [refreshing, setRefreshing] = useState(false)
   const operationalLoadedRef = useRef(false)
   /** Só a consulta mais recente aplica resultado (período antigo não sobrescreve o novo). */
@@ -210,11 +216,13 @@ export function DashboardPage() {
       if (seq !== loadSeqRef.current) return
       setOperational(op)
       setExecutive(ex)
+      setDataPeriod(period)
       operationalLoadedRef.current = true
     } catch (e) {
       if (seq !== loadSeqRef.current) return
       setOperational(null)
       setExecutive(null)
+      setDataPeriod(null)
       operationalLoadedRef.current = false
       const n = reportClientError(e, {
         module: 'gestor',
@@ -890,7 +898,7 @@ export function DashboardPage() {
 
       {executive && tab === 'executive' && showExecTab && viewMode === 'charts' && (
         <Suspense fallback={<DashboardChartsSkeleton />}>
-          <ExecutiveDashboardCharts data={executive} period={period} />
+          <ExecutiveDashboardCharts data={executive} period={shownPeriod} />
         </Suspense>
       )}
 
@@ -917,7 +925,7 @@ export function DashboardPage() {
               value={executive.totals.completedInWindow}
               hint="Esteiras finalizadas com data de conclusão no período. Clique para abrir a lista com o mesmo período em nova aba."
               onDrillDown={() =>
-                openBacklogInNewTab('finalizadas', { completedPeriod: period })
+                openBacklogInNewTab('finalizadas', { completedPeriod: shownPeriod })
               }
               drillTitle={dashboardHints.drillBacklogConcluidas(periodLabel)}
             />

@@ -222,6 +222,22 @@ describe('DashboardPage — período único (Data inicial / Data final)', () => 
     expect(screen.getByText(/Horas apontadas no período — 01\/09\/2026 a 30\/09\/2026/)).toBeTruthy()
   })
 
+  it('enquanto o novo período carrega, os números antigos mantêm o rótulo do período deles', async () => {
+    renderPage()
+    await screen.findByText(/Horas apontadas no período — 01\/10\/2026 a 20\/10\/2026/)
+    let resolveNew!: (v: OperationalDashboardData) => void
+    mocks.fetchOperationalDashboard.mockReturnValueOnce(new Promise((res) => (resolveNew = res)))
+    await applyPeriod('2026-09-01', '2026-09-30')
+    // Ainda com os dados de 01/10 a 20/10: rótulo não pode dizer setembro.
+    expect(screen.getByText(/Horas apontadas no período — 01\/10\/2026 a 20\/10\/2026/)).toBeTruthy()
+    expect(screen.queryByText(/Horas apontadas no período — 01\/09\/2026/)).toBeNull()
+    expect(screen.getByTestId('dashboard-applied-period').textContent).toContain('01/09/2026 a 30/09/2026')
+    await act(async () => {
+      resolveNew(operationalData(45))
+    })
+    await screen.findByText(/Horas apontadas no período — 01\/09\/2026 a 30\/09\/2026/)
+  })
+
   it('Atualizar e a atualização automática (apontamento) reconsultam com o período aplicado', async () => {
     renderPage()
     await screen.findByText(/Horas apontadas no período — /)

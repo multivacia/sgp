@@ -107,6 +107,15 @@ describe.skipIf(!hasDb)('Dashboard — período Data inicial/Data final (integra
         [os.conveyorId, os.steps[0]!.id, MARIA_COLLABORATOR_ID, e.at, e.minutes, e.createdAt ?? null],
       )
     }
+    // Fora da regra: data de conclusão no período, mas situação diferente de FINALIZADA.
+    const cancelled = await createScenarioConveyor(pool, {
+      name: `OS Cancelada ${tag}`,
+      status: 'CANCELADA',
+      tasks: [{ name: 'Fim', areas: [1] }],
+    })
+    await pool.query(`UPDATE conveyors SET completed_at = '2033-10-10T12:00:00-03:00' WHERE id = $1::uuid`, [
+      cancelled.conveyorId,
+    ])
     for (const [i, at] of COMPLETIONS.entries()) {
       const c = await createScenarioConveyor(pool, {
         name: `OS Concluída ${tag} ${i}`,
@@ -200,6 +209,13 @@ describe.skipIf(!hasDb)('Dashboard — período Data inicial/Data final (integra
     const bothExec = await get('executive', { startDate: '2033-10-01', endDate: '2033-10-01', days: '90' })
     expect(bothExec.body.data.totals.completedInWindow).toBe(1)
     expect(bothExec.body.data.meta.completedWithinDays).toBe(1)
+
+    // Com datas, um `days` legado inválido é ignorado (as datas prevalecem).
+    const ignoredDays = await get('executive', { startDate: '2033-10-01', endDate: '2033-10-20', days: '999' })
+    expect(ignoredDays.status).toBe(200)
+    expect(ignoredDays.body.data.totals.completedInWindow).toBe(2)
+    // Sem datas, `days` inválido continua 422 (comportamento anterior).
+    expect((await get('executive', { days: '999' })).status).toBe(422)
   })
 
   it('datas inválidas → 400 com mensagem em português (Operacional e Gerencial)', async () => {

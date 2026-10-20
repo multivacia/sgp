@@ -134,11 +134,11 @@ O banco usado foi o Postgres 16 local da sessão (porta 55432), com migrations `
 
 | Comando | Resultado |
 |---|---|
-| `npx vitest run src/tests/dashboard-period.test.ts src/tests/dashboard-period.integration.test.ts src/tests/dashboard.integration.test.ts` (server) | exit 0, **20/20** |
+| `npx vitest run src/tests/dashboard-period.test.ts src/tests/dashboard-period.integration.test.ts src/tests/dashboard.integration.test.ts` (server) | exit 0, **20/20** (inclui os casos acrescentados após a revisão) |
 | `npx tsc -p tsconfig.json --noEmit` (server) | exit 0 |
 | `npx vitest run` (server, suíte completa) | exit 1: **só as 2 falhas preexistentes**, idênticas na `main` (`env.test`, `operational-planning.weekly-view.http`); 1330 passam e 17 são ignorados |
 | `npx tsc -b` (frontend) | exit 0 |
-| `npx vitest run` (frontend, completo) | exit 0, **227 arquivos / 1485 testes** |
+| `npx vitest run` (frontend, completo) | exit 0, **227 arquivos / 1486 testes** (versão final, após a revisão) |
 | `npm run build` (frontend) | exit 0 (só o aviso de chunk > 500 kB, preexistente) |
 | `npm run lint` | exit 1, **117 problemas (94 erros, 23 avisos), iguais aos da base**, mesmo conjunto de arquivos; nenhum novo |
 
@@ -188,6 +188,28 @@ Também cobertos: corrida (resposta antiga descartada) e mensagem de erro padrã
 - Por isso o filtro mostra sempre o "Período aplicado" e o "Novo período" em dd/mm/aaaa.
 
 Na carga inicial em desenvolvimento, cada rota é chamada duas vezes por causa do `StrictMode` do React. Isso é preexistente e não acontece no build de produção.
+
+## Revisão independente (`sgp-test-reviewer`)
+
+**Veredito:** PASSA COM RESSALVAS, **nenhum bloqueante**. O revisor reexecutou:
+- `tsc` (server e frontend): exit 0;
+- 20 testes do Dashboard no backend (com banco): exit 0;
+- 124 testes do frontend: exit 0;
+- eslint nos arquivos do diff: 0 erros.
+
+**Recomendações tratadas no commit seguinte:**
+1. **Rótulo e detalhamento acompanham os dados exibidos.**
+   - Antes, entre "Aplicar período" e a resposta, os números antigos apareciam com o rótulo do período novo.
+   - Agora o rótulo e o link de detalhamento usam o período dos dados carregados (`dataPeriod`). O filtro continua mostrando o período aplicado.
+   - Teste: "enquanto o novo período carrega, os números antigos mantêm o rótulo do período deles".
+2. **Com datas, `days` legado é ignorado** e não é validado. Antes, `days=999` com datas válidas dava 422. Sem datas, `days` inválido continua dando 422, como antes. Coberto na integração.
+3. **Novo teste:** esteira com `completed_at` no período mas situação CANCELADA não entra nas concluídas.
+
+**Recomendações registradas, sem mudança de código:**
+- A integração usa 2033/2034 para isolar os dados; o intervalo de 2026 é coberto nos testes unitários.
+- O offset −03:00 fixo é convenção preexistente, válida desde 2019.
+- A atualização ao voltar para a aba (`visibilitychange`) não tem teste automatizado: validar manualmente.
+- O layout em telas pequenas não tem teste automatizado; foi validado visualmente.
 
 ## Limitações, riscos e pendências
 
