@@ -14,8 +14,9 @@
 # Restore (--restore), usado pela tela Backups:
 #   1. confere o SHA-256 do arquivo escolhido;
 #   2. faz backup de segurança com motivo pre-restore (sem aplicar retenção). Se falhar, sai com 3 e a base não é tocada;
-#   3. pg_restore --clean --if-exists --single-transaction (sem as entradas de extensão, que já existem na base).
-#      Se falhar, a transação é desfeita e sai com 4;
+#   3. pg_restore --clean --if-exists --single-transaction (sem as entradas de extensão, que já existem na base),
+#      executado pelo psql com ON_ERROR_STOP e lock_timeout (padrão 120000 ms). Se falhar (inclusive por tempo
+#      limite de bloqueio), a transação é desfeita e sai com 4;
 #   4. não executa migrations.
 #
 # Credenciais: lidas do mesmo arquivo .env usado pela API (DATABASE_URL ou PGHOST/PGPORT/PGDATABASE/PGUSER/PGPASSWORD).
@@ -27,6 +28,8 @@
 #   SGP_BACKUP_LOG       log JSONL das execuções      (padrão: $SGP_BACKUP_DIR/backup-log.jsonl)
 #   SGP_BACKUP_TZ        fuso do nome dos arquivos    (padrão: America/Sao_Paulo)
 #   SGP_PG_BIN_DIR       diretório com pg_dump/pg_restore compatíveis com o servidor (opcional)
+#   SGP_RESTORE_LOCK_TIMEOUT_MS  lock_timeout do pg_restore no --restore (padrão: 120000; usado nos testes
+#                                com valor menor). Não afeta o backup.
 #
 # Nome dos arquivos: sgp_<AAAAMMDD-HHMMSS>_<motivo>.dump e sgp_<AAAAMMDD-HHMMSS>_<motivo>.globals.sql
 # (data e hora de São Paulo).
@@ -58,6 +61,7 @@ BACKUP_TZ="${SGP_BACKUP_TZ:-America/Sao_Paulo}"
 if [[ -n "${SGP_PG_BIN_DIR:-}" ]]; then
   PATH="$SGP_PG_BIN_DIR:$PATH"
 fi
+RESTORE_LOCK_TIMEOUT_MS="${SGP_RESTORE_LOCK_TIMEOUT_MS:-120000}"
 
 KEEP_DAILY=7
 KEEP_WEEKLY=4
@@ -416,9 +420,22 @@ do_restore() {
     log_restore failure "$file" "$started" "$pre"
     return 4
   fi
-  if ! pg_restore --clean --if-exists --single-transaction --exit-on-error \
-    --use-list="$listf" --dbname="$PGDATABASE" "$BACKUP_DIR/$file" 2>"$errf"; then
-    LAST_ERROR="pg_restore falhou; a transação foi desfeita e a base continua como estava. Detalhe: $(err_tail "$errf")"
+  # lock_timeout só no restore: se uma sessão segurar bloqueio numa tabela, o restore desiste em vez de
+  # esperar indefinidamente; a transação única é desfeita e a base fica intacta.
+  # O dump traz "SET lock_timeout = 0;" no cabeçalho (anularia PGOPTIONS), por isso o SQL é gerado
+  # com pg_restore -f -, essa primeira linha é trocada e o psql executa com ON_ERROR_STOP. O BEGIN/COMMIT
+  # vem do --single-transaction: em erro o psql sai sem COMMIT e a transação é desfeita.
+  # PGOPTIONS fica como reforço, caso o dump não traga a linha SET.
+  if ! pg_restore --clean --if-exists --single-transaction --use-list="$listf" \
+    --file=- "$BACKUP_DIR/$file" 2>"$errf" |
+    sed "0,/^SET lock_timeout = 0;\$/s//SET lock_timeout = $RESTORE_LOCK_TIMEOUT_MS;/" |
+    PGOPTIONS="-c lock_timeout=$RESTORE_LOCK_TIMEOUT_MS ${PGOPTIONS:-}" \
+      psql -X -q -v ON_ERROR_STOP=1 --dbname="$PGDATABASE" >/dev/null 2>>"$errf"; then
+    if grep -q 'lock timeout' "$errf"; then
+      LAST_ERROR="pg_restore falhou: tempo limite de espera por bloqueio ($((RESTORE_LOCK_TIMEOUT_MS / 1000)) s) esgotado; outra sessão está usando a base. A transação foi desfeita e a base continua como estava. Detalhe: $(err_tail "$errf")"
+    else
+      LAST_ERROR="pg_restore falhou; a transação foi desfeita e a base continua como estava. Detalhe: $(err_tail "$errf")"
+    fi
     rm -f -- "$errf" "$listf"
     log_restore failure "$file" "$started" "$pre"
     return 4
@@ -475,13 +492,18 @@ main() {
     exit 0
   fi
 
+  if [[ ! $RESTORE_LOCK_TIMEOUT_MS =~ ^[1-9][0-9]*$ ]]; then
+    echo "SGP_RESTORE_LOCK_TIMEOUT_MS inválido: $RESTORE_LOCK_TIMEOUT_MS" >&2
+    exit 2
+  fi
+
   if [[ -n $reason && ! $reason =~ $REASON_RE ]]; then
     echo "Motivo inválido: $reason" >&2
     exit 2
   fi
 
   local tool
-  for tool in pg_dump pg_dumpall pg_restore sha256sum flock; do
+  for tool in pg_dump pg_dumpall pg_restore psql sha256sum flock; do
     if ! command -v "$tool" >/dev/null 2>&1; then
       echo "Ferramenta não encontrada no PATH: $tool" >&2
       exit 1

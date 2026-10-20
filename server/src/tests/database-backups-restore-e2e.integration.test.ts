@@ -159,7 +159,13 @@ describe.skipIf(!hasDb || !hasPgTools)('restore ponta a ponta (PostgreSQL local 
     await pool?.end()
     await admin?.query(`DROP DATABASE IF EXISTS ${E2E_DB} WITH (FORCE)`)
     await admin?.end()
-    for (const k of ['SGP_BACKUP_DIR', 'SGP_SERVER_ENV_FILE', 'SGP_BACKUP_LOG', 'SGP_BACKUP_SCRIPT']) {
+    for (const k of [
+      'SGP_BACKUP_DIR',
+      'SGP_SERVER_ENV_FILE',
+      'SGP_BACKUP_LOG',
+      'SGP_BACKUP_SCRIPT',
+      'SGP_RESTORE_LOCK_TIMEOUT_MS',
+    ]) {
       if (savedEnv[k] === undefined) delete process.env[k]
       else process.env[k] = savedEnv[k]
     }
@@ -261,6 +267,49 @@ describe.skipIf(!hasDb || !hasPgTools)('restore ponta a ponta (PostgreSQL local 
        WHERE event_type = 'database_restored' ORDER BY occurred_at DESC LIMIT 1`,
     )
     expect(audit.rows[0]?.result_status).toBe('failure')
+
+    const health = await request(app).get('/api/v1/health')
+    expect(health.status).toBe(200)
+  })
+
+  it('bloqueio segurado por outra sessão: restore desiste no lock_timeout, base intacta e manutenção liberada', async () => {
+    await pool.query(`DROP VIEW IF EXISTS e2e_restore_blocker`)
+    // Valor curto só para o teste; o padrão do script é 120000 ms.
+    process.env.SGP_RESTORE_LOCK_TIMEOUT_MS = '2000'
+    const holder = await pool.connect()
+    try {
+      // ACCESS SHARE mantido por transação aberta: o DROP do --clean precisa de ACCESS EXCLUSIVE.
+      await holder.query('BEGIN')
+      await holder.query(`SELECT count(*) FROM sectors`)
+
+      resetDatabaseBackupsStateForTests()
+      const t0 = Date.now()
+      const start = await startRestore(dumpName)
+      expect(start.status).toBe(202)
+      expect(isMaintenanceActive()).toBe(true)
+      await waitFor(() => getRestoreJob()?.auditRecorded != null)
+      const elapsedMs = Date.now() - t0
+
+      const job = getRestoreJob()!
+      expect(job.status).toBe('failure')
+      expect(job.errorMessage).toContain('tempo limite de espera por bloqueio')
+      expect(job.errorMessage).toContain('lock timeout')
+      expect(job.migrationsNotice).toBeNull()
+      expect(isMaintenanceActive()).toBe(false)
+      expect(elapsedMs).toBeLessThan(60_000)
+    } finally {
+      await holder.query('ROLLBACK')
+      holder.release()
+      delete process.env.SGP_RESTORE_LOCK_TIMEOUT_MS
+    }
+
+    // Base intacta: o setor criado depois do backup continua lá.
+    expect(await sectorNames()).toEqual([MARK_AFTER, MARK_BEFORE])
+
+    const log = readFileSync(join(dir, 'backup-log.jsonl'), 'utf-8').trim().split('\n').map((l) => JSON.parse(l))
+    const restoreEv = log.filter((e) => e.event === 'restore').pop()
+    expect(restoreEv.status).toBe('failure')
+    expect(restoreEv.errorMessage).toContain('lock timeout')
 
     const health = await request(app).get('/api/v1/health')
     expect(health.status).toBe(200)
