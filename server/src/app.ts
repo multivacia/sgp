@@ -10,6 +10,8 @@ import { adminUsersRouter } from './modules/admin-users/admin-users.routes.js'
 import { authRouter } from './modules/auth/auth.routes.js'
 import { collaboratorsRouter } from './modules/collaborators/collaborators.routes.js'
 import { dashboardRouter } from './modules/dashboard/dashboard.routes.js'
+import { maintenanceGuard } from './modules/database-backups/database-backups.maintenance.js'
+import { databaseBackupsRouter } from './modules/database-backups/database-backups.routes.js'
 import { conveyorProgressRouter } from './modules/conveyor-progress/conveyor-progress.routes.js'
 import { conveyorAssignmentsRouter } from './modules/conveyors/conveyorAssignments.routes.js'
 import { createArgosDocumentDraftAdapter } from './modules/argos-integration/createArgosDocumentDraftAdapter.js'
@@ -38,6 +40,7 @@ export function createApp(pool: pg.Pool, logger: Logger, env: Env): Express {
   app.locals.env = env
 
   app.use(cors(corsOptions(env.corsOrigin)))
+  app.use(maintenanceGuard())
   app.use(cookieParser())
   app.use(express.json({ limit: '1mb' }))
 
@@ -64,6 +67,7 @@ export function createApp(pool: pg.Pool, logger: Logger, env: Env): Express {
   app.use('/api/v1', conveyorProgressRouter())
   app.use('/api/v1', supportRouter())
   app.use('/api/v1', systemSettingsRouter())
+  app.use('/api/v1', databaseBackupsRouter())
 
   app.use(notFoundHandler)
   app.use(errorHandler(logger))
