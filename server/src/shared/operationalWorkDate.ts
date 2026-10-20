@@ -64,7 +64,8 @@ export function isDateOnlyString(s: string): boolean {
   return DATE_ONLY_RE.test(s.trim())
 }
 
-function isValidDateOnly(s: string): boolean {
+/** `YYYY-MM-DD` de uma data civil existente (rejeita 2026-02-30). */
+export function isValidDateOnly(s: string): boolean {
   if (!DATE_ONLY_RE.test(s)) return false
   const d = new Date(`${s}${OPERATIONAL_NOON_SUFFIX}`)
   return !Number.isNaN(d.getTime()) && operationalDateOf(d) === s

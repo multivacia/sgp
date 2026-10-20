@@ -23,7 +23,9 @@ import {
   COLABS_DEFAULT_PAGE_SIZE,
 } from '../lib/admin/collaboratorsListUrlState'
 import {
+  completedAtWithinPeriod,
   normalizeBacklogSearchParams,
+  parseBacklogCompletedPeriod,
   parseBacklogDaysWindow,
   parseBacklogPage,
   parseBacklogPageSize,
@@ -35,13 +37,16 @@ import {
   type BacklogSituationFilterValue,
 } from '../lib/backlog/backlogUrlParams'
 import { useRegisterTransientContext } from '../lib/shell/transient-context'
+import { formatDashboardDateRange } from '../lib/dashboard/dashboardDateRange'
 import {
   backlogChipBusca,
+  backlogChipConcluidasPeriodo,
   backlogChipJanelaDias,
   backlogChipPrioridade,
   backlogChipResponsavel,
   backlogChipSituacaoPrefixed,
   backlogFilterDetailAtivas,
+  backlogFilterDetailConcluidasPeriodo,
   backlogFilterDetailConcluidasWindow,
   backlogHeaderSemanticLine,
   backlogKpiDeckIntro,
@@ -88,6 +93,7 @@ function applySituationAndWindow(
   row: BacklogRow,
   statusFilter: BacklogSituationFilterValue,
   daysWindow: number,
+  completedPeriod: { startDate: string; endDate: string } | null,
 ): boolean {
   if (statusFilter === 'ativas') {
     const b = getOperationalBucket(row)
@@ -95,6 +101,9 @@ function applySituationAndWindow(
   }
   if (!statusFilter) return true
   const b = getOperationalBucket(row)
+  if (statusFilter === 'finalizadas' && completedPeriod) {
+    return b === 'finalizadas' && completedAtWithinPeriod(row.completedAt, completedPeriod)
+  }
   if (statusFilter === 'finalizadas' && daysWindow > 0) {
     if (b !== 'finalizadas') return false
     const ca = row.completedAt
@@ -153,6 +162,13 @@ export function BacklogPage() {
     [searchParams],
   )
 
+  /** Concluídas por período (Data inicial/final do Dashboard); prevalece sobre `days`. */
+  const completedPeriod = useMemo(
+    () =>
+      statusFilter === 'finalizadas' ? parseBacklogCompletedPeriod(searchParams) : null,
+    [searchParams, statusFilter],
+  )
+
   const priorityFilter = useMemo(
     () => parseBacklogPriority(searchParams),
     [searchParams],
@@ -177,6 +193,8 @@ export function BacklogPage() {
       next.delete('situacao')
       next.delete('days')
       next.delete('completedWithinDays')
+      next.delete('completedFrom')
+      next.delete('completedTo')
       if (!v) {
         setSearchParams(next, { replace: true })
         return
@@ -379,7 +397,9 @@ export function BacklogPage() {
       if (responsibleFilter && row.responsible !== responsibleFilter) {
         return false
       }
-      if (!applySituationAndWindow(row, statusFilter, daysWindow)) return false
+      if (!applySituationAndWindow(row, statusFilter, daysWindow, completedPeriod)) {
+        return false
+      }
       return true
     })
   }, [
@@ -389,6 +409,7 @@ export function BacklogPage() {
     responsibleFilter,
     statusFilter,
     daysWindow,
+    completedPeriod,
   ])
 
   const argosOverview = useMemo(
@@ -442,13 +463,15 @@ export function BacklogPage() {
   }, [allRows])
 
   const hasTemporalWindow =
-    statusFilter === 'finalizadas' && daysWindow > 0
+    statusFilter === 'finalizadas' && daysWindow > 0 && !completedPeriod
+  const completedPeriodLabel = completedPeriod ? formatDashboardDateRange(completedPeriod) : null
   const hasTableFilters =
     Boolean(qFromUrl.trim()) ||
     Boolean(statusFilter) ||
     Boolean(priorityFilter) ||
     Boolean(responsibleFilter) ||
-    hasTemporalWindow
+    hasTemporalWindow ||
+    Boolean(completedPeriodLabel)
 
   return (
     <div className="space-y-8">
@@ -526,6 +549,11 @@ export function BacklogPage() {
                 {backlogChipJanelaDias(daysWindow)}
               </span>
             ) : null}
+            {completedPeriodLabel ? (
+              <span className="inline-flex items-center rounded-full border border-emerald-500/25 bg-emerald-500/10 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-100/90">
+                {backlogChipConcluidasPeriodo(completedPeriodLabel)}
+              </span>
+            ) : null}
             {qFromUrl.trim() ? (
               <span className="inline-flex items-center rounded-full border border-white/12 bg-white/[0.04] px-2.5 py-0.5 text-[11px] font-semibold text-slate-300/95">
                 {backlogChipBusca(qFromUrl)}
@@ -552,6 +580,11 @@ export function BacklogPage() {
           {hasTemporalWindow ? (
             <p className="rounded-lg border border-emerald-500/15 bg-emerald-500/[0.06] px-3 py-2 text-emerald-100/90">
               {backlogFilterDetailConcluidasWindow(daysWindow)}
+            </p>
+          ) : null}
+          {completedPeriodLabel ? (
+            <p className="rounded-lg border border-emerald-500/15 bg-emerald-500/[0.06] px-3 py-2 text-emerald-100/90">
+              {backlogFilterDetailConcluidasPeriodo(completedPeriodLabel)}
             </p>
           ) : null}
         </div>

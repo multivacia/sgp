@@ -9,6 +9,7 @@ import {
   serviceExecutiveDashboard,
   serviceOperationalDashboard,
 } from './dashboard.service.js'
+import { resolveDashboardPeriod } from './dashboard.period.js'
 
 function queryString(v: unknown): string | undefined {
   if (typeof v === 'string') return v
@@ -22,10 +23,14 @@ export async function getOperationalDashboard(
 ): Promise<void> {
   const pool = req.app.locals.pool as pg.Pool
   const q = operationalDashboardQuerySchema.parse({
+    startDate: queryString(req.query.startDate),
+    endDate: queryString(req.query.endDate),
     realizedPeriodPreset: queryString(req.query.realizedPeriodPreset),
   })
+  const period = resolveDashboardPeriod(q.startDate, q.endDate)
   const data = await serviceOperationalDashboard(pool, {
-    realizedPeriodPreset: q.realizedPeriodPreset,
+    period,
+    realizedPeriodPreset: period ? undefined : q.realizedPeriodPreset,
   })
   res.json(ok(data))
 }
@@ -34,8 +39,16 @@ export async function getExecutiveDashboard(
   req: Request,
   res: Response,
 ): Promise<void> {
-  const q = executiveDashboardQuerySchema.parse(req.query)
+  const q = executiveDashboardQuerySchema.parse({
+    startDate: queryString(req.query.startDate),
+    endDate: queryString(req.query.endDate),
+    days: queryString(req.query.days),
+  })
+  const period = resolveDashboardPeriod(q.startDate, q.endDate)
   const pool = req.app.locals.pool as pg.Pool
-  const data = await serviceExecutiveDashboard(pool, q.days)
+  const data = await serviceExecutiveDashboard(
+    pool,
+    period ? { period } : { completedWithinDays: q.days },
+  )
   res.json(ok(data))
 }

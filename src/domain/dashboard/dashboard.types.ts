@@ -1,5 +1,14 @@
 /** Resposta `data` de GET /api/v1/dashboard/operational */
 
+/** Período aplicado devolvido pela API (`startDate`/`endDate`: dias civis de São Paulo). */
+export type DashboardPeriodMeta = {
+  startDate: string
+  endDate: string
+  timezone: 'America/Sao_Paulo'
+  from: string
+  to: string
+}
+
 export type OperationalBucketKey =
   | 'em_elaboracao'
   | 'aguardando_planejamento'
@@ -15,6 +24,7 @@ export type OperationalDashboardData = {
     scope: 'snapshot_atual'
     bucketRule: string
     semanticsVersion?: '1.5'
+    period?: DashboardPeriodMeta
   }
   conveyorsByBucket: Record<OperationalBucketKey, number>
   overdueHighlight: Array<{
@@ -37,7 +47,9 @@ export type OperationalDashboardData = {
     realizedPeriod?: {
       from: string
       to: string
-      preset: '7d' | '15d' | '30d' | 'month'
+      preset: '7d' | '15d' | '30d' | 'month' | 'custom'
+      startDate?: string
+      endDate?: string
     }
     notes: string
   }
@@ -69,6 +81,7 @@ export type ExecutiveDashboardData = {
     generatedAt: string
     completedWithinDays: number
     scope: string
+    period?: DashboardPeriodMeta
   }
   totals: {
     activeConveyors: number

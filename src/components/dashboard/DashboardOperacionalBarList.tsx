@@ -25,7 +25,7 @@ const ACCENT_BAR: Record<NonNullable<Props['accent']>, string> = {
 
 export function DashboardOperacionalBarList({
   items,
-  emptyMessage = 'Sem dados para este recorte.',
+  emptyMessage = 'Sem dados para exibir.',
   accent = 'operacao',
   onBarClick,
 }: Props) {

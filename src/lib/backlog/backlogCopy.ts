@@ -24,6 +24,15 @@ export function backlogFilterDetailConcluidasWindow(days: number): string {
   return `Apenas finalizadas com completed_at nos últimos ${days} dias (alinhado ao dashboard gerencial). Parâmetro: days=${days}.`
 }
 
+/** Filtro de concluídas por período (vindo do Dashboard). */
+export function backlogFilterDetailConcluidasPeriodo(label: string): string {
+  return `Apenas esteiras finalizadas com data de conclusão de ${label} (mesmo período do Dashboard).`
+}
+
+export function backlogChipConcluidasPeriodo(label: string): string {
+  return `Concluídas: ${label}`
+}
+
 export const backlogKpiHints = {
   emElaboracao: 'Rascunho administrativo — ainda não visível para produção.',
   aguardandoPlanejamento: 'Cadastro concluído; aguardando aceite do gestor da fábrica.',

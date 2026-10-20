@@ -93,6 +93,28 @@ export async function sumRealizedMinutesBetween(
   return Number.parseInt(r.rows[0]?.s ?? '0', 10) || 0
 }
 
+/**
+ * Soma global de minutos apontados com `entry_at` em `[from, toExclusive)` — data de
+ * realização (inclui apontamentos retroativos pela data informada, não pela gravação).
+ */
+export async function sumRealizedMinutesInRange(
+  pool: pg.Pool,
+  from: Date,
+  toExclusive: Date,
+): Promise<number> {
+  const r = await pool.query<{ s: string | null }>(
+    `
+    SELECT COALESCE(SUM(minutes), 0)::text AS s
+    FROM conveyor_time_entries
+    WHERE deleted_at IS NULL
+      AND entry_at >= $1::timestamptz
+      AND entry_at < $2::timestamptz
+    `,
+    [from, toExclusive],
+  )
+  return Number.parseInt(r.rows[0]?.s ?? '0', 10) || 0
+}
+
 export type CollaboratorAggRow = {
   collaborator_id: string
   full_name: string | null
@@ -218,6 +240,27 @@ export async function countCompletedInWindow(
       AND completed_at >= NOW() - ($1::int * INTERVAL '1 day')
     `,
     [days],
+  )
+  return Number.parseInt(r.rows[0]?.c ?? '0', 10) || 0
+}
+
+/** FINALIZADA com `completed_at` em `[from, toExclusive)`. */
+export async function countCompletedInRange(
+  pool: pg.Pool,
+  from: Date,
+  toExclusive: Date,
+): Promise<number> {
+  const r = await pool.query<{ c: string }>(
+    `
+    SELECT COUNT(*)::text AS c
+    FROM conveyors
+    WHERE deleted_at IS NULL
+      AND operational_status = 'FINALIZADA'
+      AND completed_at IS NOT NULL
+      AND completed_at >= $1::timestamptz
+      AND completed_at < $2::timestamptz
+    `,
+    [from, toExclusive],
   )
   return Number.parseInt(r.rows[0]?.c ?? '0', 10) || 0
 }

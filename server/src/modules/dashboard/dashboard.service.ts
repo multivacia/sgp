@@ -9,8 +9,15 @@ import type {
   OperationalDashboardDto,
 } from './dashboard.dto.js'
 import {
+  dashboardPeriodDayCount,
+  dashboardPeriodMeta,
+  type DashboardPeriod,
+} from './dashboard.period.js'
+import { operationalDayEnd } from '../../shared/operationalWorkDate.js'
+import {
   countActiveConveyors,
   countAssigneeRoles,
+  countCompletedInRange,
   countCompletedInWindow,
   listCollaboratorLoadAggregates,
   listConveyorsForDashboard,
@@ -19,8 +26,13 @@ import {
   sumRealizedMinutes,
   sumRealizedMinutesBetween,
   sumRealizedMinutesByCollaborator,
+  sumRealizedMinutesInRange,
   sumStepPlannedMinutes,
 } from './dashboard.repository.js'
+
+/** Texto exibido no Dashboard — sem nomes de colunas nem termos técnicos. */
+const PLANNED_VS_REALIZED_NOTES =
+  'Tempo previsto das atividades: tempo unitário × quantidade das atividades ativas. Total por esteira (OS): tempo previsto registrado em cada OS, usado como referência (pode diferir se o total da OS não foi recalculado). Total de horas apontadas: todos os apontamentos registrados, sem filtro de período.'
 
 function emptyBucketCounts(): Record<OperationalBucket, number> {
   return {
@@ -37,6 +49,9 @@ function emptyBucketCounts(): Record<OperationalBucket, number> {
 export async function serviceOperationalDashboard(
   pool: pg.Pool,
   opts?: {
+    /** Período do Dashboard; tem precedência sobre `realizedPeriodPreset`. */
+    period?: DashboardPeriod | null
+    /** Legado: janela móvel até agora. */
     realizedPeriodPreset?: '7d' | '15d' | '30d' | 'month'
   },
 ): Promise<OperationalDashboardDto> {
@@ -61,10 +76,18 @@ export async function serviceOperationalDashboard(
   ])
 
   let realizedInPeriod: number | undefined
-  let realizedPeriod:
-    | { from: string; to: string; preset: '7d' | '15d' | '30d' | 'month' }
-    | undefined
-  if (opts?.realizedPeriodPreset) {
+  let realizedPeriod: OperationalDashboardDto['plannedVsRealized']['realizedPeriod']
+  if (opts?.period) {
+    const p = opts.period
+    realizedInPeriod = await sumRealizedMinutesInRange(pool, p.from, p.toExclusive)
+    realizedPeriod = {
+      from: p.from.toISOString(),
+      to: operationalDayEnd(p.endDate).toISOString(),
+      preset: 'custom',
+      startDate: p.startDate,
+      endDate: p.endDate,
+    }
+  } else if (opts?.realizedPeriodPreset) {
     const win = resolveOperationalPeriod({
       preset: opts.realizedPeriodPreset,
       now: new Date(),
@@ -126,7 +149,7 @@ export async function serviceOperationalDashboard(
 
   const periodNote =
     realizedInPeriod !== undefined && realizedPeriod
-      ? ` Minutos apontados (período, preset ${realizedPeriod.preset}): soma dos lançamentos com entry_at entre o início da janela e agora (month: desde 00:00 do dia 1 em America/Sao_Paulo).`
+      ? ' Horas apontadas no período: apontamentos com data de realização dentro do período selecionado (fuso de São Paulo).'
       : ''
 
   return {
@@ -135,6 +158,7 @@ export async function serviceOperationalDashboard(
       scope: 'snapshot_atual',
       bucketRule: 'shared_operationalBucket_ts',
       ...(realizedPeriod ? { semanticsVersion: '1.5' as const } : {}),
+      ...(opts?.period ? { period: dashboardPeriodMeta(opts.period) } : {}),
     },
     conveyorsByBucket,
     overdueHighlight,
@@ -153,24 +177,33 @@ export async function serviceOperationalDashboard(
             realizedPeriod,
           }
         : {}),
-      notes:
-        'Previsto estrutural: soma do tempo unitário × quantidade dos STEPs ativos. Total por esteira (coluna OS): soma de total_planned_minutes (apoio; pode diferir do previsto estrutural se a coluna não foi recalculada). Minutos apontados (acumulado): soma global de conveyor_time_entries não apagados.' +
-        periodNote,
+      notes: PLANNED_VS_REALIZED_NOTES + periodNote,
     },
     collaboratorLoad,
     recentTimeEntries,
   }
 }
 
+/**
+ * Gerencial. Com `period`, concluídas = FINALIZADA com `completed_at` no período (dias civis
+ * de SP, inclusivos). Legado `completedWithinDays`: últimos N dias até agora. Ativas, atraso e
+ * totais de tempo não dependem do período.
+ */
 export async function serviceExecutiveDashboard(
   pool: pg.Pool,
-  completedWithinDays: number,
+  window: { period: DashboardPeriod } | { completedWithinDays: number },
 ): Promise<ExecutiveDashboardDto> {
+  const period = 'period' in window ? window.period : null
+  const completedWithinDays = period
+    ? dashboardPeriodDayCount(period)
+    : (window as { completedWithinDays: number }).completedWithinDays
   const [rows, active, completedInWindow, plannedConv, plannedSteps, realized] =
     await Promise.all([
       listConveyorsForDashboard(pool),
       countActiveConveyors(pool),
-      countCompletedInWindow(pool, completedWithinDays),
+      period
+        ? countCompletedInRange(pool, period.from, period.toExclusive)
+        : countCompletedInWindow(pool, completedWithinDays),
       sumConveyorPlannedMinutes(pool),
       sumStepPlannedMinutes(pool),
       sumRealizedMinutes(pool),
@@ -207,7 +240,10 @@ export async function serviceExecutiveDashboard(
     meta: {
       generatedAt: new Date().toISOString(),
       completedWithinDays,
-      scope: `esteiras_ativas_e_concluidas_ultimos_${completedWithinDays}_dias`,
+      scope: period
+        ? `esteiras_ativas_e_concluidas_periodo_${period.startDate}_${period.endDate}`
+        : `esteiras_ativas_e_concluidas_ultimos_${completedWithinDays}_dias`,
+      ...(period ? { period: dashboardPeriodMeta(period) } : {}),
     },
     totals: {
       activeConveyors: active,
@@ -219,8 +255,7 @@ export async function serviceExecutiveDashboard(
       plannedMinutesConveyorTotal: plannedConv,
       plannedMinutesStepNodes: plannedSteps,
       realizedMinutesTotal: realized,
-      notes:
-        'Previsto estrutural: soma do tempo unitário × quantidade dos STEPs ativos. Total por esteira (OS): apoio; pode diferir se total_planned_minutes não foi recalculado. Minutos apontados (acumulado): todos os lançamentos válidos. Mesma base de agregação do painel operacional.',
+      notes: PLANNED_VS_REALIZED_NOTES,
     },
     topOverdueConveyors: topOverdue,
   }

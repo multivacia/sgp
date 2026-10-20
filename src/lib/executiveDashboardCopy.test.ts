@@ -1,32 +1,58 @@
 import { describe, expect, it } from 'vitest'
-import { executiveDashboardCopy } from './operationalSemantics'
+import {
+  dashboardConcluidasNoPeriodoLabel,
+  dashboardHints,
+  dashboardLabels,
+  executiveDashboardCopy,
+} from './operationalSemantics'
 
-describe('executiveDashboardCopy', () => {
-  it('expõe o mapa estável de copy do dashboard gerencial (V1.5)', () => {
-    expect(executiveDashboardCopy.headerMicrocopyExecutive).toBe(
-      'Visão executiva (agregados operacionais)',
+/** Termos técnicos que não podem aparecer em textos do Dashboard. */
+const DASHBOARD_TECHNICAL_TERMS = [
+  'step',
+  'bucket',
+  'snapshot',
+  'preset',
+  'entry_at',
+  'completed_at',
+  'total_planned_minutes',
+  'em_atraso',
+  'âmbito',
+  'premir',
+  'registad',
+  'janela',
+  'recorte executivo',
+  'utc',
+]
+
+function technicalTermsIn(text: string): string[] {
+  const lower = text.toLowerCase()
+  return DASHBOARD_TECHNICAL_TERMS.filter((t) => lower.includes(t))
+}
+
+function allStrings(): string[] {
+  return [
+    ...Object.values(executiveDashboardCopy),
+    ...Object.values(dashboardLabels),
+    ...Object.values(dashboardHints).map((v) => (typeof v === 'function' ? v('01/10/2026 a 20/10/2026') : v)),
+    dashboardConcluidasNoPeriodoLabel('01/10/2026 a 20/10/2026'),
+  ]
+}
+
+describe('copy do Dashboard (pt-BR)', () => {
+  it('rótulos principais', () => {
+    expect(dashboardLabels.totalHorasApontadas).toBe('Total de horas apontadas')
+    expect(dashboardLabels.horasApontadasPeriodo).toBe('Horas apontadas no período')
+    expect(dashboardLabels.tempoPrevistoAtividades).toBe('Tempo previsto das atividades')
+    expect(dashboardLabels.esteirasPorSituacao).toBe('Esteiras por situação operacional')
+    expect(dashboardConcluidasNoPeriodoLabel('01/10/2026 a 20/10/2026')).toBe(
+      'Esteiras concluídas — 01/10/2026 a 20/10/2026',
     )
-    expect(executiveDashboardCopy.participacaoAtrasoTitulo).toBe(
-      'Participação de atraso (ativas)',
-    )
-    expect(executiveDashboardCopy.participacaoAtrasoHint).toBe(
-      'Razão entre esteiras no bucket em_atraso e esteiras ativas. Indicador derivado.',
-    )
-    expect(executiveDashboardCopy.secaoAgregadaTitulo).toBe(
-      'Previsto estrutural e minutos apontados',
-    )
-    expect(executiveDashboardCopy.listaAtrasoTitulo).toBe(
-      'Esteiras em atraso (amostra)',
-    )
-    expect(executiveDashboardCopy.pizzaTitulo).toBe(
-      'Ativas · Concluídas · Em atraso (esteiras)',
-    )
-    expect(executiveDashboardCopy.pieTooltipValueLabel).toBe(
-      'Contagem (esteiras)',
-    )
-    expect(executiveDashboardCopy.barSeriesName).toBe(
-      'Totais em minutos (por métrica no eixo)',
-    )
-    expect(executiveDashboardCopy.barTooltipValueCaption.length).toBeGreaterThan(20)
+    expect(executiveDashboardCopy.secaoAgregadaTitulo).toBe('Tempo previsto e horas apontadas')
+  })
+
+  it('nenhum texto do Dashboard usa termos técnicos', () => {
+    for (const text of allStrings()) {
+      expect(technicalTermsIn(text), text).toEqual([])
+    }
   })
 })

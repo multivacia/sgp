@@ -14,7 +14,7 @@ import {
   DashboardViewModeToggle,
   type DashboardViewMode,
 } from '../../components/dashboard/DashboardViewModeToggle'
-import { ExecutiveWindowSelector } from '../../components/dashboard/ExecutiveWindowSelector'
+import { DashboardDateRangeFilter } from '../../components/dashboard/DashboardDateRangeFilter'
 import { PageCanvas } from '../../components/ui/PageCanvas'
 import type { DashboardOperacionalSerieItem } from '../../lib/dashboard-operacional-series'
 import { OPERATIONAL_BUCKET_LABELS } from '../../lib/backlog/operationalBuckets'
@@ -30,10 +30,13 @@ import { isBlockingSeverity, reportClientError } from '../../lib/errors'
 import { useSgpErrorSurface } from '../../lib/errors/SgpErrorPresentation'
 import { useAuth } from '../../lib/use-auth'
 import {
-  readStoredExecutiveWindowDays,
-  persistExecutiveWindowDays,
-  type ExecutiveWindowDays,
-} from '../../lib/dashboard/executiveDashboardWindow'
+  DASHBOARD_LOAD_ERROR,
+  formatDashboardDateRange,
+  persistDashboardDateRange,
+  readStoredDashboardDateRange,
+  type DashboardDateRange,
+} from '../../lib/dashboard/dashboardDateRange'
+import { ApiError } from '../../lib/api/apiErrors'
 import {
   fetchExecutiveDashboard,
   fetchOperationalDashboard,
@@ -44,9 +47,10 @@ import { getConveyorHealthSummary } from '../../services/conveyors/conveyorsApiS
 import { buildArgosDashboardSummary } from '../../domain/conveyors/conveyorHealthDashboard'
 import type { ConveyorHealthSummaryItem } from '../../domain/conveyors/conveyorHealth.types'
 import {
+  dashboardConcluidasNoPeriodoLabel,
   dashboardHints,
+  dashboardLabels,
   executiveDashboardCopy,
-  operationalLabels,
 } from '../../lib/operationalSemantics'
 import type {
   ExecutiveDashboardData,
@@ -85,24 +89,6 @@ const BUCKET_ORDER: OperationalBucketKey[] = [
 type TabKey = 'operational' | 'executive'
 
 const VIEW_MODE_STORAGE_KEY = 'sgp.dashboard.viewMode'
-const OP_REALIZED_PRESET_KEY = 'sgp.dashboard.operationalRealizedPreset'
-
-function readStoredOperationalRealizedPreset():
-  | ''
-  | '7d'
-  | '15d'
-  | '30d'
-  | 'month' {
-  try {
-    const v = localStorage.getItem(OP_REALIZED_PRESET_KEY)
-    if (v === '7d' || v === '15d' || v === '30d' || v === 'month' || v === '') {
-      return v as '' | '7d' | '15d' | '30d' | 'month'
-    }
-  } catch {
-    /* ignore */
-  }
-  return ''
-}
 
 function readStoredViewMode(): DashboardViewMode {
   try {
@@ -194,14 +180,15 @@ export function DashboardPage() {
     null,
   )
   const [executive, setExecutive] = useState<ExecutiveDashboardData | null>(null)
-  const [execDays, setExecDays] = useState<ExecutiveWindowDays>(() =>
-    readStoredExecutiveWindowDays(),
+  /** Período aplicado — único para Operacional e Gerencial (Cards e Gráficos). */
+  const [period, setPeriod] = useState<DashboardDateRange>(() =>
+    readStoredDashboardDateRange(),
   )
-  const [execRefreshing, setExecRefreshing] = useState(false)
-  const [opRealizedPreset, setOpRealizedPreset] = useState<
-    '' | '7d' | '15d' | '30d' | 'month'
-  >(() => readStoredOperationalRealizedPreset())
+  const periodLabel = formatDashboardDateRange(period)
+  const [refreshing, setRefreshing] = useState(false)
   const operationalLoadedRef = useRef(false)
+  /** Só a consulta mais recente aplica resultado (período antigo não sobrescreve o novo). */
+  const loadSeqRef = useRef(0)
   const [argosSummaryLoading, setArgosSummaryLoading] = useState(true)
   const [argosSummaryError, setArgosSummaryError] = useState<string | null>(null)
   const [argosSummaryItems, setArgosSummaryItems] = useState<ConveyorHealthSummaryItem[]>([])
@@ -210,23 +197,22 @@ export function DashboardPage() {
   >({})
 
   const load = useCallback(async () => {
+    const seq = ++loadSeqRef.current
     const isInitialLoad = !operationalLoadedRef.current
     if (isInitialLoad) setLoading(true)
-    else setExecRefreshing(true)
+    else setRefreshing(true)
     setError(null)
     try {
       const [op, ex] = await Promise.all([
-        showOpTab
-          ? fetchOperationalDashboard(
-              opRealizedPreset ? { realizedPeriodPreset: opRealizedPreset } : undefined,
-            )
-          : Promise.resolve(null),
-        showExecTab ? fetchExecutiveDashboard(execDays) : Promise.resolve(null),
+        showOpTab ? fetchOperationalDashboard(period) : Promise.resolve(null),
+        showExecTab ? fetchExecutiveDashboard(period) : Promise.resolve(null),
       ])
+      if (seq !== loadSeqRef.current) return
       setOperational(op)
       setExecutive(ex)
       operationalLoadedRef.current = true
     } catch (e) {
+      if (seq !== loadSeqRef.current) return
       setOperational(null)
       setExecutive(null)
       operationalLoadedRef.current = false
@@ -239,13 +225,16 @@ export function DashboardPage() {
         presentBlocking(n)
         setError(null)
       } else {
-        setError(n.userMessage)
+        // Período recusado pelo servidor: mostra a mensagem dele; demais falhas, texto padrão.
+        setError(e instanceof ApiError && e.status === 400 ? n.userMessage : DASHBOARD_LOAD_ERROR)
       }
     } finally {
-      if (isInitialLoad) setLoading(false)
-      else setExecRefreshing(false)
+      if (seq === loadSeqRef.current) {
+        setLoading(false)
+        setRefreshing(false)
+      }
     }
-  }, [execDays, opRealizedPreset, showOpTab, showExecTab, pathname, presentBlocking])
+  }, [period, showOpTab, showExecTab, pathname, presentBlocking])
 
   useEffect(() => {
     if (!showExecTab && tab === 'executive') {
@@ -253,9 +242,9 @@ export function DashboardPage() {
     }
   }, [showExecTab, tab])
 
-  const handleExecWindowChange = useCallback((days: ExecutiveWindowDays) => {
-    setExecDays(days)
-    persistExecutiveWindowDays(days)
+  const applyPeriod = useCallback((next: DashboardDateRange) => {
+    setPeriod(next)
+    persistDashboardDateRange(next)
   }, [])
 
   useEffect(() => {
@@ -349,18 +338,6 @@ export function DashboardPage() {
     }
   }, [])
 
-  const persistOpRealizedPreset = useCallback(
-    (v: '' | '7d' | '15d' | '30d' | 'month') => {
-      setOpRealizedPreset(v)
-      try {
-        localStorage.setItem(OP_REALIZED_PRESET_KEY, v)
-      } catch {
-        /* ignore */
-      }
-    },
-    [],
-  )
-
   const bucketSeries: DashboardOperacionalSerieItem[] = useMemo(() => {
     if (!operational) return []
     return BUCKET_ORDER.map((k) => ({
@@ -405,8 +382,8 @@ export function DashboardPage() {
         </p>
         <h1 className="sgp-page-title mt-3">Dashboards</h1>
         <p className="sgp-page-lead mt-1 max-w-3xl">
-          Acompanhe o snapshot operacional e os recortes executivos com a mesma regra de
-          backlog e esteiras.
+          Acompanhe a situação atual da operação e a visão gerencial, com as mesmas regras do
+          painel de esteiras. Data inicial e Data final valem para as duas visões.
         </p>
         {tab === 'executive' && showExecTab ? (
           <p className="mt-2 max-w-3xl text-sm text-slate-400">
@@ -415,7 +392,7 @@ export function DashboardPage() {
         ) : null}
       </header>
 
-      <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
+      <div className="mt-6 flex flex-wrap items-start justify-between gap-x-6 gap-y-4">
         {showOpTab && showExecTab ? (
           <div
             className="inline-flex rounded-lg border border-white/10 bg-sgp-void/60 p-0.5"
@@ -449,32 +426,20 @@ export function DashboardPage() {
             {showOpTab ? 'Operacional' : showExecTab ? 'Gerencial' : null}
           </div>
         )}
+        <DashboardDateRangeFilter
+          value={period}
+          onApply={applyPeriod}
+          refreshing={loading || refreshing}
+        />
         <div className="flex flex-wrap items-center gap-3">
-          {tab === 'executive' ? (
-            <div className="flex flex-wrap items-center gap-2 border-r border-white/10 pr-3">
-              <ExecutiveWindowSelector
-                value={execDays}
-                onChange={handleExecWindowChange}
-                disabled={execRefreshing}
-              />
-              {execRefreshing ? (
-                <span
-                  className="text-[10px] font-medium text-slate-500"
-                  aria-live="polite"
-                >
-                  Atualizando painel gerencial…
-                </span>
-              ) : null}
-            </div>
-          ) : null}
           <DashboardViewModeToggle value={viewMode} onChange={persistViewMode} />
           <button
             type="button"
             onClick={() => void load()}
-            disabled={loading || execRefreshing}
+            disabled={loading || refreshing}
             className="sgp-cta-secondary !py-2 text-sm disabled:opacity-40"
           >
-            {loading || execRefreshing ? 'Atualizando…' : 'Atualizar'}
+            {loading || refreshing ? 'Atualizando…' : 'Atualizar'}
           </button>
         </div>
       </div>
@@ -496,7 +461,7 @@ export function DashboardPage() {
 
       {!loading && operational && tab === 'operational' && showOpTab && viewMode === 'charts' && (
         <Suspense fallback={<DashboardChartsSkeleton />}>
-          <OperationalDashboardCharts data={operational} />
+          <OperationalDashboardCharts data={operational} periodLabel={periodLabel} />
         </Suspense>
       )}
 
@@ -506,24 +471,10 @@ export function DashboardPage() {
             <h2 className="font-heading text-sm font-bold uppercase tracking-[0.12em] text-slate-300">
               Resumo
             </h2>
-            <label className="mt-3 flex max-w-md flex-col gap-1.5 text-xs font-medium text-slate-500">
-              Opcional: soma de apontamentos num recorte temporal (não altera o acumulado global).
-              <select
-                className="rounded-lg border border-white/10 bg-sgp-app-panel-deep px-3 py-2 text-sm text-slate-200"
-                value={opRealizedPreset}
-                onChange={(e) =>
-                  persistOpRealizedPreset(
-                    e.target.value as '' | '7d' | '15d' | '30d' | 'month',
-                  )
-                }
-              >
-                <option value="">Sem período adicional</option>
-                <option value="7d">Últimos 7 dias</option>
-                <option value="15d">Últimos 15 dias</option>
-                <option value="30d">Últimos 30 dias</option>
-                <option value="month">Mês atual (UTC)</option>
-              </select>
-            </label>
+            <p className="mt-1 text-xs text-slate-500">
+              Situação atual das esteiras e alocações. {dashboardLabels.horasApontadasPeriodo}:{' '}
+              {periodLabel}.
+            </p>
             <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <KpiCard
                 featured
@@ -534,42 +485,42 @@ export function DashboardPage() {
                     0,
                   )
                 }
-                hint="Snapshot atual na base. Abre o backlog de esteiras (todas) numa nova aba."
+                hint="Situação atual de todas as esteiras. Clique para abrir o painel de esteiras em nova aba."
                 onDrillDown={() => openBacklogInNewTab()}
                 drillTitle={dashboardHints.drillBacklogTodas}
               />
               <KpiCard
-                label={`${operationalLabels.pressaoAtraso} (esteiras)`}
+                label={dashboardLabels.esteirasEmAtraso}
                 value={operational.conveyorsByBucket.em_atraso}
-                hint="Bucket operacional em atraso (prazo vs hoje). Abre o backlog com o mesmo recorte numa nova aba."
+                hint="Prazo estimado vencido (situação atual). Clique para abrir a lista em nova aba."
                 onDrillDown={() => openBacklogInNewTab('em_atraso')}
                 drillTitle={dashboardHints.drillBacklogAtraso}
               />
               <KpiCard
-                label="Alocações em STEPs"
+                label={dashboardLabels.alocacoesAtividades}
                 value={operational.assignees.totalAllocations}
                 hint={`Principal ${operational.assignees.primaryAllocations} · Apoio ${operational.assignees.supportAllocations}`}
               />
               <KpiCard
-                label={operationalLabels.minutosApontadosAcumulado}
+                label={dashboardLabels.totalHorasApontadas}
                 value={formatHumanMinutes(
                   operational.plannedVsRealized.realizedMinutesTotal,
                 )}
-                hint="Todos os apontamentos válidos na base."
+                hint={dashboardHints.acumuladoGlobal}
               />
             </div>
-            {operational.plannedVsRealized.realizedMinutesInPeriod !== undefined &&
-              operational.plannedVsRealized.realizedPeriod && (
-                <div className="mt-4">
-                  <KpiCard
-                    label={operationalLabels.minutosApontadosPeriodo}
-                    value={formatHumanMinutes(
-                      operational.plannedVsRealized.realizedMinutesInPeriod,
-                    )}
-                    hint={`Janela ${operational.plannedVsRealized.realizedPeriod.preset} (UTC).`}
-                  />
-                </div>
-              )}
+            {operational.plannedVsRealized.realizedMinutesInPeriod !== undefined && (
+              <div className="mt-4">
+                <KpiCard
+                  featured
+                  label={`${dashboardLabels.horasApontadasPeriodo} — ${periodLabel}`}
+                  value={formatHumanMinutes(
+                    operational.plannedVsRealized.realizedMinutesInPeriod,
+                  )}
+                  hint={dashboardHints.periodo(periodLabel)}
+                />
+              </div>
+            )}
           </section>
 
           {SHOW_ARGOS_HEALTH_UI ? (
@@ -657,11 +608,11 @@ export function DashboardPage() {
 
           <section className="sgp-panel sgp-panel-hover">
             <h2 className="font-heading text-sm font-bold uppercase tracking-[0.12em] text-slate-200">
-              Esteiras por bucket operacional
+              {dashboardLabels.esteirasPorSituacao}
             </h2>
             <p className="mt-1 text-xs text-slate-500">
-              Mesma regra do backlog e do painel de esteiras (prazo vs estado). Abre o
-              backlog com o recorte do bucket ao premir uma barra{' '}
+              Situação atual, com a mesma regra do painel de esteiras (prazo e estado). Clique
+              em uma barra para abrir o painel de esteiras com a mesma situação{' '}
               <span className="text-slate-600">(nova aba)</span>.
             </p>
             <div className="mt-4 max-w-xl">
@@ -678,11 +629,11 @@ export function DashboardPage() {
           <div className="grid gap-8 lg:grid-cols-2">
             <section className="sgp-panel sgp-panel-hover">
               <h2 className="font-heading text-sm font-bold uppercase tracking-[0.12em] text-slate-200">
-                Destaque — {operationalLabels.pressaoAtraso}
+                Destaque — {dashboardLabels.esteirasEmAtraso}
               </h2>
               <ul className="mt-4 space-y-2 text-sm">
                 {operational.overdueHighlight.length === 0 ? (
-                  <li className="text-slate-500">Nenhuma esteira neste bucket.</li>
+                  <li className="text-slate-500">Nenhuma esteira em atraso.</li>
                 ) : (
                   operational.overdueHighlight.map((r) => (
                     <li
@@ -706,7 +657,7 @@ export function DashboardPage() {
 
             <section className="sgp-panel sgp-panel-hover">
               <h2 className="font-heading text-sm font-bold uppercase tracking-[0.12em] text-slate-200">
-                Previsto estrutural vs minutos apontados
+                {dashboardLabels.tempoPrevistoVsHoras}
               </h2>
               <p className="mt-1 text-xs text-slate-500">
                 {operational.plannedVsRealized.notes}
@@ -714,7 +665,7 @@ export function DashboardPage() {
               <dl className="mt-4 space-y-3 text-sm">
                 <div className="flex justify-between gap-4">
                   <dt className="text-slate-400">
-                    {operationalLabels.previstoEstrutural} (referência — STEPs)
+                    {dashboardLabels.tempoPrevistoAtividades}
                   </dt>
                   <dd className="font-heading font-bold tabular-nums text-slate-50">
                     {formatHumanMinutes(
@@ -724,9 +675,9 @@ export function DashboardPage() {
                 </div>
                 <div className="flex justify-between gap-4">
                   <dt className="text-slate-500">
-                    {operationalLabels.totalPorEsteiraOs}{' '}
+                    {dashboardLabels.totalPorEsteiraOs}{' '}
                     <span className="text-[10px] font-normal text-slate-600">
-                      — apoio
+                      — referência
                     </span>
                   </dt>
                   <dd className="font-heading font-bold tabular-nums text-slate-300">
@@ -737,7 +688,7 @@ export function DashboardPage() {
                 </div>
                 <div className="flex justify-between gap-4 border-t border-white/10 pt-3">
                   <dt className="text-slate-500">
-                    {operationalLabels.minutosApontadosAcumulado}
+                    {dashboardLabels.totalHorasApontadas}
                   </dt>
                   <dd className="font-heading font-bold tabular-nums text-emerald-200/95">
                     {formatHumanMinutes(
@@ -745,14 +696,11 @@ export function DashboardPage() {
                     )}
                   </dd>
                 </div>
-                {operational.plannedVsRealized.realizedMinutesInPeriod !== undefined &&
-                  operational.plannedVsRealized.realizedPeriod && (
+                {operational.plannedVsRealized.realizedMinutesInPeriod !== undefined && (
                     <div className="flex justify-between gap-4 border-t border-white/10 pt-3">
                       <dt className="text-slate-500">
-                        {operationalLabels.minutosApontadosPeriodo}{' '}
-                        <span className="text-[10px] text-slate-600">
-                          ({operational.plannedVsRealized.realizedPeriod.preset})
-                        </span>
+                        {dashboardLabels.horasApontadasPeriodo}{' '}
+                        <span className="text-[10px] text-slate-600">({periodLabel})</span>
                       </dt>
                       <dd className="font-heading font-bold tabular-nums text-sky-200">
                         {formatHumanMinutes(
@@ -778,8 +726,8 @@ export function DashboardPage() {
               </Link>
             </div>
             <p className="mt-1 text-xs text-slate-500">
-              Atividades = alocações por colaborador; minutos = soma dos apontamentos de
-              cada um.
+              Atividades = alocações por colaborador; horas = soma de todos os apontamentos de
+              cada um (sem filtro de período).
             </p>
             <div className="mt-6 grid gap-10 lg:grid-cols-2">
               <div>
@@ -796,13 +744,13 @@ export function DashboardPage() {
               </div>
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">
-                  Minutos apontados
+                  {dashboardLabels.totalHorasApontadas}
                 </p>
                 <div className="mt-2">
                   <DashboardOperacionalBarList
                     items={collaboratorMinutesSeries}
                     accent="responsaveis-minutos"
-                    emptyMessage="Sem apontamentos registados."
+                    emptyMessage="Nenhum apontamento registrado."
                   />
                 </div>
               </div>
@@ -814,11 +762,11 @@ export function DashboardPage() {
                     <th className="py-2 pr-3">Colaborador</th>
                     <th className="py-2 pr-3">Alocações</th>
                     <th className="py-2 pr-3">Principal / apoio</th>
-                    <th className="py-2 pr-3">{operationalLabels.previstoEstrutural} (STEPS)</th>
+                    <th className="py-2 pr-3">{dashboardLabels.tempoPrevistoAtividades}</th>
                     {canManageOperationalCapacity ? (
                       <th className="py-2 pr-3">Previsto vs capacidade diária</th>
                     ) : null}
-                    <th className="py-2">{operationalLabels.minutosApontadosAcumulado}</th>
+                    <th className="py-2">{dashboardLabels.totalHorasApontadas}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -885,7 +833,7 @@ export function DashboardPage() {
               </table>
               {canManageOperationalCapacity ? (
                 <p className="mt-3 max-w-3xl text-[11px] leading-relaxed text-slate-600">
-                  O previsto em STEPs é a soma estrutural das atribuições; a capacidade diária é o
+                  O tempo previsto é a soma das atividades atribuídas; a capacidade diária é o
                   limite de jornada. A comparação é indicativa quando o previsto total excede um dia.
                 </p>
               ) : null}
@@ -935,43 +883,43 @@ export function DashboardPage() {
           </section>
 
           <p className="text-[10px] text-slate-600">
-            Gerado em {new Date(operational.meta.generatedAt).toLocaleString('pt-BR')}{' '}
-            · {operational.meta.scope}
+            Gerado em {new Date(operational.meta.generatedAt).toLocaleString('pt-BR')}
           </p>
         </div>
       )}
 
       {executive && tab === 'executive' && showExecTab && viewMode === 'charts' && (
         <Suspense fallback={<DashboardChartsSkeleton />}>
-          <ExecutiveDashboardCharts data={executive} windowDays={execDays} />
+          <ExecutiveDashboardCharts data={executive} period={period} />
         </Suspense>
       )}
 
       {executive && tab === 'executive' && showExecTab && viewMode === 'cards' && (
         <div className="mt-8 max-w-6xl space-y-10">
           <p className="text-xs text-slate-500">
-            <span className="font-medium text-slate-400">Janela ({execDays} dias)</span>: aplica-se
-            só a <span className="text-slate-400">concluídas</span> (data de conclusão neste
-            intervalo). <span className="text-slate-600">Esteiras ativas</span> são o estado
-            atual (não concluídas); a janela não se aplica a este recorte.
+            <span className="font-medium text-slate-400">
+              {dashboardLabels.periodoAnalise} ({periodLabel})
+            </span>
+            : aplica-se somente às <span className="text-slate-400">esteiras concluídas</span>{' '}
+            (pela data de conclusão). Esteiras ativas e em atraso mostram a situação atual.
           </p>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <KpiCard
               featured
               label="Esteiras ativas"
               value={executive.totals.activeConveyors}
-              hint="Snapshot atual (não concluídas). Sem filtro de data. Abre o backlog com âmbito ativas numa nova aba."
+              hint="Situação atual: esteiras não finalizadas nem canceladas, sem filtro de data. Clique para abrir a lista em nova aba."
               onDrillDown={() => openBacklogInNewTab('ativas')}
               drillTitle={dashboardHints.drillBacklogAtivas}
             />
             <KpiCard
-              label={`Concluídas (${execDays}d)`}
+              label={dashboardConcluidasNoPeriodoLabel(periodLabel)}
               value={executive.totals.completedInWindow}
-              hint={`Concluídas com data de conclusão nos últimos ${execDays} dias. Abre o backlog com o mesmo recorte numa nova aba.`}
+              hint="Esteiras finalizadas com data de conclusão no período. Clique para abrir a lista com o mesmo período em nova aba."
               onDrillDown={() =>
-                openBacklogInNewTab('finalizadas', { days: execDays })
+                openBacklogInNewTab('finalizadas', { completedPeriod: period })
               }
-              drillTitle={`Abre o backlog com concluídas dos últimos ${execDays} dias. Nova aba.`}
+              drillTitle={dashboardHints.drillBacklogConcluidas(periodLabel)}
             />
             <KpiCard
               label={executiveDashboardCopy.participacaoAtrasoTitulo}
@@ -994,7 +942,7 @@ export function DashboardPage() {
             <div className="mt-4 flex flex-wrap gap-x-12 gap-y-6">
               <div title={dashboardHints.previstoEstruturalSteps}>
                 <p className="text-[10px] uppercase tracking-wide text-slate-500">
-                  {operationalLabels.previstoEstrutural} (STEPS)
+                  {dashboardLabels.tempoPrevistoAtividades}
                 </p>
                 <p className="mt-1 font-heading text-2xl font-bold text-slate-50">
                   {formatHumanMinutes(executive.plannedVsRealized.plannedMinutesStepNodes)}
@@ -1002,9 +950,9 @@ export function DashboardPage() {
               </div>
               <div title={dashboardHints.totalOsApoio}>
                 <p className="text-[10px] uppercase tracking-wide text-slate-500">
-                  {operationalLabels.totalPorEsteiraOs}
+                  {dashboardLabels.totalPorEsteiraOs}
                   <span className="ml-1 text-[9px] font-normal normal-case text-slate-600">
-                    apoio
+                    referência
                   </span>
                 </p>
                 <p className="mt-1 font-heading text-2xl font-bold text-slate-400">
@@ -1013,7 +961,7 @@ export function DashboardPage() {
               </div>
               <div title={dashboardHints.acumuladoGlobal}>
                 <p className="text-[10px] uppercase tracking-wide text-slate-500">
-                  {operationalLabels.minutosApontadosAcumulado}
+                  {dashboardLabels.totalHorasApontadas}
                 </p>
                 <p className="mt-1 font-heading text-2xl font-bold text-emerald-200/95">
                   {formatHumanMinutes(executive.plannedVsRealized.realizedMinutesTotal)}

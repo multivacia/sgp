@@ -24,7 +24,7 @@ import { useColorTheme } from '../../../lib/theme/useColorTheme'
 import { resolveDashboardChartTheme } from './dashboardChartTheme'
 import {
   dashboardHints,
-  operationalLabels,
+  dashboardLabels,
 } from '../../../lib/operationalSemantics'
 import { BarMetricTooltip } from './BarMetricTooltip'
 import { formatWorkDateFromEntryAt } from '../../../domain/operational/workDate'
@@ -40,15 +40,24 @@ const BUCKET_CHART_ORDER: OperationalBucketKey[] = [
 ]
 
 function minutesTick(v: number) {
-  if (v >= 60) return `${Math.round(v / 60)}h`
-  return `${Math.round(v)}m`
+  if (v >= 60) return `${Math.round(v / 60)} h`
+  return `${Math.round(v)} min`
 }
 
 type Props = {
   data: OperationalDashboardData
+  /** «01/10/2026 a 20/10/2026» — período aplicado no Dashboard. */
+  periodLabel: string
 }
 
-export function OperationalDashboardCharts({ data }: Props) {
+type PlannedRow = {
+  kind: 'planned' | 'os' | 'total' | 'period'
+  metric: string
+  minutes: number
+  hint: string
+}
+
+export function OperationalDashboardCharts({ data, periodLabel }: Props) {
   const { themeId } = useColorTheme()
   const chart = useMemo(() => resolveDashboardChartTheme(), [themeId])
 
@@ -69,30 +78,32 @@ export function OperationalDashboardCharts({ data }: Props) {
   )
   const pieSlices = bucketRows.filter((r) => r.value > 0)
 
-  const periodPreset = data.plannedVsRealized.realizedPeriod?.preset ?? '7d'
-
-  const plannedRows = [
+  const plannedRows: PlannedRow[] = [
     {
-      metric: `${operationalLabels.previstoEstrutural} (etapas)`,
+      kind: 'planned',
+      metric: dashboardLabels.tempoPrevistoAtividades,
       minutes: data.plannedVsRealized.plannedMinutesStepNodes,
       hint: dashboardHints.previstoEstruturalSteps,
     },
     {
-      metric: operationalLabels.totalPorEsteiraOs,
+      kind: 'os',
+      metric: dashboardLabels.totalPorEsteiraOs,
       minutes: data.plannedVsRealized.plannedMinutesConveyorTotal,
       hint: dashboardHints.totalOsApoio,
     },
     {
-      metric: operationalLabels.minutosApontadosAcumulado,
+      kind: 'total',
+      metric: dashboardLabels.totalHorasApontadas,
       minutes: data.plannedVsRealized.realizedMinutesTotal,
       hint: dashboardHints.acumuladoGlobal,
     },
     ...(data.plannedVsRealized.realizedMinutesInPeriod !== undefined
       ? [
           {
-            metric: `${operationalLabels.minutosApontadosPeriodo} (query)`,
+            kind: 'period' as const,
+            metric: dashboardLabels.horasApontadasPeriodo,
             minutes: data.plannedVsRealized.realizedMinutesInPeriod,
-            hint: dashboardHints.periodoUtc(periodPreset),
+            hint: dashboardHints.periodo(periodLabel),
           },
         ]
       : []),
@@ -115,21 +126,21 @@ export function OperationalDashboardCharts({ data }: Props) {
   return (
     <div className="mt-8 max-w-6xl space-y-10">
       <p className="text-xs text-slate-500">
-        Visualização analítica — mesmos dados do modo Cards · snapshot{' '}
-        <span className="text-slate-600">({data.meta.scope})</span>.
+        Mesmos dados do modo Cards: situação atual, exceto as horas apontadas no período (
+        {periodLabel}).
       </p>
 
       <section className="sgp-panel sgp-panel-hover">
         <h2 className="font-heading text-sm font-bold uppercase tracking-[0.12em] text-slate-200">
-          Esteiras por bucket operacional
+          {dashboardLabels.esteirasPorSituacao}
         </h2>
         <p className="mt-1 text-xs text-slate-500">
-          Contagem por bucket operacional. Abre o backlog com o recorte correspondente
-          ao premir um segmento ou um item da legenda{' '}
+          Quantidade de esteiras por situação (agora). Clique em um segmento ou em um item da
+          legenda para abrir o painel de esteiras com a mesma situação{' '}
           <span className="text-slate-600">(nova aba)</span>.
         </p>
         {bucketTotal === 0 ? (
-          <p className="mt-6 text-sm text-slate-500">Sem esteiras no recorte.</p>
+          <p className="mt-6 text-sm text-slate-500">Nenhuma esteira cadastrada.</p>
         ) : (
           <>
             <div className="mt-4 h-[300px] w-full max-w-lg mx-auto">
@@ -201,7 +212,7 @@ export function OperationalDashboardCharts({ data }: Props) {
               ))}
             </ul>
             <p className="mt-3 text-center text-[10px] text-slate-600">
-              Se um bucket concentrar quase todo o volume, use a legenda para
+              Se uma situação concentrar quase todo o volume, use a legenda para
               navegar com precisão.
             </p>
           </>
@@ -211,11 +222,11 @@ export function OperationalDashboardCharts({ data }: Props) {
       <div className="grid gap-8 lg:grid-cols-2">
         <section className="sgp-panel sgp-panel-hover">
           <h2 className="font-heading text-sm font-bold uppercase tracking-[0.12em] text-slate-200">
-            Destaque — em atraso
+            Destaque — {dashboardLabels.esteirasEmAtraso}
           </h2>
           <ul className="mt-4 space-y-2 text-sm">
             {data.overdueHighlight.length === 0 ? (
-              <li className="text-slate-500">Nenhuma esteira neste bucket.</li>
+              <li className="text-slate-500">Nenhuma esteira em atraso.</li>
             ) : (
               data.overdueHighlight.map((r) => (
                 <li
@@ -239,13 +250,13 @@ export function OperationalDashboardCharts({ data }: Props) {
 
         <section className="sgp-panel sgp-panel-hover">
           <h2 className="font-heading text-sm font-bold uppercase tracking-[0.12em] text-slate-200">
-            Previsto estrutural vs minutos apontados
+            {dashboardLabels.tempoPrevistoVsHoras}
           </h2>
           <p className="mt-1 text-xs text-slate-500">{data.plannedVsRealized.notes}</p>
           <p className="mt-2 text-[11px] leading-snug text-slate-400">
-            Ordem: {operationalLabels.previstoEstrutural} (etapas) ·{' '}
-            {operationalLabels.totalPorEsteiraOs} · acumulado global · opcionalmente{' '}
-            {operationalLabels.minutosApontadosPeriodo} (escalas podem diferir).
+            Barras: {dashboardLabels.tempoPrevistoAtividades} · {dashboardLabels.totalPorEsteiraOs}{' '}
+            · {dashboardLabels.totalHorasApontadas} · {dashboardLabels.horasApontadasPeriodo} (
+            {periodLabel}).
           </p>
           <div className="mt-4 h-[220px] w-full">
             <ResponsiveContainer width="100%" height="100%">
@@ -270,16 +281,16 @@ export function OperationalDashboardCharts({ data }: Props) {
                   {...chart.axisProps}
                 />
                 <Tooltip content={(props) => <BarMetricTooltip {...props} />} />
-                <Bar dataKey="minutes" name="Minutos" radius={[6, 6, 0, 0]} maxBarSize={48}>
-                  {plannedRows.map((row, i) => (
+                <Bar dataKey="minutes" name="Tempo" radius={[6, 6, 0, 0]} maxBarSize={48}>
+                  {plannedRows.map((row) => (
                     <Cell
-                      key={row.metric}
+                      key={row.kind}
                       fill={
-                        row.metric.includes('período')
+                        row.kind === 'period'
                           ? chart.periodBar
-                          : row.metric.includes('acumulado')
+                          : row.kind === 'total'
                             ? chart.barMetric.realized
-                            : i === 0
+                            : row.kind === 'planned'
                               ? chart.barMetric.planned
                               : chart.barMetric.total
                       }
@@ -307,8 +318,8 @@ export function OperationalDashboardCharts({ data }: Props) {
           </a>
         </div>
         <p className="mt-1 text-xs text-slate-500">
-          Top 10 por alocações. Barras: {operationalLabels.previstoEstrutural} nas etapas e{' '}
-          {operationalLabels.minutosApontadosAcumulado} (colaborador).
+          Os 10 colaboradores com mais alocações: {dashboardLabels.tempoPrevistoAtividades}{' '}
+          atribuídas e {dashboardLabels.totalHorasApontadas.toLowerCase()} por cada um.
         </p>
         <div className="mt-6 h-[320px] w-full">
           {collabSorted.length === 0 ? (
@@ -343,13 +354,13 @@ export function OperationalDashboardCharts({ data }: Props) {
                 <Legend wrapperStyle={{ fontSize: 11, paddingTop: 8 }} />
                 <Bar
                   dataKey="planejSteps"
-                  name={`${operationalLabels.previstoEstrutural} (etapas)`}
+                  name={dashboardLabels.tempoPrevistoAtividades}
                   fill={chart.barMetric.planned}
                   radius={[0, 4, 4, 0]}
                 />
                 <Bar
                   dataKey="realizado"
-                  name="Minutos apontados (colaborador)"
+                  name={dashboardLabels.totalHorasApontadas}
                   fill={chart.barMetric.realized}
                   radius={[0, 4, 4, 0]}
                 />
@@ -358,9 +369,8 @@ export function OperationalDashboardCharts({ data }: Props) {
           )}
         </div>
         <p className="mt-2 text-[10px] text-slate-600">
-          Por colaborador: {operationalLabels.previstoEstrutural} = soma das etapas alocadas; minutos
-          apontados = soma dos apontamentos do colaborador. Comparar barras, não somar num único
-          total.
+          Por colaborador: tempo previsto = soma das atividades atribuídas; horas apontadas = soma
+          de todos os apontamentos do colaborador. Compare as barras; não as some em um único total.
         </p>
       </section>
 
@@ -404,8 +414,7 @@ export function OperationalDashboardCharts({ data }: Props) {
       </section>
 
       <p className="text-[10px] text-slate-600">
-        Gerado em {new Date(data.meta.generatedAt).toLocaleString('pt-BR')} ·{' '}
-        {data.meta.scope}
+        Gerado em {new Date(data.meta.generatedAt).toLocaleString('pt-BR')}
       </p>
     </div>
   )

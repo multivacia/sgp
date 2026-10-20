@@ -7,6 +7,8 @@
  * - `days` — janela temporal em dias; **aplica-se apenas** com `situacao=concluidas`, filtrando por `completed_at`
  *   dentro dos últimos N dias (alinhado ao dashboard gerencial).
  * - `completedWithinDays` — alias legado de `days` (mesma regra); se ambos existirem, `days` prevalece.
+ * - `completedFrom` / `completedTo` — período de conclusão (`YYYY-MM-DD`, dias civis de São Paulo,
+ *   inclusivos), vindo do Dashboard; só com `situacao=finalizadas`. Têm precedência sobre `days`.
  * - `q` — texto para `GET /api/v1/conveyors?q=` (nome, código, cliente).
  * - `priority` — `alta` | `media` | `baixa`.
  * - `responsible` — texto (ILIKE no servidor no campo responsável da esteira).
@@ -21,6 +23,7 @@ import {
   COLABS_DEFAULT_PAGE_SIZE,
   COLABS_PAGE_SIZE_OPTIONS,
 } from '../admin/collaboratorsListUrlState'
+import { isValidIsoDate, operationalDateOf } from '../../domain/operational/workDate'
 
 const MAX_DAYS = 365
 
@@ -53,6 +56,28 @@ export function parseBacklogDaysWindow(sp: URLSearchParams): number {
   const n = raw ? Number.parseInt(raw, 10) : NaN
   if (!Number.isFinite(n) || n < 1 || n > MAX_DAYS) return 0
   return n
+}
+
+/** Período de conclusão (`completedFrom`/`completedTo`) válido; senão `null`. */
+export function parseBacklogCompletedPeriod(
+  sp: URLSearchParams,
+): { startDate: string; endDate: string } | null {
+  const from = sp.get('completedFrom')?.trim() ?? ''
+  const to = sp.get('completedTo')?.trim() ?? ''
+  if (!isValidIsoDate(from) || !isValidIsoDate(to) || from > to) return null
+  return { startDate: from, endDate: to }
+}
+
+/** `completedAt` (instante) cai no período de dias civis de São Paulo (inclusivo)? */
+export function completedAtWithinPeriod(
+  completedAt: string | null | undefined,
+  period: { startDate: string; endDate: string },
+): boolean {
+  if (!completedAt) return false
+  const d = new Date(completedAt)
+  if (Number.isNaN(d.getTime())) return false
+  const day = operationalDateOf(d)
+  return day >= period.startDate && day <= period.endDate
 }
 
 export function backlogHasScopeAtivas(sp: URLSearchParams): boolean {
@@ -172,6 +197,21 @@ export function normalizeBacklogSearchParams(
     next.delete('days')
     next.delete('completedWithinDays')
     changed = true
+  }
+
+  const hasCompletedParams = next.has('completedFrom') || next.has('completedTo')
+  if (hasCompletedParams) {
+    const finalizadas = next.get('scope') !== 'ativas' && next.get('situacao') === 'finalizadas'
+    if (!finalizadas || !parseBacklogCompletedPeriod(next)) {
+      next.delete('completedFrom')
+      next.delete('completedTo')
+      changed = true
+    } else if (next.has('days') || next.has('completedWithinDays')) {
+      // O período explícito prevalece sobre a janela em dias.
+      next.delete('days')
+      next.delete('completedWithinDays')
+      changed = true
+    }
   }
 
   const dPrimary = next.get('days')

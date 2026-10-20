@@ -13,6 +13,12 @@ function appUrl(path: string): string {
 
 export type OpenBacklogInNewTabOptions = {
   /**
+   * Com `situacao=finalizadas`: concluídas com data de conclusão entre as datas civis
+   * (São Paulo, inclusivas) — mesmo período do Dashboard. Serializado como
+   * `completedFrom`/`completedTo`; tem precedência sobre `days`.
+   */
+  completedPeriod?: { startDate: string; endDate: string }
+  /**
    * Com `situacao=concluidas`, restringe a linhas com `completed_at` nesta janela (dias).
    * Serializado na URL como `days=`.
    */
@@ -37,7 +43,10 @@ export function openBacklogInNewTab(
     sp.set('situacao', situacao)
   }
   const effDays = opts?.days ?? opts?.completedWithinDays
-  if (situacao === 'finalizadas' && effDays != null && Number.isFinite(effDays)) {
+  if (situacao === 'finalizadas' && opts?.completedPeriod) {
+    sp.set('completedFrom', opts.completedPeriod.startDate)
+    sp.set('completedTo', opts.completedPeriod.endDate)
+  } else if (situacao === 'finalizadas' && effDays != null && Number.isFinite(effDays)) {
     const d = Math.max(1, Math.min(365, Math.round(effDays)))
     sp.set('days', String(d))
   }

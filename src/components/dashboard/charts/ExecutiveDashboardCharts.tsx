@@ -15,17 +15,22 @@ import type { OperationalBucket } from '../../../lib/backlog/operationalBuckets'
 import { openBacklogInNewTab } from '../../../lib/dashboard/dashboardNavigation'
 import type { ExecutiveDashboardData } from '../../../domain/dashboard/dashboard.types'
 import {
+  dashboardConcluidasNoPeriodoLabel,
   dashboardHints,
+  dashboardLabels,
   executiveDashboardCopy,
-  operationalLabels,
 } from '../../../lib/operationalSemantics'
+import {
+  formatDashboardDateRange,
+  type DashboardDateRange,
+} from '../../../lib/dashboard/dashboardDateRange'
 import { useColorTheme } from '../../../lib/theme/useColorTheme'
 import { BarMetricTooltip } from './BarMetricTooltip'
 import { resolveDashboardChartTheme } from './dashboardChartTheme'
 
 function minutesTick(v: number) {
-  if (v >= 60) return `${Math.round(v / 60)}h`
-  return `${Math.round(v)}m`
+  if (v >= 60) return `${Math.round(v / 60)} h`
+  return `${Math.round(v)} min`
 }
 
 type ExecSlice = {
@@ -39,10 +44,12 @@ type ExecSlice = {
 
 type Props = {
   data: ExecutiveDashboardData
-  windowDays: number
+  /** Período aplicado no Dashboard (mesmo dos Cards). */
+  period: DashboardDateRange
 }
 
-export function ExecutiveDashboardCharts({ data, windowDays }: Props) {
+export function ExecutiveDashboardCharts({ data, period }: Props) {
+  const periodLabel = formatDashboardDateRange(period)
   const { themeId } = useColorTheme()
   const chart = useMemo(() => resolveDashboardChartTheme(), [themeId])
   const { totals } = data
@@ -58,7 +65,7 @@ export function ExecutiveDashboardCharts({ data, windowDays }: Props) {
       },
       {
         key: 'concl_janela',
-        name: `Concluídas (${windowDays}d)`,
+        name: dashboardConcluidasNoPeriodoLabel(periodLabel),
         value: totals.completedInWindow,
         fill: chart.execPie.conclJanela,
         nav: 'bucket',
@@ -73,7 +80,7 @@ export function ExecutiveDashboardCharts({ data, windowDays }: Props) {
         situacao: 'em_atraso',
       },
     ],
-    [chart.execPie, totals, windowDays],
+    [chart.execPie, totals, periodLabel],
   )
 
   const execTotal = execSlicesRaw.reduce((s, x) => s + x.value, 0)
@@ -85,7 +92,7 @@ export function ExecutiveDashboardCharts({ data, windowDays }: Props) {
       return
     }
     if (s.key === 'concl_janela' && s.situacao === 'finalizadas') {
-      openBacklogInNewTab('finalizadas', { days: windowDays })
+      openBacklogInNewTab('finalizadas', { completedPeriod: period })
       return
     }
     if (s.situacao) openBacklogInNewTab(s.situacao)
@@ -93,19 +100,19 @@ export function ExecutiveDashboardCharts({ data, windowDays }: Props) {
 
   const execRows = [
     {
-      metric: `${operationalLabels.previstoEstrutural} (etapas)`,
+      metric: dashboardLabels.tempoPrevistoAtividades,
       minutes: data.plannedVsRealized.plannedMinutesStepNodes,
       valueCaption: executiveDashboardCopy.barTooltipValueCaption,
       hint: dashboardHints.previstoEstruturalSteps,
     },
     {
-      metric: operationalLabels.totalPorEsteiraOs,
+      metric: dashboardLabels.totalPorEsteiraOs,
       minutes: data.plannedVsRealized.plannedMinutesConveyorTotal,
       valueCaption: executiveDashboardCopy.barTooltipValueCaption,
       hint: dashboardHints.totalOsApoio,
     },
     {
-      metric: operationalLabels.minutosApontadosAcumulado,
+      metric: dashboardLabels.totalHorasApontadas,
       minutes: data.plannedVsRealized.realizedMinutesTotal,
       valueCaption: executiveDashboardCopy.barTooltipValueCaption,
       hint: dashboardHints.acumuladoGlobal,
@@ -121,9 +128,11 @@ export function ExecutiveDashboardCharts({ data, windowDays }: Props) {
     <div className="mt-8 max-w-6xl space-y-10">
       <p className="text-xs text-slate-500">
         Mesmos dados do modo Cards.{' '}
-        <span className="font-medium text-slate-400">Janela temporal</span> aplica-se
-        apenas a <span className="text-slate-400">concluídas</span> (data de conclusão nos
-        últimos {windowDays} dias). Ativas = estado atual, sem janela.
+        <span className="font-medium text-slate-400">
+          {dashboardLabels.periodoAnalise} ({periodLabel})
+        </span>{' '}
+        aplica-se somente às <span className="text-slate-400">esteiras concluídas</span> (pela
+        data de conclusão). Ativas e em atraso mostram a situação atual.
       </p>
 
       <section className="sgp-panel sgp-panel-hover">
@@ -131,17 +140,14 @@ export function ExecutiveDashboardCharts({ data, windowDays }: Props) {
           {executiveDashboardCopy.pizzaTitulo}
         </h2>
         <p className="mt-1 text-xs text-slate-500">
-          <span className="font-medium text-slate-400">Ativas</span>: não concluídas
-          (agora).{' '}
-          <span className="font-medium text-slate-400">
-            Concluídas ({windowDays}d)
-          </span>
-          : concluídas com data de conclusão na janela. Abre o backlog com o mesmo filtro
-          ao premir um segmento ou a legenda{' '}
-          <span className="text-slate-600">(nova aba)</span>.
+          <span className="font-medium text-slate-400">Ativas</span>: não finalizadas nem
+          canceladas (agora).{' '}
+          <span className="font-medium text-slate-400">Concluídas</span>: finalizadas com data
+          de conclusão de {periodLabel}. Clique em um segmento ou na legenda para abrir o painel
+          de esteiras com o mesmo filtro <span className="text-slate-600">(nova aba)</span>.
         </p>
         {execTotal === 0 ? (
-          <p className="mt-6 text-sm text-slate-500">Sem dados agregados.</p>
+          <p className="mt-6 text-sm text-slate-500">Sem esteiras para exibir.</p>
         ) : (
           <>
             <div className="mt-6 h-[280px] w-full max-w-lg mx-auto">

@@ -2,35 +2,34 @@ import type {
   ExecutiveDashboardData,
   OperationalDashboardData,
 } from '../../domain/dashboard/dashboard.types'
+import type { DashboardDateRange } from '../../lib/dashboard/dashboardDateRange'
 import { requestJson } from '../../lib/api/client'
 
 const BASE = '/api/v1'
 
-export type OperationalDashboardFetchOpts = {
-  realizedPeriodPreset?: '7d' | '15d' | '30d' | 'month'
+function periodQuery(range: DashboardDateRange): string {
+  const q = new URLSearchParams()
+  q.set('startDate', range.startDate)
+  q.set('endDate', range.endDate)
+  return q.toString()
 }
 
+/** GET /api/v1/dashboard/operational — horas apontadas no período (Data inicial a Data final). */
 export async function fetchOperationalDashboard(
-  opts?: OperationalDashboardFetchOpts,
+  range: DashboardDateRange,
 ): Promise<OperationalDashboardData> {
-  const qs = new URLSearchParams()
-  if (opts?.realizedPeriodPreset) {
-    qs.set('realizedPeriodPreset', opts.realizedPeriodPreset)
-  }
-  const q = qs.toString()
   return requestJson<OperationalDashboardData>(
     'GET',
-    `${BASE}/dashboard/operational${q ? `?${q}` : ''}`,
+    `${BASE}/dashboard/operational?${periodQuery(range)}`,
   )
 }
 
+/** GET /api/v1/dashboard/executive — esteiras concluídas no período (Data inicial a Data final). */
 export async function fetchExecutiveDashboard(
-  days = 30,
+  range: DashboardDateRange,
 ): Promise<ExecutiveDashboardData> {
-  const q = new URLSearchParams()
-  q.set('days', String(days))
   return requestJson<ExecutiveDashboardData>(
     'GET',
-    `${BASE}/dashboard/executive?${q.toString()}`,
+    `${BASE}/dashboard/executive?${periodQuery(range)}`,
   )
 }

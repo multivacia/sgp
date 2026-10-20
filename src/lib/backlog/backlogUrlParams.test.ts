@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
   backlogHasScopeAtivas,
+  completedAtWithinPeriod,
+  parseBacklogCompletedPeriod,
   listConveyorsQueryFromBacklogUrl,
   normalizeBacklogSearchParams,
   parseBacklogDaysWindow,
@@ -117,5 +119,53 @@ describe('listConveyorsQueryFromBacklogUrl', () => {
     const sp = params('situacao=em_atraso')
     const situation = parseBacklogSituationFilter(sp)
     expect(listConveyorsQueryFromBacklogUrl(sp, situation)).toEqual({})
+  })
+})
+
+describe('período de conclusão vindo do Dashboard (completedFrom/completedTo)', () => {
+  it('parse: só aceita par válido e ordenado', () => {
+    expect(
+      parseBacklogCompletedPeriod(new URLSearchParams('completedFrom=2026-10-01&completedTo=2026-10-20')),
+    ).toEqual({ startDate: '2026-10-01', endDate: '2026-10-20' })
+    expect(parseBacklogCompletedPeriod(new URLSearchParams('completedFrom=2026-10-01'))).toBeNull()
+    expect(
+      parseBacklogCompletedPeriod(new URLSearchParams('completedFrom=2026-10-21&completedTo=2026-10-20')),
+    ).toBeNull()
+    expect(
+      parseBacklogCompletedPeriod(new URLSearchParams('completedFrom=2026-02-30&completedTo=2026-03-01')),
+    ).toBeNull()
+  })
+
+  it('normalização: período prevalece sobre days; removido fora de finalizadas ou inválido', () => {
+    const withDays = normalizeBacklogSearchParams(
+      new URLSearchParams('situacao=finalizadas&completedFrom=2026-10-01&completedTo=2026-10-20&days=30'),
+    )
+    expect(withDays?.get('days')).toBeNull()
+    expect(withDays?.get('completedFrom')).toBe('2026-10-01')
+
+    const otherSituation = normalizeBacklogSearchParams(
+      new URLSearchParams('situacao=em_atraso&completedFrom=2026-10-01&completedTo=2026-10-20'),
+    )
+    expect(otherSituation?.has('completedFrom')).toBe(false)
+
+    const invalid = normalizeBacklogSearchParams(
+      new URLSearchParams('situacao=finalizadas&completedFrom=2026-10-21&completedTo=2026-10-20'),
+    )
+    expect(invalid?.has('completedTo')).toBe(false)
+
+    expect(
+      normalizeBacklogSearchParams(
+        new URLSearchParams('situacao=finalizadas&completedFrom=2026-10-01&completedTo=2026-10-20'),
+      ),
+    ).toBeNull()
+  })
+
+  it('completedAtWithinPeriod usa o dia civil de São Paulo, inclusivo', () => {
+    const p = { startDate: '2026-10-01', endDate: '2026-10-20' }
+    expect(completedAtWithinPeriod('2026-10-01T03:00:00.000Z', p)).toBe(true) // 00:00 SP de 01/10
+    expect(completedAtWithinPeriod('2026-10-01T02:59:59.999Z', p)).toBe(false) // 30/09 em SP
+    expect(completedAtWithinPeriod('2026-10-21T02:59:59.999Z', p)).toBe(true) // 23:59:59 SP de 20/10
+    expect(completedAtWithinPeriod('2026-10-21T03:00:00.000Z', p)).toBe(false) // 21/10 em SP
+    expect(completedAtWithinPeriod(null, p)).toBe(false)
   })
 })

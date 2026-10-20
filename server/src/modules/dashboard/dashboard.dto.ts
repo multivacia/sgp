@@ -1,4 +1,5 @@
 import type { OperationalBucket } from '../../shared/operationalBucket.js'
+import type { DashboardPeriodMeta } from './dashboard.period.js'
 
 export type ConveyorRowForBucket = {
   id: string
@@ -16,6 +17,8 @@ export type OperationalDashboardDto = {
     bucketRule: 'shared_operationalBucket_ts'
     /** Presença quando a resposta inclui campos V1.5 de semântica operacional. */
     semanticsVersion?: '1.5'
+    /** Período aplicado (`startDate`/`endDate`); ausente em chamadas legadas. */
+    period?: DashboardPeriodMeta
   }
   conveyorsByBucket: Record<OperationalBucket, number>
   overdueHighlight: Array<{
@@ -43,15 +46,20 @@ export type OperationalDashboardDto = {
     /** Soma de `conveyor_time_entries.minutes` (não apagados). — Minutos apontados (acumulado) global. */
     realizedMinutesTotal: number
     /**
-     * Quando `GET ?realizedPeriodPreset=` é enviado: soma de apontamentos na janela.
-     * Minutos apontados (período), independente do acumulado total.
+     * Com `startDate`/`endDate` (ou o legado `realizedPeriodPreset`): soma dos apontamentos
+     * com data de realização (`entry_at`) no período. Independente do acumulado total.
      */
     realizedMinutesInPeriod?: number
-    /** Janela resolvida para `realizedMinutesInPeriod` (UTC). */
+    /**
+     * Período resolvido para `realizedMinutesInPeriod`. `preset: 'custom'` quando veio de
+     * `startDate`/`endDate` (com as datas civis); `to` é inclusivo (23:59:59.999 em SP).
+     */
     realizedPeriod?: {
       from: string
       to: string
-      preset: '7d' | '15d' | '30d' | 'month'
+      preset: '7d' | '15d' | '30d' | 'month' | 'custom'
+      startDate?: string
+      endDate?: string
     }
     notes: string
   }
@@ -81,13 +89,16 @@ export type OperationalDashboardDto = {
 export type ExecutiveDashboardDto = {
   meta: {
     generatedAt: string
+    /** Dias do período (com `startDate`/`endDate`: dias civis inclusivos; legado: `days`). */
     completedWithinDays: number
     scope: string
+    /** Período aplicado às concluídas; ausente em chamadas legadas com `days`. */
+    period?: DashboardPeriodMeta
   }
   totals: {
     /** Esteiras não concluídas (operational_status <> CONCLUIDA). */
     activeConveyors: number
-    /** CONCLUIDA com completed_at na janela. */
+    /** FINALIZADA com `completed_at` no período (ou nos últimos `days`, legado). */
     completedInWindow: number
     /** Contagem com bucket operacional em_atraso (mesma regra do painel). */
     overdueConveyors: number
