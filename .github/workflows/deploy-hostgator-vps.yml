@@ -116,6 +116,17 @@ jobs:
           echo "==> Fetching branch: $DEPLOY_BRANCH"
           git fetch origin "$DEPLOY_BRANCH"
 
+          echo "==> Database backup (pre-deploy)"
+          # Usa o script da versão que será publicada (existe mesmo no primeiro deploy com backup).
+          PRE_DEPLOY_BACKUP_SCRIPT="$(mktemp)"
+          git show "origin/$DEPLOY_BRANCH:scripts/db/backup/sgp-db-backup.sh" > "$PRE_DEPLOY_BACKUP_SCRIPT"
+          if ! SGP_SERVER_ENV_FILE="$REMOTE_APP_DIR/server/.env" bash "$PRE_DEPLOY_BACKUP_SCRIPT" --reason pre-deploy; then
+            rm -f "$PRE_DEPLOY_BACKUP_SCRIPT"
+            echo "Database backup failed; deploy aborted before changing the release."
+            exit 1
+          fi
+          rm -f "$PRE_DEPLOY_BACKUP_SCRIPT"
+
           echo "==> Resetting working tree to origin/$DEPLOY_BRANCH"
           git checkout "$DEPLOY_BRANCH"
           git reset --hard "origin/$DEPLOY_BRANCH"

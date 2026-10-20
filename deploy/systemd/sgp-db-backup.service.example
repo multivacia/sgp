@@ -1,0 +1,24 @@
+# Copiar para /etc/systemd/system/sgp-db-backup.service e ajustar User/Group.
+# Executado pelo timer sgp-db-backup.timer (backup diário da base de produção).
+#
+# User: o mesmo usuário que roda a API no PM2 (lê /opt/sgp/sgp-main/server/.env e grava em
+# /opt/sgp/backups/db). Group: grupo compartilhado com o usuário SSH de cópia (sgpbackup).
+# Ver docs/backup-restore-runbook.md.
+
+[Unit]
+Description=SGP+ backup diário da base de produção
+After=network-online.target postgresql.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=TROCAR_USUARIO_DA_API
+Group=sgp-backup
+Environment=SGP_SERVER_ENV_FILE=/opt/sgp/sgp-main/server/.env
+Environment=SGP_BACKUP_DIR=/opt/sgp/backups/db
+# Descomente se o pg_dump padrão do sistema for mais antigo que o servidor PostgreSQL:
+# Environment=SGP_PG_BIN_DIR=/usr/lib/postgresql/16/bin
+ExecStart=/bin/bash /opt/sgp/sgp-main/scripts/db/backup/sgp-db-backup.sh --reason scheduled
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
