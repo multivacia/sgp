@@ -103,7 +103,7 @@ O hook `useCursorPagedList` é usado no drawer, no Kiosk e no backlog.
 
 **Backend (novos):**
 - `server/src/shared/pagination/keysetCursor.ts`
-- `server/src/tests/listing-pagination.integration.test.ts` (12 cenários)
+- `server/src/tests/listing-pagination.integration.test.ts` (13 cenários)
 - `server/src/tests/listingPaginationFixtures.ts`
 - `server/src/tests/keyset-cursor.test.ts`
 
@@ -142,7 +142,7 @@ O banco usado foi um Postgres 16 local criado nesta sessão (`initdb`, porta 554
 | Diagnóstico **antes** (`tsx diag-before.ts` contra o código original) | exit 0; cortes 50/51 e 100/101 conforme a tabela acima |
 | Testes novos de integração rodados num worktree **da main sem correção** | **12/12 falham** (ex.: `expected [ 50 ] to deeply equal [ 50, 50, 26 ]`; backlog `[ 100 ]` vs `[ 100, 53 ]`; 139 de 186 itens com sobreposição) |
 | Teste do drawer na main sem correção | **5/5 falham** |
-| `npx vitest run src/tests/listing-pagination.integration.test.ts` (com correção) | exit 0, **12/12** |
+| `npx vitest run src/tests/listing-pagination.integration.test.ts` (com correção) | exit 0, **13/13** (o 13º, incluído após a revisão, cobre plano com atrasadas e `planned_order` invertido na fronteira de página) |
 | `npx vitest run` dos 6 arquivos backend relacionados + `keyset-cursor` | exit 0, todos passam |
 | `npm --prefix server run build` (`tsc -p`) | exit 0 |
 | `npm --prefix server test` (suíte completa, com banco) | exit 1: **2 falhas preexistentes**, idênticas na main (`env.test` fallback de versão; `operational-planning.weekly-view.http` `=SUM`); 1318 passam e 17 são ignorados |
@@ -179,12 +179,33 @@ O banco usado foi um Postgres 16 local criado nesta sessão (`initdb`, porta 554
 | 10 | Corrida com reinício pós-persistência (sucesso, erro e finalização) | `useCursorPagedList.test.ts` "corrida…" |
 | 11 | Regressão do Kiosk e de `handleCardPointTime` | Integração do Kiosk + teste de componente; `findTimeEntryCandidateForPlanningCard` (página posterior, fim, `&`) |
 
+## Revisão independente (`sgp-test-reviewer`)
+
+- **Veredito:** PASSA COM RESSALVAS, **nenhum bloqueante**.
+- **Comandos reexecutados pelo revisor:**
+  - `tsc` server e frontend: exit 0;
+  - 7 arquivos backend: 67 testes, exit 0;
+  - frontend (pagination/shell/kiosk/planejamento): 352 testes, exit 0;
+  - eslint nos arquivos do diff: 0 erros (3 avisos preexistentes).
+- **Confirmações do revisor:**
+  - filtros equivalentes às 3 consultas originais;
+  - precedência e dedup iguais ao `seenStep` antigo;
+  - ordem visível inalterada;
+  - sem risco de NULL no keyset;
+  - mesma colação no keyset do backlog.
+- **Recomendações:**
+  - teste com itens atrasados na fronteira: **feito** (13º cenário);
+  - documentar que, se a origem de um step mudar entre páginas, ele pode mudar de posição (é inerente ao keyset; a repetição é contida pela dedup no cliente): registrado no risco 6;
+  - EXPLAIN com volume de produção: risco 3;
+  - testes de componente da página do Planejamento: lacuna aceita (critérios 6, 8 e 11 cobertos por função pura, leitura de código e verificação visual).
+
 ## Riscos e pendências
 
 1. **Homologação real pendente:** sem acesso ao banco nem ao navegador de produção, o caso exato da OS 7467 não foi reproduzido.
 2. **"Agenda da semana"** (`/app/agenda-semanal`) usa o mesmo endpoint do backlog com `limit: 100` e o mesmo `handleCardPointTime` com `limit: 100`. Ficou **fora do escopo** do hotfix: continua mostrando só a 1ª página, compatível com o contrato porque `meta.limit` foi mantido. O botão "Apontar" dela continua caindo no fallback. Está registrada como pendência, com correção análoga sugerida.
 3. **Desempenho:** sem LIMIT interno, a consulta sem pesquisa do usuário ordena todo o conjunto elegível (alocadas + plano) antes de paginar, e a origem "fora da alocação" exige um termo de 2 ou mais caracteres. O tempo foi baixo no banco local; **não foi medido com o volume de produção**. Os indícios não justificam índice novo.
 4. **Kiosk:** falta a verificação visual no navegador.
+6. Se a alocação ou o plano de uma atividade mudar entre duas páginas do Apontar horas, a origem dela muda e a atividade pode mudar de posição (pular ou repetir; a repetição é descartada no cliente). Recarregar a lista resolve.
 5. Cursor com `cv.name` muito longo é aceito até 2048 caracteres codificados; nomes maiores (improváveis) causariam 400 ao "Carregar mais".
 
 ## Roteiro curto para a Tati (OS 7467)

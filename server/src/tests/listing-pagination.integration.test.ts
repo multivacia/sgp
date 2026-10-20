@@ -230,6 +230,53 @@ describe.skipIf(!hasDb)('Paginação keyset — Apontar horas, Kiosk e backlog (
     }
   })
 
+  it('plano publicado: atrasadas primeiro, depois data e planned_order, atravessando a fronteira da página', async () => {
+    const tag = `A${randomUUID().slice(0, 6)}`
+    const os = await createScenarioConveyor(pool, { name: `OS ${tag}`, tasks: [{ name: 'Plano', areas: [8] }] })
+    await seedWeekPlanItems(pool, {
+      createdByUserId: MARIA_APP_USER_ID,
+      weekStart,
+      status: 'PUBLISHED',
+      plannedDate: today,
+      items: os.steps.map((s) => ({ conveyorId: os.conveyorId, activityNodeId: s.id, collaboratorId: MARIA_COLLABORATOR_ID })),
+    })
+    // planned_order invertido em relação à estrutura; as 3 últimas viram atrasadas (ontem) se a semana permitir.
+    await pool.query(
+      `UPDATE operational_work_plan_items SET planned_order = 9 - planned_order WHERE conveyor_id = $1::uuid`,
+      [os.conveyorId],
+    )
+    const canOverdue = today > weekStart
+    if (canOverdue) {
+      await pool.query(
+        `UPDATE operational_work_plan_items SET planned_date = planned_date - 1
+          WHERE conveyor_id = $1::uuid AND activity_node_id = ANY($2::uuid[])`,
+        [os.conveyorId, ids(os.steps.slice(5))],
+      )
+    }
+    try {
+      const pages = await walkCandidates({ q: tag, limit: '3' })
+      const all = pages.flat()
+      const reversed = [...os.steps].reverse()
+      const expected = canOverdue
+        ? [...ids(reversed.slice(0, 3)), ...ids(reversed.slice(3))]
+        : ids(reversed)
+      expect(all.map((c) => c.stepNodeId)).toEqual(expected)
+      expect(pages.map((p) => p.length)).toEqual([3, 3, 2])
+      if (canOverdue) {
+        expect(all.slice(0, 3).every((c) => c.plannedDate! < today)).toBe(true)
+        expect(all.slice(3).every((c) => c.plannedDate === today)).toBe(true)
+      }
+    } finally {
+      await seedWeekPlanItems(pool, {
+        createdByUserId: MARIA_APP_USER_ID,
+        weekStart,
+        status: 'PUBLISHED',
+        plannedDate: today,
+        items: [],
+      })
+    }
+  })
+
   it('Kiosk ("Outra atividade") usa o mesmo contrato e percorre todas as páginas', async () => {
     const tag = `K${randomUUID().slice(0, 6)}`
     const os = await createScenarioConveyor(pool, { name: `OS 7467 ${tag}` })
