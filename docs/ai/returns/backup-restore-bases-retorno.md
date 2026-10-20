@@ -6,7 +6,7 @@
 - **Status final:** IMPLEMENTADO E VALIDADO LOCALMENTE — commits locais, **sem push, sem merge, sem deploy**. Configuração da VPS e da máquina de Compras pendente (passos manuais abaixo).
 - **Branch:** `feat/backup-restore-bases` (local; não publicada)
 - **SHA inicial:** `a43208e2` (`develop` = `origin/develop`, já com o Histórico de esteiras / migration 0054)
-- **SHA final:** ver `git log -1 feat/backup-restore-bases` (o commit deste retorno é o último; o anterior é `0435d685`)
+- **SHA final:** ver `git log -1 feat/backup-restore-bases` (o commit desta atualização do retorno é o último; o anterior é `cbe63881`)
 - **Prompt:** `docs/ai/prompts/backup-restore-bases.md`
 
 ## Resumo
@@ -82,8 +82,9 @@ Nenhuma criada, nenhuma executada em ambiente compartilhado. Localmente: `npm ru
 | `npm run server:build` (`tsc -p tsconfig.json`) | exit 0 |
 | `npm run lint` | exit 1 — **146 problemas, idêntico à `develop` `a43208e2`** (mesma lista de arquivos; `server/dist/` gerado entra no lint, preexistente). `eslint` nos arquivos novos/alterados e no `server/dist` gerado por eles: exit 0 |
 | `npx vitest run` (frontend completo) | exit 0 — 222 arquivos, **1465** testes (develop: 1457) |
-| `npm run server:test` (suíte completa) | exit 1 — 1345 aprovados, **2 falhas preexistentes**, 17 ignorados (develop: 1312 aprovados, 3 falhas) |
-| testes novos do servidor (3 arquivos) | 32/32 aprovados |
+| `npm run server:test` (suíte completa, **base limpa**: PostgreSQL descartável recriado e migrado do zero com `npm run server:migrate`, sem seed) | exit 1 — 172 arquivos (2 falham, 166 passam, 4 ignorados); **1341 aprovados, 6 falhas preexistentes, 17 ignorados** (1364). `develop` `a43208e2` na mesma condição: 1308 aprovados, 7 falhas, 17 ignorados (1332) — as mesmas 6 + `env.test` |
+| `database-backups-restore-e2e` sozinho, base recém-migrada (super-admin inexistente antes) | exit 0 — 3/3 (antes da correção `cbe63881`: 3/3 falhavam com 401) |
+| testes do módulo (3 arquivos juntos), mesma base limpa | exit 0 — 32/32 |
 | `shellcheck` (via `pip install shellcheck-py`, 0.11.0) nos dois `.sh` | exit 0; heredoc do workflow: `bash -n` ok e `shellcheck -S warning` exit 0 |
 | `sgp-backup-pull.ps1` | PowerShell 7.4.6 (release oficial, só para validar): parse ok; teste funcional com `ssh` falso chamando o forced command real: copia, confere, confirma; 2ª execução não baixa de novo; arquivo com SHA divergente é descartado e **não** é confirmado. **Não testado em Windows PowerShell 5.1 real.** |
 
@@ -96,10 +97,13 @@ Nenhuma criada, nenhuma executada em ambiente compartilhado. Localmente: `npm ru
 
 ### Falhas preexistentes (não relacionadas)
 
-- `operational-planning.weekly-view.http.test.ts` — exportação XLSX (`=SUM`), já registrada no checkpoint.
-- `production-auth.integration.test.ts` — ordenação por nome difere da collation do ambiente (`"Outro df1164e1"` x `"Outro Escopo…"`). Falha igual na `develop` `a43208e2` (worktree temporária, mesma base); depende dos dados acumulados na base de teste.
-- `admin-password-governance.test.ts` (401 em vez de 403) falhou só na linha de base da `develop` e passou nas execuções seguintes: intermitente, sem relação.
-- `env.test.ts` falhava na `develop` (esperava 1.9.4); corrigido no commit da versão.
+Execução em base limpa (recriada e migrada do zero, sem seed), branch e `develop` `a43208e2` (worktree temporária) na mesma condição:
+
+- `admin-password-governance.test.ts` — **5 testes** (reset administrativo, `/auth/me` após reset, reset da própria conta → 422, sem governança → 403 recebe 401, login com senha temporária). Falham iguais na `develop`: o arquivo depende de usuários de teste (ex.: `66666666-…` `colaborador-only`) criados por outros arquivos/seed, não por ele mesmo.
+- `operational-planning.weekly-view.http.test.ts` — exportação XLSX (`=SUM`), já registrada no checkpoint. Igual na `develop`.
+- `env.test.ts` — falha só na `develop` (esperava 1.9.4); corrigido nesta branch no commit da versão.
+
+Observações de execuções anteriores (base de teste reaproveitada, com seed e dados acumulados), também presentes na `develop`: `production-auth.integration.test.ts` (ordenação por nome depende da collation e dos dados acumulados) e `admin-password-governance` com 1 falha intermitente. Em base limpa, `production-auth` passa.
 
 ## Passos manuais do Gustavo
 
@@ -134,8 +138,17 @@ Nenhuma criada, nenhuma executada em ambiente compartilhado. Localmente: `npm ru
    sudo systemctl start sgp-db-backup.service && tail -n 2 /opt/sgp/backups/db/backup-log.jsonl
    ```
    O `OnCalendar` com fuso exige systemd ≥ 235 (`systemctl --version`).
-6. **Primeiro teste manual antes do primeiro deploy com o passo novo:**
-   `sudo -u <api> bash /opt/sgp/sgp-main/scripts/db/backup/sgp-db-backup.sh --reason manual` → exit 0. Se falhar, o próximo deploy **para** (comportamento pedido).
+6. **Primeiro teste manual antes do primeiro deploy com o passo novo** — fazer **pelos dois caminhos**:
+   - como o usuário da API (timer e tela):
+     `sudo -u <api> bash /opt/sgp/sgp-main/scripts/db/backup/sgp-db-backup.sh --reason manual` → exit 0;
+   - pelo caminho exato do deploy, como `VPS_USER` (o mesmo usuário/chave dos secrets do workflow), a partir de uma cópia do repositório nesta branch:
+     ```bash
+     ssh -p <VPS_PORT> VPS_USER@<VPS_HOST> 'cd /opt/sgp/sgp-main && SGP_SERVER_ENV_FILE=/opt/sgp/sgp-main/server/.env bash -s -- --reason manual' < scripts/db/backup/sgp-db-backup.sh
+     ```
+     → exit 0. Os caminhos são os do workflow (`REMOTE_APP_DIR=/opt/sgp/sgp-main`, env em `$REMOTE_APP_DIR/server/.env`); o deploy roda o script da versão a publicar via `git show`, por isso o teste envia o script local pela entrada padrão (validado localmente: `bash -s` gera e registra o backup normalmente).
+   Se qualquer um falhar, o próximo deploy **para** (comportamento pedido).
+
+   > **Alerta:** crie `/opt/sgp/backups/db` com dono/grupo corretos (passo 2: `<api>:sgp-backup`, modo `2770`) **ANTES** do primeiro deploy e antes desses testes. Se o primeiro a rodar o script for o deploy (ou o teste como `VPS_USER`), o script cria o diretório com dono `VPS_USER` e modo `750` (umask 027 — reproduzido localmente), e a API, o timer e o usuário `sgpbackup` deixam de conseguir gravar/ler. Se `VPS_USER` for diferente de `<api>`, inclua-o também no grupo: `sudo usermod -aG sgp-backup VPS_USER`. Corrigir depois exige `chown -R <api>:sgp-backup` + `chmod 2770` no diretório e `640`/`660` nos arquivos.
 7. **Espaço em disco:** reserve ~15 vezes o tamanho de um `.dump` (7 diários + pre-deploy + 4 semanais + 3 mensais).
 8. **`.env` da API (opcional):** só se mudar os padrões: `SGP_BACKUP_DIR`, `SGP_BACKUP_LOG`, `SGP_BACKUP_SCRIPT`, `SGP_SERVER_ENV_FILE`, `SGP_PG_BIN_DIR`. O PM2 precisa de `pm2 restart sgp-api --update-env` para enxergar.
 
@@ -178,7 +191,7 @@ Revisão da branch → passos manuais da VPS (pelo menos 1, 2 e 6) → PR para `
 
 ## Git
 
-- Commits (locais, nesta ordem): `8c9bc9e1` scripts/workflow/systemd; `4bd52a15` API; `39e2613e` tela; `1b41704a` docs; `0435d685` versão 1.11.0; último: este retorno.
+- Commits (locais, nesta ordem): `8c9bc9e1` scripts/workflow/systemd; `4bd52a15` API; `39e2613e` tela; `1b41704a` docs; `0435d685` versão 1.11.0; `590e3ab8` retorno; `cbe63881` correção da revisão independente (e2e autossuficiente); último: atualização deste retorno.
 - Push/PR: **não feitos** (sem autorização). Arquivo de retorno não publicado.
 - `git status` final: working tree limpo (`server/.env` local é ignorado pelo Git e não foi alterado).
 - Ambiente: instância PostgreSQL descartável parada e apagada; PowerShell baixado removido.
