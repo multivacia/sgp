@@ -197,3 +197,16 @@ Revisão da branch → passos manuais da VPS (pelo menos 1, 2 e 6) → PR para `
 - Ambiente: instância PostgreSQL descartável parada e apagada; PowerShell baixado removido.
 
 Uso/tokens disponíveis: INDISPONÍVEL — a sessão não fornece métrica confiável.
+
+## Validação independente (sgp-test-reviewer, 19/10/2026)
+
+- **1ª revisão:** REPROVADO por um único bloqueio: o teste de restore e2e dependia de usuário criado por outro arquivo e falhava em base limpa (0/3). Corrigido em `cbe63881` (upsert do super-admin).
+- **Reconferência após a correção (Claude, base PostgreSQL 16 criada e migrada do zero):** e2e sozinho 3/3; os 3 arquivos do módulo juntos 32/32.
+- **Confirmado na revisão:** builds, testes frontend (1465), lint idêntico à `develop`, `shellcheck`, permissão `system_settings.manage` nas 6 rotas, validação de nome de arquivo, `spawn` sem shell, credenciais fora de linha de comando/log/API, trava `flock`, retenção 7/4/3, restore em transação única com base intacta em falha, saída do modo manutenção em sucesso e falha, auditoria após o restore, sem migrations automáticas, versão 1.11.0 em commit isolado.
+- **Achados médios em aberto (decisão do Gustavo antes da produção):**
+  - M1: restore de backup anterior a migrations posteriores falha (FK) ou gera estado misto (tabelas novas mantidas).
+  - M2: restore sem tempo limite de lock pode deixar a API em 503 até reinício.
+  - M3: resolvido na documentação (teste prévio também como `VPS_USER`).
+- **Achados baixos:** `stat` segue link simbólico na listagem; `printf %b` em senha com `\`; `restorePhase` no 503 sem autenticação; `stderr` do `pg_*` no erro para o super-admin; arquivos `.partial` não limpos.
+- **Riscos de VPS a conferir:** dono único das tabelas, `pg_dump` com versão ≥ servidor, PM2 em modo fork, `.ps1` não testado no Windows PowerShell 5.1.
+- **Publicação:** autorizada pelo Gustavo direto na `develop` por fast-forward.
