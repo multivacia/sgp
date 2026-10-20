@@ -15,7 +15,7 @@
 |---|---|
 | Correção implementada | Sim (backend, web, Kiosk, Planejamento). |
 | Validada em ambiente isolado | Sim. Banco local, testes de integração com as consultas reais e navegador (notebook e celular). Tudo com **dados sintéticos**. |
-| Homologada pela Tati | **Não.** Depende do roteiro abaixo, numa versão com este hotfix. |
+| Homologada | **Validação informada pelo usuário (Gustavo) em 2026-10-20**, após a entrega da branch. O registro formal do aceite da Tati pelo roteiro abaixo continua recomendado antes do merge. |
 
 ## Causa por tela
 
