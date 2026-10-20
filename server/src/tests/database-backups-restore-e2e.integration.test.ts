@@ -19,6 +19,7 @@ import {
   resetDatabaseBackupsStateForTests,
 } from '../modules/database-backups/database-backups.state.js'
 import { createLogger } from '../plugins/logger.js'
+import { hashPassword } from '../shared/password/password.js'
 import { sessionCookieForUser } from './sessionTestCookie.js'
 
 loadDotenvFiles()
@@ -128,9 +129,24 @@ describe.skipIf(!hasDb || !hasPgTools)('restore ponta a ponta (PostgreSQL local 
     pool = new pg.Pool({ ...base, database: E2E_DB, max: 4 })
     app = createApp(pool, createLogger('silent'), e2eEnv)
 
+    // Upsert: o teste não depende de outro arquivo ter criado o super-admin.
+    const hash = await hashPassword('GoodPass1!')
     await pool.query(
-      `UPDATE app_users SET role_id = $2::uuid, is_active = true, deleted_at = NULL WHERE id = $1::uuid`,
-      [SUPER_ADMIN_USER_ID, SUPER_ADMIN_ROLE_ID],
+      `
+      INSERT INTO app_users (
+        id, email, password_hash, is_active, role_id, must_change_password, password_changed_at,
+        failed_login_count, locked_until
+      ) VALUES ($1::uuid, $2, $3, true, $4::uuid, false, now(), 0, NULL)
+      ON CONFLICT (id) DO UPDATE SET
+        email = EXCLUDED.email,
+        is_active = true,
+        role_id = EXCLUDED.role_id,
+        must_change_password = false,
+        failed_login_count = 0,
+        locked_until = NULL,
+        deleted_at = NULL
+      `,
+      [SUPER_ADMIN_USER_ID, SUPER_ADMIN_EMAIL, hash, SUPER_ADMIN_ROLE_ID],
     )
     await pool.query(`DELETE FROM sectors WHERE name LIKE 'E2E backup:%'`)
     await pool.query(`INSERT INTO sectors (name) VALUES ($1)`, [MARK_BEFORE])
