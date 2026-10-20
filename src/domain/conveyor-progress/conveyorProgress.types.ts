@@ -20,13 +20,6 @@ export type TimeEfficiencyStatus =
   | 'ATENCAO'
   | 'CRITICO'
 
-export type TimeEfficiencyClassification =
-  | 'MAIS_RAPIDO'
-  | 'DENTRO_DO_PREVISTO'
-  | 'LEVE_DESVIO'
-  | 'ATENCAO'
-  | 'CRITICO'
-
 export type ActivityTimeEfficiency = {
   status: TimeEfficiencyStatus
   isPartial: boolean
@@ -34,7 +27,6 @@ export type ActivityTimeEfficiency = {
   efficiencyPct: number | null
   deviationMinutes: number | null
   deviationPct: number | null
-  classification: TimeEfficiencyClassification | null
 }
 
 export type AggregateTimeEfficiency = {
@@ -42,7 +34,6 @@ export type AggregateTimeEfficiency = {
   efficiencyPct: number | null
   deviationMinutes: number | null
   deviationPct: number | null
-  classification: TimeEfficiencyClassification | null
   notStartedCount: number
   withoutPlannedTimeCount: number
   completedWithoutTimeCount: number

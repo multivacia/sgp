@@ -17,13 +17,6 @@ export type TimeEfficiencyStatus =
   | 'ATENCAO'
   | 'CRITICO'
 
-export type TimeEfficiencyClassification =
-  | 'MAIS_RAPIDO'
-  | 'DENTRO_DO_PREVISTO'
-  | 'LEVE_DESVIO'
-  | 'ATENCAO'
-  | 'CRITICO'
-
 export type TimeEfficiencyMetrics = {
   status: TimeEfficiencyStatus
   isPartial: boolean
@@ -31,7 +24,6 @@ export type TimeEfficiencyMetrics = {
   efficiencyPct: number | null
   deviationMinutes: number | null
   deviationPct: number | null
-  classification: TimeEfficiencyClassification | null
 }
 
 export type WeightedTimeEfficiencySummary = {
@@ -39,7 +31,6 @@ export type WeightedTimeEfficiencySummary = {
   efficiencyPct: number | null
   deviationMinutes: number | null
   deviationPct: number | null
-  classification: TimeEfficiencyClassification | null
   notStartedCount: number
   withoutPlannedTimeCount: number
   completedWithoutTimeCount: number
@@ -71,7 +62,7 @@ function classifyTimeEfficiency(
   plannedMinutes: number,
   realizedMinutes: number,
   deviationPct: number,
-): TimeEfficiencyClassification {
+): TimeEfficiencyStatus {
   if (realizedMinutes < plannedMinutes) return 'MAIS_RAPIDO'
   if (realizedMinutes === plannedMinutes) return 'DENTRO_DO_PREVISTO'
   if (deviationPct <= 10) return 'LEVE_DESVIO'
@@ -84,17 +75,16 @@ function calculateTimeEfficiencyValues(
   realizedMinutes: number,
 ): Pick<
   TimeEfficiencyMetrics,
-  'status' | 'efficiencyPct' | 'deviationMinutes' | 'deviationPct' | 'classification'
+  'status' | 'efficiencyPct' | 'deviationMinutes' | 'deviationPct'
 > {
   const deviationMinutes = realizedMinutes - plannedMinutes
   const deviationPct = roundToSingleDecimal((deviationMinutes / plannedMinutes) * 100)
-  const classification = classifyTimeEfficiency(plannedMinutes, realizedMinutes, deviationPct)
+  const status = classifyTimeEfficiency(plannedMinutes, realizedMinutes, deviationPct)
   return {
-    status: classification,
+    status,
     efficiencyPct: roundToSingleDecimal((plannedMinutes / realizedMinutes) * 100),
     deviationMinutes,
     deviationPct,
-    classification,
   }
 }
 
@@ -127,7 +117,6 @@ export function computeTimeEfficiencyMetrics(
       efficiencyPct: null,
       deviationMinutes: null,
       deviationPct: null,
-      classification: null,
     }
   }
 
@@ -139,7 +128,6 @@ export function computeTimeEfficiencyMetrics(
       efficiencyPct: null,
       deviationMinutes: null,
       deviationPct: null,
-      classification: null,
     }
   }
 
@@ -151,7 +139,6 @@ export function computeTimeEfficiencyMetrics(
       efficiencyPct: null,
       deviationMinutes: null,
       deviationPct: null,
-      classification: null,
     }
   }
 
@@ -207,7 +194,6 @@ export function consolidateWeightedTimeEfficiency(
       efficiencyPct: null,
       deviationMinutes: null,
       deviationPct: null,
-      classification: null,
       notStartedCount,
       withoutPlannedTimeCount,
       completedWithoutTimeCount,
