@@ -8,6 +8,7 @@ import { AlterarEsteiraPage } from '../features/esteiras/AlterarEsteiraPage'
 import { EsteiraDetalhePage } from '../features/esteiras/EsteiraDetalhePage'
 import { ImportarOsPage } from '../features/documentos/ImportarOsPage'
 import { SystemSettingsPage } from '../features/admin/system-settings/SystemSettingsPage'
+import { DatabaseBackupsPage } from '../features/admin/database-backups/DatabaseBackupsPage'
 import { RbacRolePermissionsPage } from '../features/admin/rbac/RbacRolePermissionsPage'
 import { AdminAuditTrailPage } from '../features/admin/users/AdminAuditTrailPage'
 import { UsersPage } from '../features/admin/users/UsersPage'
@@ -39,6 +40,7 @@ import { RequirePasswordChangeCleared } from './RequirePasswordChangeCleared'
 import {
   PERMISSION_OPERATIONAL_SETTINGS_MANAGE,
   PERMISSION_RBAC_MANAGE_ROLE_PERMISSIONS,
+  PERMISSION_SYSTEM_SETTINGS_MANAGE,
   PERMISSION_SYSTEM_SETTINGS_VIEW,
 } from '../lib/permissions/permissionCodes'
 import { RequireAnyPermission, RequirePermission } from './RequirePermission'
@@ -156,6 +158,14 @@ export function AppRoutes() {
               element={
                 <RequirePermission permission={PERMISSION_SYSTEM_SETTINGS_VIEW}>
                   <SystemSettingsPage />
+                </RequirePermission>
+              }
+            />
+            <Route
+              path="configuracoes/sistema/backups"
+              element={
+                <RequirePermission permission={PERMISSION_SYSTEM_SETTINGS_MANAGE}>
+                  <DatabaseBackupsPage />
                 </RequirePermission>
               }
             />
