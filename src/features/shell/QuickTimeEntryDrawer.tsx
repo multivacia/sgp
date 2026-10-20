@@ -4,7 +4,13 @@ import { SgpToast, type SgpToastVariant } from '../../components/ui/SgpToast'
 import { formatHumanMinutes } from '../../lib/formatters'
 import { postConveyorStepTimeEntry } from '../../services/conveyors/conveyorStepAssignmentsApiService'
 import { patchConveyorStepCompletion } from '../../services/conveyors/conveyorsApiService'
-import { listTimeEntryCandidates } from '../../services/my-activities/myActivitiesApiService'
+import {
+  listTimeEntryCandidates,
+  TIME_ENTRY_CANDIDATES_PAGE_SIZE,
+  type TimeEntryCandidatesResult,
+} from '../../services/my-activities/myActivitiesApiService'
+import { useCursorPagedList } from '../../lib/pagination/useCursorPagedList'
+import { LoadMoreFooter } from '../../components/ui/LoadMoreFooter'
 import type { TimeEntryCandidateItem } from '../../domain/my-activities/my-activities.types'
 import type {
   ExtraTimeEntryDescriptionOption,
@@ -72,6 +78,10 @@ type Props = {
   onTimeEntrySaved?: () => void
 }
 
+function candidateKey(c: TimeEntryCandidateItem): string {
+  return `${c.conveyorId}-${c.stepNodeId}`
+}
+
 function buildContextLine(c: TimeEntryCandidateItem) {
   const parts: string[] = [c.conveyorName]
   if (c.clientName?.trim()) parts.push(c.clientName.trim())
@@ -96,10 +106,14 @@ export function QuickTimeEntryDrawer({
   const [debouncedSearch, setDebouncedSearch] = useState('')
   /** Inclui atividades em aberto fora da alocação do colaborador (com critério no servidor). */
   const [searchOtherActivities, setSearchOtherActivities] = useState(false)
-  const [items, setItems] = useState<TimeEntryCandidateItem[]>([])
+  /** Candidatos paginados por cursor ("Carregar mais"). */
+  const candidates = useCursorPagedList<TimeEntryCandidateItem, TimeEntryCandidatesResult>(
+    candidateKey,
+  )
+  const items = candidates.items
+  const loading = candidates.loadingFirst
+  const loadError = candidates.firstError
   const [unavailableReason, setUnavailableReason] = useState<string | null>(null)
-  const [loading, setLoading] = useState(false)
-  const [loadError, setLoadError] = useState<string | null>(null)
   const [selected, setSelected] = useState<TimeEntryCandidateItem | null>(null)
   const [minutesStr, setMinutesStr] = useState('0')
   const [workDate, setWorkDate] = useState(() => operationalTodayIso())
@@ -150,7 +164,6 @@ export function QuickTimeEntryDrawer({
       setSearch('')
       setDebouncedSearch('')
       setSearchOtherActivities(false)
-      setLoadError(null)
       setSubmitError(null)
       setToast(null)
       setMinutesStr('0')
@@ -179,35 +192,41 @@ export function QuickTimeEntryDrawer({
     }
   }, [open])
 
+  const { reload: reloadCandidates, reset: resetCandidates } = candidates
+
+  /** Reinicia a lista na 1ª página (nova geração), mantendo pesquisa e checkbox. */
   const load = useCallback(async () => {
     if (!open) return
-    setLoading(true)
-    setLoadError(null)
-    try {
-      const r = await listTimeEntryCandidates({
-        q: debouncedSearch || undefined,
-        limit: 50,
-        includeUnassigned: searchOtherActivities,
-      })
-      setItems(r.items)
-      setUnavailableReason(r.unavailableReason)
-    } catch (e) {
-      setItems([])
-      setUnavailableReason(null)
-      const n = reportClientError(e, {
-        module: 'shell',
-        action: 'time_entry_candidates',
-      })
-      if (isBlockingSeverity(n.severity)) {
-        presentBlocking(n)
-        onClose()
-        return
-      }
-      setLoadError(n.userMessage)
-    } finally {
-      setLoading(false)
-    }
-  }, [open, debouncedSearch, searchOtherActivities, onClose, presentBlocking])
+    await reloadCandidates({
+      fetchPage: (cursor) =>
+        listTimeEntryCandidates({
+          q: debouncedSearch || undefined,
+          limit: TIME_ENTRY_CANDIDATES_PAGE_SIZE,
+          includeUnassigned: searchOtherActivities,
+          cursor,
+        }),
+      onPage: (page, phase) => {
+        if (phase === 'first') setUnavailableReason(page.unavailableReason)
+      },
+      onError: (e, phase) => {
+        if (phase === 'first') setUnavailableReason(null)
+        const n = reportClientError(e, {
+          module: 'shell',
+          action: phase === 'first' ? 'time_entry_candidates' : 'time_entry_candidates_more',
+        })
+        if (isBlockingSeverity(n.severity)) {
+          presentBlocking(n)
+          onClose()
+          return null
+        }
+        return n.userMessage
+      },
+    })
+  }, [open, debouncedSearch, searchOtherActivities, onClose, presentBlocking, reloadCandidates])
+
+  useEffect(() => {
+    if (!open) resetCandidates()
+  }, [open, resetCandidates])
 
   useEffect(() => {
     if (!open || !authReady) return
@@ -876,6 +895,16 @@ export function QuickTimeEntryDrawer({
                           ) : null}
                         </div>
                       )}
+                      {!loading && !loadError ? (
+                        <LoadMoreFooter
+                          hasMore={candidates.hasMore}
+                          loading={candidates.loadingMore}
+                          error={candidates.moreError}
+                          onLoadMore={() => void candidates.loadMore()}
+                          testId="quick-time-entry-load-more"
+                          buttonClassName="w-full rounded-xl border border-white/[0.10] bg-white/[0.05] px-3 py-2.5 text-xs font-bold text-sgp-blue-bright transition hover:bg-white/[0.08] disabled:cursor-wait disabled:opacity-60"
+                        />
+                      ) : null}
                     </div>
                   </>
                 ) : selected ? (

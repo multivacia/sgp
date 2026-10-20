@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { keysetCursorQuerySchema } from '../../shared/pagination/keysetCursor.js'
 
 const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Use YYYY-MM-DD')
 
@@ -14,6 +15,8 @@ export const operationalPlanningWeekActivityQuerySchema = z.object({
 export const operationalPlanningBacklogQuerySchema = z.object({
   q: z.string().optional(),
   limit: z.coerce.number().int().min(1).max(100).optional().default(100),
+  /** `meta.nextCursor` da página anterior ("Carregar mais"); ausente = primeira página. */
+  cursor: keysetCursorQuerySchema,
   conveyorId: z.string().uuid().optional(),
   collaboratorId: z.string().uuid().optional(),
 })

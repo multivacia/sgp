@@ -1405,15 +1405,34 @@ export type BacklogRawRow = {
   conveyor_code?: string | null
   conveyor_priority?: string | null
   planned_quantity?: number | null
+  /** Chave de ordenação/cursor (`opt`/`area`/`step.order_index`). */
+  task_order_index?: number
+  sector_order_index?: number
+  activity_order_index?: number
 }
+
+/**
+ * Chave keyset do backlog, na ordem funcional atual + desempate por `step.id`:
+ * esteira (nome) → tarefa → setor → atividade → id.
+ */
+export type OperationalPlanningBacklogCursorKey = [
+  conveyorName: string,
+  taskOrder: number,
+  sectorOrder: number,
+  activityOrder: number,
+  stepId: string,
+]
 
 export async function listOperationalPlanningBacklog(
   pool: pg.Pool,
   options: {
     q: string | null
+    /** Máximo de linhas da consulta (o serviço pede página + 1 para detectar continuação). */
     limit: number
     conveyorId: string | null
     collaboratorId: string | null
+    /** Último item da página anterior; `null` = primeira página. */
+    after?: OperationalPlanningBacklogCursorKey | null
   },
 ): Promise<BacklogRawRow[]> {
   const r = await pool.query<{
@@ -1435,6 +1454,9 @@ export async function listOperationalPlanningBacklog(
     conveyor_code: string | null
     conveyor_priority: string | null
     planned_quantity: string | null
+    task_order_index: number
+    sector_order_index: number
+    activity_order_index: number
   }>(
     `
     WITH realized AS (
@@ -1492,7 +1514,10 @@ export async function listOperationalPlanningBacklog(
       ) AS assigned_teams_json,
       cv.code AS conveyor_code,
       cv.priority::text AS conveyor_priority,
-      step.planned_quantity::text AS planned_quantity
+      step.planned_quantity::text AS planned_quantity,
+      opt.order_index AS task_order_index,
+      area.order_index AS sector_order_index,
+      step.order_index AS activity_order_index
     FROM conveyor_nodes step
     INNER JOIN conveyor_nodes area
       ON area.id = step.parent_id
@@ -1557,10 +1582,25 @@ export async function listOperationalPlanningBacklog(
         OR area.name ILIKE '%' || $3 || '%'
         OR step.name ILIKE '%' || $3 || '%'
       )
-    ORDER BY cv.name ASC, opt.order_index ASC, area.order_index ASC, step.order_index ASC
+      AND (
+        $5::text IS NULL
+        OR (cv.name, opt.order_index, area.order_index, step.order_index, step.id)
+          > ($5::text, $6::int, $7::int, $8::int, $9::uuid)
+      )
+    ORDER BY cv.name ASC, opt.order_index ASC, area.order_index ASC, step.order_index ASC, step.id ASC
     LIMIT $4::int
     `,
-    [options.conveyorId, options.collaboratorId, options.q, options.limit],
+    [
+      options.conveyorId,
+      options.collaboratorId,
+      options.q,
+      options.limit,
+      options.after?.[0] ?? null,
+      options.after?.[1] ?? null,
+      options.after?.[2] ?? null,
+      options.after?.[3] ?? null,
+      options.after?.[4] ?? null,
+    ],
   )
 
   return r.rows.map((row) => ({
@@ -1585,6 +1625,9 @@ export async function listOperationalPlanningBacklog(
     conveyor_code: row.conveyor_code,
     conveyor_priority: row.conveyor_priority,
     planned_quantity: row.planned_quantity == null ? null : Number(row.planned_quantity),
+    task_order_index: row.task_order_index,
+    sector_order_index: row.sector_order_index,
+    activity_order_index: row.activity_order_index,
   }))
 }
 

@@ -182,10 +182,13 @@ export async function listOperationalPlanningBacklog(params: {
   limit?: number
   conveyorId?: string
   collaboratorId?: string
+  /** `meta.nextCursor` da página anterior ("Carregar mais"). */
+  cursor?: string | null
 }): Promise<OperationalPlanningBacklogPayload> {
   const sp = new URLSearchParams()
   if (params.q?.trim()) sp.set('q', params.q.trim())
   if (params.limit != null) sp.set('limit', String(params.limit))
+  if (params.cursor) sp.set('cursor', params.cursor)
   if (params.conveyorId) sp.set('conveyorId', params.conveyorId)
   if (params.collaboratorId) sp.set('collaboratorId', params.collaboratorId)
   const s = sp.toString()

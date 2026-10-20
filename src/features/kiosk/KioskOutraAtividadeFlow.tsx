@@ -6,7 +6,10 @@ import {
   listProductionTimeEntryCandidates,
   PRODUCTION_TIME_ENTRY_CANDIDATES_ERROR_MESSAGE,
   PRODUCTION_TIME_ENTRY_ERROR_MESSAGE,
+  type ProductionTimeEntryCandidatesResult,
 } from '../../services/production/productionApiService'
+import { useCursorPagedList } from '../../lib/pagination/useCursorPagedList'
+import { LoadMoreFooter } from '../../components/ui/LoadMoreFooter'
 import { ApiError } from '../../lib/api/apiErrors'
 import { JustificationSelect } from '../../components/operational/JustificationSelect'
 import { emptyJustificationValue, type JustificationFieldValue } from '../shell/quickTimeEntryDrawerLogic'
@@ -23,6 +26,12 @@ import {
 
 const PRESETS = [15, 30, 45, 60] as const
 const SEARCH_DEBOUNCE_MS = 300
+/** Tamanho da página de "Outra atividade" (o restante vem por "Carregar mais"). */
+const SEARCH_PAGE_SIZE = 20
+
+function candidateKey(c: TimeEntryCandidateItem): string {
+  return `${c.conveyorId}-${c.stepNodeId}`
+}
 
 import { WorkDateField } from '../../components/ui/WorkDateField'
 import { formatWorkDateLabel, operationalTodayIso } from '../../domain/operational/workDate'
@@ -38,9 +47,15 @@ type Props = {
 export function KioskOutraAtividadeFlow({ collaborator, onClose, onSuccess }: Props) {
   const [step, setStep] = useState<Step>('search')
   const [query, setQuery] = useState('')
-  const [results, setResults] = useState<TimeEntryCandidateItem[]>([])
-  const [searching, setSearching] = useState(false)
-  const [searchError, setSearchError] = useState<string | null>(null)
+  const search = useCursorPagedList<TimeEntryCandidateItem, ProductionTimeEntryCandidatesResult>(
+    candidateKey,
+  )
+  const results = search.items
+  /** Pesquisa digitada aguardando o debounce. */
+  const [debouncing, setDebouncing] = useState(false)
+  const searching = debouncing || search.loadingFirst
+  const [unavailableReason, setUnavailableReason] = useState<string | null>(null)
+  const searchError = search.firstError ?? unavailableReason
   const [candidate, setCandidate] = useState<TimeEntryCandidateItem | null>(null)
 
   const [preset, setPreset] = useState<number | null>(null)
@@ -57,34 +72,41 @@ export function KioskOutraAtividadeFlow({ collaborator, onClose, onSuccess }: Pr
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
+  const { reload: reloadSearch, reset: resetSearch } = search
+
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current)
     const trimmed = query.trim()
+    setUnavailableReason(null)
     if (trimmed.length < KIOSK_OUTRA_ATIVIDADE_SEARCH_MIN_CHARS) {
-      setResults([])
-      setSearching(false)
-      setSearchError(null)
+      resetSearch()
+      setDebouncing(false)
       return
     }
-    setSearching(true)
+    // Nova pesquisa: invalida respostas pendentes da anterior já durante o debounce.
+    resetSearch()
+    setDebouncing(true)
     debounceRef.current = setTimeout(() => {
-      listProductionTimeEntryCandidates({ q: trimmed, includeUnassigned: true, limit: 20 })
-        .then((res) => {
-          setResults(res.items)
-          setSearchError(res.unavailableReason)
-        })
-        .catch((e) => {
-          setResults([])
-          setSearchError(
-            e instanceof ApiError ? e.message : PRODUCTION_TIME_ENTRY_CANDIDATES_ERROR_MESSAGE,
-          )
-        })
-        .finally(() => setSearching(false))
+      setDebouncing(false)
+      void reloadSearch({
+        fetchPage: (cursor) =>
+          listProductionTimeEntryCandidates({
+            q: trimmed,
+            includeUnassigned: true,
+            limit: SEARCH_PAGE_SIZE,
+            cursor,
+          }),
+        onPage: (page, phase) => {
+          if (phase === 'first') setUnavailableReason(page.unavailableReason)
+        },
+        onError: (e) =>
+          e instanceof ApiError ? e.message : PRODUCTION_TIME_ENTRY_CANDIDATES_ERROR_MESSAGE,
+      })
     }, SEARCH_DEBOUNCE_MS)
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current)
     }
-  }, [query])
+  }, [query, reloadSearch, resetSearch])
 
   function selectCandidate(c: TimeEntryCandidateItem) {
     setCandidate(c)
@@ -455,6 +477,18 @@ export function KioskOutraAtividadeFlow({ collaborator, onClose, onSuccess }: Pr
                   ))}
                 </ul>
               )}
+
+              {!searching && !searchError ? (
+                <LoadMoreFooter
+                  hasMore={search.hasMore}
+                  loading={search.loadingMore}
+                  error={search.moreError}
+                  onLoadMore={() => void search.loadMore()}
+                  testId="kiosk-outra-atividade-load-more"
+                  errorClassName="text-sm text-red-400"
+                  buttonClassName="sgp-cta-secondary min-h-12 w-full text-base disabled:cursor-wait disabled:opacity-50"
+                />
+              ) : null}
 
               <button
                 type="button"

@@ -1,8 +1,10 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
+import type { TimeEntryCandidateItem } from '../../domain/my-activities/my-activities.types'
 import {
   canCompletePlanningStep,
   canPointTimeOnPlanningStep,
   canReopenPlanningStep,
+  findTimeEntryCandidateForPlanningCard,
   mergePlanningExecutionFromServerItems,
   planningApontamentoCandidate,
 } from './planningCardActions'
@@ -84,5 +86,40 @@ describe('planningCardActions', () => {
     expect(merged[0]?.realizedMinutes).toBe(20)
     expect(merged[0]?.activityOperationalStatus).toBe('IN_PROGRESS')
     expect(merged[0]?.plannedMinutes).toBe(30)
+  })
+})
+
+describe('findTimeEntryCandidateForPlanningCard', () => {
+  const item = { conveyorId: 'cv-1', activityNodeId: 'step-77', activityTitle: 'Revestir Painel' }
+  const cand = (id: string, conveyorId = 'cv-1') =>
+    ({ conveyorId, stepNodeId: id }) as unknown as TimeEntryCandidateItem
+
+  it('percorre páginas pelo cursor até encontrar a atividade do cartão (página posterior)', async () => {
+    const fetchPage = vi
+      .fn()
+      .mockResolvedValueOnce({ items: [cand('step-1')], nextCursor: 'c1' })
+      .mockResolvedValueOnce({ items: [cand('step-77')], nextCursor: 'c2' })
+    const found = await findTimeEntryCandidateForPlanningCard(item, fetchPage)
+    expect(found?.stepNodeId).toBe('step-77')
+    expect(fetchPage.mock.calls.map((c) => c[0])).toEqual([
+      { q: 'Revestir Painel', cursor: null },
+      { q: 'Revestir Painel', cursor: 'c1' },
+    ])
+  })
+
+  it('devolve null ao fim da lista ou no limite de páginas (chamador usa o fallback)', async () => {
+    const end = vi.fn().mockResolvedValue({ items: [cand('step-77', 'outra')], nextCursor: null })
+    expect(await findTimeEntryCandidateForPlanningCard(item, end)).toBeNull()
+    expect(end).toHaveBeenCalledTimes(1)
+
+    const endless = vi.fn().mockResolvedValue({ items: [], nextCursor: 'x' })
+    expect(await findTimeEntryCandidateForPlanningCard(item, endless, 3)).toBeNull()
+    expect(endless).toHaveBeenCalledTimes(3)
+  })
+
+  it('não usa como pesquisa título com "&" (seria interpretado como OS & atividade)', async () => {
+    const fetchPage = vi.fn().mockResolvedValue({ items: [], nextCursor: null })
+    await findTimeEntryCandidateForPlanningCard({ ...item, activityTitle: 'Corte & costura' }, fetchPage)
+    expect(fetchPage.mock.calls[0][0]).toEqual({ q: undefined, cursor: null })
   })
 })

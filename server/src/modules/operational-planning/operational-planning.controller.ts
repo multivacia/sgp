@@ -112,6 +112,7 @@ export async function getOperationalPlanningBacklog(req: Request, res: Response)
   const q = operationalPlanningBacklogQuerySchema.parse({
     q: queryString(req.query.q),
     limit: queryString(req.query.limit),
+    cursor: queryString(req.query.cursor),
     conveyorId: queryString(req.query.conveyorId),
     collaboratorId: queryString(req.query.collaboratorId),
   })
@@ -120,6 +121,7 @@ export async function getOperationalPlanningBacklog(req: Request, res: Response)
     limit: q.limit,
     collaboratorId: q.collaboratorId ?? null,
     conveyorId: q.conveyorId ?? null,
+    cursor: q.cursor ?? null,
   })
   res.status(200).json(ok(data))
 }

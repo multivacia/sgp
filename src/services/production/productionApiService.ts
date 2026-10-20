@@ -416,6 +416,8 @@ export type ProductionTimeEntryCandidatesResult = {
   items: TimeEntryCandidateItem[]
   collaboratorId: string | null
   unavailableReason: string | null
+  /** Cursor da próxima página ("Carregar mais"); `null` = fim da lista. */
+  nextCursor: string | null
 }
 
 /**
@@ -426,12 +428,14 @@ export async function listProductionTimeEntryCandidates(options?: {
   q?: string
   limit?: number
   includeUnassigned?: boolean
+  cursor?: string | null
 }): Promise<ProductionTimeEntryCandidatesResult> {
   try {
     const sp = new URLSearchParams()
     if (options?.q?.trim()) sp.set('q', options.q.trim())
     if (options?.limit != null) sp.set('limit', String(options.limit))
     if (options?.includeUnassigned) sp.set('includeUnassigned', 'true')
+    if (options?.cursor) sp.set('cursor', options.cursor)
     const qs = sp.toString()
     const path = qs
       ? `${BASE}/me/time-entry-candidates?${qs}`
@@ -444,6 +448,7 @@ export async function listProductionTimeEntryCandidates(options?: {
       items: Array.isArray(data) ? data : [],
       collaboratorId: (meta.collaboratorId as string | null | undefined) ?? null,
       unavailableReason: (meta.unavailableReason as string | null | undefined) ?? null,
+      nextCursor: (meta.nextCursor as string | null | undefined) ?? null,
     }
   } catch (e) {
     if (e instanceof ApiError) {

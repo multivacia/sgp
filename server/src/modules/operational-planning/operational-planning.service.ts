@@ -64,7 +64,15 @@ import {
   type PlanItemEnrichedRow,
   type PlanItemExportRow,
   type OperationalWorkPlanRow,
+  type OperationalPlanningBacklogCursorKey,
 } from './operational-planning.repository.js'
+import { z } from 'zod'
+import {
+  decodeKeysetCursor,
+  encodeKeysetCursor,
+  keysetCursorInt,
+  keysetCursorUuid,
+} from '../../shared/pagination/keysetCursor.js'
 import { listCollaborators } from '../collaborators/collaborators.repository.js'
 import {
   buildOperationalPlanningExportFilename,
@@ -1210,21 +1218,55 @@ export type BacklogItemApi = {
   plannedQuantity?: number | null
 }
 
+/** Escopo do cursor de `GET /operational-planning/backlog`. */
+const PLANNING_BACKLOG_CURSOR_SCOPE = 'operational-planning-backlog'
+
+const planningBacklogCursorKeySchema: z.ZodType<OperationalPlanningBacklogCursorKey> = z.tuple([
+  z.string().max(1000),
+  keysetCursorInt,
+  keysetCursorInt,
+  keysetCursorInt,
+  keysetCursorUuid,
+])
+
 export async function serviceListOperationalPlanningBacklog(
   pool: pg.Pool,
   options: {
     q: string | null
+    /** Tamanho da página. */
     limit: number
     conveyorId: string | null
     collaboratorId: string | null
+    /** `meta.nextCursor` da página anterior; ausente = primeira página. Inválido → 400. */
+    cursor?: string | null
   },
-): Promise<{ items: BacklogItemApi[]; meta: { limit: number } }> {
-  const raw = await listOperationalPlanningBacklog(pool, {
+): Promise<{ items: BacklogItemApi[]; meta: { limit: number; nextCursor: string | null } }> {
+  const after = decodeKeysetCursor(
+    options.cursor,
+    PLANNING_BACKLOG_CURSOR_SCOPE,
+    planningBacklogCursorKeySchema,
+  )
+  const rows = await listOperationalPlanningBacklog(pool, {
     q: options.q?.trim() || null,
-    limit: options.limit,
+    limit: options.limit + 1,
     conveyorId: options.conveyorId,
     collaboratorId: options.collaboratorId,
+    after,
   })
+  // A linha extra só indica continuação; o cursor vem do último item devolvido.
+  const hasMore = rows.length > options.limit
+  const raw = hasMore ? rows.slice(0, options.limit) : rows
+  const lastRow = raw.at(-1)
+  const nextCursor =
+    hasMore && lastRow
+      ? encodeKeysetCursor(PLANNING_BACKLOG_CURSOR_SCOPE, [
+          lastRow.conveyor_title,
+          lastRow.task_order_index ?? 0,
+          lastRow.sector_order_index ?? 0,
+          lastRow.activity_order_index ?? 0,
+          lastRow.activity_node_id,
+        ])
+      : null
 
   const conveyorIds = [...new Set(raw.map((r) => r.conveyor_id))]
   const nodesByConveyor = new Map<string, SequenceAnalysisNode[]>()
@@ -1268,7 +1310,7 @@ export async function serviceListOperationalPlanningBacklog(
     }
   })
 
-  return { items, meta: { limit: options.limit } }
+  return { items, meta: { limit: options.limit, nextCursor } }
 }
 
 export type FactoryIntakeItemApi = {

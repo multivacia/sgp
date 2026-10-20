@@ -14,9 +14,13 @@ import {
   canCompletePlanningStep,
   canPointTimeOnPlanningStep,
   canReopenPlanningStep,
+  findTimeEntryCandidateForPlanningCard,
   mergePlanningExecutionFromServerItems,
   planningApontamentoCandidate,
 } from './planningCardActions'
+import { resolvePlanningBacklogEmptyMessage } from './planningBacklogListState'
+import { useCursorPagedList } from '../../lib/pagination/useCursorPagedList'
+import { LoadMoreFooter } from '../../components/ui/LoadMoreFooter'
 import { QuickTimeEntryDrawer } from '../shell/QuickTimeEntryDrawer'
 import { useAuth } from '../../lib/use-auth'
 import {
@@ -24,7 +28,10 @@ import {
   patchConveyorStepCompletion,
   reopenConveyorStep,
 } from '../../services/conveyors/conveyorsApiService'
-import { listTimeEntryCandidates } from '../../services/my-activities/myActivitiesApiService'
+import {
+  listTimeEntryCandidates,
+  TIME_ENTRY_CANDIDATES_PAGE_SIZE,
+} from '../../services/my-activities/myActivitiesApiService'
 import type {
   OperationalPlanningBacklogItem,
   OperationalPlanningFactoryIntakeItem,
@@ -184,6 +191,13 @@ import { PlanningPeriodSearchPanel } from './PlanningPeriodSearchPanel'
 export { ACTIVITY_TICKET_PRINT_SUPPORT_MESSAGE } from '../operational-tickets/activityTicketPrintCopy'
 
 const collaboratorsApi = createCollaboratorsApiService()
+
+/** Tamanho da página do backlog (máximo aceito pelo backend). */
+const PLANNING_BACKLOG_PAGE_SIZE = 100
+
+function backlogItemKey(item: OperationalPlanningBacklogItem): string {
+  return item.activityNodeId
+}
 
 type DraftPlanItem = {
   localKey: string
@@ -683,7 +697,9 @@ export function OperationalPlanningPage() {
   const [draftItems, setDraftItems] = useState<DraftPlanItem[]>([])
   const savedDraftJsonRef = useRef<string>('')
 
-  const [backlogItems, setBacklogItems] = useState<OperationalPlanningBacklogItem[]>([])
+  /** Backlog remoto paginado por cursor ("Carregar mais"). */
+  const backlog = useCursorPagedList<OperationalPlanningBacklogItem>(backlogItemKey)
+  const backlogItems = backlog.items
   /** Devoluções locais ao backlog ainda não refletidas pelo GET (antes do save). */
   const [localReturnedBacklogItems, setLocalReturnedBacklogItems] = useState<
     OperationalPlanningBacklogItem[]
@@ -835,17 +851,32 @@ export function OperationalPlanningPage() {
     }
   }, [weekMonday, loadWeekActivity])
 
+  const { reload: reloadBacklog } = backlog
+
+  /**
+   * Reinicia o backlog na 1ª página (nova geração), mantendo a busca. Usado na mudança de
+   * busca e após persistir (salvar/publicar/concluir). Inclusões só no rascunho local não
+   * recarregam: o item fica oculto e as páginas/cursor são mantidos.
+   */
   const loadBacklog = useCallback(async () => {
-    try {
-      const b = await listOperationalPlanningBacklog({
-        q: backlogQ,
-        limit: 100,
-      })
-      setBacklogItems(b.items)
-    } catch (e) {
-      reportClientError(e, { module: 'operational-planning', action: 'load_backlog' })
-    }
-  }, [backlogQ])
+    await reloadBacklog({
+      fetchPage: async (cursor) => {
+        const b = await listOperationalPlanningBacklog({
+          q: backlogQ,
+          limit: PLANNING_BACKLOG_PAGE_SIZE,
+          cursor,
+        })
+        return { items: b.items, nextCursor: b.meta.nextCursor ?? null }
+      },
+      onError: (e, phase) => {
+        reportClientError(e, {
+          module: 'operational-planning',
+          action: phase === 'first' ? 'load_backlog' : 'load_backlog_more',
+        })
+        return 'Não foi possível carregar o backlog.'
+      },
+    })
+  }, [backlogQ, reloadBacklog])
 
   const loadFactoryIntake = useCallback(async () => {
     try {
@@ -898,11 +929,14 @@ export function OperationalPlanningPage() {
     try {
       let candidate: TimeEntryCandidateItem | null = null
       try {
-        const r = await listTimeEntryCandidates({ limit: 100, includeUnassigned: true })
-        candidate =
-          r.items.find(
-            (c) => c.conveyorId === item.conveyorId && c.stepNodeId === item.activityNodeId,
-          ) ?? null
+        candidate = await findTimeEntryCandidateForPlanningCard(item, ({ q, cursor }) =>
+          listTimeEntryCandidates({
+            q,
+            limit: TIME_ENTRY_CANDIDATES_PAGE_SIZE,
+            includeUnassigned: true,
+            cursor,
+          }),
+        )
       } catch {
         candidate = null
       }
@@ -1597,16 +1631,14 @@ export function OperationalPlanningPage() {
     requestTicketPrint(buildActivityTicketPrintModelsFromPlanningInputs(inputs))
   }, [ticketBatchSources, backlogExecutionLookup, requestTicketPrint])
 
-  const backlogEmptyMessage = useMemo(() => {
-    if (visibleBacklogItems.length > 0) return null
-    if (backlogItems.length > 0) {
-      return 'Todas as atividades carregadas no backlog já foram planejadas nesta semana.'
-    }
-    if (backlogQ.trim()) {
-      return 'Nenhuma atividade encontrada para a busca.'
-    }
-    return 'Nenhuma atividade disponível no backlog operacional. Esteiras com Plano Operacional enviado à fábrica aparecem em Aguardando encaixe.'
-  }, [visibleBacklogItems.length, backlogItems.length, backlogQ])
+  const backlogEmptyMessage = resolvePlanningBacklogEmptyMessage({
+    visibleCount: visibleBacklogItems.length,
+    loadedCount: backlogItems.length,
+    query: backlogQ,
+    hasMore: backlog.hasMore,
+    loading: backlog.loadingFirst,
+    loadError: backlog.firstError,
+  })
 
   const displayedWeekRange = useMemo(() => {
     if (weekPayload) {
@@ -2215,6 +2247,17 @@ export function OperationalPlanningPage() {
                   <p className="rounded-xl border border-white/[0.06] bg-white/[0.02] px-3 py-4 text-center text-[13px] text-slate-500">
                     {backlogEmptyMessage}
                   </p>
+                ) : null}
+                {!backlog.loadingFirst && !backlog.firstError ? (
+                  <LoadMoreFooter
+                    hasMore={backlog.hasMore}
+                    loading={backlog.loadingMore}
+                    error={backlog.moreError}
+                    onLoadMore={() => void backlog.loadMore()}
+                    testId="planning-backlog-load-more"
+                    errorClassName="text-[12px] text-rose-200"
+                    buttonClassName="w-full rounded-xl border border-white/[0.10] bg-white/[0.06] px-3 py-2 text-[13px] text-slate-100 transition hover:bg-white/[0.10] disabled:cursor-wait disabled:opacity-60"
+                  />
                 ) : null}
               </div>
               </>

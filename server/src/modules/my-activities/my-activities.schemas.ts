@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { keysetCursorQuerySchema } from '../../shared/pagination/keysetCursor.js'
 
 export const timeEntryCandidatesQuerySchema = z.object({
   q: z.string().optional(),
@@ -6,7 +7,10 @@ export const timeEntryCandidatesQuerySchema = z.object({
   conveyorQ: z.string().max(200).optional(),
   /** Nome da atividade — AND com `conveyorQ`. */
   activityQ: z.string().max(200).optional(),
+  /** Tamanho da página (máx. 50). */
   limit: z.coerce.number().int().min(1).max(50).optional().default(50),
+  /** `meta.nextCursor` da página anterior ("Carregar mais"); ausente = primeira página. */
+  cursor: keysetCursorQuerySchema,
   includeUnassigned: z
     .union([z.boolean(), z.string()])
     .optional()

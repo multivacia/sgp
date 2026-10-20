@@ -233,5 +233,72 @@ describe('serviceListOperationalPlanningBacklog', () => {
     expect(out.items).toHaveLength(1)
     expect(out.items[0]?.conveyorId).toBe('cv-legacy')
     expect(out.items[0]?.activityNodeId).toBe('step-1')
+    expect(out.meta).toEqual({ limit: 100, nextCursor: null })
+  })
+
+  it('pede página + 1 e calcula nextCursor a partir do último item devolvido', async () => {
+    const row = (id: string, stepOrder: number) => ({
+      conveyor_id: 'cv-1',
+      conveyor_title: 'OS 7467',
+      client_name: null,
+      vehicle_description: null,
+      license_plate: null,
+      estimated_deadline: null,
+      activity_node_id: id,
+      activity_title: `Atividade ${stepOrder}`,
+      task_title: 'Tarefa',
+      sector_title: 'Setor',
+      planned_minutes: 60,
+      realized_minutes: 0,
+      pending_minutes: 60,
+      assigned_collaborators_json: [],
+      assigned_teams_json: [],
+      task_order_index: 11,
+      sector_order_index: 2,
+      activity_order_index: stepOrder,
+    })
+    const ID_A = '00000000-0000-0000-0000-00000000000a'
+    const ID_B = '00000000-0000-0000-0000-00000000000b'
+    const ID_C = '00000000-0000-0000-0000-00000000000c'
+    const spy = vi
+      .spyOn(opRepo, 'listOperationalPlanningBacklog')
+      .mockResolvedValue([row(ID_A, 1), row(ID_B, 2), row(ID_C, 3)])
+    vi.spyOn(conveyorRepo, 'listConveyorNodesForSequenceAnalysis').mockResolvedValue([])
+
+    const first = await serviceListOperationalPlanningBacklog(pool, {
+      q: null,
+      limit: 2,
+      conveyorId: null,
+      collaboratorId: null,
+    })
+    expect(spy.mock.calls[0]?.[1]).toMatchObject({ limit: 3, after: null })
+    expect(first.items.map((i) => i.activityNodeId)).toEqual([ID_A, ID_B])
+    expect(first.meta.limit).toBe(2)
+    expect(first.meta.nextCursor).toBeTruthy()
+
+    spy.mockClear()
+    spy.mockResolvedValue([row(ID_C, 3)])
+    const second = await serviceListOperationalPlanningBacklog(pool, {
+      q: null,
+      limit: 2,
+      conveyorId: null,
+      collaboratorId: null,
+      cursor: first.meta.nextCursor,
+    })
+    expect(spy.mock.calls[0]?.[1]?.after).toEqual(['OS 7467', 11, 2, 2, ID_B])
+    expect(second.items.map((i) => i.activityNodeId)).toEqual([ID_C])
+    expect(second.meta.nextCursor).toBeNull()
+  })
+
+  it('cursor inválido → 400', async () => {
+    await expect(
+      serviceListOperationalPlanningBacklog(pool, {
+        q: null,
+        limit: 100,
+        conveyorId: null,
+        collaboratorId: null,
+        cursor: 'xx',
+      }),
+    ).rejects.toMatchObject({ statusCode: 400 })
   })
 })

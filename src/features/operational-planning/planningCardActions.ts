@@ -108,3 +108,35 @@ export function mergePlanningExecutionFromServerItems<
     }
   })
 }
+
+/** Máximo de páginas percorridas ao procurar o candidato do cartão ("Apontar"). */
+export const PLANNING_CARD_CANDIDATE_MAX_PAGES = 10
+
+/**
+ * Procura, nos candidatos de apontamento do usuário (paginados por cursor), a atividade do
+ * cartão do planejamento. Usa o nome da atividade como pesquisa para reduzir as páginas
+ * (exceto se contiver `&`, que o backend interpreta como "OS & atividade"). Devolve `null`
+ * se não encontrar — o chamador mantém o fallback `planningApontamentoCandidate`.
+ */
+export async function findTimeEntryCandidateForPlanningCard(
+  item: Pick<PlanningCardActionItem, 'conveyorId' | 'activityNodeId' | 'activityTitle'>,
+  fetchPage: (options: {
+    q?: string
+    cursor: string | null
+  }) => Promise<{ items: TimeEntryCandidateItem[]; nextCursor: string | null }>,
+  maxPages = PLANNING_CARD_CANDIDATE_MAX_PAGES,
+): Promise<TimeEntryCandidateItem | null> {
+  const title = item.activityTitle.trim()
+  const q = title.length >= 2 && !title.includes('&') ? title : undefined
+  let cursor: string | null = null
+  for (let page = 0; page < maxPages; page++) {
+    const r = await fetchPage({ q, cursor })
+    const found = r.items.find(
+      (c) => c.conveyorId === item.conveyorId && c.stepNodeId === item.activityNodeId,
+    )
+    if (found) return found
+    if (!r.nextCursor) return null
+    cursor = r.nextCursor
+  }
+  return null
+}

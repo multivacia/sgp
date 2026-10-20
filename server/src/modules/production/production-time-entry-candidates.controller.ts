@@ -27,6 +27,7 @@ export async function getProductionTimeEntryCandidates(
     conveyorQ: queryString(req.query.conveyorQ),
     activityQ: queryString(req.query.activityQ),
     limit: queryString(req.query.limit),
+    cursor: queryString(req.query.cursor),
     includeUnassigned:
       typeof req.query.includeUnassigned === 'boolean'
         ? req.query.includeUnassigned
@@ -37,11 +38,14 @@ export async function getProductionTimeEntryCandidates(
     ...resolveCandidateSearchTerms(parsed),
     limit: parsed.limit,
     includeUnassigned: Boolean(parsed.includeUnassigned),
+    cursor: parsed.cursor ?? null,
   })
   res.json(
     ok(result.items, {
       collaboratorId: result.collaboratorId,
       unavailableReason: result.unavailableReason,
+      limit: parsed.limit,
+      nextCursor: result.nextCursor,
     }),
   )
 }

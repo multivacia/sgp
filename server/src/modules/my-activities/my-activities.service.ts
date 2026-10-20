@@ -13,11 +13,20 @@ import type {
 } from './my-activities.dto.js'
 import {
   listActivitiesRawForCollaborator,
-  listTimeEntryCandidatesForCollaborator,
-  listTimeEntryCandidatesFromPublishedPlan,
-  listTimeEntryUnassignedOpenStepsForCollaborator,
+  listTimeEntryCandidatesPage,
+  TIME_ENTRY_CANDIDATE_SOURCE,
+  timeEntryCandidateCursorKey,
+  type TimeEntryCandidateCursorKey,
   type TimeEntryCandidateRawRow,
 } from './my-activities.repository.js'
+import {
+  decodeKeysetCursor,
+  encodeKeysetCursor,
+  keysetCursorInt,
+  keysetCursorIsoDate,
+  keysetCursorUuid,
+} from '../../shared/pagination/keysetCursor.js'
+import { z } from 'zod'
 import { analyzeConveyorActivitySequence } from '../conveyors/conveyorActivitySequence.logic.js'
 import { mapWorkQueueSequenceForCollaborator } from '../my-work-queue/work-queue-sequence-for-collaborator.js'
 import { resolveActivityPlannedTotalMinutes } from '../../shared/activityOperationalQuantity.js'
@@ -237,6 +246,20 @@ function mapCandidateRow(
   }
 }
 
+/** Escopo do cursor: `GET /me/time-entry-candidates` e `GET /production/me/time-entry-candidates`. */
+const TIME_ENTRY_CANDIDATES_CURSOR_SCOPE = 'time-entry-candidates'
+
+const timeEntryCandidateCursorKeySchema: z.ZodType<TimeEntryCandidateCursorKey> = z.tuple([
+  z.number().int().min(0).max(2),
+  z.number().int().min(0).max(1),
+  keysetCursorIsoDate,
+  keysetCursorInt,
+  keysetCursorInt,
+  keysetCursorInt,
+  keysetCursorInt,
+  keysetCursorUuid,
+])
+
 export async function serviceListTimeEntryCandidates(
   pool: pg.Pool,
   input: {
@@ -246,54 +269,33 @@ export async function serviceListTimeEntryCandidates(
     conveyorQ?: string | null
     /** Nome da atividade; combinado com `conveyorQ` e `q` via AND. */
     activityQ?: string | null
+    /** Tamanho da página. */
     limit: number
     includeUnassigned: boolean
+    /** `nextCursor` da página anterior; ausente = primeira página. Inválido → 400. */
+    cursor?: string | null
   },
 ): Promise<{
   items: TimeEntryCandidateItemApi[]
   collaboratorId: string | null
   unavailableReason: string | null
+  /** `null` quando não há mais itens. */
+  nextCursor: string | null
 }> {
+  const after = decodeKeysetCursor(
+    input.cursor,
+    TIME_ENTRY_CANDIDATES_CURSOR_SCOPE,
+    timeEntryCandidateCursorKeySchema,
+  )
+
   if (!input.collaboratorId) {
     return {
       items: [],
       collaboratorId: null,
       unavailableReason:
         'Sua conta não está vinculada a um colaborador operacional. Peça ao administrador para associar seu acesso.',
+      nextCursor: null,
     }
-  }
-
-  const searchTerms = {
-    q: input.q,
-    conveyorQ: input.conveyorQ ?? null,
-    activityQ: input.activityQ ?? null,
-  }
-
-  const rawAssigned = await listTimeEntryCandidatesForCollaborator(
-    pool,
-    input.collaboratorId,
-    {
-      ...searchTerms,
-      limit: input.limit,
-    },
-  )
-
-  const referenceDate = todayIsoLocal()
-  const rawFromPlan = await listTimeEntryCandidatesFromPublishedPlan(pool, {
-    collaboratorId: input.collaboratorId,
-    date: referenceDate,
-    ...searchTerms,
-    limit: input.limit,
-  })
-
-  const seenStep = new Set(rawAssigned.map((r) => r.step_node_id))
-  let tagged: Array<{ row: TimeEntryCandidateRawRow; isAssignedToMe: boolean }> =
-    rawAssigned.map((r) => ({ row: r, isAssignedToMe: true }))
-
-  for (const row of rawFromPlan) {
-    if (seenStep.has(row.step_node_id)) continue
-    seenStep.add(row.step_node_id)
-    tagged.push({ row, isAssignedToMe: true })
   }
 
   const qOk =
@@ -302,21 +304,28 @@ export async function serviceListTimeEntryCandidates(
       (term) => Boolean(term && term.trim().length >= 2),
     )
 
-  if (qOk) {
-    const rawUnassigned = await listTimeEntryUnassignedOpenStepsForCollaborator(
-      pool,
-      input.collaboratorId,
-      { ...searchTerms, limit: input.limit },
-    )
-    tagged = [
-      ...tagged,
-      ...rawUnassigned
-        .filter((r) => !seenStep.has(r.step_node_id))
-        .map((r) => ({ row: r, isAssignedToMe: false })),
-    ]
-  }
+  const referenceDate = todayIsoLocal()
+  const rows = await listTimeEntryCandidatesPage(pool, {
+    collaboratorId: input.collaboratorId,
+    q: input.q,
+    conveyorQ: input.conveyorQ ?? null,
+    activityQ: input.activityQ ?? null,
+    referenceDate,
+    includeUnassigned: qOk,
+    after,
+    fetchLimit: input.limit + 1,
+  })
 
-  const conveyorIds = [...new Set(tagged.map((t) => t.row.conveyor_id))]
+  // A linha extra só indica continuação; o cursor vem do último item devolvido.
+  const hasMore = rows.length > input.limit
+  const pageRows = hasMore ? rows.slice(0, input.limit) : rows
+  const lastRow = pageRows.at(-1)
+  const nextCursor =
+    hasMore && lastRow
+      ? encodeKeysetCursor(TIME_ENTRY_CANDIDATES_CURSOR_SCOPE, timeEntryCandidateCursorKey(lastRow))
+      : null
+
+  const conveyorIds = [...new Set(pageRows.map((r) => r.conveyor_id))]
   const nodesByConveyor = new Map<string, SequenceAnalysisNode[]>()
   const plannedByConveyor = new Map<string, Map<string, Set<string>>>()
   await Promise.all(
@@ -330,10 +339,14 @@ export async function serviceListTimeEntryCandidates(
     }),
   )
 
-  const items = tagged.map(({ row, isAssignedToMe }) =>
+  const items = pageRows.map((row) =>
     mapCandidateRow(
       row,
-      { isAssignedToMe, referenceDate, collaboratorId: input.collaboratorId! },
+      {
+        isAssignedToMe: row.source_rank !== TIME_ENTRY_CANDIDATE_SOURCE.UNASSIGNED,
+        referenceDate,
+        collaboratorId: input.collaboratorId!,
+      },
       nodesByConveyor,
       plannedByConveyor,
     ),
@@ -343,5 +356,6 @@ export async function serviceListTimeEntryCandidates(
     items,
     collaboratorId: input.collaboratorId,
     unavailableReason: null,
+    nextCursor,
   }
 }

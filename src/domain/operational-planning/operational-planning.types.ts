@@ -199,7 +199,8 @@ export type OperationalPlanningBacklogItem = {
 
 export type OperationalPlanningBacklogPayload = {
   items: OperationalPlanningBacklogItem[]
-  meta: { limit: number }
+  /** `nextCursor`: próxima página ("Carregar mais"); `null` = fim da lista. */
+  meta: { limit: number; nextCursor?: string | null }
 }
 
 export type SaveOperationalWeekPlanInput = {
