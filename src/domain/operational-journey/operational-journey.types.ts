@@ -34,6 +34,23 @@ export type OperationalJourneyTimeEntry = {
   standardJustificationComplement?: string | null
 }
 
+export type ExtraTimeEntryCorrectionSnapshot = {
+  descriptionId: string
+  description: string | null
+  entryDate: string
+  minutes: number
+  notes: string | null
+}
+
+export type ExtraTimeEntryCorrection = {
+  action: 'EDIT' | 'DELETE'
+  reason: string
+  occurredAt: string
+  actorLabel: string | null
+  before: ExtraTimeEntryCorrectionSnapshot
+  after: ExtraTimeEntryCorrectionSnapshot | null
+}
+
 /** Lançamento Extra Esteira (tempo fora de esteira) no período da jornada. */
 export type OperationalJourneyExtraTimeEntry = {
   id: string
@@ -46,6 +63,8 @@ export type OperationalJourneyExtraTimeEntry = {
   /** Dados da revisão otimista; opcionais para respostas de versões antigas da API. */
   descriptionId?: string
   updatedAt?: string
+  deletedAt?: string | null
+  correctionHistory?: ExtraTimeEntryCorrection[]
   notes: string | null
   origin: 'WEB' | 'PRODUCTION'
 }
