@@ -57,7 +57,7 @@ export function JourneyExtraTimeEntriesSection({
         </p>
       </div>
       <p className="mt-0.5 text-[11px] text-slate-500">
-        Tempo fora de esteira (SGP e Modo Fábrica) no período (até {limit} registros, incluindo excluídos).
+        Tempo fora de esteira (SGP e Modo Fábrica): {entries.length} registro(s) carregado(s), em páginas de {limit}, incluindo excluídos.
         Os totais consideram apenas lançamentos ativos; excluídos são exibidos para consulta histórica.
       </p>
       {entries.length === 0 ? (
