@@ -3,6 +3,7 @@ import type { OperationalBucket } from '../../shared/operationalBucket.js'
 import {
   operationalBucketSortRank,
   parseFlexibleDeadlineToDate,
+  getOperationalBucketForConveyor,
 } from '../../shared/operationalBucket.js'
 import { resolveActivityPlannedTotalMinutes } from '../../shared/activityOperationalQuantity.js'
 import { computeCoberturaTempo } from '../../shared/coberturaTempo.js'
@@ -36,6 +37,7 @@ import {
   listCollaboratorBriefs,
   listExtraTimeEntriesInPeriodForCollaborator,
   listExtraTimeEntriesInPeriodForCollaborators,
+  listPlannedOpenJourneyRows,
   listTopExtraTimeEntryDescriptionsInPeriodForCollaborators,
   listTimeEntriesForCollaboratorsInPeriod,
   summarizeExtraTimeEntriesInPeriodForCollaborators,
@@ -273,6 +275,8 @@ export async function serviceGetOperationalJourneyForCollaborators(
 
   const conveyorId = args.query.conveyorId ?? null
   const limit = args.query.limit
+  const { openOffset, historyOffset, extraOffset } = args.query
+  const conveyorCode = args.query.conveyorCode ?? null
 
   const perCollaborator = await Promise.all(
     collaboratorIds.map((collaboratorId) =>
@@ -302,6 +306,7 @@ export async function serviceGetOperationalJourneyForCollaborators(
     extraSummary,
     extraTopDescriptions,
     rawExtraEntries,
+    plannedOpenRows,
   ] = await Promise.all([
     sumRealizedMinutesInPeriodForCollaborators(pool, {
       collaboratorIds,
@@ -315,7 +320,9 @@ export async function serviceGetOperationalJourneyForCollaborators(
       from,
       to,
       conveyorId,
-      limit,
+      conveyorCode,
+      limit: limit + 1,
+      offset: historyOffset,
     }),
     summarizeExtraTimeEntriesInPeriodForCollaborators(pool, {
       collaboratorIds,
@@ -332,19 +339,52 @@ export async function serviceGetOperationalJourneyForCollaborators(
       collaboratorIds,
       from,
       to,
-      limit,
+      limit: limit + 1,
+      offset: extraOffset,
+    }),
+    listPlannedOpenJourneyRows(pool, {
+      collaboratorIds, from, to, conveyorId, conveyorCode,
+      limit: limit + 1,
+      offset: openOffset,
     }),
   ])
 
-  const assignmentsOpen = assignments.filter(
-    (a) => a.operationalBucket !== 'finalizadas' && a.operationalBucket !== 'canceladas',
-  )
+  const assignmentsOpen: OperationalJourneyAssignmentApi[] = plannedOpenRows
+    .slice(0, limit)
+    .map((r) => {
+      const planned = r.planned_minutes == null ? null : Number(r.planned_minutes)
+      return {
+        assigneeId: r.collaborator_id + ':' + r.step_node_id,
+        collaboratorId: r.collaborator_id,
+        collaboratorName: r.collaborator_name,
+        conveyorId: r.conveyor_id,
+        conveyorCode: r.conveyor_code,
+        conveyorName: r.conveyor_name,
+        conveyorStatus: r.conveyor_status,
+        estimatedDeadline: r.estimated_deadline,
+        operationalBucket: getOperationalBucketForConveyor(r.conveyor_status, r.estimated_deadline),
+        stepNodeId: r.step_node_id,
+        stepName: r.step_name,
+        optionName: r.option_name,
+        areaName: r.area_name,
+        roleInStep: r.is_primary ? 'primary' : 'support',
+        plannedMinutes: planned,
+        plannedQuantity: 1,
+        plannedTotalMinutes: planned,
+        realizedMinutes: Number(r.realized_minutes ?? 0),
+      }
+    })
   const assignmentsAtRisk = assignments.filter((a) => a.operationalBucket === 'em_atraso')
 
-  const pendenciaItems = buildJourneyPendenciaItems(assignmentsOpen)
+  // Sinais e totais de cobertura continuam sobre o conjunto inteiro de alocações,
+  // nunca sobre os vinte itens visíveis de Em aberto.
+  const structuralOpen = assignments.filter(
+    (a) => a.operationalBucket !== 'finalizadas' && a.operationalBucket !== 'canceladas',
+  )
+  const pendenciaItems = buildJourneyPendenciaItems(structuralOpen)
   const pendenciaSliced = pendenciaItems.slice(0, MAX_PENDENCIAS)
 
-  const recentTimeEntries = rawEntries.map((r) => ({
+  const recentTimeEntries = rawEntries.slice(0, limit).map((r) => ({
     id: r.id,
     collaboratorId: r.collaborator_id,
     collaboratorName: r.collaborator_name,
@@ -363,7 +403,7 @@ export async function serviceGetOperationalJourneyForCollaborators(
     standardJustificationComplement: r.standard_justification_complement?.trim() || null,
   }))
 
-  const recentExtraTimeEntries = rawExtraEntries.map((r) => ({
+  const recentExtraTimeEntries = rawExtraEntries.slice(0, limit).map((r) => ({
     id: r.id,
     collaboratorId: r.collaborator_id,
     collaboratorName: r.collaborator_name,
@@ -401,6 +441,14 @@ export async function serviceGetOperationalJourneyForCollaborators(
       fullName: collaborators[0]!.fullName,
     },
     collaborators,
+    pagination: {
+      open: {
+        nextOffset: plannedOpenRows.length > limit ? openOffset + limit : null,
+        totalCount: Number(plannedOpenRows[0]?.total_count ?? 0),
+      },
+      history: { nextOffset: rawEntries.length > limit ? historyOffset + limit : null },
+      extra: { nextOffset: rawExtraEntries.length > limit ? extraOffset + limit : null },
+    },
     period: {
       from: from.toISOString(),
       to: to.toISOString(),

@@ -103,6 +103,11 @@ export type OperationalJourneyApi = {
   collaborator: { id: string; fullName: string | null }
   /** Escopo completo: 1..N colaboradores, na ordem solicitada. */
   collaborators: OperationalJourneyCollaboratorApi[]
+  pagination?: {
+    open: { nextOffset: number | null; totalCount: number }
+    history: { nextOffset: number | null }
+    extra: { nextOffset: number | null }
+  }
   period: { from: string; to: string }
   query: {
     limit: number

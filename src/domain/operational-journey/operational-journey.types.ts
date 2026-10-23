@@ -97,6 +97,11 @@ export type OperationalJourneyData = {
   collaborator: { id: string; fullName: string | null }
   /** Escopo consolidado: 1..N colaboradores, na ordem solicitada. */
   collaborators?: OperationalJourneyCollaborator[]
+  pagination?: {
+    open: { nextOffset: number | null; totalCount: number }
+    history: { nextOffset: number | null }
+    extra: { nextOffset: number | null }
+  }
   period: { from: string; to: string }
   query: {
     limit: number
