@@ -165,11 +165,11 @@ function AssignmentCard({
           </p>
           <div className="flex flex-wrap gap-x-6 gap-y-1 text-xs tabular-nums text-slate-500">
             <span>
-              {operationalLabels.previstoEstrutural} (step):{' '}
+              Previsto no período:{' '}
               {item.plannedMinutes != null ? formatHumanMinutes(item.plannedMinutes) : '—'}
             </span>
             <span>
-              {operationalLabels.minutosApontadosAcumulado} (neste step):{' '}
+              {operationalLabels.minutosApontadosAcumulado} (nesta atividade):{' '}
               {item.realizedMinutes == null
                 ? '—'
                 : formatHumanMinutes(item.realizedMinutes)}
@@ -216,6 +216,7 @@ export function JornadaColaboradorGestorPage() {
   const hasSelection = colaboradorIds.length > 0
   const isMultiSelection = colaboradorIds.length > 1
   const conveyorFilter = searchParams.get('conveyorId')?.trim() || ''
+  const conveyorCodeFilter = searchParams.get('os')?.trim() || ''
   const periodPresetRaw = searchParams.get('periodPreset')?.trim() || '7d'
   const periodPreset = (
     ['7d', '15d', '30d', 'month', 'custom'].includes(periodPresetRaw)
@@ -232,6 +233,8 @@ export function JornadaColaboradorGestorPage() {
   const [error, setError] = useState<string | null>(null)
   const [exporting, setExporting] = useState(false)
   const [exportError, setExportError] = useState<string | null>(null)
+  const [moreLoading, setMoreLoading] = useState<'open' | 'history' | 'extra' | null>(null)
+  const [moreError, setMoreError] = useState<string | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -261,11 +264,12 @@ export function JornadaColaboradorGestorPage() {
     () => ({
       periodPreset,
       ...(conveyorFilter ? { conveyorId: conveyorFilter } : {}),
+      ...(conveyorCodeFilter ? { conveyorCode: conveyorCodeFilter } : {}),
       ...(periodPreset === 'custom' && periodFrom && periodTo
         ? operationalDayRangeIso(periodFrom, periodTo)
         : {}),
     }),
-    [periodPreset, conveyorFilter, periodFrom, periodTo],
+    [periodPreset, conveyorFilter, conveyorCodeFilter, periodFrom, periodTo],
   )
 
   /** Descarta respostas de cargas antigas quando a seleção/recorte muda no meio da requisição. */
@@ -273,6 +277,8 @@ export function JornadaColaboradorGestorPage() {
 
   const loadJourney = useCallback(async () => {
     const seq = ++loadSeqRef.current
+    setMoreError(null)
+    setMoreLoading(null)
     if (colaboradorIds.length === 0) {
       setJourney(null)
       setError(null)
@@ -314,6 +320,44 @@ export function JornadaColaboradorGestorPage() {
   useEffect(() => {
     void loadJourney()
   }, [loadJourney])
+
+  const loadMore = useCallback(async (section: 'open' | 'history' | 'extra') => {
+    const nextOffset = journey?.pagination?.[section].nextOffset
+    if (nextOffset == null || moreLoading || !hasSelection) return
+    const seq = loadSeqRef.current
+    setMoreLoading(section)
+    setMoreError(null)
+    try {
+      const offsets = section === 'open' ? { openOffset: nextOffset }
+        : section === 'history' ? { historyOffset: nextOffset }
+        : { extraOffset: nextOffset }
+      const query = { limit: 20, ...journeyQuery, ...offsets }
+      const data = colaboradorIds.length === 1
+        ? await fetchOperationalJourney(colaboradorIds[0]!, query)
+        : await fetchOperationalJourneyForCollaborators(colaboradorIds, query)
+      if (seq !== loadSeqRef.current) return
+      setJourney((previous) => {
+        if (!previous) return previous
+        return {
+          ...previous,
+          assignmentsOpen: section === 'open'
+            ? [...previous.assignmentsOpen, ...data.assignmentsOpen] : previous.assignmentsOpen,
+          recentTimeEntries: section === 'history'
+            ? [...previous.recentTimeEntries, ...data.recentTimeEntries] : previous.recentTimeEntries,
+          recentExtraTimeEntries: section === 'extra'
+            ? [...(previous.recentExtraTimeEntries ?? []), ...(data.recentExtraTimeEntries ?? [])]
+            : previous.recentExtraTimeEntries,
+          pagination: previous.pagination && data.pagination
+            ? { ...previous.pagination, [section]: data.pagination[section] }
+            : previous.pagination,
+        }
+      })
+    } catch (e) {
+      if (seq === loadSeqRef.current) setMoreError('Não foi possível carregar mais registros. Tente novamente.')
+    } finally {
+      if (seq === loadSeqRef.current) setMoreLoading(null)
+    }
+  }, [journey, moreLoading, hasSelection, colaboradorIds, journeyQuery])
 
   const conveyorChoices = useMemo(() => {
     if (!journey) return []
@@ -479,6 +523,19 @@ export function JornadaColaboradorGestorPage() {
             </label>
           </div>
         )}
+        <label className="mt-4 flex max-w-xl flex-col gap-2 text-xs font-medium text-slate-400">
+          OS exata (Em aberto e Histórico recente)
+          <input
+            type="search"
+            placeholder="Código da OS"
+            value={conveyorCodeFilter}
+            onChange={(e) => patchParams({ os: e.target.value.trim() || undefined })}
+            className="rounded-lg border border-white/10 bg-sgp-app-panel-deep px-3 py-2.5 text-sm text-slate-200"
+          />
+          <span className="text-[11px] font-normal text-slate-500">
+            Extra Esteira não é filtrado pela OS.
+          </span>
+        </label>
         {journey && conveyorChoices.length > 0 && (
           <label className="mt-4 flex max-w-xl flex-col gap-2 text-xs font-medium text-slate-400">
             Esteira (opcional)
@@ -663,13 +720,13 @@ export function JornadaColaboradorGestorPage() {
               Em aberto
             </h2>
             <p className="mt-1 text-sm text-slate-500">
-              Alocações em esteiras ainda não concluídas (bucket ≠ concluídas).
+              Atividades planejadas e publicadas para os colaboradores selecionados no período ({journey.pagination?.open.totalCount ?? journey.assignmentsOpen.length} no total).
             </p>
             {journey.assignmentsOpen.length === 0 ? (
               <p className="mt-4 text-sm text-slate-500">
                 {conveyorFilter
                   ? transversalUxCopy.journeyEmptyFiltered
-                  : 'Nada em aberto neste recorte. Confira o bucket «em atraso» ou o histórico abaixo.'}
+                  : 'Nenhuma atividade planejada em aberto neste período.'}
               </p>
             ) : (
               <ul className="mt-6 space-y-4">
@@ -688,71 +745,11 @@ export function JornadaColaboradorGestorPage() {
                 ))}
               </ul>
             )}
-          </section>
-
-          <section className="mt-12">
-            <h2 className="font-heading text-sm font-bold uppercase tracking-[0.12em] text-slate-50">
-              Em risco (bucket em atraso)
-            </h2>
-            <p className="mt-1 text-sm text-slate-500">
-              Alocações cuja esteira está no bucket «em atraso» ({operationalLabels.pressaoAtraso}).
-            </p>
-            {journey.assignmentsAtRisk.length === 0 ? (
-              <p className="mt-4 text-sm text-slate-500">
-                {conveyorFilter
-                  ? transversalUxCopy.journeyEmptyFiltered
-                  : 'Nenhuma alocação em atraso neste recorte.'}
-              </p>
-            ) : (
-              <ul className="mt-6 space-y-4">
-                {journey.assignmentsAtRisk.map((item) => (
-                  <AssignmentCard
-                    key={item.assigneeId}
-                    item={item}
-                    collaboratorLabel={resolveRecordCollaboratorLabel(item)}
-                    showApontamento={canApontamentoGestor}
-                    apontamentoGestorHref={
-                      canApontamentoGestor
-                        ? `/app/gestao/apontamento/${encodeURIComponent(item.stepNodeId)}?conveyorId=${encodeURIComponent(item.conveyorId)}&from=jornada_gestao`
-                        : null
-                    }
-                  />
-                ))}
-              </ul>
-            )}
-          </section>
-
-          <section className="mt-12 max-w-5xl">
-            <h2 className="font-heading text-sm font-bold uppercase tracking-[0.12em] text-slate-50">
-              {operationalLabels.pendenciaTempo}
-            </h2>
-            <p className="mt-1 text-sm text-slate-500">
-              STEPs em aberto com previsto estrutural superior ao acumulado apontado pelo colaborador
-              (ordenado por maior diferença). Sinal operacional.
-            </p>
-            {journey.signals.pendenciaTempo.count === 0 ? (
-              <p className="mt-4 text-sm text-slate-500">Nenhuma neste recorte.</p>
-            ) : (
-              <ul className="mt-4 space-y-2 rounded-xl border border-white/[0.08] bg-sgp-app-panel-deep/30 p-3 text-sm">
-                {journey.signals.pendenciaTempo.items.map((p) => (
-                  <li
-                    key={p.assigneeId}
-                    className="flex flex-wrap items-center justify-between gap-2 border-b border-white/[0.05] py-2 last:border-0"
-                  >
-                    <span className="text-slate-200">
-                      {resolveRecordCollaboratorLabel(p) ? (
-                        <span className="mr-2 text-amber-100/90">
-                          {resolveRecordCollaboratorLabel(p)} ·
-                        </span>
-                      ) : null}
-                      {p.conveyorName} · {p.stepName}
-                    </span>
-                    <span className="tabular-nums text-slate-400">
-                      Δ {formatHumanMinutes(p.gapMinutes)}
-                    </span>
-                  </li>
-                ))}
-              </ul>
+            {journey.pagination?.open.nextOffset != null && (
+              <button type="button" className="sgp-cta-secondary mt-4 !py-2 text-sm"
+                onClick={() => void loadMore('open')} disabled={moreLoading !== null}>
+                {moreLoading === 'open' ? 'Carregando…' : 'Carregar mais atividades'}
+              </button>
             )}
           </section>
 
@@ -761,10 +758,8 @@ export function JornadaColaboradorGestorPage() {
               Histórico recente
             </h2>
             <p className="mt-1 text-sm text-slate-500">
-              {operationalLabels.minutosApontadosPeriodo}: últimos lançamentos (máx.{' '}
-              {journey.query.limit} linhas
-              {isMultiSelection ? ' no conjunto dos colaboradores' : ''}). A exportação traz a lista
-              completa.
+              Apontamentos do período, em páginas de {journey.query.limit} registros
+              {isMultiSelection ? ' no conjunto dos colaboradores' : ''}. A exportação traz o histórico completo.
             </p>
             {journey.recentTimeEntries.length === 0 ? (
               <p className="mt-4 text-sm text-slate-500">
@@ -835,6 +830,12 @@ export function JornadaColaboradorGestorPage() {
                 ))}
               </ul>
             )}
+            {journey.pagination?.history.nextOffset != null && (
+              <button type="button" className="sgp-cta-secondary mt-4 !py-2 text-sm"
+                onClick={() => void loadMore('history')} disabled={moreLoading !== null}>
+                {moreLoading === 'history' ? 'Carregando…' : 'Carregar mais apontamentos'}
+              </button>
+            )}
           </section>
 
           <JourneyExtraTimeEntriesSection
@@ -846,6 +847,13 @@ export function JornadaColaboradorGestorPage() {
             canDelete={can('time_entries.delete_any')}
             onMutated={loadJourney}
           />
+          {journey.pagination?.extra.nextOffset != null && (
+            <button type="button" className="sgp-cta-secondary mt-4 !py-2 text-sm"
+              onClick={() => void loadMore('extra')} disabled={moreLoading !== null}>
+              {moreLoading === 'extra' ? 'Carregando…' : 'Carregar mais Extra Esteira'}
+            </button>
+          )}
+          {moreError && <p className="mt-3 text-sm text-rose-200" role="alert">{moreError}</p>}
         </>
       )}
 
