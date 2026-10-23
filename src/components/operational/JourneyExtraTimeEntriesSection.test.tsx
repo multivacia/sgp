@@ -65,6 +65,74 @@ describe('Jornada Extra Esteira — correção gerencial', () => {
     await waitFor(() => expect(reload).toHaveBeenCalledTimes(1))
   })
 
+  it('mostra exclusão e justificativa sem computar horas ou permitir novas alterações', () => {
+    const excluded = {
+      ...entry,
+      deletedAt: '2026-10-22T11:00:00.000Z',
+      correctionHistory: [{
+        action: 'DELETE' as const,
+        reason: 'Apontamento duplicado',
+        occurredAt: '2026-10-22T11:00:00.000Z',
+        actorLabel: 'gestao@sgp.local',
+        before: {
+          descriptionId: ID,
+          description: 'Limpeza',
+          entryDate: '2026-10-20',
+          minutes: 30,
+          notes: null,
+        },
+        after: null,
+      }],
+    }
+    render(
+      <JourneyExtraTimeEntriesSection
+        {...common}
+        summary={{ totalMinutes: 0, entriesCount: 0, topDescriptions: [] }}
+        entries={[excluded]}
+        canEdit canDelete onMutated={vi.fn()}
+      />,
+    )
+    expect(screen.getByText('Excluído')).toBeTruthy()
+    expect(screen.getByText(/Apontamento duplicado/)).toBeTruthy()
+    expect(screen.getByText(/Não contabilizado/)).toBeTruthy()
+    expect(screen.queryByRole('button', { name: /Editar apontamento Extra Esteira/ })).toBeNull()
+    expect(screen.queryByRole('button', { name: /Remover apontamento Extra Esteira/ })).toBeNull()
+    expect(screen.getByText(/0 lançamento/)).toBeTruthy()
+  })
+
+  it('exibe o motivo da última correção e permite consultar valores anteriores', () => {
+    const corrected = {
+      ...entry,
+      minutes: 45,
+      correctionHistory: [{
+        action: 'EDIT' as const,
+        reason: 'Conferência do tempo executado',
+        occurredAt: '2026-10-22T11:00:00.000Z',
+        actorLabel: 'gestao@sgp.local',
+        before: {
+          descriptionId: ID,
+          description: 'Limpeza',
+          entryDate: '2026-10-20',
+          minutes: 30,
+          notes: null,
+        },
+        after: {
+          descriptionId: ID,
+          description: 'Limpeza',
+          entryDate: '2026-10-20',
+          minutes: 45,
+          notes: null,
+        },
+      }],
+    }
+    render(<JourneyExtraTimeEntriesSection {...common} entries={[corrected]} />)
+    expect(screen.getByText('Corrigido')).toBeTruthy()
+    expect(screen.getByText(/Conferência do tempo executado/)).toBeTruthy()
+    fireEvent.click(screen.getByText('Histórico de alterações (1)'))
+    expect(screen.getByText(/Antes:.*30 min/)).toBeTruthy()
+    expect(screen.getByText(/Depois:.*45 min/)).toBeTruthy()
+  })
+
   it('exclui mediante confirmação com motivo e atualiza jornada', async () => {
     mocks.remove.mockResolvedValue({ deleted: true, id: ID })
     const reload = vi.fn().mockResolvedValue(undefined)
