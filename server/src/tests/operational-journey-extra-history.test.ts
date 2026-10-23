@@ -1,6 +1,6 @@
 import type pg from 'pg'
 import { describe, expect, it, vi } from 'vitest'
-import { listExtraTimeEntriesInPeriodForCollaborators } from '../modules/operational-journey/operational-journey.repository.js'
+import { listExtraTimeEntriesInPeriodForCollaborators, summarizeExtraTimeEntriesInPeriodForCollaborators } from '../modules/operational-journey/operational-journey.repository.js'
 
 const ID_ACTIVE = '11111111-1111-4111-8111-111111111111'
 const ID_DELETED = '22222222-2222-4222-8222-222222222222'
@@ -63,6 +63,20 @@ describe('Jornada Extra Esteira — histórico e excluídos', () => {
     expect(listSql).not.toContain('AND e.deleted_at IS NULL')
     const auditSql = query.mock.calls[1]![0]
     expect(auditSql).toContain("extra_time_entry_deleted_by_manager")
+  })
+
+  it('mantém o filtro de excluídos nos totais e contagem da jornada', async () => {
+    const query = vi.fn(async (sql: string) => {
+      expect(sql).toContain('e.deleted_at IS NULL')
+      return { rows: [{ total_minutes: '45', entries_count: '1' }] }
+    })
+    const pool = { query } as unknown as pg.Pool
+    const result = await summarizeExtraTimeEntriesInPeriodForCollaborators(pool, {
+      collaboratorIds: [COLLABORATOR],
+      from: new Date('2026-10-19T03:00:00Z'),
+      to: new Date('2026-10-21T02:59:59Z'),
+    })
+    expect(result).toEqual({ totalMinutes: 45, entriesCount: 1 })
   })
 
   it('não consulta auditoria quando a janela está vazia', async () => {
