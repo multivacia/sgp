@@ -27,7 +27,7 @@ describe('1.10.2 — autorização por planejamento publicado', () => {
       [{ mine_count: 0, any_count: 1, mine_minutes: null }, 'OTHER'],
       [{ mine_count: 0, any_count: 0, mine_minutes: null }, 'NONE'],
     ] as const) {
-      const query = vi.fn(async () => ({ rows: [row] }))
+      const query = vi.fn(async (_sql: string, _params?: unknown[]) => ({ rows: [row] }))
       const pool = { query } as unknown as pg.Pool
       const actual = await getTimeEntryPlanningEligibility(pool, eligibilityInput)
       expect(actual.scope).toBe(expected)
@@ -57,7 +57,7 @@ describe('1.10.2 — autorização por planejamento publicado', () => {
 
 describe('1.10.2 — listagens filtra antes de paginar', () => {
   it('Apontar horas aplica plano publicado, pesquisa e cursor no SQL único', async () => {
-    const query = vi.fn(async () => ({ rows: [] }))
+    const query = vi.fn(async (_sql: string, _params?: unknown[]) => ({ rows: [] }))
     const pool = { query } as unknown as pg.Pool
     const rows = await listTimeEntryCandidatesPage(pool, {
       collaboratorId: COLLAB,
@@ -82,7 +82,7 @@ describe('1.10.2 — listagens filtra antes de paginar', () => {
   })
 
   it('Jornada seleciona colaborador, período e OS antes do limite de 20', async () => {
-    const query = vi.fn(async () => ({ rows: [] }))
+    const query = vi.fn(async (_sql: string, _params?: unknown[]) => ({ rows: [] }))
     const pool = { query } as unknown as pg.Pool
     const rows = await listPlannedOpenJourneyRows(pool, {
       collaboratorIds: [COLLAB],
