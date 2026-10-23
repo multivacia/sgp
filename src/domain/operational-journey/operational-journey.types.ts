@@ -43,6 +43,9 @@ export type OperationalJourneyExtraTimeEntry = {
   entryDate: string
   minutes: number
   description: string
+  /** Dados da revisão otimista; opcionais para respostas de versões antigas da API. */
+  descriptionId?: string
+  updatedAt?: string
   notes: string | null
   origin: 'WEB' | 'PRODUCTION'
 }

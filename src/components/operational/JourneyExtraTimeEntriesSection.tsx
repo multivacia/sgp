@@ -1,3 +1,5 @@
+import { useState } from 'react'
+import { JourneyExtraTimeEntryCorrectionDialog } from './JourneyExtraTimeEntryCorrectionDialog'
 import type {
   OperationalJourneyData,
   OperationalJourneyExtraTimeEntry,
@@ -11,6 +13,9 @@ type Props = {
   limit: number
   /** Exibe o nome do colaborador em cada lançamento (visão gerencial multi-colaborador). */
   showCollaborator?: boolean
+  canEdit?: boolean
+  canDelete?: boolean
+  onMutated?: () => Promise<void>
 }
 
 /** Lançamentos Extra Esteira (tempo fora de esteira) do período da jornada. */
@@ -19,7 +24,11 @@ export function JourneyExtraTimeEntriesSection({
   entries,
   limit,
   showCollaborator = false,
+  canEdit = false,
+  canDelete = false,
+  onMutated,
 }: Props) {
+  const [selected, setSelected] = useState<{ entry: OperationalJourneyExtraTimeEntry; mode: 'edit' | 'delete' } | null>(null)
   return (
     <section
       className="mt-6 rounded-2xl border border-white/[0.08] bg-white/[0.02] p-4 ring-1 ring-white/[0.03]"
@@ -65,6 +74,24 @@ export function JourneyExtraTimeEntriesSection({
                 {formatHumanMinutes(e.minutes)} · {formatIsoDateBr(e.entryDate)}
                 {showCollaborator && e.collaboratorName ? ` · ${e.collaboratorName}` : ''}
               </p>
+              {(canEdit || canDelete) && onMutated && e.updatedAt ? (
+                <div className="mt-2 flex flex-wrap gap-3 text-xs">
+                  {canEdit ? (
+                    <button type="button" className="font-semibold text-sky-300 hover:underline"
+                      onClick={() => setSelected({ entry: e, mode: 'edit' })}
+                      aria-label={`Editar apontamento Extra Esteira: ${e.description}`}>
+                      Editar
+                    </button>
+                  ) : null}
+                  {canDelete ? (
+                    <button type="button" className="font-semibold text-rose-300 hover:underline"
+                      onClick={() => setSelected({ entry: e, mode: 'delete' })}
+                      aria-label={`Remover apontamento Extra Esteira: ${e.description}`}>
+                      Remover
+                    </button>
+                  ) : null}
+                </div>
+              ) : null}
               {e.notes?.trim() ? (
                 <p className="mt-1 text-[11px] leading-snug text-slate-400">
                   <span className="font-semibold text-slate-500">Observação: </span>
@@ -75,6 +102,15 @@ export function JourneyExtraTimeEntriesSection({
           ))}
         </ul>
       )}
+      {selected && onMutated ? (
+        <JourneyExtraTimeEntryCorrectionDialog
+          key={selected.entry.id + selected.mode}
+          entry={selected.entry}
+          mode={selected.mode}
+          onClose={() => setSelected(null)}
+          onMutated={onMutated}
+        />
+      ) : null}
     </section>
   )
 }

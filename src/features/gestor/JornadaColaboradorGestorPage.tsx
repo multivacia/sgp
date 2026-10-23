@@ -199,7 +199,7 @@ function AssignmentCard({
 
 export function JornadaColaboradorGestorPage() {
   const { pathname } = useLocation()
-  const { canAny } = useAuth()
+  const { can, canAny } = useAuth()
   const canApontamentoGestor = canAny([
     'time_entries.create_on_behalf',
     'time_entries.edit_any',
@@ -842,6 +842,9 @@ export function JornadaColaboradorGestorPage() {
             entries={journey.recentExtraTimeEntries ?? []}
             limit={journey.query.limit ?? 20}
             showCollaborator={isMultiSelection}
+            canEdit={can('time_entries.edit_any')}
+            canDelete={can('time_entries.delete_any')}
+            onMutated={loadJourney}
           />
         </>
       )}
