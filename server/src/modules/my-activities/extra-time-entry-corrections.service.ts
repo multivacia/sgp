@@ -95,14 +95,26 @@ export function servicePatchExtraTimeEntryAsManager(
     if (JSON.stringify(snapshot(old)) === JSON.stringify(snapshot(after))) {
       throw new AppError('Nenhuma alteração informada.', 422, ErrorCodes.VALIDATION_ERROR)
     }
-    const updated = await db.query<{ updated_at: Date }>(
-      `UPDATE operational_extra_time_entries
-          SET description_id = $2::uuid, entry_date = $3::date,
-              minutes = $4::int, notes = $5::text, updated_at = clock_timestamp()
-        WHERE id = $1::uuid AND deleted_at IS NULL
-        RETURNING updated_at`,
-      [input.id, after.description_id, after.entry_date, after.minutes, after.notes],
-    )
+    // O trigger do catálogo valida UPDATE OF description_id. Ao corrigir apenas
+    // data/minutos/observação, não tocar na coluna: descrição histórica pode estar inativa.
+    const changedDescription = old.description_id !== after.description_id
+    const updated = changedDescription
+      ? await db.query<{ updated_at: Date }>(
+          `UPDATE operational_extra_time_entries
+              SET description_id = $2::uuid, entry_date = $3::date,
+                  minutes = $4::int, notes = $5::text, updated_at = clock_timestamp()
+            WHERE id = $1::uuid AND deleted_at IS NULL
+            RETURNING updated_at`,
+          [input.id, after.description_id, after.entry_date, after.minutes, after.notes],
+        )
+      : await db.query<{ updated_at: Date }>(
+          `UPDATE operational_extra_time_entries
+              SET entry_date = $2::date,
+                  minutes = $3::int, notes = $4::text, updated_at = clock_timestamp()
+            WHERE id = $1::uuid AND deleted_at IS NULL
+            RETURNING updated_at`,
+          [input.id, after.entry_date, after.minutes, after.notes],
+        )
     await insertAdminAuditEvent(db, {
       eventType: 'extra_time_entry_edited_by_manager',
       actorUserId: input.actorId,
