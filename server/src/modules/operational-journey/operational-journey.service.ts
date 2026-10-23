@@ -513,6 +513,7 @@ export async function serviceExportOperationalJourneyXlsx(
   },
 ): Promise<{ buffer: Buffer; filename: string }> {
   const conveyorId = args.query.conveyorId ?? null
+  const conveyorCode = args.query.conveyorCode ?? null
   const collaborators: OperationalJourneyExportCollaborator[] = []
   let periodFrom: Date | null = null
   let periodTo: Date | null = null
@@ -526,7 +527,7 @@ export async function serviceExportOperationalJourneyXlsx(
     periodTo ??= to
     const [brief, entries, extraEntries] = await Promise.all([
       findCollaboratorBrief(pool, collaboratorId),
-      listAllTimeEntriesForCollaboratorInPeriod(pool, { collaboratorId, from, to, conveyorId }),
+      listAllTimeEntriesForCollaboratorInPeriod(pool, { collaboratorId, from, to, conveyorId, conveyorCode }),
       listExtraTimeEntriesInPeriodForCollaborator(pool, { collaboratorId, from, to }),
     ])
     collaborators.push({
@@ -583,7 +584,7 @@ export async function serviceExportOperationalJourneyXlsx(
     periodPreset: args.query.periodPreset,
     conveyorFilterLabel: conveyor
       ? [conveyor.code, conveyor.name].filter(Boolean).join(' · ')
-      : null,
+      : conveyorCode,
     generatedAt: new Date(),
   }
   const buffer = await buildOperationalJourneyExportWorkbookBuffer({ meta, collaborators })

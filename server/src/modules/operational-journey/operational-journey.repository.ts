@@ -169,6 +169,7 @@ export async function listAllTimeEntriesForCollaboratorInPeriod(
     from: Date
     to: Date
     conveyorId: string | null
+    conveyorCode?: string | null
   },
 ): Promise<TimeEntryExportRow[]> {
   const r = await pool.query<TimeEntryExportRow>(
@@ -199,9 +200,10 @@ export async function listAllTimeEntriesForCollaboratorInPeriod(
       AND cte.entry_at >= $2::timestamptz
       AND cte.entry_at <= $3::timestamptz
       AND ($4::uuid IS NULL OR cte.conveyor_id = $4::uuid)
+      AND ($5::text IS NULL OR cv.code = $5::text)
     ORDER BY cte.entry_at ASC, cte.created_at ASC
     `,
-    [args.collaboratorId, args.from, args.to, args.conveyorId],
+    [args.collaboratorId, args.from, args.to, args.conveyorId, args.conveyorCode ?? null],
   )
   return r.rows
 }
