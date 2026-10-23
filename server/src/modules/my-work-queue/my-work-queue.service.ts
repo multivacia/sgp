@@ -91,15 +91,27 @@ export async function serviceGetWorkQueueForCollaborator(
      * Quando presente, `date` passa a ser "hoje" (America/Sao_Paulo) e `includePastDue` é ignorado.
      */
     period?: { from: string; to: string } | null
+    allOpenPlanned?: boolean
   },
 ): Promise<MyWorkQueueResponseApi> {
-  const period = input.period ?? null
-  const date = period ? operationalToday() : input.date?.trim() || todayIsoLocal()
+  const allOpenPlanned = input.allOpenPlanned === true
+  const period = allOpenPlanned ? null : input.period ?? null
+  const date = period || allOpenPlanned ? operationalToday() : input.date?.trim() || todayIsoLocal()
   const includePastDue = input.includePastDue ?? true
   const { collaboratorId } = input
 
   let raw: MyWorkQueueRawRow[]
-  if (period) {
+  if (allOpenPlanned) {
+    raw = await listMyWorkQueueRows(pool, {
+      workPlanId: null,
+      collaboratorId,
+      date,
+      includePastDue: false,
+      allOpenPlanned: true,
+      listOptions: { ...input.listOptions, planItemStatuses: ['PLANNED'] },
+    })
+    if (raw.length === 0) return emptyResponse(date)
+  } else if (period) {
     const plans = await findPublishedWorkPlansInRange(
       pool,
       mondayOfWeekContaining(period.from),
@@ -163,7 +175,31 @@ export async function serviceGetWorkQueueForCollaborator(
     overload: todayMinutes > capacity.resolvedDailyMinutes,
   }
 
-  const conveyorIds = [...new Set(raw.map((row) => row.conveyor_id))]
+  // Uma atividade aparece uma vez na fila do Kiosk, mesmo com planejamento
+  // distribuído por várias semanas. Os totais acima continuam pelo dia.
+  const displayRows: MyWorkQueueRawRow[] = allOpenPlanned
+    ? (() => {
+        const byStep = new Map<string, MyWorkQueueRawRow>()
+        for (const row of raw) {
+          const key = row.conveyor_id + ':' + row.activity_node_id
+          const current = byStep.get(key)
+          if (!current) {
+            byStep.set(key, { ...row })
+            continue
+          }
+          const minutes = (current.planned_minutes ?? 0) + (row.planned_minutes ?? 0)
+          if (row.planned_date < current.planned_date ||
+              (row.planned_date === current.planned_date && row.planned_order < current.planned_order)) {
+            byStep.set(key, { ...row, planned_minutes: minutes })
+          } else {
+            byStep.set(key, { ...current, planned_minutes: minutes })
+          }
+        }
+        return [...byStep.values()]
+      })()
+    : raw
+
+  const conveyorIds = [...new Set(displayRows.map((row) => row.conveyor_id))]
   const nodesByConveyor = new Map<string, SequenceAnalysisNode[]>()
   const plannedByConveyor = new Map<string, Map<string, Set<string>>>()
   await Promise.all(
@@ -177,7 +213,7 @@ export async function serviceGetWorkQueueForCollaborator(
     }),
   )
 
-  const mappedItems = raw.map((row): MyWorkQueueItemApi => {
+  const mappedItems = displayRows.map((row): MyWorkQueueItemApi => {
     const isActivityCompleted = row.activity_operational_status === 'COMPLETED'
     const isActivityAborted = row.activity_operational_status === 'ABORTED'
     const closedForPointing = isActivityCompleted || isActivityAborted

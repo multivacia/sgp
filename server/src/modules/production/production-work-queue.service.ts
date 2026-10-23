@@ -3,7 +3,6 @@ import type { MyWorkQueueItemApi } from '../my-work-queue/my-work-queue.dto.js'
 import { serviceGetWorkQueueForCollaborator } from '../my-work-queue/my-work-queue.service.js'
 import {
   getLatestSessionCompletionPctByStepForCollaborator,
-  sumRealizedMinutesByStepForConveyor,
 } from '../conveyors/conveyorNodeWorkload.repository.js'
 import type {
   ProductionWorkQueueItemApi,
@@ -107,6 +106,7 @@ export async function serviceGetProductionWorkQueue(
     collaboratorId: input.collaboratorId,
     date: input.date,
     includePastDue: input.includePastDue,
+    allOpenPlanned: true,
     listOptions: {
       planItemStatuses: ['PLANNED'],
     },
@@ -114,14 +114,14 @@ export async function serviceGetProductionWorkQueue(
 
   const uniqueConveyorIds = [...new Set(result.items.map((i) => i.conveyorId))]
   const realizedByStep = new Map<string, number>()
-  await Promise.all(
-    uniqueConveyorIds.map(async (cid) => {
-      const m = await sumRealizedMinutesByStepForConveyor(pool, cid)
-      for (const [stepId, min] of m) {
-        realizedByStep.set(stepId, min)
-      }
-    }),
-  )
+  const stepIds = result.items.map((item) => item.activityNodeId)
+  if (stepIds.length > 0) {
+    const realized = await pool.query<{ step_id: string; minutes: string }>(
+      'SELECT conveyor_node_id::text AS step_id, COALESCE(SUM(minutes), 0)::text AS minutes FROM conveyor_time_entries WHERE deleted_at IS NULL AND collaborator_id = $1::uuid AND conveyor_node_id = ANY($2::uuid[]) GROUP BY conveyor_node_id',
+      [input.collaboratorId, stepIds],
+    )
+    for (const row of realized.rows) realizedByStep.set(row.step_id, Number(row.minutes) || 0)
+  }
 
   const lastSessionCompletionPctByStep =
     await getLatestSessionCompletionPctByStepForCollaborator(
