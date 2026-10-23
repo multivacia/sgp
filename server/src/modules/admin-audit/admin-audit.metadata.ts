@@ -28,6 +28,13 @@ function isUuidString(v: unknown): v is string {
   return typeof v === 'string' && z.string().uuid().safeParse(v).success
 }
 
+const extraTimeEntrySnapshot = z.object({
+  descriptionId: z.string().uuid(),
+  entryDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  minutes: z.number().int().positive(),
+  notes: z.string().max(500).nullable(),
+}).strict()
+
 const METADATA_ALLOWLIST: Record<
   AdminAuditEventType,
   readonly string[] | 'empty'
@@ -76,6 +83,13 @@ const METADATA_ALLOWLIST: Record<
     'time_entry_id',
     'target_collaborator_id',
     'reason',
+  ],
+  extra_time_entry_edited_by_manager: [
+    'time_entry_id', 'target_collaborator_id', 'reason',
+    'previous_snapshot', 'new_snapshot',
+  ],
+  extra_time_entry_deleted_by_manager: [
+    'time_entry_id', 'target_collaborator_id', 'reason', 'previous_snapshot',
   ],
 }
 
@@ -186,6 +200,11 @@ export function buildSanitizedMetadata(
       if (!t.length) throw new Error('reason não pode ser vazio')
       if (t.length > 4000) throw new Error('reason excede tamanho máximo')
       out[key] = t
+      continue
+    }
+
+    if (key === 'previous_snapshot' || key === 'new_snapshot') {
+      out[key] = extraTimeEntrySnapshot.parse(v)
       continue
     }
 

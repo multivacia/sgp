@@ -529,6 +529,8 @@ export type ExtraTimeEntryJourneyRow = {
   description: string
   notes: string | null
   origin: string
+  description_id: string
+  updated_at: Date
 }
 
 /**
@@ -555,7 +557,9 @@ export async function listExtraTimeEntriesInPeriodForCollaborators(
       e.minutes,
       d.description,
       e.notes,
-      e.origin
+      e.origin,
+      e.description_id::text AS description_id,
+      e.updated_at
     FROM operational_extra_time_entries e
     INNER JOIN operational_extra_time_entry_descriptions d
       ON d.id = e.description_id

@@ -370,6 +370,8 @@ export async function serviceGetOperationalJourneyForCollaborators(
     entryDate: r.entry_date,
     minutes: r.minutes,
     description: r.description,
+    descriptionId: r.description_id,
+    updatedAt: r.updated_at.toISOString(),
     notes: r.notes,
     origin: r.origin === 'PRODUCTION' ? ('PRODUCTION' as const) : ('WEB' as const),
   }))

@@ -42,6 +42,8 @@ export type OperationalJourneyExtraTimeEntryApi = {
   entryDate: string
   minutes: number
   description: string
+  descriptionId: string
+  updatedAt: string
   notes: string | null
   /** WEB (SGP) ou PRODUCTION (Modo Fábrica/Kiosk). */
   origin: 'WEB' | 'PRODUCTION'
