@@ -14,6 +14,10 @@ export type OperationalJourneyQuery = {
   to?: string
   limit?: number
   conveyorId?: string
+  conveyorCode?: string
+  openOffset?: number
+  historyOffset?: number
+  extraOffset?: number
 }
 
 function operationalJourneyQueryString(query?: OperationalJourneyQuery): string {
@@ -23,6 +27,10 @@ function operationalJourneyQueryString(query?: OperationalJourneyQuery): string 
   if (query?.to?.trim()) qs.set('to', query.to.trim())
   if (query?.limit !== undefined) qs.set('limit', String(query.limit))
   if (query?.conveyorId?.trim()) qs.set('conveyorId', query.conveyorId.trim())
+  if (query?.conveyorCode?.trim()) qs.set('conveyorCode', query.conveyorCode.trim())
+  if (query?.openOffset) qs.set('openOffset', String(query.openOffset))
+  if (query?.historyOffset) qs.set('historyOffset', String(query.historyOffset))
+  if (query?.extraOffset) qs.set('extraOffset', String(query.extraOffset))
   return qs.toString()
 }
 
@@ -73,7 +81,10 @@ export function buildOperationalJourneyExportPath(
   collaboratorIds: readonly string[],
   query?: OperationalJourneyQuery,
 ): string {
-  const qs = new URLSearchParams(operationalJourneyQueryString({ ...query, limit: undefined }))
+  const qs = new URLSearchParams(operationalJourneyQueryString({
+    ...query, limit: undefined, openOffset: undefined,
+    historyOffset: undefined, extraOffset: undefined,
+  }))
   qs.set('collaboratorIds', collaboratorIds.join(','))
   return `${BASE}/collaborators/operational-journey/export.xlsx?${qs.toString()}`
 }
