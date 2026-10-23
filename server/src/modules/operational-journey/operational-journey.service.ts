@@ -283,7 +283,7 @@ export async function serviceGetOperationalJourneyForCollaborators(
       serviceListActivitiesForCollaborator(pool, collaboratorId, { conveyorId }),
     ),
   )
-  const assignments = sortJourneyAssignments(
+  const allAssignments = sortJourneyAssignments(
     collaborators.flatMap((collaborator, i) =>
       perCollaborator[i]!.map<OperationalJourneyAssignmentApi>((a) => ({
         ...a,
@@ -293,6 +293,9 @@ export async function serviceGetOperationalJourneyForCollaborators(
     ),
   )
 
+  const assignments = conveyorCode
+    ? allAssignments.filter((a) => a.conveyorCode === conveyorCode)
+    : allAssignments
   const byBucket = countJourneyAssignmentsByBucket(assignments)
   const realizadoAcumuladoEscopo = sumJourneyRealizedMinutes(assignments)
   const plannedSum = sumJourneyStructuralPlannedMinutes(assignments)
@@ -313,8 +316,9 @@ export async function serviceGetOperationalJourneyForCollaborators(
       from,
       to,
       conveyorId,
+      conveyorCode,
     }),
-    sumRealizedMinutesTotalForCollaborators(pool, collaboratorIds, conveyorId),
+    sumRealizedMinutesTotalForCollaborators(pool, collaboratorIds, conveyorId, conveyorCode),
     listTimeEntriesForCollaboratorsInPeriod(pool, {
       collaboratorIds,
       from,

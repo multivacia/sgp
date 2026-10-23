@@ -353,6 +353,7 @@ export async function sumRealizedMinutesTotalForCollaborators(
   pool: pg.Pool,
   collaboratorIds: string[],
   conveyorId: string | null,
+  conveyorCode: string | null = null,
 ): Promise<number> {
   const r = await pool.query<{ s: string | null }>(
     `
@@ -360,8 +361,9 @@ export async function sumRealizedMinutesTotalForCollaborators(
     ${journeyTimeEntriesFromSql()}
       AND cte.collaborator_id = ANY($1::uuid[])
       AND ($2::uuid IS NULL OR cte.conveyor_id = $2::uuid)
+      AND ($3::text IS NULL OR cv.code = $3::text)
     `,
-    [collaboratorIds, conveyorId],
+    [collaboratorIds, conveyorId, conveyorCode],
   )
   return Number.parseInt(r.rows[0]?.s ?? '0', 10) || 0
 }
@@ -373,6 +375,7 @@ export async function sumRealizedMinutesInPeriodForCollaborators(
     from: Date
     to: Date
     conveyorId: string | null
+    conveyorCode?: string | null
   },
 ): Promise<number> {
   const r = await pool.query<{ s: string | null }>(
@@ -383,8 +386,9 @@ export async function sumRealizedMinutesInPeriodForCollaborators(
       AND cte.entry_at >= $2::timestamptz
       AND cte.entry_at <= $3::timestamptz
       AND ($4::uuid IS NULL OR cte.conveyor_id = $4::uuid)
+      AND ($5::text IS NULL OR cv.code = $5::text)
     `,
-    [args.collaboratorIds, args.from, args.to, args.conveyorId],
+    [args.collaboratorIds, args.from, args.to, args.conveyorId, args.conveyorCode ?? null],
   )
   return Number.parseInt(r.rows[0]?.s ?? '0', 10) || 0
 }
