@@ -1,4 +1,5 @@
 import type pg from 'pg'
+import { VALID_PUBLISHED_PLANNED_ITEMS_CTE } from '../operational-planning/time-entry-planning.repository.js'
 import { OPERATIONAL_TIMEZONE } from '../../shared/operationalWorkDate.js'
 
 export type CollaboratorBriefRow = {
@@ -630,4 +631,122 @@ export async function listExtraTimeEntriesInPeriodForCollaborators(
     ...row,
     correction_history: byId.get(row.id) ?? [],
   }))
+}
+
+
+/** Uma linha por colaborador e atividade do planejamento publicado válido.
+ * A data e a OS são filtradas ANTES da agregação e da paginação.
+ * Não exige alocação estrutural e não inclui atividades concluídas/dispensadas.
+ */
+export type PlannedOpenJourneyRow = {
+  collaborator_id: string
+  collaborator_name: string | null
+  conveyor_id: string
+  conveyor_code: string | null
+  conveyor_name: string
+  conveyor_status: string
+  estimated_deadline: string | null
+  step_node_id: string
+  step_name: string
+  option_name: string
+  area_name: string
+  is_primary: boolean
+  planned_minutes: string | null
+  realized_minutes: string | null
+  planned_date: string
+  total_count: number
+}
+
+export async function listPlannedOpenJourneyRows(
+  pool: pg.Pool,
+  input: {
+    collaboratorIds: string[]
+    from: Date
+    to: Date
+    conveyorId: string | null
+    conveyorCode: string | null
+    limit: number
+    offset: number
+  },
+): Promise<PlannedOpenJourneyRow[]> {
+  const result = await pool.query<PlannedOpenJourneyRow>(
+    `
+    WITH ${VALID_PUBLISHED_PLANNED_ITEMS_CTE},
+    scoped_steps AS (
+      SELECT
+        vi.assigned_collaborator_id AS collaborator_id,
+        vi.conveyor_id,
+        vi.activity_node_id,
+        MIN(vi.planned_date) AS planned_date,
+        SUM(vi.planned_minutes) AS planned_minutes
+      FROM valid_planned_items vi
+      WHERE vi.assigned_collaborator_id = ANY($1::uuid[])
+        AND vi.planned_date >= ($2::timestamptz AT TIME ZONE '${OPERATIONAL_TIMEZONE}')::date
+        AND vi.planned_date <= ($3::timestamptz AT TIME ZONE '${OPERATIONAL_TIMEZONE}')::date
+        AND ($4::uuid IS NULL OR vi.conveyor_id = $4::uuid)
+      GROUP BY vi.assigned_collaborator_id, vi.conveyor_id, vi.activity_node_id
+    )
+    SELECT
+      sc.collaborator_id::text,
+      col.full_name AS collaborator_name,
+      cv.id::text AS conveyor_id,
+      cv.code AS conveyor_code,
+      cv.name AS conveyor_name,
+      cv.operational_status::text AS conveyor_status,
+      cv.estimated_deadline,
+      step.id::text AS step_node_id,
+      step.name AS step_name,
+      opt.name AS option_name,
+      area.name AS area_name,
+      COALESCE((
+        SELECT cna.is_primary
+        FROM conveyor_node_assignees cna
+        WHERE cna.conveyor_id = sc.conveyor_id
+          AND cna.conveyor_node_id = sc.activity_node_id
+          AND cna.deleted_at IS NULL
+          AND cna.assignment_type = 'COLLABORATOR'
+          AND cna.collaborator_id = sc.collaborator_id
+        ORDER BY cna.is_primary DESC, cna.order_index, cna.id
+        LIMIT 1
+      ), FALSE) AS is_primary,
+      sc.planned_minutes::text,
+      (
+        SELECT COALESCE(SUM(cte.minutes), 0)::text
+        FROM conveyor_time_entries cte
+        WHERE cte.deleted_at IS NULL
+          AND cte.conveyor_node_id = sc.activity_node_id
+          AND cte.collaborator_id = sc.collaborator_id
+      ) AS realized_minutes,
+      sc.planned_date::text AS planned_date,
+      COUNT(*) OVER()::int AS total_count
+    FROM scoped_steps sc
+    INNER JOIN conveyors cv ON cv.id = sc.conveyor_id
+      AND cv.deleted_at IS NULL
+      AND cv.operational_status IN ('A_INICIAR', 'EM_ANDAMENTO')
+    INNER JOIN conveyor_nodes step ON step.id = sc.activity_node_id
+      AND step.conveyor_id = sc.conveyor_id
+      AND step.deleted_at IS NULL
+      AND step.is_active = TRUE
+      AND step.node_type = 'STEP'
+      AND step.operational_status IS DISTINCT FROM 'COMPLETED'
+      AND step.operational_status IS DISTINCT FROM 'ABORTED'
+    INNER JOIN conveyor_nodes area ON area.id = step.parent_id
+      AND area.deleted_at IS NULL AND area.is_active = TRUE
+      AND area.node_type = 'AREA'
+    INNER JOIN conveyor_nodes opt ON opt.id = area.parent_id
+      AND opt.deleted_at IS NULL AND opt.is_active = TRUE
+      AND opt.node_type = 'OPTION'
+    INNER JOIN collaborators col ON col.id = sc.collaborator_id
+      AND col.deleted_at IS NULL
+    WHERE ($5::text IS NULL OR cv.code = $5::text)
+    ORDER BY sc.planned_date, cv.name, opt.order_index,
+             area.order_index, step.order_index, sc.collaborator_id, step.id
+    LIMIT $6::int OFFSET $7::int
+    `,
+    [
+      input.collaboratorIds, input.from, input.to, input.conveyorId,
+      input.conveyorCode, input.limit, input.offset,
+    ],
+  )
+  return result.rows
 }
