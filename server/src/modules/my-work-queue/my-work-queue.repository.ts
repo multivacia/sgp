@@ -1,4 +1,5 @@
 import type pg from 'pg'
+import { VALID_PUBLISHED_PLANNED_ITEMS_CTE } from '../operational-planning/time-entry-planning.repository.js'
 
 export type MyWorkQueuePlanRow = {
   id: string
@@ -130,7 +131,7 @@ export async function findPublishedWorkPlansInRange(
 export async function listMyWorkQueueRows(
   pool: pg.Pool,
   input: {
-    workPlanId: string
+    workPlanId: string | null
     collaboratorId: string
     date: string
     includePastDue: boolean
@@ -140,6 +141,7 @@ export async function listMyWorkQueueRows(
      * "dia + atrasadas" (`date`/`includePastDue`); `date` segue como referência de "hoje".
      */
     periodRange?: { from: string; to: string }
+    allOpenPlanned?: boolean
   },
 ): Promise<MyWorkQueueRawRow[]> {
   const listOptions = input.listOptions
@@ -151,7 +153,11 @@ export async function listMyWorkQueueRows(
     queryParams.push(value)
     return `$${queryParams.length}`
   }
-  const dateScopeSql = input.periodRange
+  const dateScopeSql = input.allOpenPlanned
+    ? `AND step.operational_status IS DISTINCT FROM 'COMPLETED'
+       AND step.operational_status IS DISTINCT FROM 'ABORTED'
+       AND cv.operational_status IN ('A_INICIAR', 'EM_ANDAMENTO')`
+    : input.periodRange
     ? `AND i.planned_date >= ${param(input.periodRange.from)}::date
       AND i.planned_date <= ${param(input.periodRange.to)}::date`
     : `AND (
@@ -163,9 +169,14 @@ export async function listMyWorkQueueRows(
         )
       )`
   const weekBoundsSql =
-    weekStart && weekEnd
+    !input.allOpenPlanned && weekStart && weekEnd
       ? `AND i.planned_date >= ${param(weekStart)}::date AND i.planned_date <= ${param(weekEnd)}::date`
       : ''
+
+  const planCte = input.allOpenPlanned ? `WITH ${VALID_PUBLISHED_PLANNED_ITEMS_CTE}` : ''
+  const planScopeSql = input.allOpenPlanned
+    ? '$1::uuid IS NULL AND i.work_plan_id IN (SELECT id FROM current_published_plans)'
+    : 'i.work_plan_id = $1::uuid'
 
   const r = await pool.query<{
     work_plan_id: string
@@ -189,6 +200,7 @@ export async function listMyWorkQueueRows(
     is_assigned_to_me: boolean
   }>(
     `
+    ${planCte}
     SELECT
       p.id::text AS work_plan_id,
       i.id::text AS work_plan_item_id,
@@ -208,7 +220,7 @@ export async function listMyWorkQueueRows(
       opt.name AS task_title,
       area.name AS sector_title,
       step.operational_status::text AS activity_operational_status,
-      EXISTS (
+      CASE WHEN $1::uuid IS NULL THEN TRUE ELSE EXISTS (
         SELECT 1
         FROM conveyor_node_assignees cna
         WHERE cna.conveyor_id = cv.id
@@ -230,7 +242,7 @@ export async function listMyWorkQueueRows(
               )
             )
           )
-      ) AS is_assigned_to_me
+      ) END AS is_assigned_to_me
     FROM operational_work_plan_items i
     INNER JOIN operational_work_plans p
       ON p.id = i.work_plan_id
@@ -255,7 +267,7 @@ export async function listMyWorkQueueRows(
       AND opt.deleted_at IS NULL
       AND opt.is_active = TRUE
       AND opt.node_type = 'OPTION'
-    WHERE i.work_plan_id = $1::uuid
+    WHERE ${planScopeSql}
       AND i.deleted_at IS NULL
       ${statusFilterSql}
       AND i.assigned_collaborator_id = $2::uuid
