@@ -59,6 +59,7 @@ import {
   TIME_ENTRY_JUSTIFICATION_REQUIRED_MESSAGE,
 } from '../../shared/timeEntryJustificationResolver.js'
 import { resolveProductionStepAssigneeId } from '../production/production-plan-assignee.js'
+import { requireTimeEntryPlanningEligibility, TIME_ENTRY_NOT_PLANNED_MESSAGE } from '../operational-planning/time-entry-planning.repository.js'
 import { resolveTimeEntryEntryAt } from '../../shared/operationalWorkDate.js'
 
 function isPgUniqueViolation(err: unknown): boolean {
@@ -276,6 +277,8 @@ export type CreateTimeEntryInput = {
   sessionCompletionPct?: number | null
   /** Colaborador indicou que a atividade está concluída. Kiosk only. */
   markAsDone?: boolean
+  /** Revalidar a autorização do plano vigente na transação. */
+  enforcePublishedPlan?: boolean
   /** Análise de sequência prévia (evita releitura na transação). */
   sequence?: ConveyorActivitySequenceAnalysis
   standardJustificationException?: ResolvedStandardJustification | null
@@ -386,13 +389,18 @@ export async function serviceCreateConveyorTimeEntryForAppUser(
     actorAppUserId: input.appUserId,
   }
 
-  const assigneeId = await findAssigneeIdForStepAndCollaborator(
-    pool,
-    input.conveyorId,
-    input.conveyorNodeId,
+  const eligibility = await requireTimeEntryPlanningEligibility(pool, {
+    conveyorId: input.conveyorId,
+    stepNodeId: input.conveyorNodeId,
     collaboratorId,
-  )
-  if (assigneeId) {
+  })
+  if (eligibility.scope === 'MINE') {
+    const assigneeId = await resolveProductionStepAssigneeId(pool, {
+      conveyorId: input.conveyorId,
+      stepNodeId: input.conveyorNodeId,
+      collaboratorId,
+    })
+    if (!assigneeId) throw new AppError(TIME_ENTRY_NOT_PLANNED_MESSAGE, 422, ErrorCodes.TIME_ENTRY_NOT_PLANNED)
     return serviceCreateConveyorTimeEntry(pool, {
       conveyorId: input.conveyorId,
       conveyorNodeId: input.conveyorNodeId,
@@ -407,46 +415,18 @@ export async function serviceCreateConveyorTimeEntryForAppUser(
       exceptionJustification: null,
       markAsDone: input.markAsDone,
       sequence: seq,
-    outOfSequenceJustificationId: input.outOfSequenceJustificationId,
-    outOfSequenceJustificationComplement: input.outOfSequenceJustificationComplement,
-    voluntaryJustificationId: input.voluntaryJustificationId,
-    voluntaryJustificationComplement: input.voluntaryJustificationComplement,
-    standardJustificationException: null,
+      outOfSequenceJustificationId: input.outOfSequenceJustificationId,
+      outOfSequenceJustificationComplement: input.outOfSequenceJustificationComplement,
+      voluntaryJustificationId: input.voluntaryJustificationId,
+      voluntaryJustificationComplement: input.voluntaryJustificationComplement,
+      standardJustificationException: null,
       standardJustificationOos: oosStandard,
+      enforcePublishedPlan: true,
       ...commonSeq,
     })
   }
 
-  const planAssigneeId = await resolveProductionStepAssigneeId(pool, {
-    conveyorId: input.conveyorId,
-    stepNodeId: input.conveyorNodeId,
-    collaboratorId,
-  })
-  if (planAssigneeId) {
-    return serviceCreateConveyorTimeEntry(pool, {
-      conveyorId: input.conveyorId,
-      conveyorNodeId: input.conveyorNodeId,
-      collaboratorId,
-      conveyorNodeAssigneeId: planAssigneeId,
-      entryAt: input.entryAt,
-      minutes: input.minutes,
-      executedQuantity: input.executedQuantity,
-      notes: input.notes ?? null,
-      entryMode: input.entryMode,
-      entryOrigin: 'ASSIGNED',
-      exceptionJustification: null,
-      markAsDone: input.markAsDone,
-      sequence: seq,
-    outOfSequenceJustificationId: input.outOfSequenceJustificationId,
-    outOfSequenceJustificationComplement: input.outOfSequenceJustificationComplement,
-    voluntaryJustificationId: input.voluntaryJustificationId,
-    voluntaryJustificationComplement: input.voluntaryJustificationComplement,
-    standardJustificationException: null,
-      standardJustificationOos: oosStandard,
-      ...commonSeq,
-    })
-  }
-
+  // Atividade planejada para outro: exceção, ainda que exista alocação estrutural antiga.
   const effectiveException = pickEffectiveContextualJustification({
     specificJustificationId: input.exceptionJustificationId,
     specificJustificationComplement: input.exceptionJustificationComplement,
@@ -474,6 +454,7 @@ export async function serviceCreateConveyorTimeEntryForAppUser(
     notes: input.notes ?? null,
     entryMode: input.entryMode,
     entryOrigin: 'UNASSIGNED_EXCEPTION',
+    enforcePublishedPlan: true,
     exceptionJustification: exceptionResolved.legacyText,
     markAsDone: input.markAsDone,
     sequence: seq,
@@ -704,6 +685,17 @@ export async function serviceCreateConveyorTimeEntry(
         ErrorCodes.CONFLICT,
       )
     }
+    if (input.enforcePublishedPlan) {
+      const current = await requireTimeEntryPlanningEligibility(client, {
+        conveyorId: input.conveyorId,
+        stepNodeId: input.conveyorNodeId,
+        collaboratorId: input.collaboratorId,
+      })
+      const requiredScope = entryOrigin === 'UNASSIGNED_EXCEPTION' ? 'OTHER' : 'MINE'
+      if (current.scope !== requiredScope) {
+        throw new AppError(TIME_ENTRY_NOT_PLANNED_MESSAGE, 422, ErrorCodes.TIME_ENTRY_NOT_PLANNED)
+      }
+    }
     const shouldAutoStartLocked = locked.conveyor.operational_status === 'A_INICIAR'
     await insertConveyorTimeEntry(client, row)
     if (shouldAutoStartLocked) {
@@ -853,18 +845,20 @@ export async function serviceCreateConveyorTimeEntryOnBehalf(
     oosStandard = resolved.standard
   }
 
-  const assigneeId = await findAssigneeIdForStepAndCollaborator(
-    pool,
-    input.conveyorId,
-    input.conveyorNodeId,
-    input.targetCollaboratorId,
-  )
-  if (!assigneeId) {
-    throw new AppError(
-      'O colaborador indicado não está alocado nesta atividade.',
-      422,
-      ErrorCodes.VALIDATION_ERROR,
-    )
+  const eligibility = await requireTimeEntryPlanningEligibility(pool, {
+    conveyorId: input.conveyorId,
+    stepNodeId: input.conveyorNodeId,
+    collaboratorId: input.targetCollaboratorId,
+  })
+  const assigneeId = eligibility.scope === 'MINE'
+    ? await resolveProductionStepAssigneeId(pool, {
+        conveyorId: input.conveyorId,
+        stepNodeId: input.conveyorNodeId,
+        collaboratorId: input.targetCollaboratorId,
+      })
+    : null
+  if (eligibility.scope === 'MINE' && !assigneeId) {
+    throw new AppError(TIME_ENTRY_NOT_PLANNED_MESSAGE, 422, ErrorCodes.TIME_ENTRY_NOT_PLANNED)
   }
 
   const metadataJson = {
@@ -898,8 +892,8 @@ export async function serviceCreateConveyorTimeEntryOnBehalf(
     notes: input.notes ?? null,
     entry_mode: 'manual',
     metadata_json: metadataJson,
-    entry_origin: 'ASSIGNED',
-    exception_justification: null,
+    entry_origin: eligibility.scope === 'MINE' ? 'ASSIGNED' : 'UNASSIGNED_EXCEPTION',
+    exception_justification: eligibility.scope === 'OTHER' ? reason : null,
     is_out_of_sequence: seq.isOutOfSequence,
     out_of_sequence_justification: seq.isOutOfSequence ? outSeqJust : null,
     session_completion_pct: null,
@@ -926,6 +920,14 @@ export async function serviceCreateConveyorTimeEntryOnBehalf(
         409,
         ErrorCodes.CONFLICT,
       )
+    }
+    const currentEligibility = await requireTimeEntryPlanningEligibility(client, {
+      conveyorId: input.conveyorId,
+      stepNodeId: input.conveyorNodeId,
+      collaboratorId: input.targetCollaboratorId,
+    })
+    if (currentEligibility.scope !== eligibility.scope) {
+      throw new AppError(TIME_ENTRY_NOT_PLANNED_MESSAGE, 422, ErrorCodes.TIME_ENTRY_NOT_PLANNED)
     }
     try {
       await insertConveyorTimeEntry(client, row)
