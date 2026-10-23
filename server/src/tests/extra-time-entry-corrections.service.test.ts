@@ -75,7 +75,7 @@ describe('correção gerencial Extra Esteira — transação e auditoria', () =>
         expectedUpdatedAt: '2026-10-20T12:00:01.000Z', reason: 'Conferência',
         descriptionId: ID, entryDate: '2026-10-20', minutes: 45, notes: null,
       },
-    })).rejects.toMatchObject({ status: 409 })
+    })).rejects.toMatchObject({ statusCode: 409 })
     expect(query.mock.calls.map((x) => x[0])).toContain('ROLLBACK')
     expect(mocks.audit).not.toHaveBeenCalled()
   })
@@ -103,7 +103,7 @@ describe('correção gerencial Extra Esteira — transação e auditoria', () =>
         expectedUpdatedAt: DATE, reason: 'Correção', descriptionId: COLAB,
         entryDate: '2026-10-20', minutes: 30, notes: null,
       },
-    })).rejects.toMatchObject({ status: 422 })
+    })).rejects.toMatchObject({ statusCode: 422 })
     expect(query.mock.calls.map((x) => x[0])).toContain('ROLLBACK')
     expect(mocks.audit).not.toHaveBeenCalled()
   })

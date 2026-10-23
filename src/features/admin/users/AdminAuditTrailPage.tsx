@@ -30,6 +30,11 @@ function eventLabel(t: AdminAuditEventType): string {
     admin_user_collaborator_linked: 'Colaborador vinculado',
     admin_user_collaborator_unlinked: 'Colaborador desvinculado',
     role_permissions_updated: 'Permissões do papel atualizadas',
+    time_entry_created_on_behalf: 'Apontamento gerencial registrado',
+    time_entry_edited_by_manager: 'Apontamento corrigido',
+    time_entry_deleted_by_manager: 'Apontamento removido',
+    extra_time_entry_edited_by_manager: 'Extra Esteira corrigido',
+    extra_time_entry_deleted_by_manager: 'Extra Esteira removido',
   }
   return map[t] ?? t
 }
