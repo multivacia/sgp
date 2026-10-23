@@ -2,12 +2,11 @@ import type pg from 'pg'
 import { DatabaseError } from 'pg'
 import {
   findAssigneeIdForStepAndCollaborator,
-  findPublishedPlanItemIdForCollaboratorOnStep,
   insertConveyorNodeAssignee,
   maxAssigneeOrderIndexForStep,
   newAssignmentId,
 } from '../conveyors/conveyorAssignments.repository.js'
-import { mondayOfWeekContaining } from '../operational-planning/operational-planning.week.js'
+import { getTimeEntryPlanningEligibility } from '../operational-planning/time-entry-planning.repository.js'
 
 export const PRODUCTION_PUBLISHED_PLAN_ASSIGNEE_METADATA = {
   source: 'production_published_plan',
@@ -15,15 +14,6 @@ export const PRODUCTION_PUBLISHED_PLAN_ASSIGNEE_METADATA = {
 
 function isPgUniqueViolation(err: unknown): boolean {
   return err instanceof DatabaseError && err.code === '23505'
-}
-
-function todayIsoLocal(): string {
-  const t = new Date()
-  return [
-    t.getFullYear(),
-    String(t.getMonth() + 1).padStart(2, '0'),
-    String(t.getDate()).padStart(2, '0'),
-  ].join('-')
 }
 
 /**
@@ -38,6 +28,9 @@ export async function resolveProductionStepAssigneeId(
     stepNodeId: string
   },
 ): Promise<string | null> {
+  const eligibility = await getTimeEntryPlanningEligibility(pool, input)
+  if (eligibility.scope !== 'MINE') return null
+
   const existing = await findAssigneeIdForStepAndCollaborator(
     pool,
     input.conveyorId,
@@ -45,12 +38,6 @@ export async function resolveProductionStepAssigneeId(
     input.collaboratorId,
   )
   if (existing) return existing
-
-  const planItemId = await findPublishedPlanItemIdForCollaboratorOnStep(pool, {
-    ...input,
-    weekStartDate: mondayOfWeekContaining(todayIsoLocal()),
-  })
-  if (!planItemId) return null
 
   const orderIndex = (await maxAssigneeOrderIndexForStep(pool, input.stepNodeId)) + 1
 
