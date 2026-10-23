@@ -34,6 +34,8 @@ export const ErrorCodes = {
   SERVICE_UNAVAILABLE: 'SERVICE_UNAVAILABLE',
   /** Etapa STEP espúria (rollup de TASK) em área placeholder quando já há setores reais. */
   CONVEYOR_SYNTHETIC_ROLLUP_STEP: 'CONVEYOR_SYNTHETIC_ROLLUP_STEP',
+  /** Atividade ausente dos planejamentos publicados vigentes. */
+  TIME_ENTRY_NOT_PLANNED: 'TIME_ENTRY_NOT_PLANNED',
   /** Apontamento em atividade sem alocação exige justificativa (`exceptionJustification`). */
   TIME_ENTRY_UNASSIGNED_REQUIRES_JUSTIFICATION:
     'TIME_ENTRY_UNASSIGNED_REQUIRES_JUSTIFICATION',
