@@ -51,8 +51,16 @@ describe('1.10.2 — autorização por planejamento publicado', () => {
   it('exclui versões substituídas, itens sem responsável e não planejados na fonte canônica', () => {
     expect(VALID_PUBLISHED_PLANNED_ITEMS_CTE).toContain('DISTINCT ON (p.week_start_date)')
     expect(VALID_PUBLISHED_PLANNED_ITEMS_CTE).toContain("p.status = 'PUBLISHED'")
+    expect(VALID_PUBLISHED_PLANNED_ITEMS_CTE).toContain('DISTINCT ON (i.conveyor_id, i.activity_node_id)')
+    expect(VALID_PUBLISHED_PLANNED_ITEMS_CTE).toContain('p.week_start_date DESC')
     expect(VALID_PUBLISHED_PLANNED_ITEMS_CTE).toContain("i.status = 'PLANNED'")
     expect(VALID_PUBLISHED_PLANNED_ITEMS_CTE).toContain('i.assigned_collaborator_id IS NOT NULL')
+    // A escolha da semana vigente antecede os filtros: item novo cancelado/sem
+    // colaborador não pode liberar a atribuição antiga da atividade.
+    const ranking = VALID_PUBLISHED_PLANNED_ITEMS_CTE.split('latest_activity_plan_items AS (')[1]!
+      .split('valid_planned_items AS (')[0]!
+    expect(ranking).not.toContain("i.status = 'PLANNED'")
+    expect(ranking).not.toContain('i.assigned_collaborator_id IS NOT NULL')
   })
 })
 
@@ -116,6 +124,7 @@ describe('1.10.2 — listagens filtra antes de paginar', () => {
     const sql = String(query.mock.calls[0]![0])
     expect(sql).toContain('WITH ' + VALID_PUBLISHED_PLANNED_ITEMS_CTE)
     expect(sql).toContain('i.work_plan_id IN (SELECT id FROM current_published_plans)')
+    expect(sql).toContain('FROM valid_planned_items i')
     expect(sql).toContain('i.assigned_collaborator_id = $2::uuid')
     expect(sql).toContain("cv.operational_status IN ('A_INICIAR', 'EM_ANDAMENTO')")
     expect(query.mock.calls[0]![1]).toEqual([null, COLLAB, '2026-10-22'])

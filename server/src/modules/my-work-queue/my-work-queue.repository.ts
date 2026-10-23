@@ -243,7 +243,7 @@ export async function listMyWorkQueueRows(
             )
           )
       ) END AS is_assigned_to_me
-    FROM operational_work_plan_items i
+    FROM ${input.allOpenPlanned ? 'valid_planned_items' : 'operational_work_plan_items'} i
     INNER JOIN operational_work_plans p
       ON p.id = i.work_plan_id
       AND p.deleted_at IS NULL

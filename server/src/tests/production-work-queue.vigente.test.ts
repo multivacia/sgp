@@ -95,12 +95,17 @@ describe('serviceGetProductionWorkQueue — plano vigente', () => {
       },
       items: [queueItem],
     })
-    vi.spyOn(workloadRepo, 'sumRealizedMinutesByStepForConveyor').mockResolvedValue(new Map())
+    // A fila consulta os minutos realizados diretamente por colaborador;
+    // esse SELECT precisa ser simulado junto dos métodos auxiliares.
+    const query = vi.fn(async (_sql: string, _params: unknown[]) => ({
+      rows: [{ step_id: 'step-1', minutes: '20' }],
+    }))
+    const pool = { query } as unknown as pg.Pool
     vi.spyOn(workloadRepo, 'getLatestSessionCompletionPctByStepForCollaborator').mockResolvedValue(
       new Map(),
     )
 
-    const result = await serviceGetProductionWorkQueue({} as pg.Pool, {
+    const result = await serviceGetProductionWorkQueue(pool, {
       collaboratorId: COLLABORATOR_ID,
       date: '2026-06-02',
       includePastDue: true,
@@ -110,7 +115,13 @@ describe('serviceGetProductionWorkQueue — plano vigente', () => {
       conveyorTitle: 'Esteira 7070',
       conveyorCode: '7070',
       activityTitle: 'Costura do tecido XPTO',
+      realizedMinutes: 20,
+      pendingMinutes: 40,
     })
+    expect(query).toHaveBeenCalledWith(
+      expect.stringContaining('collaborator_id = $1::uuid'),
+      [COLLABORATOR_ID, ['step-1']],
+    )
     // O item de origem (fila web) traz cliente/veículo/placa; o contrato do Kiosk não.
     expect(result.items[0]).not.toHaveProperty('clientName')
     expect(result.items[0]).not.toHaveProperty('vehicleDescription')

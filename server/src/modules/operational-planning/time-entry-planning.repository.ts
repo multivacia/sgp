@@ -2,21 +2,33 @@ import type pg from 'pg'
 import { AppError } from '../../shared/errors/AppError.js'
 import { ErrorCodes } from '../../shared/errors/errorCodes.js'
 
-/** Somente planos publicados vigentes em cada semana autorizam apontamentos.
- * Não contam itens sem responsável, cancelados, movidos, excluídos ou em rascunho.
+/** Só o responsável do último item publicado por esteira/atividade pode apontar
+ * normalmente, considerando a semana publicada mais recente (inclusive futura).
+ * Atribuições de semanas anteriores não prevalecem após transferência.
+ * CANCELLED, MOVED, excluídos e itens sem responsável invalidam elegibilidade.
  */
 export const VALID_PUBLISHED_PLANNED_ITEMS_CTE = `
   current_published_plans AS (
-    SELECT DISTINCT ON (p.week_start_date) p.id
+    SELECT DISTINCT ON (p.week_start_date) p.id, p.week_start_date
     FROM operational_work_plans p
     WHERE p.status = 'PUBLISHED' AND p.deleted_at IS NULL
     ORDER BY p.week_start_date, p.published_at DESC NULLS LAST,
              p.updated_at DESC, p.id DESC
   ),
-  valid_planned_items AS (
-    SELECT i.*
+  latest_activity_plan_items AS (
+    -- A semana publicada mais recente prevalece por esteira/atividade.
+    -- Classificar ANTES de retirar cancelamentos/sem responsável evita
+    -- ressuscitar um planejamento antigo após uma mudança de responsável.
+    SELECT DISTINCT ON (i.conveyor_id, i.activity_node_id) i.*
     FROM operational_work_plan_items i
     INNER JOIN current_published_plans p ON p.id = i.work_plan_id
+    ORDER BY i.conveyor_id, i.activity_node_id,
+             p.week_start_date DESC, i.planned_date DESC,
+             i.updated_at DESC, i.id DESC
+  ),
+  valid_planned_items AS (
+    SELECT i.*
+    FROM latest_activity_plan_items i
     WHERE i.deleted_at IS NULL
       AND i.status = 'PLANNED'
       AND i.assigned_collaborator_id IS NOT NULL
