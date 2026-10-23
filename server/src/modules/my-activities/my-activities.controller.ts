@@ -99,6 +99,10 @@ export async function getMyOperationalJourney(
     to: queryString(req.query.to),
     limit: queryString(req.query.limit),
     conveyorId: queryString(req.query.conveyorId),
+    conveyorCode: queryString(req.query.conveyorCode),
+    openOffset: queryString(req.query.openOffset),
+    historyOffset: queryString(req.query.historyOffset),
+    extraOffset: queryString(req.query.extraOffset),
   })
   const data = await serviceGetOperationalJourney(pool, { collaboratorId, query: q })
   res.json(ok(data))

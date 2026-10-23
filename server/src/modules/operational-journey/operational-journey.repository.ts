@@ -407,7 +407,9 @@ export async function listTimeEntriesForCollaboratorsInPeriod(
     from: Date
     to: Date
     conveyorId: string | null
+    conveyorCode?: string | null
     limit: number
+    offset?: number
   },
 ): Promise<TimeEntryMultiHistoryRow[]> {
   const r = await pool.query<TimeEntryMultiHistoryRow>(
@@ -434,10 +436,11 @@ export async function listTimeEntriesForCollaboratorsInPeriod(
       AND cte.entry_at >= $2::timestamptz
       AND cte.entry_at <= $3::timestamptz
       AND ($4::uuid IS NULL OR cte.conveyor_id = $4::uuid)
-    ORDER BY cte.entry_at DESC, cte.created_at DESC
-    LIMIT $5
+      AND ($7::text IS NULL OR cv.code = $7::text)
+    ORDER BY cte.entry_at DESC, cte.created_at DESC, cte.id DESC
+    LIMIT $5 OFFSET $6::int
     `,
-    [args.collaboratorIds, args.from, args.to, args.conveyorId, args.limit],
+    [args.collaboratorIds, args.from, args.to, args.conveyorId, args.limit, args.offset ?? 0, args.conveyorCode ?? null],
   )
   return r.rows
 }
@@ -566,6 +569,7 @@ export async function listExtraTimeEntriesInPeriodForCollaborators(
     from: Date
     to: Date
     limit: number
+    offset?: number
   },
 ): Promise<ExtraTimeEntryJourneyRow[]> {
   const r = await pool.query<Omit<ExtraTimeEntryJourneyRow, 'correction_history'>>(
@@ -590,9 +594,9 @@ export async function listExtraTimeEntriesInPeriodForCollaborators(
       AND e.entry_date >= ($2::timestamptz AT TIME ZONE '${OPERATIONAL_TIMEZONE}')::date
       AND e.entry_date <= ($3::timestamptz AT TIME ZONE '${OPERATIONAL_TIMEZONE}')::date
     ORDER BY e.entry_date DESC, e.created_at DESC, e.id DESC
-    LIMIT $4::int
+    LIMIT $4::int OFFSET $5::int
     `,
-    [args.collaboratorIds, args.from, args.to, args.limit],
+    [args.collaboratorIds, args.from, args.to, args.limit, args.offset ?? 0],
   )
   if (r.rows.length === 0) return []
 

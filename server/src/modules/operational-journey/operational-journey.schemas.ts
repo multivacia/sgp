@@ -9,6 +9,11 @@ export const operationalJourneyQuerySchema = z
     to: z.string().optional(),
     limit: z.coerce.number().int().min(1).max(MAX_LIMIT).optional(),
     conveyorId: z.string().uuid().optional(),
+    /** Código exato da OS; filtros de Em aberto e Histórico. */
+    conveyorCode: z.string().trim().min(1).max(60).optional(),
+    openOffset: z.coerce.number().int().min(0).max(100000).optional(),
+    historyOffset: z.coerce.number().int().min(0).max(100000).optional(),
+    extraOffset: z.coerce.number().int().min(0).max(100000).optional(),
   })
   .superRefine((data, ctx) => {
     const hasFrom = Boolean(data.from?.trim())
@@ -43,6 +48,10 @@ export const operationalJourneyQuerySchema = z
       to,
       limit: data.limit ?? 20,
       conveyorId: data.conveyorId?.trim(),
+      conveyorCode: data.conveyorCode?.trim(),
+      openOffset: data.openOffset ?? 0,
+      historyOffset: data.historyOffset ?? 0,
+      extraOffset: data.extraOffset ?? 0,
     }
   })
 

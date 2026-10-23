@@ -28,6 +28,10 @@ export async function getOperationalJourney(req: Request, res: Response): Promis
     to: queryString(req.query.to),
     limit: queryString(req.query.limit),
     conveyorId: queryString(req.query.conveyorId),
+    conveyorCode: queryString(req.query.conveyorCode),
+    openOffset: queryString(req.query.openOffset),
+    historyOffset: queryString(req.query.historyOffset),
+    extraOffset: queryString(req.query.extraOffset),
   })
   const data = await serviceGetOperationalJourney(pool, { collaboratorId, query: q })
   res.json(ok(data))
@@ -44,6 +48,10 @@ export async function getOperationalJourneyExportXlsx(req: Request, res: Respons
     from: queryString(req.query.from),
     to: queryString(req.query.to),
     conveyorId: queryString(req.query.conveyorId),
+    conveyorCode: queryString(req.query.conveyorCode),
+    openOffset: queryString(req.query.openOffset),
+    historyOffset: queryString(req.query.historyOffset),
+    extraOffset: queryString(req.query.extraOffset),
   })
   const { buffer, filename } = await serviceExportOperationalJourneyXlsx(pool, {
     collaboratorIds,
@@ -79,6 +87,10 @@ export async function getOperationalJourneyForCollaborators(
     to: queryString(req.query.to),
     limit: queryString(req.query.limit),
     conveyorId: queryString(req.query.conveyorId),
+    conveyorCode: queryString(req.query.conveyorCode),
+    openOffset: queryString(req.query.openOffset),
+    historyOffset: queryString(req.query.historyOffset),
+    extraOffset: queryString(req.query.extraOffset),
   })
   const data = await serviceGetOperationalJourneyForCollaborators(pool, {
     collaboratorIds,
