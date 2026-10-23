@@ -372,6 +372,20 @@ export async function serviceGetOperationalJourneyForCollaborators(
     description: r.description,
     descriptionId: r.description_id,
     updatedAt: r.updated_at.toISOString(),
+    deletedAt: r.deleted_at?.toISOString() ?? null,
+    correctionHistory: r.correction_history.map((event) => ({
+      action: event.event_type === 'extra_time_entry_deleted_by_manager' ? ('DELETE' as const) : ('EDIT' as const),
+      reason: event.reason ?? '',
+      occurredAt: event.occurred_at.toISOString(),
+      actorLabel: event.actor_label,
+      before: {
+        ...event.previous_snapshot,
+        description: event.previous_description,
+      },
+      after: event.new_snapshot
+        ? { ...event.new_snapshot, description: event.new_description }
+        : null,
+    })),
     notes: r.notes,
     origin: r.origin === 'PRODUCTION' ? ('PRODUCTION' as const) : ('WEB' as const),
   }))

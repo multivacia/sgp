@@ -520,6 +520,24 @@ export async function listTopExtraTimeEntryDescriptionsInPeriodForCollaborators(
   }))
 }
 
+export type ExtraTimeEntryCorrectionSnapshot = {
+  descriptionId: string
+  entryDate: string
+  minutes: number
+  notes: string | null
+}
+
+export type ExtraTimeEntryCorrectionHistoryRow = {
+  event_type: 'extra_time_entry_edited_by_manager' | 'extra_time_entry_deleted_by_manager'
+  occurred_at: Date
+  reason: string | null
+  actor_label: string | null
+  previous_snapshot: ExtraTimeEntryCorrectionSnapshot
+  new_snapshot: ExtraTimeEntryCorrectionSnapshot | null
+  previous_description: string | null
+  new_description: string | null
+}
+
 export type ExtraTimeEntryJourneyRow = {
   id: string
   collaborator_id: string
@@ -531,12 +549,14 @@ export type ExtraTimeEntryJourneyRow = {
   origin: string
   description_id: string
   updated_at: Date
+  deleted_at: Date | null
+  correction_history: ExtraTimeEntryCorrectionHistoryRow[]
 }
 
 /**
- * Lançamentos Extra Esteira no período (mais recentes primeiro) — mesmo universo de
- * `summarizeExtraTimeEntriesInPeriodForCollaborators`. Descrições excluídas do catálogo
- * continuam visíveis para preservar o histórico.
+ * Lista consultável inclui registros excluídos (identificados e sem participação nos totais).
+ * A sumarização acima continua filtrando deleted_at IS NULL.
+ * Histórico de correções é buscado em lote para evitar consultas por registro.
  */
 export async function listExtraTimeEntriesInPeriodForCollaborators(
   pool: pg.Pool,
@@ -547,7 +567,7 @@ export async function listExtraTimeEntriesInPeriodForCollaborators(
     limit: number
   },
 ): Promise<ExtraTimeEntryJourneyRow[]> {
-  const r = await pool.query<ExtraTimeEntryJourneyRow>(
+  const r = await pool.query<Omit<ExtraTimeEntryJourneyRow, 'correction_history'>>(
     `
     SELECT
       e.id::text,
@@ -559,19 +579,55 @@ export async function listExtraTimeEntriesInPeriodForCollaborators(
       e.notes,
       e.origin,
       e.description_id::text AS description_id,
-      e.updated_at
+      e.updated_at,
+      e.deleted_at
     FROM operational_extra_time_entries e
     INNER JOIN operational_extra_time_entry_descriptions d
       ON d.id = e.description_id
     LEFT JOIN collaborators col ON col.id = e.collaborator_id
     WHERE e.collaborator_id = ANY($1::uuid[])
-      AND e.deleted_at IS NULL
       AND e.entry_date >= ($2::timestamptz AT TIME ZONE '${OPERATIONAL_TIMEZONE}')::date
       AND e.entry_date <= ($3::timestamptz AT TIME ZONE '${OPERATIONAL_TIMEZONE}')::date
-    ORDER BY e.entry_date DESC, e.created_at DESC
+    ORDER BY e.entry_date DESC, e.created_at DESC, e.id DESC
     LIMIT $4::int
     `,
     [args.collaboratorIds, args.from, args.to, args.limit],
   )
-  return r.rows
+  if (r.rows.length === 0) return []
+
+  const ids = r.rows.map((row) => row.id)
+  const history = await pool.query<ExtraTimeEntryCorrectionHistoryRow & { time_entry_id: string }>(
+    `
+    SELECT
+      a.metadata_json->>'time_entry_id' AS time_entry_id,
+      a.event_type,
+      a.occurred_at,
+      a.metadata_json->>'reason' AS reason,
+      u.email AS actor_label,
+      a.metadata_json->'previous_snapshot' AS previous_snapshot,
+      a.metadata_json->'new_snapshot' AS new_snapshot,
+      old_d.description AS previous_description,
+      new_d.description AS new_description
+    FROM admin_audit_events a
+    LEFT JOIN app_users u ON u.id = a.actor_user_id
+    LEFT JOIN operational_extra_time_entry_descriptions old_d
+      ON old_d.id::text = a.metadata_json->'previous_snapshot'->>'descriptionId'
+    LEFT JOIN operational_extra_time_entry_descriptions new_d
+      ON new_d.id::text = a.metadata_json->'new_snapshot'->>'descriptionId'
+    WHERE a.event_type IN ('extra_time_entry_edited_by_manager', 'extra_time_entry_deleted_by_manager')
+      AND a.metadata_json->>'time_entry_id' = ANY($1::text[])
+    ORDER BY a.occurred_at DESC, a.id DESC
+    `,
+    [ids],
+  )
+  const byId = new Map<string, ExtraTimeEntryCorrectionHistoryRow[]>()
+  for (const event of history.rows) {
+    const events = byId.get(event.time_entry_id) ?? []
+    events.push(event)
+    byId.set(event.time_entry_id, events)
+  }
+  return r.rows.map((row) => ({
+    ...row,
+    correction_history: byId.get(row.id) ?? [],
+  }))
 }

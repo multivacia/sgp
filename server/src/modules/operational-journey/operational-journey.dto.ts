@@ -33,6 +33,28 @@ export type OperationalJourneyTimeEntryApi = {
   standardJustificationComplement: string | null
 }
 
+/** Histórico auditado de correções e remoções de apontamentos Extra Esteira. */
+export type OperationalExtraTimeEntryCorrectionApi = {
+  action: 'EDIT' | 'DELETE'
+  reason: string
+  occurredAt: string
+  actorLabel: string | null
+  before: {
+    descriptionId: string
+    description: string | null
+    entryDate: string
+    minutes: number
+    notes: string | null
+  }
+  after: {
+    descriptionId: string
+    description: string | null
+    entryDate: string
+    minutes: number
+    notes: string | null
+  } | null
+}
+
 /** Lançamento Extra Esteira (tempo fora de esteira) no período da jornada. */
 export type OperationalJourneyExtraTimeEntryApi = {
   id: string
@@ -44,6 +66,8 @@ export type OperationalJourneyExtraTimeEntryApi = {
   description: string
   descriptionId: string
   updatedAt: string
+  deletedAt: string | null
+  correctionHistory: OperationalExtraTimeEntryCorrectionApi[]
   notes: string | null
   /** WEB (SGP) ou PRODUCTION (Modo Fábrica/Kiosk). */
   origin: 'WEB' | 'PRODUCTION'
