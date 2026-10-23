@@ -6,7 +6,8 @@ import {
   VALID_PUBLISHED_PLANNED_ITEMS_CTE,
 } from '../modules/operational-planning/time-entry-planning.repository.js'
 import { listTimeEntryCandidatesPage } from '../modules/my-activities/my-activities.repository.js'
-import { listPlannedOpenJourneyRows } from '../modules/operational-journey/operational-journey.repository.js'
+import { listPlannedOpenJourneyRows, listTimeEntriesForCollaboratorsInPeriod, listExtraTimeEntriesInPeriodForCollaborators } from '../modules/operational-journey/operational-journey.repository.js'
+import { listMyWorkQueueRows } from '../modules/my-work-queue/my-work-queue.repository.js'
 
 const COLLAB = '11111111-1111-4111-8111-111111111111'
 const STEP = '22222222-2222-4222-8222-222222222222'
@@ -103,4 +104,43 @@ describe('1.10.2 — listagens filtra antes de paginar', () => {
     expect(sql).toContain('LIMIT $6::int OFFSET $7::int')
     expect(query.mock.calls[0]![1]).toEqual([[COLLAB], FROM, TO, null, '7467', 21, 20])
   })
+  it('Kiosk busca tarefas de qualquer semana publicada, sem liberar itens sem colaborador', async () => {
+    const query = vi.fn(async (_sql: string, _params?: unknown[]) => ({ rows: [] }))
+    const pool = { query } as unknown as pg.Pool
+    const result = await listMyWorkQueueRows(pool, {
+      workPlanId: null, collaboratorId: COLLAB, date: '2026-10-22',
+      includePastDue: false, allOpenPlanned: true,
+      listOptions: { planItemStatuses: ['PLANNED'] },
+    })
+    expect(result).toEqual([])
+    const sql = String(query.mock.calls[0]![0])
+    expect(sql).toContain('WITH ' + VALID_PUBLISHED_PLANNED_ITEMS_CTE)
+    expect(sql).toContain('i.work_plan_id IN (SELECT id FROM current_published_plans)')
+    expect(sql).toContain('i.assigned_collaborator_id = $2::uuid')
+    expect(sql).toContain("cv.operational_status IN ('A_INICIAR', 'EM_ANDAMENTO')")
+    expect(query.mock.calls[0]![1]).toEqual([null, COLLAB, '2026-10-22'])
+  })
+
+  it('Histórico pagina por 20 e filtra código exato de OS no banco', async () => {
+    const query = vi.fn(async (_sql: string, _params?: unknown[]) => ({ rows: [] }))
+    const pool = { query } as unknown as pg.Pool
+    await listTimeEntriesForCollaboratorsInPeriod(pool, {
+      collaboratorIds: [COLLAB], from: FROM, to: TO,
+      conveyorId: null, conveyorCode: '7467', limit: 21, offset: 20,
+    })
+    expect(String(query.mock.calls[0]![0])).toContain('cv.code = $7::text')
+    expect(query.mock.calls[0]![1]).toEqual([[COLLAB], FROM, TO, null, 21, 20, '7467'])
+  })
+
+  it('Extra Esteira pagina independentemente da OS, incluindo exclusões no histórico', async () => {
+    const query = vi.fn(async (_sql: string, _params?: unknown[]) => ({ rows: [] }))
+    const pool = { query } as unknown as pg.Pool
+    await listExtraTimeEntriesInPeriodForCollaborators(pool, {
+      collaboratorIds: [COLLAB], from: FROM, to: TO, limit: 21, offset: 20,
+    })
+    expect(String(query.mock.calls[0]![0])).toContain('LIMIT $4::int OFFSET $5::int')
+    expect(String(query.mock.calls[0]![0])).not.toContain('cv.code')
+    expect(query.mock.calls[0]![1]).toEqual([[COLLAB], FROM, TO, 21, 20])
+  })
+
 })
