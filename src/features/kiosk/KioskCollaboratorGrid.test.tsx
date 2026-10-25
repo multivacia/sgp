@@ -46,6 +46,8 @@ describe('KioskCollaboratorGrid — rolagem mobile/tablet', () => {
 
     const root = container.firstElementChild as HTMLElement
     expect(root.className).toMatch(/\bh-full\b/)
+    expect(root.className).toMatch(/\bw-full\b/)
+    expect(root.className).toMatch(/\bmin-w-0\b/)
     expect(root.className).toMatch(/\bmin-h-0\b/)
     expect(root.className).toMatch(/\bflex\b/)
     expect(root.className).toMatch(/\bflex-col\b/)
