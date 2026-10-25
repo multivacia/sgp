@@ -1,7 +1,7 @@
 {
   "product": "SGP+",
-  "version": "1.10.1",
-  "releaseName": "Correção da listagem de atividades e período do Dashboard",
-  "releaseDate": "2026-10-21",
+  "version": "1.10.2",
+  "releaseName": "Correção de responsividade do Kiosk",
+  "releaseDate": "2026-10-24",
   "channel": "production"
 }
