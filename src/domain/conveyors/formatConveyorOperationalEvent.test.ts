@@ -26,6 +26,17 @@ describe('formatConveyorOperationalEvent', () => {
     expect(out.category).toBe('delay')
   })
 
+  it('formata CONVEYOR_ARCHIVED e CONVEYOR_UNARCHIVED sem exibir o código cru', () => {
+    const arch = formatConveyorOperationalEvent({ ...base('CONVEYOR_ARCHIVED'), reason: null })
+    expect(arch.label).toBe('Esteira arquivada')
+    expect(arch.description).toContain('Histórico')
+    expect(arch.description).not.toContain('CONVEYOR_')
+    const un = formatConveyorOperationalEvent({ ...base('CONVEYOR_UNARCHIVED'), reason: null })
+    expect(un.label).toBe('Esteira desarquivada')
+    expect(un.description).toContain('Operacional')
+    expect(un.description).not.toContain('CONVEYOR_')
+  })
+
   it('formata CONVEYOR_LEFT_DELAY', () => {
     const out = formatConveyorOperationalEvent(base('CONVEYOR_LEFT_DELAY'))
     expect(out.label).toBe('Esteira saiu do atraso')

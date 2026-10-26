@@ -276,6 +276,8 @@ function mapListRowToApi(row: ConveyorListRow): ConveyorListItemApi {
     completedAt: row.completed_at,
     estimatedDeadline: row.estimated_deadline,
     totalSteps: row.total_steps,
+    panelSection: row.panel_section,
+    panelSectionManual: row.panel_section_manual,
   }
 }
 

@@ -416,6 +416,11 @@ export const getConveyorsQuerySchema = z.object({
     emptyQueryToUndef,
     conveyorOperationalStatusQueryEnum.optional(),
   ),
+  /** Recorte do Painel operacional; ausente = `operacional`. */
+  view: z.preprocess(
+    emptyQueryToUndef,
+    z.enum(['operacional', 'historico', 'todas']).optional(),
+  ),
 })
 
 export type GetConveyorsQuery = z.infer<typeof getConveyorsQuerySchema>

@@ -13,6 +13,7 @@ export const ADMIN_AUDIT_EVENT_TYPES = [
   'time_entry_created_on_behalf',
   'time_entry_edited_by_manager',
   'time_entry_deleted_by_manager',
+  'database_restored',
 ] as const
 
 export type AdminAuditEventType = (typeof ADMIN_AUDIT_EVENT_TYPES)[number]

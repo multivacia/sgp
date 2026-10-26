@@ -75,4 +75,8 @@ export const ErrorCodes = {
     'CONVEYOR_RETURN_TO_PLANNING_STATUS_NOT_ALLOWED',
   /** Retrocesso operacional sem motivo válido. */
   CONVEYOR_RETURN_REASON_REQUIRED: 'CONVEYOR_RETURN_REASON_REQUIRED',
+  /** Arquivar/desarquivar no Painel operacional: só FINALIZADA ou CANCELADA. */
+  CONVEYOR_ARCHIVE_STATUS_NOT_ALLOWED: 'CONVEYOR_ARCHIVE_STATUS_NOT_ALLOWED',
+  /** Arquivar/desarquivar incoerente com a seção efetiva atual da esteira. */
+  CONVEYOR_ARCHIVE_STATE_CONFLICT: 'CONVEYOR_ARCHIVE_STATE_CONFLICT',
 } as const

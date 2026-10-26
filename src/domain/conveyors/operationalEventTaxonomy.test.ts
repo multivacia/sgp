@@ -48,6 +48,10 @@ describe('getOperationalEventDisplayLabel', () => {
   it('MANUAL_NOTE', () => {
     expect(getOperationalEventDisplayLabel('MANUAL_NOTE')).toBe('Observação operacional')
   })
+  it('CONVEYOR_ARCHIVED e CONVEYOR_UNARCHIVED (Painel operacional)', () => {
+    expect(getOperationalEventDisplayLabel('CONVEYOR_ARCHIVED')).toBe('Esteira arquivada')
+    expect(getOperationalEventDisplayLabel('CONVEYOR_UNARCHIVED')).toBe('Esteira desarquivada')
+  })
   it('desconhecido', () => {
     expect(getOperationalEventDisplayLabel('UNKNOWN_X')).toBe('Evento operacional')
   })

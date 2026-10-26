@@ -44,5 +44,7 @@ export function mapConveyorListItemToBacklogRow(item: ConveyorListItem): Backlog
     completedAt: item.completedAt,
     estimatedDeadline: item.estimatedDeadline ?? null,
     clientName: clientName.length > 0 ? clientName : undefined,
+    panelSection: item.panelSection,
+    panelSectionManual: item.panelSectionManual,
   }
 }

@@ -3,7 +3,11 @@ import { useNavigate } from 'react-router-dom'
 import { ApiError } from '../../lib/api/apiErrors'
 import { useAuth } from '../../lib/use-auth'
 import type { BacklogRow } from '../../mocks/backlog'
-import { deleteConveyor } from '../../services/conveyors/conveyorsApiService'
+import {
+  deleteConveyor,
+  postConveyorArchive,
+  postConveyorUnarchive,
+} from '../../services/conveyors/conveyorsApiService'
 import {
   SgpContextActionsMenu,
   type SgpContextActionsMenuItemDef,
@@ -13,8 +17,20 @@ import {
   SHOW_BACKLOG_ARGOS_COLUMN,
   SHOW_BACKLOG_ORIGIN_COLUMN,
 } from '../../lib/backlog/backlogUiFlags'
+import {
+  backlogArchiveActionLabel,
+  backlogArchiveErrorFallback,
+  backlogArchiveSuccessToast,
+  backlogUnarchiveActionLabel,
+  backlogUnarchiveSuccessToast,
+} from '../../lib/backlog/backlogCopy'
+import { BacklogArchiveConveyorDialog } from './BacklogArchiveConveyorDialog'
 import { BacklogDeleteConveyorDialog } from './BacklogDeleteConveyorDialog'
-import { shouldShowBacklogDeleteAction } from './backlogRowActions'
+import {
+  resolveBacklogArchiveAction,
+  shouldShowBacklogDeleteAction,
+  type BacklogArchiveAction,
+} from './backlogRowActions'
 import { StatusBadge } from './StatusBadge'
 
 function PriorityPill({ p }: { p: BacklogRow['priority'] }) {
@@ -96,16 +112,61 @@ function deleteConveyorErrorMessage(err: unknown): string {
   return 'Não foi possível excluir a esteira. Tente novamente.'
 }
 
+function archiveConveyorErrorMessage(err: unknown): string {
+  if (err instanceof ApiError && err.message) return err.message
+  return backlogArchiveErrorFallback
+}
+
 type Props = {
   rows: BacklogRow[]
   onConveyorDeleted?: () => void
   onDeleteError?: (message: string) => void
+  /** Após arquivar/desarquivar com sucesso (mensagem pronta para toast). */
+  onArchiveChanged?: (message: string) => void
+  onArchiveError?: (message: string) => void
 }
 
-export function BacklogTable({ rows, onConveyorDeleted, onDeleteError }: Props) {
+export function BacklogTable({
+  rows,
+  onConveyorDeleted,
+  onDeleteError,
+  onArchiveChanged,
+  onArchiveError,
+}: Props) {
   const navigate = useNavigate()
   const { can } = useAuth()
   const canEditEsteira = can('conveyors.create')
+  const canEditStatus = can('conveyors.edit_status')
+
+  const [archiveTarget, setArchiveTarget] = useState<{
+    row: BacklogRow
+    action: BacklogArchiveAction
+  } | null>(null)
+  const [archiveBusy, setArchiveBusy] = useState(false)
+
+  const closeArchiveDialog = useCallback(() => {
+    if (!archiveBusy) setArchiveTarget(null)
+  }, [archiveBusy])
+
+  const confirmArchive = useCallback(async () => {
+    const id = archiveTarget?.row.esteiraId
+    if (!id || !archiveTarget) return
+    setArchiveBusy(true)
+    try {
+      if (archiveTarget.action === 'archive') {
+        await postConveyorArchive(id)
+        onArchiveChanged?.(backlogArchiveSuccessToast)
+      } else {
+        await postConveyorUnarchive(id)
+        onArchiveChanged?.(backlogUnarchiveSuccessToast)
+      }
+      setArchiveTarget(null)
+    } catch (e) {
+      onArchiveError?.(archiveConveyorErrorMessage(e))
+    } finally {
+      setArchiveBusy(false)
+    }
+  }, [archiveTarget, onArchiveChanged, onArchiveError])
 
   const [deleteTarget, setDeleteTarget] = useState<BacklogRow | null>(null)
   const [deleteBusy, setDeleteBusy] = useState(false)
@@ -202,6 +263,16 @@ export function BacklogTable({ rows, onConveyorDeleted, onDeleteError }: Props) 
                       },
                     })
                   }
+                  const archiveAction = resolveBacklogArchiveAction(row, canEditStatus)
+                  if (archiveAction) {
+                    menuItems.push({
+                      label:
+                        archiveAction === 'archive'
+                          ? backlogArchiveActionLabel
+                          : backlogUnarchiveActionLabel,
+                      onClick: () => setArchiveTarget({ row, action: archiveAction }),
+                    })
+                  }
                   if (shouldShowBacklogDeleteAction(row, canEditEsteira)) {
                     menuItems.push({
                       label: 'Excluir',
@@ -287,6 +358,14 @@ export function BacklogTable({ rows, onConveyorDeleted, onDeleteError }: Props) 
         busy={deleteBusy}
         onCancel={closeDeleteDialog}
         onConfirm={() => void confirmDelete()}
+      />
+
+      <BacklogArchiveConveyorDialog
+        row={archiveTarget?.row ?? null}
+        action={archiveTarget?.action ?? null}
+        busy={archiveBusy}
+        onCancel={closeArchiveDialog}
+        onConfirm={() => void confirmArchive()}
       />
     </>
   )
