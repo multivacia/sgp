@@ -23,7 +23,9 @@ export type DatabaseBackupsConfig = {
 
 /** Lido a cada uso: permite configurar por `server/.env` e ajustar em testes. */
 export function getDatabaseBackupsConfig(): DatabaseBackupsConfig {
-  const backupDir = process.env.SGP_BACKUP_DIR?.trim() || '/opt/sgp/backups/db'
+  const isHomol = process.env.APP_ENV === 'homologation'
+  const backupDir = process.env.SGP_BACKUP_DIR?.trim() ||
+    (isHomol ? '/opt/sgp/backups/hml' : '/opt/sgp/backups/db')
   return {
     backupDir,
     logFile: process.env.SGP_BACKUP_LOG?.trim() || join(backupDir, 'backup-log.jsonl'),
