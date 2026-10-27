@@ -133,6 +133,13 @@ export async function serviceStartRestore(
     )
   }
   await findListedBackup(input.fileName)
+  if (process.env.APP_ENV === 'homologation') {
+    throw new AppError(
+      'Restauração desabilitada no ambiente de homologação.',
+      403,
+      ErrorCodes.FORBIDDEN,
+    )
+  }
   assertNoRestoreRunning()
 
   setMaintenanceActive(true)
