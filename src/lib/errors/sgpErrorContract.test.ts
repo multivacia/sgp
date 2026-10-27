@@ -55,7 +55,7 @@ describe('normalizeClientError', () => {
     const n = normalizeClientError(err)
     expect(n.cause).toBe('sessao')
     expect(n.severity).toBe('impeditivo')
-    expect(n.modalTitle).toBe('Sessão inválida')
+    expect(n.modalTitle).toBe('Conta inativa')
     expect(n.userMessage).toBe('Sua conta está inativa. Entre em contato com o administrador.')
     expect(presentationPlan(n).surface).toBe('modal')
   })
@@ -67,6 +67,7 @@ describe('normalizeClientError', () => {
     const n = normalizeClientError(err)
     expect(n.cause).toBe('sessao')
     expect(n.severity).toBe('impeditivo')
+    expect(n.modalTitle).toBe('Acesso temporariamente bloqueado')
     expect(n.userMessage).toBe('Não foi possível entrar agora. Tente novamente mais tarde.')
   })
 
