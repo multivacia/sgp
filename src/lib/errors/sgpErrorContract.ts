@@ -54,6 +54,8 @@ export const SGP_ERROR_MESSAGES = {
   /** Mantém alinhamento com `SESSION_REVOKED_USER_MESSAGE` / backend. */
   sessaoRevogadaCredenciais: SESSION_REVOKED_USER_MESSAGE,
   semPermissao: 'Você não tem permissão para esta operação. Peça acesso ao administrador se necessário.',
+  contaInativa: 'Sua conta está inativa. Entre em contato com o administrador.',
+  contaBloqueada: 'Não foi possível entrar agora. Tente novamente mais tarde.',
   recursoNaoEncontrado: 'O recurso solicitado não foi encontrado ou não existe mais.',
   validacao: 'Os dados enviados não são válidos. Corrija os campos indicados e tente novamente.',
   conflito:
@@ -81,7 +83,12 @@ export function inferCause(
     if (code === SESSION_REVOKED_CREDENTIALS_CHANGED_CODE) return 'sessao'
     return 'sessao'
   }
-  if (status === 403) return 'permissao'
+  if (status === 403) {
+    if (code === 'ACCOUNT_INACTIVE' || code === 'ACCOUNT_TEMPORARILY_LOCKED') {
+      return 'sessao'
+    }
+    return 'permissao'
+  }
   if (status === 400 || status === 422) return 'validacao'
   if (status === 409) return 'conflito'
   if (status === 404) return 'operacional'
@@ -143,7 +150,11 @@ function refineUserMessage(api: ApiError): string {
     if (m) return m
     return SGP_ERROR_MESSAGES.sessaoExpirada
   }
-  if (status === 403) return SGP_ERROR_MESSAGES.semPermissao
+  if (status === 403) {
+    if (code === 'ACCOUNT_INACTIVE') return SGP_ERROR_MESSAGES.contaInativa
+    if (code === 'ACCOUNT_TEMPORARILY_LOCKED') return SGP_ERROR_MESSAGES.contaBloqueada
+    return SGP_ERROR_MESSAGES.semPermissao
+  }
   if (status === 404) return SGP_ERROR_MESSAGES.recursoNaoEncontrado
   if (status === 400 || status === 422) return m || SGP_ERROR_MESSAGES.validacao
   if (status === 409) return m || SGP_ERROR_MESSAGES.conflito
