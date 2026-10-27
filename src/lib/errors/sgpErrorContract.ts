@@ -180,7 +180,12 @@ export function normalizeClientError(err: unknown): SgpNormalizedError {
       severity,
       cause,
       userMessage,
-      modalTitle: modalTitleFor(severity, cause),
+      modalTitle:
+        err.status === 403 && err.code === 'ACCOUNT_INACTIVE'
+          ? 'Conta inativa'
+          : err.status === 403 && err.code === 'ACCOUNT_TEMPORARILY_LOCKED'
+            ? 'Acesso temporariamente bloqueado'
+            : modalTitleFor(severity, cause),
       status: err.status,
       code: err.code,
       errorRef: err.errorRef,
