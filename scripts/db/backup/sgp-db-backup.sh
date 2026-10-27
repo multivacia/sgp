@@ -53,6 +53,16 @@
 set -euo pipefail
 umask 027
 
+# Ao executar a cópia instalada na HML, o modo seguro é obrigatório,
+# inclusive quando o script é chamado diretamente pelo terminal.
+SCRIPT_REAL_PATH=$(readlink -f -- "${BASH_SOURCE[0]}")
+if [[ $SCRIPT_REAL_PATH == /opt/sgp/sgp-homol/scripts/db/backup/* ]]; then
+  if [[ ${SGP_BACKUP_ENV:-} != homologation ]]; then
+    echo "Backup HML: SGP_BACKUP_ENV=homologation é obrigatório." >&2
+    exit 2
+  fi
+fi
+
 BACKUP_DIR="${SGP_BACKUP_DIR:-/opt/sgp/backups/db}"
 LOG_FILE="${SGP_BACKUP_LOG:-$BACKUP_DIR/backup-log.jsonl}"
 ENV_FILE="${SGP_SERVER_ENV_FILE:-/opt/sgp/sgp-main/server/.env}"
@@ -201,6 +211,27 @@ load_db_env() {
   export PGHOST PGPORT PGDATABASE PGUSER PGPASSWORD
 }
 
+
+# Não aceita destinos, usuários ou portas fora da homologação.
+# Esta verificação ocorre antes de pg_dump, pg_dumpall e pg_restore.
+assert_hml_target() {
+  [[ ${SGP_BACKUP_ENV:-} == homologation ]] || return 0
+  if [[ $ENV_FILE != /opt/sgp/sgp-homol/server/.env ||
+        $BACKUP_DIR != /opt/sgp/backups/hml ||
+        $LOG_FILE != /opt/sgp/backups/hml/backup-log.jsonl ||
+        $PGDATABASE != sgp_homol ||
+        $PGPORT != 5434 ||
+        $PGUSER != sgp_homol_app ||
+        ( $PGHOST != 127.0.0.1 && $PGHOST != localhost ) ]]; then
+    LAST_ERROR="Backup HML bloqueado: banco, usuário, porta, host, credenciais ou diretórios inesperados."
+    return 1
+  fi
+  if [[ -L $ENV_FILE || -L $BACKUP_DIR || -L $LOG_FILE ]]; then
+    LAST_ERROR="Backup HML bloqueado: links simbólicos não são permitidos nos caminhos configurados."
+    return 1
+  fi
+}
+
 # ---------------------------------------------------------------------------
 # Retenção
 # ---------------------------------------------------------------------------
@@ -313,6 +344,11 @@ do_backup() {
 
   if ! load_db_env; then
     log_backup_failure "$reason" "$started"
+    return 1
+  fi
+
+  if ! assert_hml_target; then
+    echo "$LAST_ERROR" >&2
     return 1
   fi
 
@@ -509,6 +545,20 @@ main() {
       exit 1
     fi
   done
+
+  if [[ ${SGP_BACKUP_ENV:-} == homologation ]]; then
+    if [[ $ENV_FILE != /opt/sgp/sgp-homol/server/.env ||
+          $BACKUP_DIR != /opt/sgp/backups/hml ||
+          $LOG_FILE != /opt/sgp/backups/hml/backup-log.jsonl ||
+          -L $BACKUP_DIR ]]; then
+      echo "Backup HML: caminhos não autorizados." >&2
+      exit 2
+    fi
+    if [[ -n $restore_file ]]; then
+      echo "Restauração HML desabilitada." >&2
+      exit 2
+    fi
+  fi
 
   if [[ ! -d $BACKUP_DIR ]]; then
     mkdir -p -- "$BACKUP_DIR"
