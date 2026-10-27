@@ -24,7 +24,7 @@ describe('isolamento da configuração de backup', () => {
     delete process.env.SGP_BACKUP_LOG
     const cfg = getDatabaseBackupsConfig()
     expect(cfg.backupDir).toBe('/opt/sgp/backups/hml')
-    expect(cfg.logFile).toBe('/opt/sgp/backups/hml/backup-log.jsonl')
+    expect(cfg.logFile.replaceAll('\\', '/')).toBe('/opt/sgp/backups/hml/backup-log.jsonl')
   })
 
   it('não altera o caminho padrão da produção', () => {
