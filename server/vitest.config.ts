@@ -12,6 +12,7 @@ export default defineConfig({
       'src/modules/operation-matrix/**/*.test.ts',
       'src/modules/system-settings/**/*.test.ts',
       'src/modules/auth/**/*.test.ts',
+      'src/modules/database-backups/**/*.test.ts',
     ],
     testTimeout: 30000,
     fileParallelism: false,
