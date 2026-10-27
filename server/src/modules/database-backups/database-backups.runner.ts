@@ -43,6 +43,7 @@ export function runBackupScript(
         SGP_BACKUP_DIR: config.backupDir,
         SGP_BACKUP_LOG: config.logFile,
         SGP_SERVER_ENV_FILE: config.serverEnvFile,
+        SGP_BACKUP_ENV: process.env.APP_ENV === 'homologation' ? 'homologation' : 'production',
       },
       stdio: ['ignore', 'pipe', 'pipe'],
     })
