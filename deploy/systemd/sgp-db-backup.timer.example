@@ -1,0 +1,18 @@
+# Copiar para /etc/systemd/system/sgp-db-backup.timer e ativar:
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now sgp-db-backup.timer
+#   systemctl list-timers sgp-db-backup.timer
+#
+# Diário às 03:00 no horário de São Paulo (independe do fuso configurado na VPS; exige systemd ≥ 235).
+
+[Unit]
+Description=SGP+ agenda do backup diário da base de produção
+
+[Timer]
+OnCalendar=*-*-* 03:00:00 America/Sao_Paulo
+Persistent=true
+RandomizedDelaySec=5min
+Unit=sgp-db-backup.service
+
+[Install]
+WantedBy=timers.target

@@ -13,10 +13,15 @@
  * - `priority` — `alta` | `media` | `baixa`.
  * - `responsible` — texto (ILIKE no servidor no campo responsável da esteira).
  * - `page` / `pageSize` — paginação **apenas no cliente** (lista filtrada); não são enviados à API.
+ * - `aba` — aba do painel: ausente/`operacional` = Operacional (padrão), `historico` = Histórico,
+ *   `todas` = lista combinada (Operacional + Histórico), usada pelos links do dashboard para
+ *   Finalizadas/Canceladas. Enviada à API como `view=`. Sem `aba`, `situacao=finalizadas&days=N`
+ *   (formato do link do dashboard) também abre a lista combinada.
  */
 
 import type {
   ConveyorOperationalStatus,
+  ConveyorPanelView,
   ListConveyorsQuery,
 } from '../../domain/conveyors/conveyor.types'
 import {
@@ -134,6 +139,61 @@ export function parseBacklogSituationFilter(
     return s
   }
   return ''
+}
+
+/** Aba do Painel operacional derivada da URL (`aba`), com o mesmo valor da `view` da API. */
+export type BacklogTabValue = ConveyorPanelView
+
+export const BACKLOG_TAB_PARAM = 'aba'
+
+/**
+ * Aba ativa: `aba=historico` | `aba=todas` | `aba=operacional`.
+ * Sem `aba`: lista combinada quando a URL tem o formato do link do dashboard
+ * (`situacao=finalizadas` com `days` válido); caso contrário, Operacional.
+ */
+export function parseBacklogTab(sp: URLSearchParams): BacklogTabValue {
+  const raw = sp.get(BACKLOG_TAB_PARAM)?.trim()
+  if (raw === 'historico' || raw === 'todas' || raw === 'operacional') return raw
+  if (
+    !backlogHasScopeAtivas(sp) &&
+    sp.get('situacao')?.trim() === 'finalizadas' &&
+    parseBacklogDaysWindow(sp) > 0
+  ) {
+    return 'todas'
+  }
+  return 'operacional'
+}
+
+/**
+ * Troca de aba preservando os demais parâmetros (`scope`, `situacao`, `days`, `q`…).
+ * Operacional remove `aba` quando isso basta; senão grava `aba=operacional` explicitamente.
+ */
+export function withBacklogTab(
+  input: URLSearchParams,
+  tab: BacklogTabValue,
+): URLSearchParams {
+  const next = new URLSearchParams(input)
+  next.delete('page')
+  if (tab === 'operacional') {
+    next.delete(BACKLOG_TAB_PARAM)
+    if (parseBacklogTab(next) !== 'operacional') next.set(BACKLOG_TAB_PARAM, 'operacional')
+    return next
+  }
+  next.set(BACKLOG_TAB_PARAM, tab)
+  return next
+}
+
+/**
+ * Mantém a aba atual em `next` quando uma troca de filtro (ex.: remover `days`) mudaria
+ * a aba inferida. Usado pelos handlers de filtro do painel.
+ */
+export function preserveBacklogTab(
+  current: URLSearchParams,
+  next: URLSearchParams,
+): URLSearchParams {
+  const tab = parseBacklogTab(current)
+  if (parseBacklogTab(next) !== tab) next.set(BACKLOG_TAB_PARAM, tab)
+  return next
 }
 
 /**
@@ -266,6 +326,13 @@ export function normalizeBacklogSearchParams(
       next.delete('page')
       changed = true
     }
+  }
+
+  // Aba com valor desconhecido sai da URL (volta ao padrão).
+  const abaRaw = next.get(BACKLOG_TAB_PARAM)
+  if (abaRaw !== null && !['operacional', 'historico', 'todas'].includes(abaRaw.trim())) {
+    next.delete(BACKLOG_TAB_PARAM)
+    changed = true
   }
 
   return changed ? next : null

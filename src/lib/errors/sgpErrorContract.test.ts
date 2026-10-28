@@ -48,6 +48,43 @@ describe('normalizeClientError', () => {
     expect(presentationPlan(n).surface).toBe('modal')
   })
 
+  it('403 ACCOUNT_INACTIVE mostra a mensagem de conta inativa', () => {
+    const err = new ApiError('Sua conta está inativa. Contacte o administrador.', 403, {
+      code: 'ACCOUNT_INACTIVE',
+    })
+    const n = normalizeClientError(err)
+    expect(n.cause).toBe('sessao')
+    expect(n.severity).toBe('impeditivo')
+    expect(n.modalTitle).toBe('Conta inativa')
+    expect(n.userMessage).toBe('Sua conta está inativa. Entre em contato com o administrador.')
+    expect(presentationPlan(n).surface).toBe('modal')
+  })
+
+  it('403 ACCOUNT_TEMPORARILY_LOCKED mostra a mensagem de bloqueio sem detalhes internos', () => {
+    const err = new ApiError('Mensagem técnica interna', 403, {
+      code: 'ACCOUNT_TEMPORARILY_LOCKED',
+    })
+    const n = normalizeClientError(err)
+    expect(n.cause).toBe('sessao')
+    expect(n.severity).toBe('impeditivo')
+    expect(n.modalTitle).toBe('Acesso temporariamente bloqueado')
+    expect(n.userMessage).toBe('Não foi possível entrar agora. Tente novamente mais tarde.')
+  })
+
+  it('403 FORBIDDEN mantém a mensagem de falta de permissão', () => {
+    const err = new ApiError('Detalhe interno de autorização', 403, { code: 'FORBIDDEN' })
+    const n = normalizeClientError(err)
+    expect(n.cause).toBe('permissao')
+    expect(n.modalTitle).toBe('Sem permissão')
+    expect(n.userMessage).toContain('Você não tem permissão')
+  })
+
+  it('403 desconhecido mantém o tratamento seguro de falta de permissão', () => {
+    const n = normalizeClientError(new ApiError('Interno', 403, { code: 'OUTRO_CODIGO' }))
+    expect(n.cause).toBe('permissao')
+    expect(n.userMessage).toContain('Você não tem permissão')
+  })
+
   it('classifica 401 como sessão impeditiva', () => {
     const err = new ApiError('Não autenticado', 401)
     const n = normalizeClientError(err)

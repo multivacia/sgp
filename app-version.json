@@ -1,7 +1,7 @@
 {
   "product": "SGP+",
-  "version": "1.10.2",
-  "releaseName": "Correção de responsividade do Kiosk",
-  "releaseDate": "2026-10-24",
+  "version": "1.11.0",
+  "releaseName": "Histórico de esteiras no Painel operacional e backup da base",
+  "releaseDate": "2026-10-26",
   "channel": "production"
 }

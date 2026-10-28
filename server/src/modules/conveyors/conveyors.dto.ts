@@ -37,6 +37,10 @@ export type ConveyorListItemApi = {
   /** Prazo estimado ao nível da esteira (texto livre / ISO) — painel operacional e atraso. */
   estimatedDeadline: string | null
   totalSteps: number
+  /** Seção efetiva no Painel operacional (abas Operacional / Histórico). */
+  panelSection: 'OPERACIONAL' | 'HISTORICO'
+  /** `true` quando a seção vem de arquivamento/desarquivamento manual vigente. */
+  panelSectionManual: boolean
 }
 
 export type ConveyorStructureStepAssigneeApi = {

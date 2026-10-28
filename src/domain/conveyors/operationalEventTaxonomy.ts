@@ -41,6 +41,10 @@ export function getOperationalEventDisplayLabel(eventType: string): string {
       return 'Esteira retornada para backlog'
     case 'CONVEYOR_RETURNED_TO_PLANNING':
       return 'Esteira retornada para planejamento'
+    case 'CONVEYOR_ARCHIVED':
+      return 'Esteira arquivada'
+    case 'CONVEYOR_UNARCHIVED':
+      return 'Esteira desarquivada'
     case 'MANUAL_NOTE':
       return 'Observação operacional'
     default:

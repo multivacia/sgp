@@ -95,6 +95,40 @@ export function backlogChipResponsavel(name: string): string {
   return `Responsável: ${name}`
 }
 
+/** Abas do Painel operacional (Operacional / Histórico) e arquivamento manual. */
+export const backlogTabLabels = {
+  operacional: 'Operacional',
+  historico: 'Histórico',
+} as const
+
+export const backlogTabHistoricoHint =
+  'Histórico: esteiras finalizadas ou canceladas antes do mês atual e as arquivadas manualmente.'
+
+export const backlogCombinedListNotice = 'Exibindo Operacional + Histórico'
+
+export const backlogCombinedListBackToTabs = 'Voltar às abas'
+
+export const backlogArchiveActionLabel = 'Arquivar'
+
+export const backlogUnarchiveActionLabel = 'Desarquivar'
+
+export const backlogArchiveDialogTitle = 'Arquivar esteira?'
+
+export const backlogUnarchiveDialogTitle = 'Desarquivar esteira?'
+
+export const backlogArchiveDialogBody =
+  'A esteira sai do Operacional e passa para o Histórico agora. Você pode desarquivá-la depois.'
+
+export const backlogUnarchiveDialogBody =
+  'A esteira volta para o Operacional até a virada do mês. Depois disso, retorna ao Histórico, a menos que seja arquivada antes.'
+
+export const backlogArchiveSuccessToast = 'Esteira arquivada. Ela está no Histórico.'
+
+export const backlogUnarchiveSuccessToast = 'Esteira desarquivada. Ela voltou ao Operacional.'
+
+export const backlogArchiveErrorFallback =
+  'Não foi possível concluir a ação. Atualize a lista e tente novamente.'
+
 export function backlogChipSituacaoPrefixed(
   statusFilter: BacklogSituationFilterValue,
 ): string | null {

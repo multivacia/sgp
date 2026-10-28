@@ -1,5 +1,20 @@
 # Backup de todas as bases PostgreSQL (`pg_dumpall`)
 
+> **Produção (desde 19/10/2026):** o backup automático, a cópia para o OneDrive da Bravo e o restore da base
+> de produção usam os scripts de `scripts/db/backup/` e `scripts/db/windows/` e estão descritos em
+> [`backup-restore-runbook.md`](backup-restore-runbook.md).
+>
+> **Decisão do Gustavo (19/10/2026):** o restore destrutivo da base de produção **é permitido pela tela**
+> *Backups da base*, só para Super-admin (`system_settings.manage`), com estas proteções: nome da base
+> digitado, modo manutenção (503 para as demais requisições), backup `pre-restore` obrigatório,
+> `pg_restore --single-transaction` (falha desfaz tudo), sem migrations automáticas e registro em
+> `admin_audit_events` e no log da VPS. Isso substitui, para a base de produção, a orientação
+> "não automatizar restore destrutivo" da seção de restore abaixo.
+>
+> **Futuro HML:** restore a partir de produção deve **mascarar as senhas** dos usuários. Não implementado.
+>
+> Os scripts `backup_all_databases.*` abaixo continuam válidos para backup manual do cluster inteiro.
+
 ## Objetivo
 
 Fornecer um fluxo **operacional, simples e auditável** para gerar **um único ficheiro lógico** (plain SQL) com **timestamp**, contendo:

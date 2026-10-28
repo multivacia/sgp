@@ -33,8 +33,12 @@ import {
   parseBacklogQ,
   parseBacklogResponsible,
   parseBacklogSituationFilter,
+  parseBacklogTab,
+  preserveBacklogTab,
+  withBacklogTab,
   type BacklogPriorityParam,
   type BacklogSituationFilterValue,
+  type BacklogTabValue,
 } from '../lib/backlog/backlogUrlParams'
 import { useRegisterTransientContext } from '../lib/shell/transient-context'
 import { formatDashboardDateRange } from '../lib/dashboard/dashboardDateRange'
@@ -42,6 +46,10 @@ import {
   backlogChipBusca,
   backlogChipConcluidasPeriodo,
   backlogChipJanelaDias,
+  backlogCombinedListBackToTabs,
+  backlogCombinedListNotice,
+  backlogTabHistoricoHint,
+  backlogTabLabels,
   backlogChipPrioridade,
   backlogChipResponsavel,
   backlogChipSituacaoPrefixed,
@@ -87,6 +95,13 @@ function matchesSearch(row: BacklogRow, q: string) {
     row.responsible.toLowerCase().includes(s) ||
     (row.clientName?.toLowerCase().includes(s) ?? false)
   )
+}
+
+/** Modo mock: sem seção vinda da API, a linha conta como Operacional. */
+function rowMatchesTab(row: BacklogRow, tab: BacklogTabValue): boolean {
+  if (tab === 'todas') return true
+  const section = row.panelSection ?? 'OPERACIONAL'
+  return tab === 'historico' ? section === 'HISTORICO' : section === 'OPERACIONAL'
 }
 
 function applySituationAndWindow(
@@ -157,6 +172,16 @@ export function BacklogPage() {
     [searchParams],
   )
 
+  /** Aba ativa (Operacional / Histórico) ou lista combinada (`aba=todas`). */
+  const activeTab = useMemo(() => parseBacklogTab(searchParams), [searchParams])
+
+  const handleTabChange = useCallback(
+    (tab: BacklogTabValue) => {
+      setSearchParams(withBacklogTab(searchParams, tab), { replace: true })
+    },
+    [searchParams, setSearchParams],
+  )
+
   const daysWindow = useMemo(
     () => parseBacklogDaysWindow(searchParams),
     [searchParams],
@@ -206,7 +231,7 @@ export function BacklogPage() {
       } else {
         next.set('situacao', v)
       }
-      setSearchParams(next, { replace: true })
+      setSearchParams(preserveBacklogTab(searchParams, next), { replace: true })
     },
     [searchParams, setSearchParams],
   )
@@ -262,17 +287,23 @@ export function BacklogPage() {
   >(new Map())
   const [argosFilter, setArgosFilter] = useState<ArgosHealthBacklogFilter>('all')
 
+  /** Ignora respostas de cargas anteriores (troca rápida de aba). */
+  const loadSeqRef = useRef(0)
+
   const loadConveyors = useCallback(async () => {
     if (!useLiveApi) return
+    const seq = ++loadSeqRef.current
     setApiLoading(true)
     setApiError(null)
     try {
-      // Fonte global do painel: sem recortes de filtros de tabela.
-      const items = await listConveyors()
+      // Fonte global do painel: sem recortes de filtros de tabela; só a aba (recorte no servidor).
+      const items = await listConveyors({ view: activeTab })
+      if (seq !== loadSeqRef.current) return
       setApiRows(
         items.map((item) => mapConveyorListItemToBacklogRow(item)),
       )
     } catch (e) {
+      if (seq !== loadSeqRef.current) return
       setApiRows([])
       const n = reportClientError(e, {
         module: 'backlog',
@@ -285,9 +316,9 @@ export function BacklogPage() {
         setApiError(n.userMessage)
       }
     } finally {
-      setApiLoading(false)
+      if (seq === loadSeqRef.current) setApiLoading(false)
     }
-  }, [useLiveApi])
+  }, [useLiveApi, activeTab])
 
   const loadArgosSummary = useCallback(async () => {
     if (!useLiveApi) return
@@ -339,8 +370,8 @@ export function BacklogPage() {
   )
 
   const mockRows = useMemo(
-    () => [...BACKLOG_MOCK_ROWS, ...extra],
-    [extra],
+    () => [...BACKLOG_MOCK_ROWS, ...extra].filter((r) => rowMatchesTab(r, activeTab)),
+    [extra, activeTab],
   )
 
   const allRows = useMemo(() => {
@@ -521,6 +552,51 @@ export function BacklogPage() {
         </div>
       ) : null}
 
+      {activeTab === 'todas' ? (
+        <div
+          className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-sky-500/25 bg-sky-500/[0.08] px-4 py-3 text-sm text-sky-100/95"
+          role="status"
+        >
+          <span className="font-semibold">{backlogCombinedListNotice}</span>
+          <button
+            type="button"
+            className="rounded-lg border border-white/10 px-3 py-1.5 text-xs font-semibold text-slate-200 hover:bg-white/[0.06]"
+            onClick={() => handleTabChange('operacional')}
+          >
+            {backlogCombinedListBackToTabs}
+          </button>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          <div
+            className="inline-flex rounded-lg border border-white/10 bg-sgp-void/60 p-0.5"
+            role="tablist"
+            aria-label="Abas do Painel operacional"
+          >
+            {(['operacional', 'historico'] as const).map((k) => (
+              <button
+                key={k}
+                type="button"
+                role="tab"
+                aria-selected={activeTab === k}
+                onClick={() => handleTabChange(k)}
+                className={[
+                  'rounded-md px-4 py-2 text-xs font-bold uppercase tracking-wide transition-colors',
+                  activeTab === k
+                    ? 'bg-white/10 text-slate-100 shadow-sm'
+                    : 'text-slate-500 hover:text-slate-300',
+                ].join(' ')}
+              >
+                {backlogTabLabels[k]}
+              </button>
+            ))}
+          </div>
+          {activeTab === 'historico' ? (
+            <p className="max-w-3xl text-xs text-slate-500">{backlogTabHistoricoHint}</p>
+          ) : null}
+        </div>
+      )}
+
       <div className="space-y-3">
         <p className="max-w-3xl text-xs text-slate-500">{backlogKpiDeckIntro}</p>
         <BacklogKpiCards
@@ -630,6 +706,16 @@ export function BacklogPage() {
             onDeleteError={(message) => {
               setRouteToastVariant('error')
               setRouteToast(message)
+            }}
+            onArchiveChanged={(message) => {
+              setRouteToastVariant('success')
+              setRouteToast(message)
+              void loadConveyors()
+            }}
+            onArchiveError={(message) => {
+              setRouteToastVariant('error')
+              setRouteToast(message)
+              void loadConveyors()
             }}
           />
         </SgpContextActionsMenuProvider>

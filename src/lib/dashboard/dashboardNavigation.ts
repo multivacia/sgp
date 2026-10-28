@@ -50,7 +50,22 @@ export function openBacklogInNewTab(
     const d = Math.max(1, Math.min(365, Math.round(effDays)))
     sp.set('days', String(d))
   }
-  window.open(appUrl(`/app/backlog?${sp.toString()}`), '_blank', 'noopener,noreferrer')
+  window.open(appUrl(buildBacklogDashboardPath(sp, situacao)), '_blank', 'noopener,noreferrer')
+}
+
+/**
+ * Destino do link do dashboard no painel. Finalizadas e Canceladas (com ou sem `days`)
+ * abrem a lista combinada Operacional + Histórico (`aba=todas`); os demais, a aba Operacional.
+ */
+export function buildBacklogDashboardPath(
+  sp: URLSearchParams,
+  situacao: BacklogSituacaoQuery,
+): string {
+  const next = new URLSearchParams(sp)
+  if (situacao === 'finalizadas' || situacao === 'canceladas') {
+    next.set('aba', 'todas')
+  }
+  return `/app/backlog?${next.toString()}`
 }
 
 export function openEsteiraDetalheInNewTab(conveyorId: string) {

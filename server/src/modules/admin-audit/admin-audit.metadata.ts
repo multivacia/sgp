@@ -77,6 +77,7 @@ const METADATA_ALLOWLIST: Record<
     'target_collaborator_id',
     'reason',
   ],
+  database_restored: ['backup_file', 'pre_restore_backup', 'actor_email', 'error_message'],
 }
 
 export function buildSanitizedMetadata(
@@ -194,6 +195,21 @@ export function buildSanitizedMetadata(
         throw new Error('field inválido')
       }
       out[key] = v
+      continue
+    }
+
+    if (
+      key === 'backup_file' ||
+      key === 'pre_restore_backup' ||
+      key === 'actor_email' ||
+      key === 'error_message'
+    ) {
+      if (v === null) {
+        out[key] = null
+        continue
+      }
+      if (typeof v !== 'string') throw new Error(`${key} deve ser texto`)
+      out[key] = v.slice(0, 2000)
       continue
     }
 

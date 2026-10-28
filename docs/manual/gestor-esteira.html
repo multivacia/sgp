@@ -221,6 +221,20 @@
     <figcaption>Painel operacional com os cartões por situação e os botões <b>Nova Esteira Manual</b> e <b>Nova esteira por documento</b>.</figcaption>
   </figure>
   <div class="warn">Os cartões somam todas as esteiras carregadas; <b>os filtros da lista não alteram os cartões</b>. “Em execução” reúne esteiras <b>A iniciar</b> e <b>Em andamento</b> sem atraso de prazo.</div>
+  <h3>2.1 Abas Operacional e Histórico</h3>
+  <ol class="steps">
+    <li>O painel abre na aba <strong>Operacional</strong>: todas as esteiras abertas e as finalizadas ou canceladas <b>no mês atual</b>.</li>
+    <li>A aba <strong>Histórico</strong> mostra as esteiras finalizadas ou canceladas <b>antes do mês atual</b> e as que foram arquivadas manualmente.</li>
+    <li>Cartões, filtros e paginação funcionam igual nas duas abas, sempre dentro da aba escolhida.</li>
+  </ol>
+  <div class="info">Exemplo: uma esteira criada em agosto e finalizada em 19/10 fica no <b>Operacional</b> até 31/10 e passa sozinha para o <b>Histórico</b> em 01/11. A virada do mês segue o horário de Brasília.</div>
+  <h3>2.2 Arquivar e desarquivar</h3>
+  <ol class="steps">
+    <li>Em uma esteira <b>finalizada</b> ou <b>cancelada</b> da aba Operacional, abra o menu <strong>Ações</strong> e use <strong>Arquivar</strong> para levá-la ao Histórico na hora.</li>
+    <li>No Histórico, use <strong>Desarquivar</strong> para trazê-la de volta ao Operacional. Ela fica lá até a virada do mês ou até ser arquivada de novo.</li>
+  </ol>
+  <div class="warn">Arquivar e desarquivar só aparecem para quem pode alterar o status das esteiras (Gestor e Administrador) e só valem para esteiras finalizadas ou canceladas. A ação fica registrada nos eventos da esteira.</div>
+  <div class="info">Os atalhos do Dashboard para <b>Finalizadas</b> e <b>Canceladas</b> abrem a lista com as duas abas juntas, com o aviso <b>Exibindo Operacional + Histórico</b>. Use <strong>Voltar às abas</strong> para retornar ao Operacional.</div>
 </section>
 
 <!-- 3 -->
