@@ -100,6 +100,24 @@ export function formatProductionMinutes(minutes: number | null | undefined): str
   return `${m}min`
 }
 
+/** Calcula tempo excedido somente quando há tempo planejado válido e o realizado o ultrapassa. */
+export function resolveProductionExceededMinutes(
+  plannedMinutes: number | null | undefined,
+  realizedMinutes: number | null | undefined,
+): number | null {
+  if (
+    plannedMinutes == null ||
+    !Number.isFinite(plannedMinutes) ||
+    plannedMinutes <= 0 ||
+    realizedMinutes == null ||
+    !Number.isFinite(realizedMinutes) ||
+    realizedMinutes <= plannedMinutes
+  ) {
+    return null
+  }
+  return Math.round(realizedMinutes - plannedMinutes)
+}
+
 export type ProductionOperationalStatusDisplay = {
   label: string
   colorClass: string
