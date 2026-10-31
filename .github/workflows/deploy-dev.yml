@@ -1,0 +1,92 @@
+name: Deploy SGP+ DEV (isolated)
+
+on:
+  push:
+    branches: [develop]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sgp-deploy-dev
+  cancel-in-progress: false
+
+jobs:
+  deploy-dev:
+    # Fail closed: the DEV environment does not exist until explicitly provisioned.
+    if: ${{ vars.DEV_DEPLOY_ENABLED == 'true' }}
+    runs-on: ubuntu-latest
+    environment: development
+    timeout-minutes: 30
+    env:
+      DEV_APP_DIR: /opt/sgp/sgp-dev
+      DEV_WEB_DIR: /var/www/sgp-web-dev
+      DEV_PM2_PROCESS: sgp-api-dev
+      DEV_BRANCH: develop
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Validate isolation and required configuration
+        shell: bash
+        env:
+          DEV_HOST: ${{ secrets.DEV_VPS_HOST }}
+          DEV_PORT: ${{ secrets.DEV_VPS_PORT }}
+          DEV_USER: ${{ secrets.DEV_VPS_USER }}
+          DEV_KEY: ${{ secrets.DEV_VPS_SSH_KEY }}
+          DEV_KNOWN_HOSTS: ${{ secrets.DEV_VPS_KNOWN_HOSTS }}
+          DEV_HEALTH_URL: ${{ vars.DEV_HEALTH_URL }}
+        run: |
+          set -euo pipefail
+          test "${GITHUB_REF}" = "refs/heads/develop"
+          for v in DEV_HOST DEV_PORT DEV_USER DEV_KEY DEV_KNOWN_HOSTS DEV_HEALTH_URL; do
+            test -n "${!v}" || { echo "Missing isolated DEV configuration: $v"; exit 1; }
+          done
+          [[ "$DEV_HEALTH_URL" == https://* ]]
+          [[ "$DEV_HEALTH_URL" != *"hml.sgp.multivacia.com"* ]]
+          [[ "$DEV_HEALTH_URL" != *"sgp.multivacia.com/api/"* ]]
+      - name: Deploy exclusively to DEV
+        shell: bash
+        env:
+          DEV_HOST: ${{ secrets.DEV_VPS_HOST }}
+          DEV_PORT: ${{ secrets.DEV_VPS_PORT }}
+          DEV_USER: ${{ secrets.DEV_VPS_USER }}
+          DEV_KEY: ${{ secrets.DEV_VPS_SSH_KEY }}
+          DEV_KNOWN_HOSTS: ${{ secrets.DEV_VPS_KNOWN_HOSTS }}
+          DEV_HEALTH_URL: ${{ vars.DEV_HEALTH_URL }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$DEV_KEY" > "$HOME/.ssh/sgp_dev_key"
+          chmod 600 "$HOME/.ssh/sgp_dev_key"
+          printf '%s\n' "$DEV_KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
+          chmod 600 "$HOME/.ssh/known_hosts"
+          trap 'rm -f "$HOME/.ssh/sgp_dev_key"' EXIT
+
+          ssh -i "$HOME/.ssh/sgp_dev_key" -p "$DEV_PORT" \
+            -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
+            "$DEV_USER@$DEV_HOST" \
+            'bash -se' <<'REMOTE'
+          set -euo pipefail
+          APP_DIR=/opt/sgp/sgp-dev
+          WEB_DIR=/var/www/sgp-web-dev
+          test -d "$APP_DIR" && test -d "$WEB_DIR"
+          test -w "$WEB_DIR"
+          test -f "$APP_DIR/server/.env"
+          test "$(realpath "$APP_DIR")" = "/opt/sgp/sgp-dev"
+          test "$(realpath "$WEB_DIR")" = "/var/www/sgp-web-dev"
+          cd "$APP_DIR"
+          test "$(git rev-parse --is-inside-work-tree)" = "true"
+          git fetch origin develop
+          git checkout develop
+          git reset --hard origin/develop
+          npm ci
+          npm --prefix server ci
+          npm --prefix server run build
+          npm run build
+          test -f dist/index.html
+          rsync -a --delete dist/ "$WEB_DIR"/
+          pm2 restart sgp-api-dev --update-env
+          REMOTE
+
+          curl --fail --silent --show-error --location "$DEV_HEALTH_URL"
